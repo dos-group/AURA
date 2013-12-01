@@ -34,6 +34,12 @@
 			<artifactId>kryo</artifactId>
 			<version>2.22</version>
 		</dependency>
+
+        <dependency>
+			<groupId>bcel</groupId>
+			<artifactId>bcel</artifactId>
+			<version>5.1</version>
+		</dependency>
                    		
 		<!-- PROJECT DEPENDENCIES -->		
 	</dependencies>

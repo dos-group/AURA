@@ -22,7 +22,7 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.TMControlProtocol;
-import de.tuberlin.aura.core.task.TaskUserCode;
+import de.tuberlin.aura.core.task.UserCode;
 import de.tuberlin.aura.taskmanager.Contexts.TaskContext;
 import de.tuberlin.aura.taskmanager.Handler.AbstractTaskEventHandler;
 import de.tuberlin.aura.taskmanager.TaskEvents.TaskStateTransitionEvent;
@@ -227,7 +227,7 @@ public final class TaskManager implements TMControlProtocol {
 	
 	@Override
 	public void installTask( TaskDescriptor taskDescriptor, TaskBindingDescriptor taskBindingDescriptor,
-			TaskUserCode taskUserCode ) {
+			UserCode taskUserCode ) {
 		// sanity check.
 		if( taskDescriptor == null )
 			throw new IllegalArgumentException( "taskDescriptor must not be null" );	

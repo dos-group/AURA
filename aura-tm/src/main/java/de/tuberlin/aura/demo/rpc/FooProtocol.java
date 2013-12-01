@@ -4,6 +4,6 @@ import java.util.UUID;
 
 public interface FooProtocol {
 
-	Integer foo( String s, Integer q, UUID a, Integer y );
+	public Integer foo( String s, Integer q, UUID a, Integer y );
 	
 }

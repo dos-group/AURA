@@ -9,7 +9,7 @@ import org.apache.log4j.SimpleLayout;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
 import de.tuberlin.aura.taskmanager.TaskManager;
 
-public class RPCClient {
+public class TestRPCClient {
 
 	public static final Logger LOG = Logger.getRootLogger();
 	
