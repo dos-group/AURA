@@ -1,6 +1,6 @@
-package de.tuberlin.aura.taskmanager;
+package de.tuberlin.aura.core.task.common;
 
-import de.tuberlin.aura.taskmanager.Contexts.TaskContext;
+
 
 public abstract class TaskInvokeable {
 	

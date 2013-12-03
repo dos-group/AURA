@@ -8,10 +8,10 @@ import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
-import de.tuberlin.aura.taskmanager.Contexts.TaskContext;
+import de.tuberlin.aura.core.task.common.TaskContext;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.taskmanager.TaskEvents.TaskStateTransitionEvent;
-import de.tuberlin.aura.taskmanager.TaskStateMachine.TaskState;
-import de.tuberlin.aura.taskmanager.TaskStateMachine.TaskTransition;
 
 public final class Handler {
 

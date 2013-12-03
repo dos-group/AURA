@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.task;
+package de.tuberlin.aura.core.task.usercode;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -68,7 +68,7 @@ public final class UserCodeExtractor {
 			throw new IllegalStateException();
 		
 		final List<String> dependencies = buildTransitiveDependencyClosure( clazz, new ArrayList<String>() );
-		return new UserCode( clazz.getCanonicalName(), dependencies, Compression.compress( loadByteCode( clazz ) ) );
+		return new UserCode( clazz.getName(), dependencies, Compression.compress( loadByteCode( clazz ) ) );
 	}
 
 	//---------------------------------------------------
@@ -83,7 +83,11 @@ public final class UserCodeExtractor {
 		for( String dependency : levelDependencies ) {
 			
 			// TODO: make it flexible to provide more standard libraries.
-			if( !dependency.contains( "java" ) ) { 			
+			if( !dependency.contains( "java" ) &&
+				!dependency.contains( "org/apache/log4j" ) &&
+				!dependency.contains( "io/netty" ) &&
+				!dependency.contains( "de/tuberlin/aura/core" ) ) { 			
+				
 				final String dp1 = dependency.replace( "/", "." );
 				final String dp2 = dp1.replace( "$", "." );		 
 				
@@ -104,7 +108,8 @@ public final class UserCodeExtractor {
 						throw new IllegalStateException( e );
 					}
 					
-					buildTransitiveDependencyClosure( dependencyClass, globalDependencies );
+					if( !dependencyClass.isArray() && !dependencyClass.isPrimitive() )
+						buildTransitiveDependencyClosure( dependencyClass, globalDependencies );
 				}
 			}
 		}

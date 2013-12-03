@@ -6,10 +6,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 
-import de.tuberlin.aura.taskmanager.Contexts.TaskContext;
+import de.tuberlin.aura.core.task.common.TaskContext;
+import de.tuberlin.aura.core.task.common.TaskInvokeable;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.taskmanager.TaskEvents.TaskStateTransitionEvent;
-import de.tuberlin.aura.taskmanager.TaskStateMachine.TaskState;
-import de.tuberlin.aura.taskmanager.TaskStateMachine.TaskTransition;
 
 public final class TaskExecutionUnit {
 	
@@ -18,7 +19,7 @@ public final class TaskExecutionUnit {
     //---------------------------------------------------
 	
 	private final class ExecutionUnitRunner implements Runnable {
-
+		
 		@Override
 		public void run() {
 
@@ -51,6 +52,8 @@ public final class TaskExecutionUnit {
 				
 				executingTaskContext.dispatcher.dispatchEvent( 
 						new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_RUN ) );
+				
+				executingTaskContext.LOG = LOG;
 				
 				try {
 					invokeable.execute();

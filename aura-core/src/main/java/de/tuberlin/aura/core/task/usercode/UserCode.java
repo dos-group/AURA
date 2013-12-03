@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.task;
+package de.tuberlin.aura.core.task.usercode;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -21,12 +21,12 @@ public final class UserCode implements Serializable {
 		
 		this.classDependencies = Collections.unmodifiableList( classDependencies );
 		
-		this.byteCode = byteCode;
+		this.classByteCode = byteCode;
 	}
 
 	public final String className;
 
 	public final List<String> classDependencies; 
 	
-	public final byte[] byteCode;	
+	public final byte[] classByteCode;	
 }

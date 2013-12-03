@@ -70,6 +70,7 @@
 		<module>aura-core</module>
 		<module>aura-tm</module>
 		<module>aura-wm</module>
+		<module>aura-demo</module>
 	</modules>
 	
 </project>

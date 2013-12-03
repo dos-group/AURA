@@ -1,7 +1,7 @@
 package de.tuberlin.aura.taskmanager;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
-import de.tuberlin.aura.taskmanager.TaskStateMachine.TaskTransition;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 
 public final class TaskEvents {
 

@@ -1,5 +1,6 @@
 package de.tuberlin.aura.demo.rpc;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.log4j.ConsoleAppender;
@@ -19,6 +20,13 @@ public class TestRPCServer {
 		public Integer foo(String s, Integer q, UUID a, Integer y) {
 			LOG.info( "s = " + s + ", q = " + q + ", a = " + a );
 			return q + y + 100;
+		}
+
+		@Override
+		public void foo1(List<Integer> il) {
+			
+			LOG.info( "foo1 works" );
+			
 		}
 	}
 	

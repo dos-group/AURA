@@ -67,6 +67,17 @@ public final class LocalDeployment {
 	public static final UUID MACHINE_5_UID = UUID.fromString( "96852799-fbc5-4dbb-83a6-162d8a24a7ce" );
 	
 	public static final MachineDescriptor MACHINE_5_DESCRIPTOR = new MachineDescriptor( MACHINE_5_UID, MACHINE_5_ADDRESS, MACHINE_5_DATA_PORT, MACHINE_5_MSG_PORT );
+
+	// MACHINE_6
+	public static final int MACHINE_6_DATA_PORT = 25340;
+	
+	public static final int MACHINE_6_MSG_PORT = 26340;
+	
+	public static final InetAddress MACHINE_6_ADDRESS = getLocalHost();
+	
+	public static final UUID MACHINE_6_UID = UUID.fromString( "96852799-ccc5-4dbb-83a6-982d8a24a7ce" );
+	
+	public static final MachineDescriptor MACHINE_6_DESCRIPTOR = new MachineDescriptor( MACHINE_6_UID, MACHINE_6_ADDRESS, MACHINE_6_DATA_PORT, MACHINE_6_MSG_PORT );
 	
 	//----------- TASK SETUP -----------
 	

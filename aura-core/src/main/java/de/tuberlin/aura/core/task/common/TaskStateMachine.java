@@ -1,4 +1,4 @@
-package de.tuberlin.aura.taskmanager;
+package de.tuberlin.aura.core.task.common;
 
 import java.util.Collections;
 import java.util.HashMap;

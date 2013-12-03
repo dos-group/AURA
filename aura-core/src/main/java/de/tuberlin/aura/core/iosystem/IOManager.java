@@ -78,7 +78,7 @@ public final class IOManager extends EventDispatcher {
 
 		@Override
 		protected void channelRead0( final ChannelHandlerContext ctx, final RPCCallerMessage msg ) throws Exception {
-		
+			
 			// Execute remote call in a dedicated thread.
 			// TODO: use ThreadPool!
 			new Thread( new Runnable() {

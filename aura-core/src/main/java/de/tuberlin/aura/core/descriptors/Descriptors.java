@@ -1,5 +1,6 @@
 package de.tuberlin.aura.core.descriptors;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collections;
@@ -14,8 +15,10 @@ public final class Descriptors {
 	/**
 	 *  
 	 */
-	public static final class MachineDescriptor {
+	public static final class MachineDescriptor implements Serializable {
 		
+		private static final long serialVersionUID = -826435800717651651L;
+
 		public MachineDescriptor( UUID uid, InetAddress address, int dataPort, int controlPort ) {
 			// sanity check.
 			if( uid == null )
@@ -75,8 +78,10 @@ public final class Descriptors {
 	/**
 	 * 
 	 */
-	public static final class TaskDescriptor {
+	public static final class TaskDescriptor implements Serializable {
 		
+		private static final long serialVersionUID = 7425151926496852885L;
+
 		public TaskDescriptor( MachineDescriptor machine, UUID uid, String name ) {
 			// sanity check.
 			if( machine == null )
@@ -128,8 +133,10 @@ public final class Descriptors {
 	/**
 	 * 
 	 */
-	public static final class TaskBindingDescriptor {
+	public static final class TaskBindingDescriptor implements Serializable {
 		
+		private static final long serialVersionUID = -2803770527065206844L;
+
 		public TaskBindingDescriptor( TaskDescriptor task, List<TaskDescriptor> inputs, List<TaskDescriptor> outputs ) {
 			// sanity check.
 			if( task == null )

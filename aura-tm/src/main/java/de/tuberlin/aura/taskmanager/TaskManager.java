@@ -21,15 +21,18 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
 import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.protocols.TMControlProtocol;
-import de.tuberlin.aura.core.task.UserCode;
-import de.tuberlin.aura.taskmanager.Contexts.TaskContext;
+import de.tuberlin.aura.core.protocols.WM2TMProtocol;
+import de.tuberlin.aura.core.task.common.TaskContext;
+import de.tuberlin.aura.core.task.common.TaskInvokeable;
+import de.tuberlin.aura.core.task.common.TaskStateMachine;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
+import de.tuberlin.aura.core.task.usercode.UserCode;
+import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
 import de.tuberlin.aura.taskmanager.Handler.AbstractTaskEventHandler;
 import de.tuberlin.aura.taskmanager.TaskEvents.TaskStateTransitionEvent;
-import de.tuberlin.aura.taskmanager.TaskStateMachine.TaskState;
-import de.tuberlin.aura.taskmanager.TaskStateMachine.TaskTransition;
 
-public final class TaskManager implements TMControlProtocol {
+public final class TaskManager implements WM2TMProtocol {
 
 	//---------------------------------------------------
     // Inner Classes.
@@ -195,6 +198,8 @@ public final class TaskManager implements TMControlProtocol {
 		
 		this.ioHandler = new IOHandler();
 		
+		this.codeImplanter = new UserCodeImplanter( this.getClass().getClassLoader() );
+		
 		final int N = 4;
 		this.executionUnit = new TaskExecutionUnit[N];	
 		for( int i = 0; i < N; ++i ) {
@@ -203,6 +208,8 @@ public final class TaskManager implements TMControlProtocol {
 		}
 		
 		registerIOEvents( ioHandler );
+		
+		rpcManager.registerRPCProtocolImpl( this, WM2TMProtocol.class );
 	}
 
 	//---------------------------------------------------
@@ -221,24 +228,29 @@ public final class TaskManager implements TMControlProtocol {
 	
 	private final TaskExecutionUnit[] executionUnit;
 	
+	private final UserCodeImplanter codeImplanter;
+	
 	//---------------------------------------------------
     // Public.
     //---------------------------------------------------	
 	
 	@Override
 	public void installTask( TaskDescriptor taskDescriptor, TaskBindingDescriptor taskBindingDescriptor,
-			UserCode taskUserCode ) {
+			UserCode userCode ) {
 		// sanity check.
 		if( taskDescriptor == null )
 			throw new IllegalArgumentException( "taskDescriptor must not be null" );	
 		if( taskBindingDescriptor == null )
 			throw new IllegalArgumentException( "taskBindingDescriptor must not be null" );
-		if( taskUserCode == null )
+		if( userCode == null )
 			throw new IllegalArgumentException( "taskUserCode must not be null" );
 
 		// TODO: unpack and load all classes contained in taskUserCode. 
+		@SuppressWarnings("unchecked")
+		final Class<? extends TaskInvokeable> userCodeClass = 
+			(Class<? extends TaskInvokeable>) codeImplanter.implantUserCodeClass( userCode ); 
 		
-		installTask( taskDescriptor, taskBindingDescriptor, TaskInvokeable.class /* CHANGE */ );
+		installTask( taskDescriptor, taskBindingDescriptor, userCodeClass );
 	}
 	
 	// TODO: Make that later private!

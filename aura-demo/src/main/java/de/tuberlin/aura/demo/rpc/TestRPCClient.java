@@ -1,7 +1,5 @@
 package de.tuberlin.aura.demo.rpc;
 
-import java.util.UUID;
-
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
@@ -34,8 +32,9 @@ public class TestRPCClient {
 		FooProtocol protocol = taskManager.getRPCManager()
 				.getRPCProtocolProxy( FooProtocol.class, LocalDeployment.MACHINE_2_DESCRIPTOR );
 		
-		int i = protocol.foo( "foo on server", 10, UUID.randomUUID(), 5 );
+		//int i = protocol.foo( "foo on server", 10, UUID.randomUUID(), 5 );		
+		//LOG.info( "i = " + i );
 		
-		LOG.info( "i = " + i );
+		protocol.foo1( null );
 	}
 }

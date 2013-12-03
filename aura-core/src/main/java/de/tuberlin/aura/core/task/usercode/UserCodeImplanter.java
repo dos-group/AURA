@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.task;
+package de.tuberlin.aura.core.task.usercode;
 
 import de.tuberlin.aura.core.common.utils.Compression;
 
@@ -70,6 +70,6 @@ public final class UserCodeImplanter {
 			throw new IllegalStateException( e );
 		}
 		
-		return classLoader.buildClassFromByteArray( userCode.className, Compression.decompress( userCode.byteCode ) );
+		return classLoader.buildClassFromByteArray( userCode.className, Compression.decompress( userCode.classByteCode ) );
 	}
 }
