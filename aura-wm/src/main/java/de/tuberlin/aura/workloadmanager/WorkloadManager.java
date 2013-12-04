@@ -53,6 +53,11 @@ public class WorkloadManager implements ClientWMProtocol {
 		if( topology == null )
 			throw new IllegalArgumentException( "topology == null" );
 		
+		
+		
+		
+		
+		
 		/*final List<WM2TMProtocol> tmList = new ArrayList<WM2TMProtocol>();
 		for( final TaskDescriptor task : tasks ) {
 			rpcManager.connectToMessageServer( task.machine );			

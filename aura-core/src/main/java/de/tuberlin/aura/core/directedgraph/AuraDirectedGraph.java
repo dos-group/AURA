@@ -75,7 +75,6 @@ public class AuraDirectedGraph {
 			private final AuraTopologyBuilder tb;
 			
 			private final Node srcNode;
-
 			
 			public AuraTopologyBuilder connectTo( final String dstNodeName, 
 						  						  final Edge.TransferType transferType ) {
@@ -106,8 +105,14 @@ public class AuraDirectedGraph {
 				
 				srcNode.addOutput( dstNode );
 				dstNode.addInput( srcNode );
-				edges.add( new Edge( srcNode, dstNode, transferType, dataLifeTime, executionType ) );
+				
+				final boolean isBackCouplingEdge = detectBackCoupling(); 			
+				edges.add( new Edge( srcNode, dstNode, transferType, dataLifeTime, executionType, isBackCouplingEdge ) );
 				return tb;
+			}
+			
+			private boolean detectBackCoupling() {
+				return false; // TODO: implement detection of back coupling (cycle forming) edge!
 			}
 		}
 		
@@ -282,7 +287,8 @@ public class AuraDirectedGraph {
 					 final Node dstNode, 
 					 final TransferType transferType,
 					 final DataLifeTime dataLifeTime,
-					 final ExecutionType dstExecutionType ) {
+					 final ExecutionType dstExecutionType,
+					 final boolean isBackCouplingEdge ) {
 			
 			// sanity check.
 			if( srcNode ==  null )
@@ -305,6 +311,8 @@ public class AuraDirectedGraph {
 			this.dataLifeTime = dataLifeTime;
 			
 			this.dstExecutionType = dstExecutionType;
+			
+			this.isBackCouplingEdge = isBackCouplingEdge;
 		}
 
 		//---------------------------------------------------
@@ -321,6 +329,8 @@ public class AuraDirectedGraph {
 		
 		public final ExecutionType dstExecutionType;
 		
+		public final boolean isBackCouplingEdge;
+		
 		//---------------------------------------------------
 	    // Public.
 	    //---------------------------------------------------
@@ -333,7 +343,8 @@ public class AuraDirectedGraph {
 					.append( " dstNode = " + dstNode.toString() + ", " )
 					.append( " transferType = " + transferType.toString() + ", " )
 					.append( " dataLifeTime = " + dataLifeTime.toString() + ", " )
-					.append( " dstExecutionType = " + dstExecutionType.toString() )
+					.append( " dstExecutionType = " + dstExecutionType.toString() + ", " )
+					.append( " isBackCouplingEdge = " + isBackCouplingEdge )
 					.append( " }" ).toString();
 		}
 	}
