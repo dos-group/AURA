@@ -25,7 +25,8 @@ public final class RPCManager {
     // Constants.
     //---------------------------------------------------
 	
-	private static final long RPC_RESPONSE_TIMEOUT = -1; //5000; // in ms 
+	// for debugging use -1.
+	private static final long RPC_RESPONSE_TIMEOUT = 5000; // in ms 
 	
 	//---------------------------------------------------
     // Inner Classes.
@@ -45,11 +46,11 @@ public final class RPCManager {
 								Class<?> returnType ) {
 			// sanity check.
 			if( className == null )
-				throw new IllegalArgumentException( "className must not be null" );
+				throw new IllegalArgumentException( "className == null" );
 			if( methodName == null )
-				throw new IllegalArgumentException( "methodName must not be null" );
+				throw new IllegalArgumentException( "methodName == null" );
 			if( returnType == null )
-				throw new IllegalArgumentException( "methodArguments must not be null" );
+				throw new IllegalArgumentException( "methodArguments == null" );
 			
 			this.className = className;
 			
@@ -87,10 +88,10 @@ public final class RPCManager {
 
 		public RPCCallerMessage( final UUID callUID, final MethodSignature methodSignature ) {
 			// sanity check.
-			/*if( callUID == null )
-				throw new IllegalArgumentException( "callUID must not be null" );		
+			if( callUID == null )
+				throw new IllegalArgumentException( "callUID == null" );		
 			if( methodSignature == null )
-				throw new IllegalArgumentException( "methodSignature must not be null" );*/
+				throw new IllegalArgumentException( "methodSignature == null" );
 			
 			this.callUID = callUID;
 			
@@ -112,7 +113,7 @@ public final class RPCManager {
 		public RPCCalleeMessage( final UUID callUID, final Object result ) {
 			// sanity check.
 			if( callUID == null )
-				throw new IllegalArgumentException( "callUID must not be null" );		
+				throw new IllegalArgumentException( "callUID == null" );		
 			
 			this.callUID = callUID;
 			
@@ -133,7 +134,7 @@ public final class RPCManager {
 		public ProtocolCallerProxy( Channel channel ) {
 			// sanity check.
 			if( channel == null )
-				throw new IllegalArgumentException( "channel must not be null." );
+				throw new IllegalArgumentException( "channel == null" );
 
 			this.channel = channel;
 		}
@@ -151,11 +152,25 @@ public final class RPCManager {
 		} 
 		
 		@Override
-		public Object invoke( Object proxy, Method method, Object[] args )
+		public Object invoke( Object proxy, Method method, Object[] methodArguments )
 				throws Throwable {	
 			
-			final MethodSignature methodInfo = new MethodSignature( method.getDeclaringClass().getSimpleName(), 
-					method.getName(), method.getParameterTypes(), args, method.getReturnType() );
+			// check if all arguments implement serializable
+			int argumentIndex = 0;
+			for( final Object argument : methodArguments ) {
+				if( !( argument instanceof Serializable ) )
+					throw new IllegalStateException( "argument [" + argumentIndex + "] is not instance of" +
+							 "<" + Serializable.class.getCanonicalName() + ">" );				
+				++argumentIndex;
+			}
+			
+			final MethodSignature methodInfo = new MethodSignature( 
+					method.getDeclaringClass().getSimpleName(), 
+					method.getName(), 
+					method.getParameterTypes(), 
+					methodArguments, 
+					method.getReturnType() 
+				);
 			
 			// every remote call is identified by a unique id. The id is used to 
 			// resolve the associated response from remote site. 
@@ -198,7 +213,7 @@ public final class RPCManager {
 		public static void notifyCaller( final UUID callUID, final Object result ) {
 			// sanity check.
 			if( callUID == null )
-				throw new IllegalArgumentException( "callUID must not be null." );
+				throw new IllegalArgumentException( "callUID == null" );
 			
 			callerResultTable.put( callUID, result );
 			final CountDownLatch cdl = RPCManager.ProtocolCallerProxy.callerTable.get( callUID );
@@ -220,9 +235,9 @@ public final class RPCManager {
 		public static RPCCalleeMessage callMethod( final UUID callUID, final MethodSignature methodInfo ) {
 			// sanity check.
 			if( callUID == null )
-				throw new IllegalArgumentException( "callUID must no be null" );
+				throw new IllegalArgumentException( "callUID == null" );
 			if( methodInfo == null )
-				throw new IllegalArgumentException( "methodInfo must no be null" );
+				throw new IllegalArgumentException( "methodInfo == null" );
 		
 			final Object protocolImplementation = calleeTable.get( methodInfo.className );
 
@@ -234,16 +249,7 @@ public final class RPCManager {
 							
 				// TODO: Maybe we could do some caching of method signatures 
 				// on the callee site for frequent repeated calls... 
-				
-				/*@SuppressWarnings("rawtypes")
-				Class[] types = null;
-				if( methodInfo.arguments != null ) {
-					types = new Class[methodInfo.arguments.length];
-					for( int i = 0; i < methodInfo.arguments.length; ++i ) {
-						types[i] = methodInfo.arguments[i].getClass();
-					}
-				}*/
-				
+
 				try {				
 					final Method method = protocolImplementation.getClass().getMethod( methodInfo.methodName, methodInfo.argumentTypes );
 					final Object result = method.invoke( protocolImplementation, methodInfo.arguments );									
@@ -262,7 +268,7 @@ public final class RPCManager {
 	public RPCManager( final IOManager ioManager ) {
 		// sanity check.
 		if( ioManager == null )
-			throw new IllegalArgumentException( "ioManager must not be null" );
+			throw new IllegalArgumentException( "ioManager == null" );
 		
 		this.ioManager = ioManager;
 		
@@ -303,7 +309,7 @@ public final class RPCManager {
 	public void connectToMessageServer( final MachineDescriptor dstMachine ) {
 		// sanity check.
 		if( dstMachine == null )
-			throw new IllegalArgumentException( "machine must not be null" );
+			throw new IllegalArgumentException( "machine == null" );
 		
 		ioManager.connectMessageChannelBlocking( dstMachine.uid, dstMachine.controlAddress );
 	}
@@ -311,9 +317,9 @@ public final class RPCManager {
 	public void registerRPCProtocolImpl( Object protocolImplementation, Class<?> protocolInterface ) {
 		// sanity check.
 		if( protocolImplementation == null )
-			throw new IllegalArgumentException( "protocolImplementation must no be null" );
+			throw new IllegalArgumentException( "protocolImplementation == null" );
 		if( protocolInterface == null )
-			throw new IllegalArgumentException( "protocolInterface must no be null" );
+			throw new IllegalArgumentException( "protocolInterface == null" );
 		
 		ProtocolCalleeProxy.registerProtocol( protocolImplementation, protocolInterface );
 	}
@@ -321,13 +327,13 @@ public final class RPCManager {
 	public <T> T getRPCProtocolProxy( final Class<T> protocolInterface, final MachineDescriptor dstMachine ) {
 		// sanity check.
 		if( protocolInterface == null )
-			throw new IllegalArgumentException( "protocolInterface must no be null" );
+			throw new IllegalArgumentException( "protocolInterface == null" );
 		if( dstMachine == null )
-			throw new IllegalArgumentException( "dstMachine must no be null" );
+			throw new IllegalArgumentException( "dstMachine == null" );
 		
 		final Channel channel = rpcChannelMap.get( dstMachine.uid );
 		if( channel == null )
-			throw new IllegalStateException( "channel must not be null" );
+			throw new IllegalStateException( "channel == null" );
 		
 		return ProtocolCallerProxy.getProtocolProxy( protocolInterface, channel );
 	}

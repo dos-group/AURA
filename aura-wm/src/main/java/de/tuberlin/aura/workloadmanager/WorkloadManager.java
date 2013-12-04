@@ -1,19 +1,11 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.ArrayList;
-import java.util.List;
-
-//import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
-import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
+//import org.apache.log4j.Logger;
 
 public class WorkloadManager implements ClientWMProtocol {
 
@@ -24,15 +16,13 @@ public class WorkloadManager implements ClientWMProtocol {
 	public WorkloadManager( final MachineDescriptor machine ) {
 		// sanity check.
 		if( machine == null )
-			throw new IllegalArgumentException( "machine must not be null" );
+			throw new IllegalArgumentException( "machine == null" );
 		
 		this.machine = machine;
 			
 		this.ioManager = new IOManager( this.machine );
 		
 		this.rpcManager = new RPCManager( ioManager );
-		
-		this.codeExtractor = new UserCodeExtractor();
 	
 		rpcManager.registerRPCProtocolImpl( this, ClientWMProtocol.class );
 	}
@@ -49,8 +39,6 @@ public class WorkloadManager implements ClientWMProtocol {
 
 	public final RPCManager rpcManager;
 	
-	public final UserCodeExtractor codeExtractor;
-	
 	//---------------------------------------------------
     // Private.
     //---------------------------------------------------	
@@ -60,11 +48,12 @@ public class WorkloadManager implements ClientWMProtocol {
 	// TODO: detect failure if not serializable classes are sent over network 
 
 	@Override
-	public void submitProgram( final List<UserCode> userCode,
-							   final List<TaskDescriptor> tasks, 
-							   final List<TaskBindingDescriptor> bindings ) {
-
-		final List<WM2TMProtocol> tmList = new ArrayList<WM2TMProtocol>();
+	public void submitTopology( final AuraTopology topology ) {
+		// sanity check.
+		if( topology == null )
+			throw new IllegalArgumentException( "topology == null" );
+		
+		/*final List<WM2TMProtocol> tmList = new ArrayList<WM2TMProtocol>();
 		for( final TaskDescriptor task : tasks ) {
 			rpcManager.connectToMessageServer( task.machine );			
 			tmList.add( rpcManager.getRPCProtocolProxy( WM2TMProtocol.class, task.machine ) );
@@ -78,6 +67,6 @@ public class WorkloadManager implements ClientWMProtocol {
 			final WM2TMProtocol tmProtocol = tmList.get( index );
 					
 			tmProtocol.installTask( task, taskBinding, uc );
-		}
+		}*/
 	}
 }

@@ -140,11 +140,11 @@ public final class IOManager extends EventDispatcher {
     	public void buildNetworkDataChannel( final UUID srcTaskID, final UUID dstTaskID, final InetSocketAddress socketAddress ) {    		
     		// sanity check.
     		if( srcTaskID == null )
-    			throw new IllegalArgumentException( "srcTaskID must not be null" );
+    			throw new IllegalArgumentException( "srcTaskID == null" );
     		if( dstTaskID == null )
-    			throw new IllegalArgumentException( "dstTaskID must not be null" );
+    			throw new IllegalArgumentException( "dstTaskID == null" );
     		if( socketAddress == null )
-    			throw new IllegalArgumentException( "socketAddress must not be null" );    		
+    			throw new IllegalArgumentException( "socketAddress == null" );    		
     		
     		final Bootstrap bootstrap = new Bootstrap();    		
     		bootstrap.group( netOutputEventLoopGroup )
@@ -172,9 +172,9 @@ public final class IOManager extends EventDispatcher {
     	public void buildLocalDataChannel( final UUID srcTaskID, final UUID dstTaskID ) {
     		// sanity check.
     		if( srcTaskID == null )
-    			throw new IllegalArgumentException( "srcTaskID must not be null" );
+    			throw new IllegalArgumentException( "srcTaskID == null" );
     		if( dstTaskID == null )
-    			throw new IllegalArgumentException( "dstTaskID must not be null" );
+    			throw new IllegalArgumentException( "dstTaskID == null" );
     			
     		final Bootstrap bootstrap = new Bootstrap();
     		bootstrap.group( netOutputEventLoopGroup )
@@ -206,7 +206,7 @@ public final class IOManager extends EventDispatcher {
     	public void buildNetworkControlChannel( final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress ) {    		
     		// sanity check.
     		if( socketAddress == null )
-    			throw new IllegalArgumentException( "socketAddress must not be null" );    		
+    			throw new IllegalArgumentException( "socketAddress == null" );    		
     		
     		final Bootstrap bootstrap = new Bootstrap();    		
     		bootstrap.group( netOutputEventLoopGroup )
@@ -248,7 +248,7 @@ public final class IOManager extends EventDispatcher {
 	public IOManager( final MachineDescriptor machine ) {
 		// sanity check.
 		if( machine == null )
-			throw new IllegalArgumentException( "machine must not be null" );
+			throw new IllegalArgumentException( "machine == null" );
 		
 		this.machine = machine; 
 				
@@ -282,11 +282,11 @@ public final class IOManager extends EventDispatcher {
 	public void connectDataChannel( final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine ) {
 		// sanity check.
 		if( srcTaskID == null  )
-			throw new IllegalArgumentException( "srcTask must not be null" );
+			throw new IllegalArgumentException( "srcTask == null" );
 		if( dstTaskID == null  )
-			throw new IllegalArgumentException( "dstTask must not be null" );
+			throw new IllegalArgumentException( "dstTask == null" );
 		if( dstMachine == null  )
-			throw new IllegalArgumentException( "dstTask must not be null" );
+			throw new IllegalArgumentException( "dstTask == null" );
 		
 		if( machine.equals( dstMachine ) ) {
 			channelBuilder.buildLocalDataChannel( srcTaskID, dstTaskID );				
@@ -298,7 +298,7 @@ public final class IOManager extends EventDispatcher {
 	public void connectMessageChannelBlocking( final UUID dstMachineID, final InetSocketAddress socketAddress ) {
 		// sanity check.
 		if( socketAddress == null )
-			throw new IllegalArgumentException( "socketAddress must not be null" );
+			throw new IllegalArgumentException( "socketAddress == null" );
 		if( machine.dataAddress.equals( socketAddress ) ) 
 			throw new IllegalArgumentException( "can not setup message channel" );
 				

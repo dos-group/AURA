@@ -57,7 +57,7 @@ public final class TaskManager implements WM2TMProtocol {
 				// check state.
 				if( contextAndHandler == null )
 					throw new IllegalStateException( "contextAndHandler for task " 
-								+ event.dstTaskID + " is null" );
+								+ event.dstTaskID + " == null" );
 				final IEventDispatcher dispatcher = contextAndHandler.getSecond(); 				
 				dispatcher.dispatchEvent( event );
 				
@@ -188,7 +188,7 @@ public final class TaskManager implements WM2TMProtocol {
 	public TaskManager( final MachineDescriptor machine ) {
 		// sanity check.
 		if( machine == null )
-			throw new IllegalArgumentException( "machine must not be null" );
+			throw new IllegalArgumentException( "machine == null" );
 			
 		this.taskContextMap = new ConcurrentHashMap<UUID, Pair<TaskContext,IEventDispatcher>>();
 		
@@ -239,11 +239,11 @@ public final class TaskManager implements WM2TMProtocol {
 			UserCode userCode ) {
 		// sanity check.
 		if( taskDescriptor == null )
-			throw new IllegalArgumentException( "taskDescriptor must not be null" );	
+			throw new IllegalArgumentException( "taskDescriptor == null" );	
 		if( taskBindingDescriptor == null )
-			throw new IllegalArgumentException( "taskBindingDescriptor must not be null" );
+			throw new IllegalArgumentException( "taskBindingDescriptor == null" );
 		if( userCode == null )
-			throw new IllegalArgumentException( "taskUserCode must not be null" );
+			throw new IllegalArgumentException( "taskUserCode == null" );
 
 		// TODO: unpack and load all classes contained in taskUserCode. 
 		@SuppressWarnings("unchecked")

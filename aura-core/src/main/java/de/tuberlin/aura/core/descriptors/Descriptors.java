@@ -22,9 +22,9 @@ public final class Descriptors {
 		public MachineDescriptor( UUID uid, InetAddress address, int dataPort, int controlPort ) {
 			// sanity check.
 			if( uid == null )
-				throw new IllegalArgumentException( "uid must not be null" );
+				throw new IllegalArgumentException( "uid == null" );
 			if( address == null )
-				throw new IllegalArgumentException( "address must not be null" );
+				throw new IllegalArgumentException( "address == null" );
 			
 			this.uid = uid;
 			
@@ -85,11 +85,11 @@ public final class Descriptors {
 		public TaskDescriptor( MachineDescriptor machine, UUID uid, String name ) {
 			// sanity check.
 			if( machine == null )
-				throw new IllegalArgumentException( "machine must not be null" );
+				throw new IllegalArgumentException( "machine == null" );
 			if( uid == null )
-				throw new IllegalArgumentException( "uid must not be null" );
+				throw new IllegalArgumentException( "uid == null" );
 			if( name == null )
-				throw new IllegalArgumentException( "name must not be null" );
+				throw new IllegalArgumentException( "name == null" );
 			
 			this.machine = machine;
 			
@@ -140,11 +140,11 @@ public final class Descriptors {
 		public TaskBindingDescriptor( TaskDescriptor task, List<TaskDescriptor> inputs, List<TaskDescriptor> outputs ) {
 			// sanity check.
 			if( task == null )
-				throw new IllegalArgumentException( "taskID must not be null" );
+				throw new IllegalArgumentException( "taskID == null" );
 			if( inputs == null )
-				throw new IllegalArgumentException( "inputs must not be null" );
+				throw new IllegalArgumentException( "inputs == null" );
 			if( outputs == null )
-				throw new IllegalArgumentException( "outputs must not be null" );
+				throw new IllegalArgumentException( "outputs == null" );
 			
 			this.task = task;
 			

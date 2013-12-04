@@ -33,27 +33,25 @@ public final class TaskExecutionUnit {
 				
 				// check precondition.
 				if( executingTaskContext == null )
-					throw new IllegalStateException( "context of next running task is null" );
+					throw new IllegalStateException( "context == null" );
 				if( executingTaskContext.state != TaskState.TASK_STATE_READY )
 					throw new IllegalStateException( "task is not in state ready" );				
 				
 				// create instance of that task and execute it.
 				TaskInvokeable invokeable = null;
 				try {
-					invokeable = executingTaskContext.invokeableClass.getConstructor( TaskContext.class )
-						.newInstance( executingTaskContext );
+					invokeable = executingTaskContext.invokeableClass.getConstructor( TaskContext.class, Logger.class )
+						.newInstance( executingTaskContext, LOG );
 				} catch( Exception e ) {
 					throw new IllegalStateException( e );
 				} 
 				
 				// check instance.
 				if( invokeable == null )
-					throw new IllegalStateException( "invokeable of next running task is null" );				
+					throw new IllegalStateException( "invokeable == null" );				
 				
 				executingTaskContext.dispatcher.dispatchEvent( 
 						new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_RUN ) );
-				
-				executingTaskContext.LOG = LOG;
 				
 				try {
 					invokeable.execute();
@@ -83,7 +81,7 @@ public final class TaskExecutionUnit {
 	public TaskExecutionUnit( final int executionUnitID ) {
 		// sanity check.
 		if( executionUnitID < 0 )
-			throw new IllegalArgumentException( "executionUnitID is less than zero" );
+			throw new IllegalArgumentException( "executionUnitID < 0" );
 		
 		this.executionUnitID = executionUnitID; 
 		
@@ -129,7 +127,7 @@ public final class TaskExecutionUnit {
 	public void enqueueTask( final TaskContext context ) {
 		// sanity check.
 		if( context == null )
-			throw new IllegalArgumentException( "context must not be null" ); 
+			throw new IllegalArgumentException( "context == null" ); 
 		
 		taskQueue.add( context );
 	}

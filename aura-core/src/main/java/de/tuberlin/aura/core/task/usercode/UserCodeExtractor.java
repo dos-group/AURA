@@ -56,8 +56,32 @@ public final class UserCodeExtractor {
 	}
 
 	//---------------------------------------------------
+    // Constructor.
+    //---------------------------------------------------
+	
+	public UserCodeExtractor() {
+		
+		this.standardDependencies = new ArrayList<String>();
+	}
+	
+	//---------------------------------------------------
+    // Fields.
+    //---------------------------------------------------
+	
+	private final List<String> standardDependencies;
+	
+	//---------------------------------------------------
     // Public.
     //--------------------------------------------------- 
+
+	public UserCodeExtractor addStandardDependency( final String path ) {
+		// sanity check.
+		if( path == null )
+			throw new IllegalArgumentException( "path == null" );
+	
+		this.standardDependencies.add( path );
+		return this;
+	}
 
 	public UserCode extractUserCodeClass( final Class<?> clazz ) {
 		// sanity check.
@@ -82,11 +106,11 @@ public final class UserCodeExtractor {
 		final List<String> levelDependencies = DependencyEmitter.analyze( clazz );		
 		for( String dependency : levelDependencies ) {
 			
-			// TODO: make it flexible to provide more standard libraries.
-			if( !dependency.contains( "java" ) &&
-				!dependency.contains( "org/apache/log4j" ) &&
-				!dependency.contains( "io/netty" ) &&
-				!dependency.contains( "de/tuberlin/aura/core" ) ) { 			
+			boolean isNewDependency = true;
+			for( final String sd : standardDependencies )
+				isNewDependency &= !dependency.contains( sd );
+						
+			if( isNewDependency ) { 			
 				
 				final String dp1 = dependency.replace( "/", "." );
 				final String dp2 = dp1.replace( "$", "." );		 
@@ -123,8 +147,8 @@ public final class UserCodeExtractor {
 		
 		// TODO: handle JAR Files!!
 		
-		Class<?> enclosingClazz = clazz.getEnclosingClass();
 		String topLevelClazzName = null;
+		Class<?> enclosingClazz = clazz.getEnclosingClass();
 		while( enclosingClazz != null ) {
 			topLevelClazzName = enclosingClazz.getSimpleName();
 			enclosingClazz = enclosingClazz.getEnclosingClass();
@@ -146,8 +170,9 @@ public final class UserCodeExtractor {
 			}
 		}
 		
-		final String filePath = clazz.getProtectionDomain().getCodeSource().getLocation().getPath() + 
-				pathBuilder.toString() + ".class";				
+		final String filePath = clazz.getProtectionDomain().getCodeSource().
+				getLocation().getPath() + pathBuilder.toString() + ".class";
+		
 		final File clazzFile = new File( filePath.replace( "%20", " " ) );		
 
 		FileInputStream fis = null;

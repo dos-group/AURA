@@ -18,9 +18,9 @@ public final class IOMessages {
 		public ChannelHandshakeMessage( final UUID srcTaskID, final UUID dstTaskID ) {
 			// sanity check.
 			if( srcTaskID == null )
-				throw new IllegalArgumentException( "srcTaskID must not be null" );
+				throw new IllegalArgumentException( "srcTaskID == null" );
 			if( dstTaskID == null )
-				throw new IllegalArgumentException( "dstTaskID must not be null" );
+				throw new IllegalArgumentException( "dstTaskID == null" );
 			
 			this.srcTaskID = srcTaskID;
 			
@@ -51,13 +51,13 @@ public final class IOMessages {
 		public DataMessage( final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final byte[] data ) {
 			// sanity check.
 			if( messageID == null )
-				throw new IllegalArgumentException( "messageID must not be null" );
+				throw new IllegalArgumentException( "messageID == null" );
 			if( srcTaskID == null )
-				throw new IllegalArgumentException( "srcTaskID must not be null" );
+				throw new IllegalArgumentException( "srcTaskID == null" );
 			if( dstTaskID == null )
-				throw new IllegalArgumentException( "dstTaskID must not be null" );
+				throw new IllegalArgumentException( "dstTaskID == null" );
 			if( data == null )
-				throw new IllegalArgumentException( "data must not be null" );
+				throw new IllegalArgumentException( "data == null" );
 			
 			this.messageID = messageID;
 			
@@ -99,11 +99,11 @@ public final class IOMessages {
 		public ControlMessage( final UUID messageID, final UUID srcTaskManagerID, Object data ) {
 			// sanity check.
 			if( messageID == null )
-				throw new IllegalArgumentException( "messageID must not be null" );
+				throw new IllegalArgumentException( "messageID == null" );
 			if( srcTaskManagerID == null )
-				throw new IllegalArgumentException( "srcTaskManagerID must not be null" );
+				throw new IllegalArgumentException( "srcTaskManagerID == null" );
 			if( data == null )
-				throw new IllegalArgumentException( "data must not be null" );
+				throw new IllegalArgumentException( "data == null" );
 			
 			this.messageID = messageID;
 			

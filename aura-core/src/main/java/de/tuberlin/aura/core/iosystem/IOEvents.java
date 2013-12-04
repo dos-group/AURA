@@ -25,11 +25,11 @@ public final class IOEvents {
 			super( type );
 			// sanity check.
 			if( srcTaskID == null )
-				throw new IllegalArgumentException( "srcTaskID must not be null" );
+				throw new IllegalArgumentException( "srcTaskID == null" );
 			if( dstTaskID == null )
-				throw new IllegalArgumentException( "dstTaskID must not be null" );				
+				throw new IllegalArgumentException( "dstTaskID == null" );				
 			if( channel == null )
-				throw new IllegalArgumentException( "channel must not be null" );				
+				throw new IllegalArgumentException( "channel == null" );				
 			
 			this.srcTaskID = srcTaskID;
 			
@@ -66,11 +66,11 @@ public final class IOEvents {
 			super( IO_EVENT_MESSAGE_CHANNEL_CONNECTED );
 			// sanity check.
 			if( srcMachineID == null )
-				throw new IllegalArgumentException( "srcMachineID must not be null" );
+				throw new IllegalArgumentException( "srcMachineID == null" );
 			if( dstMachineID == null )
-				throw new IllegalArgumentException( "dstMachineID must not be null" );
+				throw new IllegalArgumentException( "dstMachineID == null" );
 			if( controlChannel == null )
-				throw new IllegalArgumentException( "controlChannel must not be null" );
+				throw new IllegalArgumentException( "controlChannel == null" );
 			
 			this.isIncoming = isIncoming;
 			
@@ -101,7 +101,7 @@ public final class IOEvents {
 			super( IO_EVENT_RECEIVED_DATA );
 			// sanity check.
 			if( message == null )
-				throw new IllegalArgumentException( "message must not be null" );
+				throw new IllegalArgumentException( "message == null" );
 				
 			this.message = message;
 		}

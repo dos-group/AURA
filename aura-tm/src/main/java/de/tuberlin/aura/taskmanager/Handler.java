@@ -28,7 +28,7 @@ public final class Handler {
 		public void setContext( final TaskContext context ) {
 			// sanity check.
 			if( context == null )
-				throw new IllegalArgumentException( "context must not be null" );
+				throw new IllegalArgumentException( "context == null" );
 			
 			this.context = context;
 			initHandler();

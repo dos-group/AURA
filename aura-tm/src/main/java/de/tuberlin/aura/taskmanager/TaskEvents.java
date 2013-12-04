@@ -19,7 +19,7 @@ public final class TaskEvents {
 			super( TASK_STATE_TRANSITION_EVENT );			
 			// sanity check.
 			if( transition == null )
-				throw new IllegalArgumentException( "transition must not be null" );
+				throw new IllegalArgumentException( "transition == null" );
 			
 			this.transition = transition;		
 		}

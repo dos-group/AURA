@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
@@ -30,15 +28,15 @@ public final class TaskContext {
 		
 		// sanity check.
 		if( task == null )
-			throw new IllegalArgumentException( "task must not be null" );	
+			throw new IllegalArgumentException( "task == null" );	
 		if( taskBinding == null )
-			throw new IllegalArgumentException( "taskBinding must not be null" );
+			throw new IllegalArgumentException( "taskBinding == null" );
 		if( handler == null )
-			throw new IllegalArgumentException( "taskEventListener must not be null" );
+			throw new IllegalArgumentException( "taskEventListener == null" );
 		if( dispatcher == null )
-			throw new IllegalArgumentException( "taskEventListener must not be null" );
+			throw new IllegalArgumentException( "taskEventListener == null" );
 		if( invokeableClass == null )
-			throw new IllegalArgumentException( "invokeableClass must not be null" );
+			throw new IllegalArgumentException( "invokeableClass == null" );
 		
 		this.task = task;
 		
@@ -74,8 +72,6 @@ public final class TaskContext {
 			this.outputChannel = null;
 		}
 	}
-	
-	public Logger LOG;
 	
 	public final TaskDescriptor task;
 	

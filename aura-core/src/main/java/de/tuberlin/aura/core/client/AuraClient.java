@@ -1,17 +1,13 @@
 package de.tuberlin.aura.core.client;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
-import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 
 public final class AuraClient {
@@ -31,7 +27,11 @@ public final class AuraClient {
 		
 		this.rpcManager = new RPCManager( ioManager );
 		
-		this.codeExtractor = new UserCodeExtractor();
+		this.codeExtractor = new UserCodeExtractor();		
+		this.codeExtractor.addStandardDependency( "java" ).
+						   addStandardDependency( "org/apache/log4j" ).
+						   addStandardDependency( "io/netty" ).
+						   addStandardDependency( "de/tuberlin/aura/core" );
 		
 		rpcManager.connectToMessageServer( workloadManager );
 		
@@ -57,18 +57,16 @@ public final class AuraClient {
 	//---------------------------------------------------
     // Public.
     //---------------------------------------------------
+	
+	public AuraTopologyBuilder createTopologyBuilder() {
+		return new AuraTopologyBuilder( codeExtractor );
+	}
 		
-	public void submitProgram( final List<Class<?>> userClasses, 
-							   final List<TaskDescriptor> tasks, 
-							   final List<TaskBindingDescriptor> bindings ) {
+	public void submitTopology( final AuraTopology topology ) {
 		// sanity check.
-		if( userClasses == null )
-			throw new IllegalArgumentException( "userClasses == null" );
+		if( topology == null )
+			throw new IllegalArgumentException( "topology == null" );
 		
-		final List<UserCode> userCodeList = new ArrayList<UserCode>();		
-		for( final Class<?> clazz : userClasses ) 			
-			userCodeList.add( codeExtractor.extractUserCodeClass( clazz ) );
-		
-		clientProtocol.submitProgram( userCodeList, tasks, bindings );
+		clientProtocol.submitTopology( topology );
 	}
 }
