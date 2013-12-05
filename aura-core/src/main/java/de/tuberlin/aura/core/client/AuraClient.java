@@ -27,7 +27,7 @@ public final class AuraClient {
 		
 		this.rpcManager = new RPCManager( ioManager );
 		
-		this.codeExtractor = new UserCodeExtractor();		
+		this.codeExtractor = new UserCodeExtractor( true );		
 		this.codeExtractor.addStandardDependency( "java" ).
 						   addStandardDependency( "org/apache/log4j" ).
 						   addStandardDependency( "io/netty" ).

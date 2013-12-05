@@ -2,11 +2,13 @@ package de.tuberlin.aura.core.directedgraph;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 
@@ -27,6 +29,8 @@ public class AuraDirectedGraph {
 	    //---------------------------------------------------
 		
 		public AuraTopology( final Map<String,Node> nodeMap, 
+							 final Map<String,Node> sourceMap,
+							 final Map<String,Node> sinkMap,
 							 final List<Edge> edges, 
 							 final Map<String,UserCode> userCodeMap ) {
 			
@@ -40,6 +44,10 @@ public class AuraDirectedGraph {
 			
 			this.nodeMap = Collections.unmodifiableMap( nodeMap );
 			
+			this.sourceMap = Collections.unmodifiableMap( sourceMap );
+			
+			this.sinkMap = Collections.unmodifiableMap( sinkMap );
+			
 			this.edges = Collections.unmodifiableList( edges );
 			
 			this.userCodeMap = Collections.unmodifiableMap( userCodeMap );
@@ -50,6 +58,10 @@ public class AuraDirectedGraph {
 	    //---------------------------------------------------
 				
 		public final Map<String,Node> nodeMap;
+		
+		public final Map<String,Node> sourceMap;
+		
+		public final Map<String,Node> sinkMap;
 		
 		public final List<Edge> edges;
 		
@@ -65,16 +77,29 @@ public class AuraDirectedGraph {
 	    // Inner Classes.
 	    //---------------------------------------------------
 		
-		public final class EdgeConnector {
+		public final class NodeConnector {
 			
-			protected EdgeConnector( final AuraTopologyBuilder tb, final Node srcNode ) {				
+			protected NodeConnector( final AuraTopologyBuilder tb ) {				
+				
 				this.tb = tb;				
-				this.srcNode = srcNode;
+			
+				this.edges = new HashMap<String,String>();
+				
+				this.edgeProperties = new HashMap<Pair<String,String>,List<Object>>();
 			}
 		
 			private final AuraTopologyBuilder tb;
 			
-			private final Node srcNode;
+			private final Map<String,String> edges;
+			
+			private final Map<Pair<String,String>,List<Object>> edgeProperties;
+			
+			private Node srcNode;
+						
+			public NodeConnector currentSource( final Node srcNode ) {
+				this.srcNode = srcNode;
+				return this;
+			} 
 			
 			public AuraTopologyBuilder connectTo( final String dstNodeName, 
 						  						  final Edge.TransferType transferType ) {
@@ -98,21 +123,19 @@ public class AuraDirectedGraph {
 					throw new IllegalArgumentException( "transferType == null" );
 				if( dataLifeTime == null )
 					throw new IllegalArgumentException( "dataLifeTime == null" );
-				
-				final Node dstNode = nodeMap.get( dstNodeName );
-				if( dstNode == null )
-					throw new IllegalStateException( "dstNode == null" );
-				
-				srcNode.addOutput( dstNode );
-				dstNode.addInput( srcNode );
-				
-				final boolean isBackCouplingEdge = detectBackCoupling(); 			
-				edges.add( new Edge( srcNode, dstNode, transferType, dataLifeTime, executionType, isBackCouplingEdge ) );
+
+				Object[] properties = { transferType, dataLifeTime, executionType }; 
+				edges.put( srcNode.name, dstNodeName );
+				edgeProperties.put( new Pair<String,String>( srcNode.name, dstNodeName ), Arrays.asList( properties ) );
 				return tb;
 			}
 			
-			private boolean detectBackCoupling() {
-				return false; // TODO: implement detection of back coupling (cycle forming) edge!
+			public Map<String,String> getEdges() {
+				return Collections.unmodifiableMap( edges );
+			}
+			
+			public Map<Pair<String,String>,List<Object>> getEdgeProperties() {
+				return Collections.unmodifiableMap( edgeProperties );
 			}
 		}
 		
@@ -127,9 +150,15 @@ public class AuraDirectedGraph {
 			
 			this.nodeMap = new HashMap<String,Node>();
 			
+			this.sourceMap = new HashMap<String,Node>();
+			
+			this.sinkMap = new HashMap<String,Node>();
+			
 			this.edges = new ArrayList<Edge>();
 			
 			this.codeExtractor = codeExtractor;
+						
+			this.nodeConnector = new NodeConnector( this );
 		}
 		
 		//---------------------------------------------------
@@ -138,15 +167,21 @@ public class AuraDirectedGraph {
 		
 		public final Map<String,Node> nodeMap;
 		
+		public final Map<String,Node> sourceMap;
+
+		public final Map<String,Node> sinkMap;
+		
 		public final List<Edge> edges;
 		
 		public final UserCodeExtractor codeExtractor;
+		
+		public final NodeConnector nodeConnector;
 		
 		//---------------------------------------------------
 	    // Public.
 	    //---------------------------------------------------
 		
-		public EdgeConnector addNode( final Node node ) {
+		public NodeConnector addNode( final Node node ) {
 			// sanity check.
 			if( node == null )
 				throw new IllegalArgumentException( "node == null" );
@@ -154,17 +189,44 @@ public class AuraDirectedGraph {
 			if( nodeMap.containsKey( node.name ) )
 				throw new IllegalStateException( "node already exists" );
 			
-			nodeMap.put( node.name, node );	
-			return new EdgeConnector( this, node );
+			nodeMap.put( node.name, node );		
+			sourceMap.put( node.name, node );
+			sinkMap.put( node.name, node );
+			
+			return nodeConnector.currentSource( node );
 		}
 		
 		public AuraTopology build() {					
+			final Map<Pair<String,String>,List<Object>> edgeProperties = nodeConnector.getEdgeProperties();
+			for( final Map.Entry<String,String> entry : nodeConnector.getEdges().entrySet() ) {
+				
+				final Node srcNode = nodeMap.get( entry.getKey() );
+				final Node dstNode = nodeMap.get( entry.getValue() );
+				final List<Object> properties = edgeProperties.get( new Pair<String,String>( entry.getKey(), entry.getValue() ) );
+				final Edge.TransferType transferType = (Edge.TransferType) properties.get( 0 );
+				final Edge.DataLifeTime dataLifeTime = (Edge.DataLifeTime) properties.get( 1 );
+				final Edge.ExecutionType executionType = (Edge.ExecutionType) properties.get( 2 );
+				
+				srcNode.addOutput( dstNode );
+				dstNode.addInput( srcNode );				
+				final boolean isBackCouplingEdge = detectBackCoupling(); 			
+				edges.add( new Edge( srcNode, dstNode, transferType, dataLifeTime, executionType, isBackCouplingEdge ) );	
+			
+				sourceMap.remove( dstNode.name );			
+				sinkMap.remove( srcNode.name );
+			}
+
 			final Map<String,UserCode> userCodeMap = new HashMap<String,UserCode>();
 			for( final Node n : nodeMap.values() ) {				
 				final UserCode uc = codeExtractor.extractUserCodeClass( n.userClazz );
 				userCodeMap.put( n.name, uc );
 			}
-			return new AuraTopology( nodeMap, edges, userCodeMap );			
+			
+			return new AuraTopology( nodeMap, sourceMap, sinkMap, edges, userCodeMap );
+		}
+	
+		private boolean detectBackCoupling() {
+			return false; // TODO: implement detection of back coupling (cycle forming) edge!
 		}
 	}
 	
@@ -197,6 +259,10 @@ public class AuraDirectedGraph {
 			this.userClazz = userClazz;
 			
 			this.degreeOfParallelism = degreeOfParallelism;
+		
+			this.inputs = new ArrayList<Node>();
+			
+			this.outputs = new ArrayList<Node>();		
 		} 
 		
 		//---------------------------------------------------
@@ -209,9 +275,9 @@ public class AuraDirectedGraph {
 		
 		public final int degreeOfParallelism;
 		
-		public List<Node> inputs;
+		public final List<Node> inputs;
 		
-		public List<Node> outputs;
+		public final List<Node> outputs;
 		
 		//---------------------------------------------------
 	    // Public.
@@ -241,6 +307,10 @@ public class AuraDirectedGraph {
 					.append( " userClazz = " + userClazz.getCanonicalName() )
 					.append( " }" ).toString();
 		}
+		
+		public void accept( final Visitor<Node> visitor ) {			
+			visitor.visit( this );			
+		}		
 	} 
 
 	/**
@@ -347,5 +417,31 @@ public class AuraDirectedGraph {
 					.append( " isBackCouplingEdge = " + isBackCouplingEdge )
 					.append( " }" ).toString();
 		}
+	}
+	
+	/**
+	 * 
+	 */
+	public static interface Visitor<T> {
+		
+		public abstract void visit( final T element );
+	}
+	
+	/**
+	 * 
+	 */
+	public static final class TopologyVisitor implements Visitor<Node>{
+
+		@Override
+		public void visit( final Node element ) {			
+		}
+	}
+	
+	public static final class BreadthFirstTraverser {
+	
+		public BreadthFirstTraverser() {
+		}
+		
+	
 	}
 }

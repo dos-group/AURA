@@ -60,8 +60,14 @@ public final class UserCodeExtractor {
     //---------------------------------------------------
 	
 	public UserCodeExtractor() {
+		this( false );
+	}
+	
+	public UserCodeExtractor( boolean analyseDependencies ) {
 		
 		this.standardDependencies = new ArrayList<String>();
+		
+		this.analyseDependencies = analyseDependencies;
 	}
 	
 	//---------------------------------------------------
@@ -69,6 +75,8 @@ public final class UserCodeExtractor {
     //---------------------------------------------------
 	
 	private final List<String> standardDependencies;
+	
+	private final boolean analyseDependencies;
 	
 	//---------------------------------------------------
     // Public.
@@ -91,7 +99,12 @@ public final class UserCodeExtractor {
 		if( clazz.isMemberClass() && !Modifier.isStatic( clazz.getModifiers() ) )
 			throw new IllegalStateException();
 		
-		final List<String> dependencies = buildTransitiveDependencyClosure( clazz, new ArrayList<String>() );
+		final List<String> dependencies;
+		if( analyseDependencies )
+			dependencies = buildTransitiveDependencyClosure( clazz, new ArrayList<String>() );
+		else
+			dependencies = new ArrayList<String>();
+		
 		return new UserCode( clazz.getName(), dependencies, Compression.compress( loadByteCode( clazz ) ) );
 	}
 
