@@ -196,6 +196,10 @@ public class AuraDirectedGraph {
 			return nodeConnector.currentSource( node );
 		}
 		
+		public NodeConnector and() {
+			return nodeConnector;
+		}
+		
 		public AuraTopology build() {					
 			final Map<Pair<String,String>,List<Object>> edgeProperties = nodeConnector.getEdgeProperties();
 			for( final Map.Entry<String,String> entry : nodeConnector.getEdges().entrySet() ) {
