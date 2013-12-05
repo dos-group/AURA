@@ -41,6 +41,10 @@ public class AuraDirectedGraph {
 			// sanity check.
 			if( nodeMap == null )
 				throw new IllegalArgumentException( "nodeMap == null" );
+			if( sourceMap == null )
+				throw new IllegalArgumentException( "sourceMap == null" );
+			if( sinkMap == null )
+				throw new IllegalArgumentException( "sinkMap == null" );		
 			if( edges == null )
 				throw new IllegalArgumentException( "edges == null" );
 			if( userCodeMap == null )
