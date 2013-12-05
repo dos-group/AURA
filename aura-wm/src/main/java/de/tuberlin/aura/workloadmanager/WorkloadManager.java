@@ -1,6 +1,8 @@
 package de.tuberlin.aura.workloadmanager;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +19,7 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
+import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
 
@@ -37,8 +40,7 @@ public class WorkloadManager implements ClientWMProtocol {
 		
 		this.rpcManager = new RPCManager( ioManager );
 	
-		this.workerMachines = new ArrayList<MachineDescriptor>();
-		
+		this.workerMachines = new ArrayList<MachineDescriptor>();		
 		workerMachines.add( LocalDeployment.MACHINE_1_DESCRIPTOR );
 		workerMachines.add( LocalDeployment.MACHINE_2_DESCRIPTOR );
 		workerMachines.add( LocalDeployment.MACHINE_3_DESCRIPTOR );
@@ -66,8 +68,6 @@ public class WorkloadManager implements ClientWMProtocol {
     //---------------------------------------------------	
 
 	// TODO: check if connections already exist.
-	
-	// TODO: detect failure if not serializable classes are sent over network 
 
 	@Override
 	public void submitTopology( final AuraTopology topology ) {
@@ -79,7 +79,9 @@ public class WorkloadManager implements ClientWMProtocol {
 		final Map<UUID,Pair<TaskDescriptor,UserCode>> taskMap = new HashMap<UUID,Pair<TaskDescriptor,UserCode>>();
 		final Map<String,UUID> name2TaskIDMap = new HashMap<String,UUID>();
 		
-		// First pass, create task descriptors (and later a clever worker assignment!). 
+		final Deque<UUID> deploymentOrder = new ArrayDeque<UUID>();
+		
+		// First pass, create task descriptors (and later a clever worker machine assignment!). 
 		TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {
 
 			private int machineIdx = 0;
@@ -94,6 +96,7 @@ public class WorkloadManager implements ClientWMProtocol {
 				
 				taskMap.put( taskID, taskAndUserCode );
 				name2TaskIDMap.put( element.name, taskID );
+				deploymentOrder.push( taskID );
 			}
 		} );
 		
@@ -118,18 +121,23 @@ public class WorkloadManager implements ClientWMProtocol {
 			}
 		} );
 		
-		/*final List<WM2TMProtocol> tmList = new ArrayList<WM2TMProtocol>();
+		// Dummy Code...
+		
+		final List<WM2TMProtocol> tmList = new ArrayList<WM2TMProtocol>();
 		for( final MachineDescriptor machine : workerMachines ) {
 			rpcManager.connectToMessageServer( machine );			
 			tmList.add( rpcManager.getRPCProtocolProxy( WM2TMProtocol.class, machine ) );
-		}*/
+		}
 		
-		/*for( int index = tasks.size() - 1; index >= 0; --index ) {
-			final UserCode uc = userCode.get( index );
-			final TaskDescriptor task = tasks.get( index );
-			final TaskBindingDescriptor taskBinding = bindings.get( index );
-			final WM2TMProtocol tmProtocol = tmList.get( index );			
-			tmProtocol.installTask( task, taskBinding, uc );
-		}*/
+		while( !deploymentOrder.isEmpty() ) {
+			
+			final WM2TMProtocol tmProtocol = tmList.get( deploymentOrder.size() - 1 );
+			final UUID taskID = deploymentOrder.pop();
+			final TaskDescriptor taskDescriptor = taskMap.get( taskID ).getFirst();
+			final UserCode userCode = taskMap.get( taskID ).getSecond();			
+			final TaskBindingDescriptor taskBinding = taskBindingMap.get( taskID );
+						
+			tmProtocol.installTask( taskDescriptor, taskBinding, userCode );
+		}
 	}
 }

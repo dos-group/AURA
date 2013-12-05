@@ -26,7 +26,7 @@ public final class RPCManager {
     //---------------------------------------------------
 	
 	// for debugging use -1.
-	private static final long RPC_RESPONSE_TIMEOUT = 5000; // in ms 
+	private static final long RPC_RESPONSE_TIMEOUT = -1; //5000; // in ms 
 	
 	//---------------------------------------------------
     // Inner Classes.
@@ -58,7 +58,8 @@ public final class RPCManager {
 			
 			if( arguments != null ) {
 				this.argumentTypes = argumentTypes;
-				this.arguments = arguments; //new Object[arguments.length];
+				this.arguments = arguments; 
+				//this.arguments = new Object[arguments.length];
 				//System.arraycopy( arguments, 0, this.arguments, 0, arguments.length );
 			} else {
 				this.argumentTypes = null;
@@ -245,8 +246,7 @@ public final class RPCManager {
 				return new RPCCalleeMessage( callUID, new IllegalStateException( "found no protocol implementation" ) );
 			}				
 			
-			synchronized( protocolImplementation ) {
-							
+			synchronized( protocolImplementation ) {						
 				// TODO: Maybe we could do some caching of method signatures 
 				// on the callee site for frequent repeated calls... 
 
@@ -345,5 +345,4 @@ public final class RPCManager {
 	
 		return rpcChannelMap.get( machine.uid );
 	}
-	
 }

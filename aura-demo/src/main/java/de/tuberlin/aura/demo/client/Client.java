@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.program;
+package de.tuberlin.aura.demo.client;
 
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
@@ -17,12 +17,12 @@ import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
 
-public final class Program1 {
+public final class Client {
 
 	private static final Logger LOG = Logger.getRootLogger();
 	
 	// Disallow Instantiation.
-	private Program1() {}
+	private Client() {}
 	
 	/**
 	 * 
@@ -137,6 +137,11 @@ public final class Program1 {
         final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
         LOG.addAppender( consoleAppender );
         
+        // Run the demo:
+        // Start TM 1-4
+        // Start WM
+        // Start Client
+        
         final AuraClient ac = new AuraClient( LocalDeployment.MACHINE_6_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR ); 
         
         final AuraTopologyBuilder atb = ac.createTopologyBuilder();
@@ -146,7 +151,10 @@ public final class Program1 {
            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
            .addNode( new Node( "Task3", Task3Exe.class, 1 ) )
            .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
-           .addNode( new Node( "Task4", Task3Exe.class, 1 ) ); 
+           .addNode( new Node( "Task4", Task4Exe.class, 1 ) ); 
+        
+        final AuraTopology at = atb.build();
+        ac.submitTopology( at );
         
         /* With Loops...
         final AuraTopologyBuilder atb = ac.createTopologyBuilder();
@@ -157,11 +165,8 @@ public final class Program1 {
            .addNode( new Node( "Task3", Task3Exe.class, 1 ) )
            .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
            .and().connectTo( "Task2", Edge.TransferType.POINT_TO_POINT, Edge.EdgeType.BACKWARD_EDGE ) // form a loop!!
-           .addNode( new Node( "Task4", Task3Exe.class, 1 ) )
+           .addNode( new Node( "Task4", Task4Exe.class, 1 ) )
            .connectTo( "Task2", Edge.TransferType.POINT_TO_POINT, Edge.EdgeType.BACKWARD_EDGE ); // form a loop!!
         */
-        
-        final AuraTopology at = atb.build();
-        ac.submitTopology( at );
 	}
 }
