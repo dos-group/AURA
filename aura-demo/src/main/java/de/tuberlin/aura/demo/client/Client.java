@@ -145,13 +145,13 @@ public final class Client {
         final AuraClient ac = new AuraClient( LocalDeployment.MACHINE_6_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR ); 
         
         final AuraTopologyBuilder atb = ac.createTopologyBuilder();
-        atb.addNode( new Node( "Task1", Task1Exe.class, 1 ) )
+        atb.addNode( new Node( "Task1", Task1Exe.class, 1, 1 ) )
            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
-           .addNode( new Node( "Task2", Task2Exe.class, 1 ) )
+           .addNode( new Node( "Task2", Task2Exe.class, 1, 1 ) )
            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
-           .addNode( new Node( "Task3", Task3Exe.class, 1 ) )
+           .addNode( new Node( "Task3", Task3Exe.class, 1, 1 ) )
            .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
-           .addNode( new Node( "Task4", Task4Exe.class, 1 ) ); 
+           .addNode( new Node( "Task4", Task4Exe.class, 1, 1 ) ); 
         
         final AuraTopology at = atb.build();
         ac.submitTopology( at );

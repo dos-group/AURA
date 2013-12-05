@@ -276,10 +276,10 @@ public class AuraDirectedGraph {
 	    //---------------------------------------------------
 
 		public Node( final String name, final Class<?> userClazz ) {
-			this( name, userClazz, 1 );
+			this( name, userClazz, 1, 1 );
 		} 
 		
-		public Node( final String name, final Class<?> userClazz, int degreeOfParallelism ) {
+		public Node( final String name, final Class<?> userClazz, int degreeOfParallelism, int perWorkerParallelism ) {
 			// sanity check.
 			if( name == null )
 				throw new IllegalArgumentException( "name == null" );
@@ -287,12 +287,16 @@ public class AuraDirectedGraph {
 				throw new IllegalArgumentException( "userClazz == null" );
 			if( degreeOfParallelism < 1 )
 				throw new IllegalArgumentException( "degreeOfParallelism < 1" );
+			if( perWorkerParallelism < 1 )
+				throw new IllegalArgumentException( "perWorkerParallelism < 1" );
 			
 			this.name = name;
 			
 			this.userClazz = userClazz;
 			
 			this.degreeOfParallelism = degreeOfParallelism;
+			
+			this.perWorkerParallelism = perWorkerParallelism;
 		
 			this.inputs = new ArrayList<Node>();
 			
@@ -308,6 +312,8 @@ public class AuraDirectedGraph {
 		public final Class<?> userClazz;
 		
 		public final int degreeOfParallelism;
+		
+		public final int perWorkerParallelism;
 		
 		public final List<Node> inputs;
 		
