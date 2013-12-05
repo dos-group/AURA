@@ -15,7 +15,6 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
-import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
 
 public final class Program1 {
@@ -128,54 +127,6 @@ public final class Program1 {
 		}
 	}
 	
-	/**
-	 * 
-	 */
-	/*public static class Task5Exe extends TaskInvokeable {
-
-		public Task5Exe( TaskContext context ) {
-			super( context );
-		}
-
-		@Override
-		public void execute() throws Exception {		
-			for( int i = 0; i < 100; ++i ) {				
-				final byte[] data = new byte[1024];			
-				final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid, 
-						context.taskBinding.outputs.get( 0 ).uid, data );			
-				context.outputChannel[0].writeAndFlush( dm );				
-				try {
-					Thread.sleep( 1000 );
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}*/
-	
-	/**
-	 * 
-	 */
-	/*public static class Task6Exe extends TaskInvokeable {
-
-		public Task6Exe( TaskContext context ) {
-			super( context );
-		}
-
-		@Override
-		public void execute() throws Exception {
-			for( int i = 0; i < 100; ++i ) {			
-				final BlockingQueue<DataMessage> inputMsgs = context.inputQueues.get( 0 );			
-				try {			
-					final DataMessage dm = inputMsgs.take();
-					LOG.info( "received data message " + dm.messageID + " from task " + dm.srcTaskID );
-				} catch (InterruptedException e) {
-					LOG.info( e );
-				}
-			}
-		}
-	}*/
-	
 	//---------------------------------------------------
     // Main.
     //---------------------------------------------------	
@@ -186,26 +137,31 @@ public final class Program1 {
         final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
         LOG.addAppender( consoleAppender );
         
-        //final AuraClient ac = new AuraClient( LocalDeployment.MACHINE_6_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR ); 
+        final AuraClient ac = new AuraClient( LocalDeployment.MACHINE_6_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR ); 
         
-        final AuraTopologyBuilder atb = new AuraTopologyBuilder( new UserCodeExtractor() );//ac.createTopologyBuilder();
+        final AuraTopologyBuilder atb = ac.createTopologyBuilder();
         atb.addNode( new Node( "Task1", Task1Exe.class, 1 ) )
-           .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT, Edge.DataLifeTime.EPHEMERAL )
+           .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
            .addNode( new Node( "Task2", Task2Exe.class, 1 ) )
-           .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT, Edge.DataLifeTime.EPHEMERAL )
+           .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
            .addNode( new Node( "Task3", Task3Exe.class, 1 ) )
-           .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT, Edge.DataLifeTime.EPHEMERAL )
-           .addNode( new Node( "Task4", Task3Exe.class, 1 ) );
+           .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
+           .addNode( new Node( "Task4", Task3Exe.class, 1 ) ); 
+        
+        /* With Loops...
+        final AuraTopologyBuilder atb = ac.createTopologyBuilder();
+        atb.addNode( new Node( "Task1", Task1Exe.class, 1 ) )
+           .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
+           .addNode( new Node( "Task2", Task2Exe.class, 1 ) )
+           .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
+           .addNode( new Node( "Task3", Task3Exe.class, 1 ) )
+           .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
+           .and().connectTo( "Task2", Edge.TransferType.POINT_TO_POINT, Edge.EdgeType.BACKWARD_EDGE ) // form a loop!!
+           .addNode( new Node( "Task4", Task3Exe.class, 1 ) )
+           .connectTo( "Task2", Edge.TransferType.POINT_TO_POINT, Edge.EdgeType.BACKWARD_EDGE ); // form a loop!!
+        */
         
         final AuraTopology at = atb.build();
-        //ac.submitTopology( at );
-        
-        LOG.info( "sources:" );
-        for( final Node n : at.sourceMap.values() )
-        	LOG.info( n.name );
-
-        LOG.info( "sinks:" );
-        for( final Node n : at.sinkMap.values() )
-        	LOG.info( n.name );
+        ac.submitTopology( at );
 	}
 }
