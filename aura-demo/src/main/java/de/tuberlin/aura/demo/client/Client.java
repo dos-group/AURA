@@ -155,8 +155,8 @@ public final class Client {
         
         final AuraTopology at = atb.build();
         ac.submitTopology( at );
-        
-        /* With Loops...
+         
+        /* With Loops... (not working, loops not yet implemented in the runtime)
         final AuraTopologyBuilder atb = ac.createTopologyBuilder();
         atb.addNode( new Node( "Task1", Task1Exe.class, 1 ) )
            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
