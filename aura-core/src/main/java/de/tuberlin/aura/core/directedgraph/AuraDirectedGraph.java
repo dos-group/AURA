@@ -102,7 +102,7 @@ public class AuraDirectedGraph {
 			public AuraTopologyBuilder connectTo( final String dstNodeName, 
 					  						  	  final Edge.TransferType transferType,
 					  						  	  final Edge.EdgeType edgeType,
-					  						  	  final Edge.DataLifeTime dataLifeTime,
+					  						  	  final Edge.DataPersistenceType dataLifeTime,
 					  						  	  final Edge.ExecutionType executionType ) {
 				// sanity check.
 				if( dstNodeName == null )
@@ -123,14 +123,14 @@ public class AuraDirectedGraph {
 			}
 			
 			public AuraTopologyBuilder connectTo( final String dstNodeName, final Edge.TransferType transferType ) {
-				return connectTo( dstNodeName, transferType, Edge.EdgeType.FORWARD_EDGE, Edge.DataLifeTime.EPHEMERAL, Edge.ExecutionType.CONCURRENT );
+				return connectTo( dstNodeName, transferType, Edge.EdgeType.FORWARD_EDGE, Edge.DataPersistenceType.EPHEMERAL, Edge.ExecutionType.CONCURRENT );
 			}
 			
 			public AuraTopologyBuilder connectTo( final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType ) {
-				return connectTo( dstNodeName, transferType, edgeType, Edge.DataLifeTime.EPHEMERAL, Edge.ExecutionType.CONCURRENT );
+				return connectTo( dstNodeName, transferType, edgeType, Edge.DataPersistenceType.EPHEMERAL, Edge.ExecutionType.CONCURRENT );
 			}
 			
-			public AuraTopologyBuilder connectTo( final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType, final Edge.DataLifeTime dataLifeTime ) {		
+			public AuraTopologyBuilder connectTo( final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType, final Edge.DataPersistenceType dataLifeTime ) {		
 				return connectTo( dstNodeName, transferType, edgeType, dataLifeTime, Edge.ExecutionType.CONCURRENT );
 			}
 			
@@ -222,7 +222,7 @@ public class AuraDirectedGraph {
 				final List<Object> properties = edgeProperties.get( new Pair<String,String>( srcNode.name, dstNode.name ) );
 				final Edge.TransferType transferType = (Edge.TransferType) properties.get( 0 );
 				final Edge.EdgeType edgeType = (Edge.EdgeType) properties.get( 1 );				
-				final Edge.DataLifeTime dataLifeTime = (Edge.DataLifeTime) properties.get( 2 );
+				final Edge.DataPersistenceType dataLifeTime = (Edge.DataPersistenceType) properties.get( 2 );
 				final Edge.ExecutionType executionType = (Edge.ExecutionType) properties.get( 3 );
 				
 				if( edgeType == Edge.EdgeType.BACKWARD_EDGE ) {
@@ -362,13 +362,6 @@ public class AuraDirectedGraph {
 	    // Edge Configurations.
 	    //---------------------------------------------------
 
-		public static enum EdgeType {
-			
-			FORWARD_EDGE,
-			
-			BACKWARD_EDGE 
-		}
-		
 		public static enum TransferType {
 			
 			POINT_TO_POINT,
@@ -378,21 +371,28 @@ public class AuraDirectedGraph {
 			BROADCAST
 		}
 		
+		public static enum EdgeType {
+			
+			FORWARD_EDGE,
+			
+			BACKWARD_EDGE 
+		}
+
+		public static enum DataPersistenceType {
+			
+			EPHEMERAL,
+			
+			PERSISTED_IN_MEMORY,
+			
+			PERSISTED_RELIABLE 
+		} 
+		
 		public static enum ExecutionType {
 			
 			SEQUENTIAL,
 			
 			CONCURRENT
 		}
-
-		public static enum DataLifeTime {
-			
-			EPHEMERAL,
-			
-			PERSISTED,
-			
-			PERSISTED_RELIABLE 
-		} 
 		
 		//---------------------------------------------------
 	    // Constructor.
@@ -402,7 +402,7 @@ public class AuraDirectedGraph {
 					 final Node dstNode, 
 					 final TransferType transferType,
 					 final EdgeType edgeType,
-					 final DataLifeTime dataLifeTime,
+					 final DataPersistenceType dataLifeTime,
 					 final ExecutionType dstExecutionType ) {
 			
 			// sanity check.
@@ -444,7 +444,7 @@ public class AuraDirectedGraph {
 		
 		public final EdgeType edgeType;
 		
-		public final DataLifeTime dataLifeTime;
+		public final DataPersistenceType dataLifeTime;
 		
 		public final ExecutionType dstExecutionType;
 		
