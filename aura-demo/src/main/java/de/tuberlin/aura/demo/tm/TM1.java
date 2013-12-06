@@ -4,6 +4,7 @@ import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
 
+import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
 import de.tuberlin.aura.taskmanager.TaskManager;
 
@@ -17,6 +18,7 @@ public class TM1 {
 		final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
 		LOG.addAppender( consoleAppender );
 				
-		new TaskManager( LocalDeployment.MACHINE_1_DESCRIPTOR ); 
+		final RPCManager rpcManager = new TaskManager( LocalDeployment.MACHINE_1_DESCRIPTOR ).getRPCManager();
+		rpcManager.connectToMessageServer( LocalDeployment.MACHINE_5_DESCRIPTOR );
 	}
 }

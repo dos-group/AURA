@@ -57,13 +57,13 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>${aura-maven-jar-plugin}</version>
-				<!--configuration>
+				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>com.aura.runtime.server.WorkloadManagerServer</mainClass>
+							<mainClass>de.tuberlin.aura.demo.client.Client</mainClass>
 						</manifest>
 					</archive>
-				</configuration-->
+				</configuration>
 		    </plugin>
 		    
 		</plugins>

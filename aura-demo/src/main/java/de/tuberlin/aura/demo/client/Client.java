@@ -17,6 +17,7 @@ import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
 
+
 public final class Client {
 
 	private static final Logger LOG = Logger.getRootLogger();
@@ -138,14 +139,14 @@ public final class Client {
         LOG.addAppender( consoleAppender );
         
         // Run the demo:
-        // Start TM 1-4
         // Start WM
+        // Start TM 1-4
         // Start Client
         
         final AuraClient ac = new AuraClient( LocalDeployment.MACHINE_6_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR ); 
         
-        final AuraTopologyBuilder atb = ac.createTopologyBuilder();
-        atb.addNode( new Node( "Task1", Task1Exe.class, 1, 1 ) )
+        final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        atb1.addNode( new Node( "Task1", Task1Exe.class, 1, 1 ) )
            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
            .addNode( new Node( "Task2", Task2Exe.class, 1, 1 ) )
            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
@@ -153,9 +154,22 @@ public final class Client {
            .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
            .addNode( new Node( "Task4", Task4Exe.class, 1, 1 ) ); 
         
-        final AuraTopology at = atb.build();
-        ac.submitTopology( at );
-         
+        final AuraTopology at1 = atb1.build();
+        
+        // Execute the same topology 4 times in parallel.
+        ac.submitTopology( at1 );
+        ac.submitTopology( at1 );
+        ac.submitTopology( at1 );
+        ac.submitTopology( at1 );
+
+		/*final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
+        atb2.addNode( new Node( "Task1", Task1Exe.class, 1, 1 ) )
+        	.connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
+        	.addNode( new Node( "Task4", Task4Exe.class, 1, 1 ) );
+		
+        final AuraTopology at2 = atb2.build();
+        ac.submitTopology( at2 );*/
+        
         /* With Loops... (not working, loops not yet implemented in the runtime)
         final AuraTopologyBuilder atb = ac.createTopologyBuilder();
         atb.addNode( new Node( "Task1", Task1Exe.class, 1 ) )

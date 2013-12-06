@@ -163,16 +163,8 @@ public final class TaskManager implements WM2TMProtocol {
 		
 		@Override
 		protected void handleInputData( DataMessage message ) {			
-			//int channelIndex = 0;
-			//for( TaskDescriptor inputTask : context.taskBinding.inputs ) {			
-			//	if( inputTask.uid.equals( message.srcTaskID ) )
-			//		break;
-			//	++channelIndex;			
-			//}
-			
 			// TODO: we should provide in TaskContext mappings in both direction 
-			// between channelIndex and taskID for task inputs and outputs!  
-			
+			// between channelIndex and taskID for task inputs and outputs!  			
 			context.inputQueues.get( taskIDToChannelIndex.get( message.srcTaskID ) ).add( message );
 		}
 		

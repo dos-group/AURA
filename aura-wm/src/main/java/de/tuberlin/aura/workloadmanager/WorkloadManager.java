@@ -124,8 +124,7 @@ public class WorkloadManager implements ClientWMProtocol {
 		// Dummy Code...
 		
 		final List<WM2TMProtocol> tmList = new ArrayList<WM2TMProtocol>();
-		for( final MachineDescriptor machine : workerMachines ) {
-			rpcManager.connectToMessageServer( machine );			
+		for( final MachineDescriptor machine : workerMachines ) {		
 			tmList.add( rpcManager.getRPCProtocolProxy( WM2TMProtocol.class, machine ) );
 		}
 		

@@ -167,6 +167,8 @@ public class AuraDirectedGraph {
 			this.nodeConnector = new NodeConnector( this );
 
 			this.codeExtractor = codeExtractor;
+			
+			this.userCodeMap = new HashMap<String,UserCode>();
 		}
 		
 		//---------------------------------------------------
@@ -184,6 +186,10 @@ public class AuraDirectedGraph {
 		public final NodeConnector nodeConnector;
 		
 		public final UserCodeExtractor codeExtractor;
+		
+		public final Map<String,UserCode> userCodeMap;
+		
+		public boolean isBuilded = false; 
 		
 		//---------------------------------------------------
 	    // Public.
@@ -210,42 +216,46 @@ public class AuraDirectedGraph {
 		
 		public AuraTopology build() {					
 			
-			final Map<Pair<String,String>,List<Object>> edgeProperties = nodeConnector.getEdgeProperties();
+			if( !isBuilded ) {
 			
-			for( final Pair<String,String> entry : nodeConnector.getEdges() ) {
-				final Node srcNode = nodeMap.get( entry.getFirst() );
-				final Node dstNode = nodeMap.get( entry.getSecond() );								
-				srcNode.addOutput( dstNode );
-				dstNode.addInput( srcNode );				
-			}
-			
-			for( final Pair<String,String> entry : nodeConnector.getEdges() ) {
+				final Map<Pair<String,String>,List<Object>> edgeProperties = nodeConnector.getEdgeProperties();
 				
-				final Node srcNode = nodeMap.get( entry.getFirst() );
-				final Node dstNode = nodeMap.get( entry.getSecond() );
-				final List<Object> properties = edgeProperties.get( new Pair<String,String>( srcNode.name, dstNode.name ) );
-				final Edge.TransferType transferType = (Edge.TransferType) properties.get( 0 );
-				final Edge.EdgeType edgeType = (Edge.EdgeType) properties.get( 1 );				
-				final Edge.DataPersistenceType dataLifeTime = (Edge.DataPersistenceType) properties.get( 2 );
-				final Edge.ExecutionType executionType = (Edge.ExecutionType) properties.get( 3 );
-				
-				if( edgeType == Edge.EdgeType.BACKWARD_EDGE ) {
-					if( !validateBackCouplingEdge( new HashSet<Node>(), srcNode, dstNode ) )
-						throw new IllegalStateException( srcNode.name + " to " + dstNode.name + "is not a back coupling edge" );
+				for( final Pair<String,String> entry : nodeConnector.getEdges() ) {
+					final Node srcNode = nodeMap.get( entry.getFirst() );
+					final Node dstNode = nodeMap.get( entry.getSecond() );								
+					srcNode.addOutput( dstNode );
+					dstNode.addInput( srcNode );				
 				}
 				
-				edges.add( new Edge( srcNode, dstNode, transferType, edgeType, dataLifeTime, executionType ) );	
-			
-				if( edgeType != Edge.EdgeType.BACKWARD_EDGE ) {
-					sourceMap.remove( dstNode.name );			
-					sinkMap.remove( srcNode.name );
+				for( final Pair<String,String> entry : nodeConnector.getEdges() ) {
+					
+					final Node srcNode = nodeMap.get( entry.getFirst() );
+					final Node dstNode = nodeMap.get( entry.getSecond() );
+					final List<Object> properties = edgeProperties.get( new Pair<String,String>( srcNode.name, dstNode.name ) );
+					final Edge.TransferType transferType = (Edge.TransferType) properties.get( 0 );
+					final Edge.EdgeType edgeType = (Edge.EdgeType) properties.get( 1 );				
+					final Edge.DataPersistenceType dataLifeTime = (Edge.DataPersistenceType) properties.get( 2 );
+					final Edge.ExecutionType executionType = (Edge.ExecutionType) properties.get( 3 );
+					
+					if( edgeType == Edge.EdgeType.BACKWARD_EDGE ) {
+						if( !validateBackCouplingEdge( new HashSet<Node>(), srcNode, dstNode ) )
+							throw new IllegalStateException( srcNode.name + " to " + dstNode.name + "is not a back coupling edge" );
+					}
+					
+					edges.add( new Edge( srcNode, dstNode, transferType, edgeType, dataLifeTime, executionType ) );	
+				
+					if( edgeType != Edge.EdgeType.BACKWARD_EDGE ) {
+						sourceMap.remove( dstNode.name );			
+						sinkMap.remove( srcNode.name );
+					}
 				}
-			}
-			
-			final Map<String,UserCode> userCodeMap = new HashMap<String,UserCode>();
-			for( final Node n : nodeMap.values() ) {				 
-				final UserCode uc = codeExtractor.extractUserCodeClass( n.userClazz );
-				userCodeMap.put( n.name, uc );
+				
+				for( final Node n : nodeMap.values() ) {				 
+					final UserCode uc = codeExtractor.extractUserCodeClass( n.userClazz );
+					userCodeMap.put( n.name, uc );
+				}
+				
+				isBuilded = true;
 			}
 			
 			return new AuraTopology( nodeMap, sourceMap, sinkMap, edges, userCodeMap );
@@ -401,7 +411,9 @@ public class AuraDirectedGraph {
 			
 			SEQUENTIAL,
 			
-			CONCURRENT
+			CONCURRENT,
+			
+			LAZY
 		}
 		
 		//---------------------------------------------------

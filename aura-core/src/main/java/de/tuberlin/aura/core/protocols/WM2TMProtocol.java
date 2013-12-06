@@ -6,7 +6,8 @@ import de.tuberlin.aura.core.task.usercode.UserCode;
 
 public interface WM2TMProtocol {
 
-	public void installTask( final TaskDescriptor taskDescriptor, final TaskBindingDescriptor taskBindingDescriptor, 
-			final UserCode taskUserCode );
+	public void installTask( final TaskDescriptor taskDescriptor, 
+							 final TaskBindingDescriptor taskBindingDescriptor, 
+							 final UserCode taskUserCode );
 		
 }

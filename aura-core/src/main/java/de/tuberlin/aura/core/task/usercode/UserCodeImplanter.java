@@ -70,6 +70,14 @@ public final class UserCodeImplanter {
 			throw new IllegalStateException( e );
 		}
 		
-		return classLoader.buildClassFromByteArray( userCode.className, Compression.decompress( userCode.classByteCode ) );
+		Class<?> clazz;
+		try {
+			clazz = Class.forName( userCode.className );
+		} catch( ClassNotFoundException e ) {
+			clazz = classLoader.buildClassFromByteArray( userCode.className, 
+					Compression.decompress( userCode.classByteCode ) );
+		}
+		
+		return clazz;
 	}
 }

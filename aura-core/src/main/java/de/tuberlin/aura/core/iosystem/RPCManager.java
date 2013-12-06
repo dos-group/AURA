@@ -17,6 +17,7 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 
 public final class RPCManager {
@@ -290,6 +291,8 @@ public final class RPCManager {
 				}
 			}
 		} );
+		
+		this.cachedProxies = new HashMap<Pair<Class<?>,UUID>,Object>();
 	}
 	
 	//---------------------------------------------------
@@ -301,6 +304,8 @@ public final class RPCManager {
 	private final IOManager ioManager;
 	
 	private final Map<UUID, Channel> rpcChannelMap;
+	
+	private final Map<Pair<Class<?>,UUID>,Object> cachedProxies;
 
 	//---------------------------------------------------
     // Public.
@@ -335,7 +340,14 @@ public final class RPCManager {
 		if( channel == null )
 			throw new IllegalStateException( "channel == null" );
 		
-		return ProtocolCallerProxy.getProtocolProxy( protocolInterface, channel );
+		final Pair<Class<?>,UUID> proxyKey = new Pair<Class<?>,UUID>( protocolInterface, dstMachine.uid );
+		@SuppressWarnings("unchecked")
+		T proxy = (T) cachedProxies.get( proxyKey );
+		if( proxy == null ) {
+			proxy = ProtocolCallerProxy.getProtocolProxy( protocolInterface, channel );
+			cachedProxies.put( proxyKey, proxy );
+		}
+		return proxy; 
 	}
 	
 	public Channel getChannel( final MachineDescriptor machine ) {
