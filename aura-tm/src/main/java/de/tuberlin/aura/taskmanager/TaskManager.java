@@ -149,8 +149,12 @@ public final class TaskManager implements WM2TMProtocol {
 					case TASK_STATE_OUTPUTS_CONNECTED: {} break;
 					case TASK_STATE_READY: { scheduleTask( context ); } break;					
 					case TASK_STATE_RUNNING: {} break;					
-					case TASK_STATE_FINISHED: {} break;		
-					case TASK_STATE_FAILURE: {} break;					
+					case TASK_STATE_FINISHED: {
+						//for( final Channel ch : context.outputChannel ) 
+						//	ch.close();
+					} break;		
+					case TASK_STATE_FAILURE: {} break;
+					case TASK_STATE_RECOVER: {} break;
 					case TASK_STATE_UNDEFINED: {
 						throw new IllegalStateException( "task " + context.task.name + " [" + context.task.uid + "] from state " 
 								+ oldState + " to " + context.state + " is not defined" );						

@@ -37,15 +37,16 @@ public final class Client {
 		@Override
 		public void execute() throws Exception {
 			for( int i = 0; i < 100; ++i ) {
-				final byte[] data = new byte[1024];			
+				final byte[] data = new byte[65536];			
 				final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid, 
 						context.taskBinding.outputs.get( 0 ).uid, data );
 				context.outputChannel[0].writeAndFlush( dm );
-				try {
-					Thread.sleep( 500 );
+				
+				/*try {
+					Thread.sleep( 50 );
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				}
+				}*/
 			}
 		}
 	}
@@ -62,15 +63,15 @@ public final class Client {
 		@Override
 		public void execute() throws Exception {
 			for( int i = 0; i < 100; ++i ) {		
-				final byte[] data = new byte[1024];			
+				final byte[] data = new byte[65536];			
 				final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid, 
 						context.taskBinding.outputs.get( 0 ).uid, data );
 				context.outputChannel[0].writeAndFlush( dm );
-				try {
-					Thread.sleep( 500 );
+				/*try {
+					Thread.sleep( 50 );
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				}
+				}*/
 			}
 		}
 	}
@@ -94,7 +95,7 @@ public final class Client {
 					final DataMessage dm2 = inputMsgs2.take();
 					LOG.info( "input1: received data message " + dm1.messageID + " from task " + dm1.srcTaskID );
 					LOG.info( "input2: received data message " + dm2.messageID + " from task " + dm2.srcTaskID );					
-					final byte[] data = new byte[1024];
+					final byte[] data = new byte[65536];
 					final DataMessage dmOut = new DataMessage( UUID.randomUUID(), context.task.uid, 
 							context.taskBinding.outputs.get( 0 ).uid, data );
 					context.outputChannel[0].writeAndFlush( dmOut );

@@ -20,7 +20,7 @@ import de.tuberlin.aura.core.common.utils.Compression;
 
 public final class UserCodeExtractor { 
 	
-	// TODO: ShrinkWrap
+	// TODO: Look at ShrinkWrap
 	
 	//---------------------------------------------------
     // Inner Classes.
@@ -194,7 +194,7 @@ public final class UserCodeExtractor {
 		byte[] clazzData = null;
 		try {
 			fis = new FileInputStream( clazzFile );
-			clazzData = new byte[(int) clazzFile.length()]; // TODO: use IOUtils, Apache Commons
+			clazzData = new byte[(int) clazzFile.length()]; // TODO: use IOUtils, Apache Commons!
 			fis.read( clazzData );
 		} catch( FileNotFoundException e ) {
 			throw new IllegalStateException( e );

@@ -13,6 +13,9 @@ import java.util.Queue;
 import java.util.Set;
 
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 
@@ -286,7 +289,7 @@ public class AuraDirectedGraph {
 		private static final long serialVersionUID = -7726710143171176855L;
 		
 		//---------------------------------------------------
-	    // Constructor.
+	    // Constructors.
 	    //---------------------------------------------------
 
 		public Node( final String name, final Class<?> userClazz ) {
@@ -314,7 +317,9 @@ public class AuraDirectedGraph {
 		
 			this.inputs = new ArrayList<Node>();
 			
-			this.outputs = new ArrayList<Node>();		
+			this.outputs = new ArrayList<Node>();
+			
+			this.executionNodes = new ArrayList<ExecutionNode>();
 		} 
 		
 		//---------------------------------------------------
@@ -332,6 +337,8 @@ public class AuraDirectedGraph {
 		public final List<Node> inputs;
 		
 		public final List<Node> outputs;
+		
+		public final List<ExecutionNode> executionNodes;
 		
 		//---------------------------------------------------
 	    // Public.
@@ -357,6 +364,14 @@ public class AuraDirectedGraph {
 			outputs.add( node );
 		}
 		
+		public void addExecutionNode( final ExecutionNode exeNode ) {
+			// sanity check.
+			if( exeNode == null )
+				throw new IllegalArgumentException( "exeNode == null" );
+			
+			executionNodes.add( exeNode );
+		}		
+		
 		@Override
 		public String toString() {
 			return (new StringBuilder())
@@ -371,6 +386,70 @@ public class AuraDirectedGraph {
 		}		
 	} 
 
+	/**
+	 * 
+	 */
+	public static final class ExecutionNode {
+
+		//---------------------------------------------------
+	    // Constructors.
+	    //---------------------------------------------------
+
+		public ExecutionNode( final Node logicalNode,
+							  final TaskDescriptor taskDescriptor,
+							  final TaskBindingDescriptor taskBindingDescriptor,
+							  final UserCode userCode ) {
+			
+			// sanity check.
+			if( logicalNode == null )
+				throw new IllegalArgumentException( "logicalNode == null" );
+			if( taskDescriptor == null )
+				throw new IllegalArgumentException( "taskDescriptor == null" );
+			if( taskBindingDescriptor == null )
+				throw new IllegalArgumentException( "taskBindingDescriptor == null" );
+			if( userCode == null )
+				throw new IllegalArgumentException( "userCode == null" );
+			
+			this.logicalNode = logicalNode;
+			
+			this.taskDescriptor = taskDescriptor;
+			
+			this.taskBindingDescriptor = taskBindingDescriptor;
+			
+			this.userCode = userCode;
+		}
+
+		//---------------------------------------------------
+	    // Fields.
+	    //---------------------------------------------------
+
+		public final Node logicalNode;
+		
+		public final TaskDescriptor taskDescriptor;
+	
+		public final TaskBindingDescriptor taskBindingDescriptor;
+		
+		public final UserCode userCode;
+		
+		private TaskState currentState;
+
+		//---------------------------------------------------
+	    // Public.
+	    //---------------------------------------------------
+
+		public void setState( final TaskState state ) {
+			// sanity check.
+			if( state == null )
+				throw new IllegalArgumentException( "state == null" );
+			
+			currentState = state;
+		}
+		
+		public TaskState getState() {
+			return currentState;
+		}
+	}
+	
 	/**
 	 * 
 	 */

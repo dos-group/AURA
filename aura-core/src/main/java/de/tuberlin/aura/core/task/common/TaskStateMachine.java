@@ -34,7 +34,9 @@ public final class TaskStateMachine {
 
 		TASK_STATE_FAILURE,
 		
-		TASK_STATE_UNDEFINED
+		TASK_STATE_UNDEFINED,
+		
+		TASK_STATE_RECOVER
 	}
 	
 	/**

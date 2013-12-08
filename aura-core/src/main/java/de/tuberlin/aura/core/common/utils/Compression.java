@@ -41,10 +41,10 @@ public final class Compression {
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream( data.length );  
 		byte[] buffer = new byte[1024];  
 		try {
-		while( !inflater.finished() ) {  
-			int count = inflater.inflate( buffer );  
-			baos.write( buffer, 0, count );  
-		}
+			while( !inflater.finished() ) {  
+				int count = inflater.inflate( buffer );  
+				baos.write( buffer, 0, count );  
+			}
 		} catch( Exception e ) {
 			throw new IllegalArgumentException( e );
 		} finally {
