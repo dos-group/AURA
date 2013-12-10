@@ -1,18 +1,14 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
-import de.tuberlin.aura.core.common.utils.Pair;
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.ExecutionNode;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.TopologyBreadthFirstTraverser;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
@@ -20,7 +16,6 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
 
 public class WorkloadManager implements ClientWMProtocol {
@@ -48,14 +43,14 @@ public class WorkloadManager implements ClientWMProtocol {
 		
 		rpcManager.registerRPCProtocolImpl( this, ClientWMProtocol.class );
 		
-		//this.topologyParallelizer = new AuraTopologyParallelizer();
+		this.topologyParallelizer = new TopologyParallelizer();
 	}
 
 	//---------------------------------------------------
     // Fields.
     //--------------------------------------------------- 
 	
-	//private static final Logger LOG = Logger.getLogger( WorkloadManager.class ); 
+	private static final Logger LOG = Logger.getLogger( WorkloadManager.class ); 
 	
 	private final MachineDescriptor machine;
 	
@@ -65,7 +60,7 @@ public class WorkloadManager implements ClientWMProtocol {
 	
 	public final List<MachineDescriptor> workerMachines;
 	
-	//private final AuraTopologyParallelizer topologyParallelizer;
+	private final TopologyParallelizer topologyParallelizer;
 	
 	//---------------------------------------------------
     // Private.
@@ -78,20 +73,49 @@ public class WorkloadManager implements ClientWMProtocol {
 		// sanity check.
 		if( topology == null )
 			throw new IllegalArgumentException( "topology == null" );
-						
-		/*// TODO: debug output
+		
+		// Parallelizing.
 		topologyParallelizer.parallelizeTopology( topology );
+		
+		// Scheduling.
 		TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {			
+			
+			private int machineIdx = 0;
+			
+			@Override
+			public void visit( final Node element ) {
+			
+				for( final ExecutionNode en : element.getExecutionNodes() ) {	
+					en.getTaskDescriptor().setMachineDescriptor( workerMachines.get( machineIdx ) );
+				}
+				
+				++machineIdx;
+			}
+		} );	
+		
+		// Deploying.
+		TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {			
+			
 			@Override
 			public void visit( final Node element ) {
 				
-				LOG.info( "---------- " + element.name + " ----------" );
-				for( final ExecutionNode en : element.getExecutionNodes() )
-					LOG.info( en.toString() );
+				for( final ExecutionNode en : element.getExecutionNodes() ) {
+					
+					final TaskDeploymentDescriptor tdd = 
+							new TaskDeploymentDescriptor( en.getTaskDescriptor(), 
+						 	 							  en.getTaskBindingDescriptor() );
+					final WM2TMProtocol tmProtocol = 
+							rpcManager.getRPCProtocolProxy( WM2TMProtocol.class, 
+									 						en.getTaskDescriptor().getMachineDescriptor() );
+					
+					tmProtocol.installTask( tdd );
+					LOG.info( "deploy task : " + tdd.toString() );
+				}
 			}
-		} );*/		
+		} );
 		
-		
+		/*
+		// DUMMY TESTING....
 		final Map<UUID,TaskBindingDescriptor> taskBindingMap = new HashMap<UUID,TaskBindingDescriptor>();
 		final Map<UUID,Pair<TaskDescriptor,UserCode>> taskMap = new HashMap<UUID,Pair<TaskDescriptor,UserCode>>();
 		final Map<String,UUID> name2TaskIDMap = new HashMap<String,UUID>();
@@ -137,8 +161,6 @@ public class WorkloadManager implements ClientWMProtocol {
 			}
 		} );
 		
-		// Dummy Code...
-		
 		final List<WM2TMProtocol> tmList = new ArrayList<WM2TMProtocol>();
 		for( final MachineDescriptor machine : workerMachines ) {		
 			tmList.add( rpcManager.getRPCProtocolProxy( WM2TMProtocol.class, machine ) );
@@ -151,7 +173,7 @@ public class WorkloadManager implements ClientWMProtocol {
 			final TaskDescriptor taskDescriptor = taskMap.get( taskID ).getFirst();			
 			final TaskBindingDescriptor taskBinding = taskBindingMap.get( taskID );
 						
-			tmProtocol.installTask( taskDescriptor, taskBinding );
-		}
+			tmProtocol.installTask( new TaskDeploymentDescriptor( taskDescriptor, taskBinding ) );
+		}*/
 	}
 }

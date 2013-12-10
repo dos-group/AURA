@@ -203,4 +203,48 @@ public final class Descriptors {
 					.append( " }" ).toString();
 		}
 	}
+	
+	public static final class TaskDeploymentDescriptor implements Serializable {
+		
+		private static final long serialVersionUID = 6533439159854768522L;
+
+		public TaskDeploymentDescriptor( final TaskDescriptor taskDescriptor, 
+										 final TaskBindingDescriptor taskBindingDescriptor ) {
+			// sanity check.
+			if( taskDescriptor == null )
+				throw new IllegalArgumentException( "taskDescriptor == null" );
+			if( taskBindingDescriptor == null )
+				throw new IllegalArgumentException( "taskBindingDescriptor == null" );
+			
+			this.taskDescriptor = taskDescriptor;
+			
+			this.taskBindingDescriptor = taskBindingDescriptor;
+		}
+		
+		public final TaskDescriptor taskDescriptor;
+		
+		public final TaskBindingDescriptor taskBindingDescriptor;
+		
+		@Override
+		public boolean equals( Object other ) { 
+			if( this == other ) return true; 
+			if( other == null ) return false; 
+			if( other.getClass() != getClass() ) return false;
+ 
+			if( !( taskDescriptor.equals( ( (TaskDeploymentDescriptor)other ).taskDescriptor ) ) ) 
+				return false;
+			if( !( taskBindingDescriptor.equals( ( (TaskDeploymentDescriptor)other ).taskBindingDescriptor ) ) ) 
+				return false;
+			return true; 
+		}
+		
+		@Override
+		public String toString() {
+			return (new StringBuilder())
+					.append( "TaskDeploymentDescriptor = {" )
+					.append( " taskDescriptor = " + taskDescriptor.toString() + ", " )
+					.append( " taskBindingDescriptor = " + taskBindingDescriptor.toString() )
+					.append( " }" ).toString();
+		}
+	}
 }

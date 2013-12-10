@@ -1,11 +1,9 @@
 package de.tuberlin.aura.core.protocols;
 
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 
 public interface WM2TMProtocol {
 
-	public void installTask( final TaskDescriptor taskDescriptor, 
-							 final TaskBindingDescriptor taskBindingDescriptor );
+	public void installTask( final TaskDeploymentDescriptor taskDeploymentDescriptor );
 		
 }

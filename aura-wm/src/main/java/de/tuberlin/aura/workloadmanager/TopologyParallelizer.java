@@ -18,9 +18,9 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.TopologyBreadthFirstTraverser;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.workloadmanager.spi.TopologyParallelizer;
+import de.tuberlin.aura.workloadmanager.spi.ITopologyParallelizer;
 
-public class AuraTopologyParallelizer implements TopologyParallelizer {
+public class TopologyParallelizer implements ITopologyParallelizer {
 			
 	//---------------------------------------------------
     // Inner Classes.

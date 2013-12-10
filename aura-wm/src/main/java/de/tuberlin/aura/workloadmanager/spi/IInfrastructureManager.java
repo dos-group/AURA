@@ -1,5 +1,5 @@
 package de.tuberlin.aura.workloadmanager.spi;
 
-public interface InfrastructureManager {
+public interface IInfrastructureManager {
 
 }

@@ -16,6 +16,7 @@ import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
@@ -230,23 +231,24 @@ public final class TaskManager implements WM2TMProtocol {
     //---------------------------------------------------	
 	
 	@Override
-	public void installTask( TaskDescriptor taskDescriptor, TaskBindingDescriptor taskBindingDescriptor ) {
+	public void installTask( final TaskDeploymentDescriptor taskDeploymentDescriptor ) {
 		// sanity check.
-		if( taskDescriptor == null )
+		if( taskDeploymentDescriptor == null )
 			throw new IllegalArgumentException( "taskDescriptor == null" );	
-		if( taskBindingDescriptor == null )
-			throw new IllegalArgumentException( "taskBindingDescriptor == null" );
 
 		@SuppressWarnings("unchecked")
 		final Class<? extends TaskInvokeable> userCodeClass = 
-			(Class<? extends TaskInvokeable>) codeImplanter.implantUserCodeClass( taskDescriptor.userCode ); 
+			(Class<? extends TaskInvokeable>) codeImplanter.implantUserCodeClass( taskDeploymentDescriptor.taskDescriptor.userCode ); 
 		
-		installTask( taskDescriptor, taskBindingDescriptor, userCodeClass );
+		installTask( taskDeploymentDescriptor.taskDescriptor, 
+					 taskDeploymentDescriptor.taskBindingDescriptor, 
+					 userCodeClass );
 	}
 	
 	// TODO: Make that later private!
-	public void installTask( final TaskDescriptor taskDescriptor, final TaskBindingDescriptor taskBindingDescriptor, 
-			final Class<? extends TaskInvokeable> executableClass ) {
+	public void installTask( final TaskDescriptor taskDescriptor, 
+							 final TaskBindingDescriptor taskBindingDescriptor, 
+							 final Class<? extends TaskInvokeable> executableClass ) {
 		
 		final TaskEventHandler handler = new TaskEventHandler();
 		final IEventDispatcher dispatcher = registerTaskEvents( new EventDispatcher(), handler );
