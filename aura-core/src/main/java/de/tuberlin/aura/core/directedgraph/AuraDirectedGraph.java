@@ -631,6 +631,14 @@ public class AuraDirectedGraph {
 	public static final class TopologyBreadthFirstTraverser {
 	
 		public static void traverse( final AuraTopology topology, final Visitor<Node> visitor ) {
+			traverse( false, topology, visitor );
+		}
+		
+		public static void traverseBackwards( final AuraTopology topology, final Visitor<Node> visitor ) {
+			traverse( true, topology, visitor );
+		}
+		
+		private static void traverse( final boolean traverseBackwards, final AuraTopology topology, final Visitor<Node> visitor ) {
 			// sanity check.
 			if( topology == null )
 				throw new IllegalArgumentException( "topology == null" );
@@ -640,20 +648,35 @@ public class AuraDirectedGraph {
 			final Set<Node> visitedNodes = new HashSet<Node>();									
 			final Queue<Node> q = new LinkedList<Node>();
 
-			for( final Node node : topology.sourceMap.values() )
+			final Collection<Node> startNodes;
+			if( traverseBackwards )
+				startNodes = topology.sinkMap.values();
+			else
+				startNodes = topology.sourceMap.values();
+			
+			for( final Node node : startNodes )
 				q.add( node );
 			
 			while(! q.isEmpty() ) { 
 				final Node node = q.remove();
 				node.accept( visitor );				
-				for( final Node nextNode : node.outputs ) {
+				
+				final Collection<Node> nextVisitedNodes;
+				if( traverseBackwards )
+					nextVisitedNodes = node.inputs;
+				else
+					nextVisitedNodes = node.outputs;				
+				
+				for( final Node nextNode : nextVisitedNodes ) {
 					if( !visitedNodes.contains( nextNode ) ) {
 						q.add( nextNode );
 						visitedNodes.add( nextNode );
 					}
 				}
 			}			
-		}	
+		}
+		
+		
 	}
 	
 	/**

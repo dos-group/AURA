@@ -93,8 +93,8 @@ public class WorkloadManager implements ClientWMProtocol {
 			}
 		} );	
 		
-		// Deploying.
-		TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {			
+		// Deploying. 
+		TopologyBreadthFirstTraverser.traverseBackwards( topology, new Visitor<Node>() {			
 			
 			@Override
 			public void visit( final Node element ) {
@@ -113,67 +113,5 @@ public class WorkloadManager implements ClientWMProtocol {
 				}
 			}
 		} );
-		
-		/*
-		// DUMMY TESTING....
-		final Map<UUID,TaskBindingDescriptor> taskBindingMap = new HashMap<UUID,TaskBindingDescriptor>();
-		final Map<UUID,Pair<TaskDescriptor,UserCode>> taskMap = new HashMap<UUID,Pair<TaskDescriptor,UserCode>>();
-		final Map<String,UUID> name2TaskIDMap = new HashMap<String,UUID>();
-		
-		final Deque<UUID> deploymentOrder = new ArrayDeque<UUID>();
-		
-		// First pass, create task descriptors (and later a clever worker machine assignment!). 
-		TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {
-
-			private int machineIdx = 0;
-			
-			@Override
-			public void visit( final Node element ) {				
-				final UUID taskID = UUID.randomUUID();
-				final UserCode uc = topology.userCodeMap.get( element.name );
-				final TaskDescriptor td = new TaskDescriptor( taskID, element.name, uc );
-				td.setMachineDescriptor( workerMachines.get( machineIdx++ ) );
-				final Pair<TaskDescriptor,UserCode> taskAndUserCode = new Pair<TaskDescriptor,UserCode>( td, uc ); 								
-				taskMap.put( taskID, taskAndUserCode );
-				name2TaskIDMap.put( element.name, taskID );
-				deploymentOrder.push( taskID );
-			}
-		} );
-		
-		// Second pass, create binding descriptors. 
-		TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {
-
-			@Override
-			public void visit( final Node element ) {
-				
-				final TaskDescriptor td = taskMap.get( name2TaskIDMap.get( element.name ) ).getFirst();
-				final List<TaskDescriptor> inputs = new ArrayList<TaskDescriptor>();
-				final List<TaskDescriptor> outputs = new ArrayList<TaskDescriptor>();
-				
-				for( final Node n : element.getInputs() )
-					inputs.add( taskMap.get( name2TaskIDMap.get( n.name ) ).getFirst() );
-				
-				for( final Node n : element.getOutputs() )
-					outputs.add( taskMap.get( name2TaskIDMap.get( n.name ) ).getFirst() );				
-				
-				final TaskBindingDescriptor tbd = new TaskBindingDescriptor( td, inputs, outputs );
-				taskBindingMap.put( td.uid, tbd );
-			}
-		} );
-		
-		final List<WM2TMProtocol> tmList = new ArrayList<WM2TMProtocol>();
-		for( final MachineDescriptor machine : workerMachines ) {		
-			tmList.add( rpcManager.getRPCProtocolProxy( WM2TMProtocol.class, machine ) );
-		}
-		
-		while( !deploymentOrder.isEmpty() ) {
-			
-			final WM2TMProtocol tmProtocol = tmList.get( deploymentOrder.size() - 1 );
-			final UUID taskID = deploymentOrder.pop();
-			final TaskDescriptor taskDescriptor = taskMap.get( taskID ).getFirst();			
-			final TaskBindingDescriptor taskBinding = taskBindingMap.get( taskID );
-						
-			tmProtocol.installTask( new TaskDeploymentDescriptor( taskDescriptor, taskBinding ) );
-		}*/
 	}
 }
