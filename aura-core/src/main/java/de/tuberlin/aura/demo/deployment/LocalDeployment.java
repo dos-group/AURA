@@ -2,15 +2,20 @@ package de.tuberlin.aura.demo.deployment;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.task.usercode.UserCode;
 
 public final class LocalDeployment {
 
+	
+	public static final UserCode USER_CODE = new UserCode( "dummy", new ArrayList<String>(), new byte[1014] );
+	
 	//----------- MACHINE SETUP -----------
 
 	// MACHINE_1
@@ -86,42 +91,42 @@ public final class LocalDeployment {
 	
 	public static final String TASK_1_NAME = "TASK_1";
 	
-	public static final TaskDescriptor TASK_1_DESCRIPTOR = new TaskDescriptor( MACHINE_1_DESCRIPTOR, TASK_1_UID, TASK_1_NAME ); 
+	public static final TaskDescriptor TASK_1_DESCRIPTOR = new TaskDescriptor( /*MACHINE_1_DESCRIPTOR,*/ TASK_1_UID, TASK_1_NAME, USER_CODE ); 
 	
 	// TASK_2
 	public static final UUID TASK_2_UID = UUID.fromString( "445a4ba2-e5c0-4afc-a503-7cbbda11fb07" );
 	
 	public static final String TASK_2_NAME = "TASK_2";
 	
-	public static final TaskDescriptor TASK_2_DESCRIPTOR = new TaskDescriptor( MACHINE_2_DESCRIPTOR, TASK_2_UID, TASK_2_NAME ); 
+	public static final TaskDescriptor TASK_2_DESCRIPTOR = new TaskDescriptor( /*MACHINE_2_DESCRIPTOR,*/ TASK_2_UID, TASK_2_NAME, USER_CODE ); 
 
 	// TASK_3
 	public static final UUID TASK_3_UID = UUID.fromString( "456434ba-e5c0-4afc-a503-7cbbda11fb07" );
 	
 	public static final String TASK_3_NAME = "TASK_3";
 	
-	public static final TaskDescriptor TASK_3_DESCRIPTOR = new TaskDescriptor( MACHINE_3_DESCRIPTOR, TASK_3_UID, TASK_3_NAME );
+	public static final TaskDescriptor TASK_3_DESCRIPTOR = new TaskDescriptor( /*MACHINE_3_DESCRIPTOR,*/ TASK_3_UID, TASK_3_NAME, USER_CODE );
 	
 	// TASK_4
 	public static final UUID TASK_4_UID = UUID.fromString( "956434ba-e5c0-4afc-a503-7cbbda11fb07" );
 	
 	public static final String TASK_4_NAME = "TASK_4";
 	
-	public static final TaskDescriptor TASK_4_DESCRIPTOR = new TaskDescriptor( MACHINE_4_DESCRIPTOR, TASK_4_UID, TASK_4_NAME );
+	public static final TaskDescriptor TASK_4_DESCRIPTOR = new TaskDescriptor( /*MACHINE_4_DESCRIPTOR,*/ TASK_4_UID, TASK_4_NAME, USER_CODE );
 	
 	// TASK_5
 	public static final UUID TASK_5_UID = UUID.fromString( "956434ba-e5c0-4afc-a703-7cbbda11fb07" );
 	
 	public static final String TASK_5_NAME = "TASK_5";
 	
-	public static final TaskDescriptor TASK_5_DESCRIPTOR = new TaskDescriptor( MACHINE_2_DESCRIPTOR, TASK_5_UID, TASK_5_NAME );
+	public static final TaskDescriptor TASK_5_DESCRIPTOR = new TaskDescriptor( /*MACHINE_2_DESCRIPTOR,*/ TASK_5_UID, TASK_5_NAME, USER_CODE );
 
 	// TASK_6
 	public static final UUID TASK_6_UID = UUID.fromString( "956434ba-5290-4afc-a703-7cbbda11fb07" );
 	
 	public static final String TASK_6_NAME = "TASK_6";
 	
-	public static final TaskDescriptor TASK_6_DESCRIPTOR = new TaskDescriptor( MACHINE_4_DESCRIPTOR, TASK_6_UID, TASK_6_NAME );
+	public static final TaskDescriptor TASK_6_DESCRIPTOR = new TaskDescriptor( /*MACHINE_4_DESCRIPTOR,*/ TASK_6_UID, TASK_6_NAME, USER_CODE );
 	
 	//----------- TASK BINDING SETUP -----------  
 	

@@ -47,6 +47,8 @@ public class WorkloadManager implements ClientWMProtocol {
 		workerMachines.add( LocalDeployment.MACHINE_4_DESCRIPTOR );
 		
 		rpcManager.registerRPCProtocolImpl( this, ClientWMProtocol.class );
+		
+		//this.topologyParallelizer = new AuraTopologyParallelizer();
 	}
 
 	//---------------------------------------------------
@@ -63,6 +65,8 @@ public class WorkloadManager implements ClientWMProtocol {
 	
 	public final List<MachineDescriptor> workerMachines;
 	
+	//private final AuraTopologyParallelizer topologyParallelizer;
+	
 	//---------------------------------------------------
     // Private.
     //---------------------------------------------------	
@@ -74,6 +78,19 @@ public class WorkloadManager implements ClientWMProtocol {
 		// sanity check.
 		if( topology == null )
 			throw new IllegalArgumentException( "topology == null" );
+						
+		/*// TODO: debug output
+		topologyParallelizer.parallelizeTopology( topology );
+		TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {			
+			@Override
+			public void visit( final Node element ) {
+				
+				LOG.info( "---------- " + element.name + " ----------" );
+				for( final ExecutionNode en : element.getExecutionNodes() )
+					LOG.info( en.toString() );
+			}
+		} );*/		
+		
 		
 		final Map<UUID,TaskBindingDescriptor> taskBindingMap = new HashMap<UUID,TaskBindingDescriptor>();
 		final Map<UUID,Pair<TaskDescriptor,UserCode>> taskMap = new HashMap<UUID,Pair<TaskDescriptor,UserCode>>();
@@ -87,13 +104,12 @@ public class WorkloadManager implements ClientWMProtocol {
 			private int machineIdx = 0;
 			
 			@Override
-			public void visit( final Node element ) {
-				
+			public void visit( final Node element ) {				
 				final UUID taskID = UUID.randomUUID();
-				final TaskDescriptor td = new TaskDescriptor( workerMachines.get( machineIdx++ ), taskID, element.name );
 				final UserCode uc = topology.userCodeMap.get( element.name );
-				final Pair<TaskDescriptor,UserCode> taskAndUserCode = new Pair<TaskDescriptor,UserCode>( td, uc ); 				
-				
+				final TaskDescriptor td = new TaskDescriptor( taskID, element.name, uc );
+				td.setMachineDescriptor( workerMachines.get( machineIdx++ ) );
+				final Pair<TaskDescriptor,UserCode> taskAndUserCode = new Pair<TaskDescriptor,UserCode>( td, uc ); 								
 				taskMap.put( taskID, taskAndUserCode );
 				name2TaskIDMap.put( element.name, taskID );
 				deploymentOrder.push( taskID );
@@ -110,10 +126,10 @@ public class WorkloadManager implements ClientWMProtocol {
 				final List<TaskDescriptor> inputs = new ArrayList<TaskDescriptor>();
 				final List<TaskDescriptor> outputs = new ArrayList<TaskDescriptor>();
 				
-				for( final Node n : element.inputs )
+				for( final Node n : element.getInputs() )
 					inputs.add( taskMap.get( name2TaskIDMap.get( n.name ) ).getFirst() );
 				
-				for( final Node n : element.outputs )
+				for( final Node n : element.getOutputs() )
 					outputs.add( taskMap.get( name2TaskIDMap.get( n.name ) ).getFirst() );				
 				
 				final TaskBindingDescriptor tbd = new TaskBindingDescriptor( td, inputs, outputs );
@@ -132,11 +148,10 @@ public class WorkloadManager implements ClientWMProtocol {
 			
 			final WM2TMProtocol tmProtocol = tmList.get( deploymentOrder.size() - 1 );
 			final UUID taskID = deploymentOrder.pop();
-			final TaskDescriptor taskDescriptor = taskMap.get( taskID ).getFirst();
-			final UserCode userCode = taskMap.get( taskID ).getSecond();			
+			final TaskDescriptor taskDescriptor = taskMap.get( taskID ).getFirst();			
 			final TaskBindingDescriptor taskBinding = taskBindingMap.get( taskID );
 						
-			tmProtocol.installTask( taskDescriptor, taskBinding, userCode );
+			tmProtocol.installTask( taskDescriptor, taskBinding );
 		}
 	}
 }

@@ -3,6 +3,7 @@ package de.tuberlin.aura.core.directedgraph;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,7 +39,7 @@ public class AuraDirectedGraph {
 		public AuraTopology( final Map<String,Node> nodeMap, 
 							 final Map<String,Node> sourceMap,
 							 final Map<String,Node> sinkMap,
-							 final List<Edge> edges, 
+							 final Map<Pair<String,String>,Edge> edges, 
 							 final Map<String,UserCode> userCodeMap ) {
 			
 			// sanity check.
@@ -59,7 +60,7 @@ public class AuraDirectedGraph {
 			
 			this.sinkMap = Collections.unmodifiableMap( sinkMap );
 			
-			this.edges = Collections.unmodifiableList( edges );
+			this.edges = Collections.unmodifiableMap( edges );
 			
 			this.userCodeMap = Collections.unmodifiableMap( userCodeMap );
 		}
@@ -74,7 +75,7 @@ public class AuraDirectedGraph {
 		
 		public final Map<String,Node> sinkMap;
 		
-		public final List<Edge> edges;
+		public final Map<Pair<String,String>,Edge> edges;
 		
 		public final Map<String,UserCode> userCodeMap;
 	}
@@ -130,15 +131,15 @@ public class AuraDirectedGraph {
 			}
 			
 			public AuraTopologyBuilder connectTo( final String dstNodeName, final Edge.TransferType transferType ) {
-				return connectTo( dstNodeName, transferType, Edge.EdgeType.FORWARD_EDGE, Edge.DataPersistenceType.EPHEMERAL, Edge.ExecutionType.CONCURRENT );
+				return connectTo( dstNodeName, transferType, Edge.EdgeType.FORWARD_EDGE, Edge.DataPersistenceType.EPHEMERAL, Edge.ExecutionType.PIPELINED );
 			}
 			
 			public AuraTopologyBuilder connectTo( final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType ) {
-				return connectTo( dstNodeName, transferType, edgeType, Edge.DataPersistenceType.EPHEMERAL, Edge.ExecutionType.CONCURRENT );
+				return connectTo( dstNodeName, transferType, edgeType, Edge.DataPersistenceType.EPHEMERAL, Edge.ExecutionType.PIPELINED);
 			}
 			
 			public AuraTopologyBuilder connectTo( final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType, final Edge.DataPersistenceType dataLifeTime ) {		
-				return connectTo( dstNodeName, transferType, edgeType, dataLifeTime, Edge.ExecutionType.CONCURRENT );
+				return connectTo( dstNodeName, transferType, edgeType, dataLifeTime, Edge.ExecutionType.PIPELINED );
 			}
 			
 			public List<Pair<String,String>> getEdges() {
@@ -165,7 +166,7 @@ public class AuraDirectedGraph {
 			
 			this.sinkMap = new HashMap<String,Node>();
 			
-			this.edges = new ArrayList<Edge>();
+			this.edges = new HashMap<Pair<String,String>,Edge>();
 			
 			this.nodeConnector = new NodeConnector( this );
 
@@ -184,7 +185,7 @@ public class AuraDirectedGraph {
 
 		public final Map<String,Node> sinkMap;
 		
-		public final List<Edge> edges;
+		public final Map<Pair<String,String>,Edge> edges;
 				
 		public final NodeConnector nodeConnector;
 		
@@ -245,7 +246,8 @@ public class AuraDirectedGraph {
 							throw new IllegalStateException( srcNode.name + " to " + dstNode.name + "is not a back coupling edge" );
 					}
 					
-					edges.add( new Edge( srcNode, dstNode, transferType, edgeType, dataLifeTime, executionType ) );	
+					edges.put( new Pair<String,String>( srcNode.name, dstNode.name ), 
+							   new Edge( srcNode, dstNode, transferType, edgeType, dataLifeTime, executionType ) );	
 				
 					if( edgeType != Edge.EdgeType.BACKWARD_EDGE ) {
 						sourceMap.remove( dstNode.name );			
@@ -320,6 +322,8 @@ public class AuraDirectedGraph {
 			this.outputs = new ArrayList<Node>();
 			
 			this.executionNodes = new ArrayList<ExecutionNode>();
+			
+			this.tmpStorage = new HashMap<String,Object>();
 		} 
 		
 		//---------------------------------------------------
@@ -334,11 +338,13 @@ public class AuraDirectedGraph {
 		
 		public final int perWorkerParallelism;
 		
-		public final List<Node> inputs;
+		private final List<Node> inputs;
 		
-		public final List<Node> outputs;
+		private final List<Node> outputs;
 		
-		public final List<ExecutionNode> executionNodes;
+		private final List<ExecutionNode> executionNodes;
+		
+		public final Map<String,Object> tmpStorage;
 		
 		//---------------------------------------------------
 	    // Public.
@@ -353,6 +359,10 @@ public class AuraDirectedGraph {
 			
 			inputs.add( node );
 		}
+		
+		public Collection<Node> getInputs() {
+			return Collections.unmodifiableList( inputs );
+		}
 
 		public void addOutput( final Node node ) {
 			// sanity check.
@@ -364,6 +374,10 @@ public class AuraDirectedGraph {
 			outputs.add( node );
 		}
 		
+		public Collection<Node> getOutputs() {
+			return Collections.unmodifiableList( outputs );
+		}		
+		
 		public void addExecutionNode( final ExecutionNode exeNode ) {
 			// sanity check.
 			if( exeNode == null )
@@ -372,6 +386,10 @@ public class AuraDirectedGraph {
 			executionNodes.add( exeNode );
 		}		
 		
+		public List<ExecutionNode> getExecutionNodes() {
+			return Collections.unmodifiableList( executionNodes );
+		}
+				
 		@Override
 		public String toString() {
 			return (new StringBuilder())
@@ -385,7 +403,7 @@ public class AuraDirectedGraph {
 			visitor.visit( this );			
 		}		
 	} 
-
+	
 	/**
 	 * 
 	 */
@@ -395,28 +413,13 @@ public class AuraDirectedGraph {
 	    // Constructors.
 	    //---------------------------------------------------
 
-		public ExecutionNode( final Node logicalNode,
-							  final TaskDescriptor taskDescriptor,
-							  final TaskBindingDescriptor taskBindingDescriptor,
-							  final UserCode userCode ) {
+		public ExecutionNode( final Node logicalNode ) {
 			
 			// sanity check.
 			if( logicalNode == null )
 				throw new IllegalArgumentException( "logicalNode == null" );
-			if( taskDescriptor == null )
-				throw new IllegalArgumentException( "taskDescriptor == null" );
-			if( taskBindingDescriptor == null )
-				throw new IllegalArgumentException( "taskBindingDescriptor == null" );
-			if( userCode == null )
-				throw new IllegalArgumentException( "userCode == null" );
 			
 			this.logicalNode = logicalNode;
-			
-			this.taskDescriptor = taskDescriptor;
-			
-			this.taskBindingDescriptor = taskBindingDescriptor;
-			
-			this.userCode = userCode;
 		}
 
 		//---------------------------------------------------
@@ -425,11 +428,9 @@ public class AuraDirectedGraph {
 
 		public final Node logicalNode;
 		
-		public final TaskDescriptor taskDescriptor;
+		public TaskDescriptor taskDescriptor;
 	
-		public final TaskBindingDescriptor taskBindingDescriptor;
-		
-		public final UserCode userCode;
+		public TaskBindingDescriptor taskBindingDescriptor;
 		
 		private TaskState currentState;
 
@@ -444,9 +445,46 @@ public class AuraDirectedGraph {
 			
 			currentState = state;
 		}
-		
+
 		public TaskState getState() {
 			return currentState;
+		}
+		
+		public void setTaskDescriptor( final TaskDescriptor taskDescriptor ) {
+			// sanity check.
+			if( taskDescriptor == null )
+				throw new IllegalArgumentException( "taskDescriptor == null" );
+			if( this.taskDescriptor != null )
+				throw new IllegalStateException( "taskDescriptor is already set" );
+			
+			this.taskDescriptor = taskDescriptor;
+		}
+		
+		public TaskDescriptor getTaskDescriptor() {
+			return this.taskDescriptor;
+		}
+		
+		public void setTaskBindingDescriptor( final TaskBindingDescriptor taskBindingDescriptor ) {
+			// sanity check.
+			if( taskBindingDescriptor == null )
+				throw new IllegalArgumentException( "taskBindingDescriptor == null" );	
+			if( this.taskBindingDescriptor != null )
+				throw new IllegalStateException( "taskBindingDescriptor is already set" );
+			
+			this.taskBindingDescriptor = taskBindingDescriptor;
+		}
+		
+		public TaskBindingDescriptor getTaskBindingDescriptor() {
+			return this.taskBindingDescriptor;
+		}
+		
+		@Override
+		public String toString() {
+			return (new StringBuilder())
+					.append( "ExecutionNode = {" )				
+					.append( " taskDescriptor = " + taskDescriptor.toString() + ", " )
+					.append( " taskBindingDescriptor = " + taskBindingDescriptor.toString() )
+					.append( " }" ).toString();
 		}
 	}
 	
@@ -465,9 +503,7 @@ public class AuraDirectedGraph {
 			
 			POINT_TO_POINT,
 			
-			ALL_TO_ALL,
-			
-			BROADCAST
+			ALL_TO_ALL
 		}
 		
 		public static enum EdgeType {
@@ -488,13 +524,27 @@ public class AuraDirectedGraph {
 		
 		public static enum ExecutionType {
 			
-			SEQUENTIAL,
+			BLOCKING,
 			
-			CONCURRENT,
-			
-			LAZY
+			PIPELINED,
 		}
 		
+		public static enum DeploymentType {
+			
+			LAZY,
+			
+			EAGER			
+		}
+		
+		public static enum PartitioningType {
+			
+			HASH_PARTITIONED,
+			
+			RANGE_PARTITIONED,
+			
+			BROADCAST			
+		}
+				
 		//---------------------------------------------------
 	    // Constructor.
 	    //---------------------------------------------------

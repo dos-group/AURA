@@ -27,7 +27,6 @@ import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.task.common.TaskStateMachine;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
-import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
 import de.tuberlin.aura.taskmanager.Handler.AbstractTaskEventHandler;
 import de.tuberlin.aura.taskmanager.TaskEvents.TaskStateTransitionEvent;
@@ -231,20 +230,16 @@ public final class TaskManager implements WM2TMProtocol {
     //---------------------------------------------------	
 	
 	@Override
-	public void installTask( TaskDescriptor taskDescriptor, TaskBindingDescriptor taskBindingDescriptor,
-			UserCode userCode ) {
+	public void installTask( TaskDescriptor taskDescriptor, TaskBindingDescriptor taskBindingDescriptor ) {
 		// sanity check.
 		if( taskDescriptor == null )
 			throw new IllegalArgumentException( "taskDescriptor == null" );	
 		if( taskBindingDescriptor == null )
 			throw new IllegalArgumentException( "taskBindingDescriptor == null" );
-		if( userCode == null )
-			throw new IllegalArgumentException( "taskUserCode == null" );
 
-		// TODO: unpack and load all classes contained in taskUserCode. 
 		@SuppressWarnings("unchecked")
 		final Class<? extends TaskInvokeable> userCodeClass = 
-			(Class<? extends TaskInvokeable>) codeImplanter.implantUserCodeClass( userCode ); 
+			(Class<? extends TaskInvokeable>) codeImplanter.implantUserCodeClass( taskDescriptor.userCode ); 
 		
 		installTask( taskDescriptor, taskBindingDescriptor, userCodeClass );
 	}
@@ -286,7 +281,7 @@ public final class TaskManager implements WM2TMProtocol {
 		// Connect outputs, if we have some...
 		if( taskBindingDescriptor.outputs.size() > 0 ) {			
 			for( final TaskDescriptor outputTask : taskBindingDescriptor.outputs ) {				
-				ioManager.connectDataChannel( taskDescriptor.uid, outputTask.uid, outputTask.machine );
+				ioManager.connectDataChannel( taskDescriptor.uid, outputTask.uid, outputTask.getMachineDescriptor() );
 			}
 		}
 	}

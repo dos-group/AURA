@@ -90,6 +90,7 @@ public final class Client {
 			for( int i = 0; i < 100; ++i ) {
 				final BlockingQueue<DataMessage> inputMsgs1 = context.inputQueues.get( 0 );			
 				final BlockingQueue<DataMessage> inputMsgs2 = context.inputQueues.get( 1 );
+
 				try {
 					final DataMessage dm1 = inputMsgs1.take();
 					final DataMessage dm2 = inputMsgs2.take();
@@ -138,7 +139,7 @@ public final class Client {
         final SimpleLayout layout = new SimpleLayout();
         final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
         LOG.addAppender( consoleAppender );
-        
+                
         // Run the demo:
         // Start WM
         // Start TM 1-4
@@ -146,22 +147,28 @@ public final class Client {
         
         final AuraClient ac = new AuraClient( LocalDeployment.MACHINE_6_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR ); 
         
-        final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        /*final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
         atb1.addNode( new Node( "Task1", Task1Exe.class, 1, 1 ) )
            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
            .addNode( new Node( "Task2", Task2Exe.class, 1, 1 ) )
            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
            .addNode( new Node( "Task3", Task3Exe.class, 1, 1 ) )
            .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
-           .addNode( new Node( "Task4", Task4Exe.class, 1, 1 ) ); 
+           .addNode( new Node( "Task4", Task4Exe.class, 1, 1 ) );*/ 
+        
+        
+        final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        atb1.addNode( new Node( "Task1", Task1Exe.class, 17, 1 ) )
+        	.connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
+        	.addNode( new Node( "Task4", Task4Exe.class, 3, 1 ) );
         
         final AuraTopology at1 = atb1.build();
         
         // Execute the same topology 4 times in parallel.
         ac.submitTopology( at1 );
+        /*ac.submitTopology( at1 );
         ac.submitTopology( at1 );
-        ac.submitTopology( at1 );
-        ac.submitTopology( at1 );
+        ac.submitTopology( at1 );*/
 
 		/*final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
         atb2.addNode( new Node( "Task1", Task1Exe.class, 1, 1 ) )

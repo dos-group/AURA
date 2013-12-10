@@ -7,6 +7,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.task.usercode.UserCode;
+
 public final class Descriptors {
 
 	// Disallow instantiation.
@@ -82,36 +84,53 @@ public final class Descriptors {
 		
 		private static final long serialVersionUID = 7425151926496852885L;
 
-		public TaskDescriptor( MachineDescriptor machine, UUID uid, String name ) {
+		public TaskDescriptor( UUID uid, String name, UserCode userCode ) {
 			// sanity check.
-			if( machine == null )
-				throw new IllegalArgumentException( "machine == null" );
 			if( uid == null )
 				throw new IllegalArgumentException( "uid == null" );
 			if( name == null )
 				throw new IllegalArgumentException( "name == null" );
-			
-			this.machine = machine;
+			if( userCode == null )
+				throw new IllegalArgumentException( "userCode == null" );
 			
 			this.uid = uid;
 			
 			this.name = name;
+			
+			this.userCode = userCode;
 		}
-		
-		public final MachineDescriptor machine;
-		
+				
 		public final UUID uid;
 		
 		public final String name;
 		
+		public final UserCode userCode;
+		
+		private MachineDescriptor machine;
+		
+		public void setMachineDescriptor( final MachineDescriptor machine ) {
+			// sanity check.
+			if( machine == null )
+				throw new IllegalArgumentException( "machine == null" );
+			if( this.machine != null )
+				throw new IllegalStateException( "machine is already set" );
+			
+			this.machine = machine;
+		}
+		
+		public MachineDescriptor getMachineDescriptor() {
+			return machine;			
+		}
+
 		@Override
 		public boolean equals( Object other ) { 
 			if( this == other ) return true; 
 			if( other == null ) return false; 
 			if( other.getClass() != getClass() ) return false;
 		
-			if( !( machine.equals( ( (TaskDescriptor)other ).machine ) ) ) 
-				return false; 
+			/*if( ( machine == null && ((TaskDescriptor)other).machine == null ) || 
+				!( machine.equals( ( (TaskDescriptor)other ).machine ) ) ) 
+				return false;*/ 
 			if( !( uid.equals( ( (TaskDescriptor)other ).uid ) ) ) 
 				return false; 
 			if( !( name.equals( ( (TaskDescriptor)other ).name ) ) ) 
@@ -123,7 +142,7 @@ public final class Descriptors {
 		public String toString() {
 			return (new StringBuilder())
 					.append( "TaskDescriptor = {" )
-					.append( " machine = " + machine.toString() + ", " )
+					//.append( " machine = " + machine.toString() + ", " )
 					.append( " uid = " + uid.toString() + ", " )
 					.append( " name = " + name )
 					.append( " }" ).toString();
