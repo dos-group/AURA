@@ -179,21 +179,21 @@ public class AuraDirectedGraph {
 	    // Fields.
 	    //---------------------------------------------------
 		
-		public final Map<String,Node> nodeMap;
+		private final Map<String,Node> nodeMap;
 		
-		public final Map<String,Node> sourceMap;
+		private final Map<String,Node> sourceMap;
 
-		public final Map<String,Node> sinkMap;
+		private final Map<String,Node> sinkMap;
 		
-		public final Map<Pair<String,String>,Edge> edges;
+		private final Map<Pair<String,String>,Edge> edges;
 				
-		public final NodeConnector nodeConnector;
+		private final NodeConnector nodeConnector;
 		
-		public final UserCodeExtractor codeExtractor;
+		private final UserCodeExtractor codeExtractor;
 		
-		public final Map<String,UserCode> userCodeMap;
+		private final Map<String,UserCode> userCodeMap;
 		
-		public boolean isBuilded = false; 
+		private boolean isBuilded = false; 
 		
 		//---------------------------------------------------
 	    // Public.
@@ -322,8 +322,6 @@ public class AuraDirectedGraph {
 			this.outputs = new ArrayList<Node>();
 			
 			this.executionNodes = new ArrayList<ExecutionNode>();
-			
-			this.tmpStorage = new HashMap<String,Object>();
 		} 
 		
 		//---------------------------------------------------
@@ -343,9 +341,7 @@ public class AuraDirectedGraph {
 		private final List<Node> outputs;
 		
 		private final List<ExecutionNode> executionNodes;
-		
-		public final Map<String,Object> tmpStorage;
-		
+				
 		//---------------------------------------------------
 	    // Public.
 	    //---------------------------------------------------
@@ -428,9 +424,9 @@ public class AuraDirectedGraph {
 
 		public final Node logicalNode;
 		
-		public TaskDescriptor taskDescriptor;
+		private TaskDescriptor taskDescriptor;
 	
-		public TaskBindingDescriptor taskBindingDescriptor;
+		private TaskBindingDescriptor taskBindingDescriptor;
 		
 		private TaskState currentState;
 

@@ -68,9 +68,9 @@ public class AuraTopologyParallelizer implements TopologyParallelizer {
 								final List<TaskDescriptor> inputDescriptors = new ArrayList<TaskDescriptor>();
 								
 								for( final ExecutionNode srcEN : n.getExecutionNodes() )
-									inputDescriptors.add( srcEN.taskDescriptor );			
+									inputDescriptors.add( srcEN.getTaskDescriptor() );			
 								
-								executionNodeInputs.put( dstEN.taskDescriptor.uid, 
+								executionNodeInputs.put( dstEN.getTaskDescriptor().uid, 
 										Collections.unmodifiableList( inputDescriptors ) ); 									
 							}
 							
@@ -97,8 +97,8 @@ public class AuraTopologyParallelizer implements TopologyParallelizer {
 									while( i++ < numOfLinks ) {																	
 										final ExecutionNode dstEN = dstIter.next();										
 										final List<TaskDescriptor> inputDescriptors = new ArrayList<TaskDescriptor>();										
-										inputDescriptors.add( srcEN.taskDescriptor );										
-										executionNodeInputs.put( dstEN.taskDescriptor.uid, 
+										inputDescriptors.add( srcEN.getTaskDescriptor() );										
+										executionNodeInputs.put( dstEN.getTaskDescriptor().uid, 
 												Collections.unmodifiableList( inputDescriptors ) );
 									}
 								}
@@ -120,10 +120,10 @@ public class AuraTopologyParallelizer implements TopologyParallelizer {
 									int i = 0;
 									while( i++ < numOfLinks ) {							
 										final ExecutionNode srcEN = srcIter.next();
-										inputDescriptors.add( srcEN.taskDescriptor );
+										inputDescriptors.add( srcEN.getTaskDescriptor() );
 									}
 									
-									executionNodeInputs.put( dstEN.taskDescriptor.uid, 
+									executionNodeInputs.put( dstEN.getTaskDescriptor().uid, 
 											Collections.unmodifiableList( inputDescriptors ) );
 								}								
 							}							
@@ -144,9 +144,9 @@ public class AuraTopologyParallelizer implements TopologyParallelizer {
 								final List<TaskDescriptor> outputDescriptors = new ArrayList<TaskDescriptor>();
 								
 								for( final ExecutionNode dstEN : n.getExecutionNodes() )
-									outputDescriptors.add( dstEN.taskDescriptor );			
+									outputDescriptors.add( dstEN.getTaskDescriptor() );			
 								
-								executionNodeOutputs.put( srcEN.taskDescriptor.uid, 
+								executionNodeOutputs.put( srcEN.getTaskDescriptor().uid, 
 										Collections.unmodifiableList( outputDescriptors ) ); 									
 							}
 							
@@ -174,10 +174,10 @@ public class AuraTopologyParallelizer implements TopologyParallelizer {
 									int i = 0;
 									while( i++ < numOfLinks ) {							
 										final ExecutionNode dstEN = dstIter.next();
-										outputDescriptors.add( dstEN.taskDescriptor );
+										outputDescriptors.add( dstEN.getTaskDescriptor() );
 									}
 									
-									executionNodeOutputs.put( srcEN.taskDescriptor.uid, 
+									executionNodeOutputs.put( srcEN.getTaskDescriptor().uid, 
 											Collections.unmodifiableList( outputDescriptors ) );
 								}
 				
@@ -197,8 +197,8 @@ public class AuraTopologyParallelizer implements TopologyParallelizer {
 									while( i++ < numOfLinks ) {																	
 										final ExecutionNode srcEN = srcIter.next();										
 										final List<TaskDescriptor> outputDescriptors = new ArrayList<TaskDescriptor>();										
-										outputDescriptors.add( dstEN.taskDescriptor );										
-										executionNodeInputs.put( srcEN.taskDescriptor.uid, 
+										outputDescriptors.add( dstEN.getTaskDescriptor() );										
+										executionNodeInputs.put( srcEN.getTaskDescriptor().uid, 
 												Collections.unmodifiableList( outputDescriptors ) );
 									}									
 								}
@@ -211,11 +211,11 @@ public class AuraTopologyParallelizer implements TopologyParallelizer {
 				// Assign the binding descriptors to the execution nodes.
 				for( final ExecutionNode en : element.getExecutionNodes() ) {				
 					
-					List<TaskDescriptor> inputs = executionNodeInputs.get( en.taskDescriptor.uid );
-					List<TaskDescriptor> outputs = executionNodeOutputs.get( en.taskDescriptor.uid );										
+					List<TaskDescriptor> inputs = executionNodeInputs.get( en.getTaskDescriptor().uid );
+					List<TaskDescriptor> outputs = executionNodeOutputs.get( en.getTaskDescriptor().uid );										
 					
 					final TaskBindingDescriptor bindingDescriptor = 
-							new TaskBindingDescriptor( en.taskDescriptor, 
+							new TaskBindingDescriptor( en.getTaskDescriptor(), 
 													   inputs  != null ? inputs  : new ArrayList<TaskDescriptor>(),
 													   outputs != null ? outputs : new ArrayList<TaskDescriptor>() );					
 					
