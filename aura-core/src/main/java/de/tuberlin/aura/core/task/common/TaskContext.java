@@ -1,18 +1,15 @@
 package de.tuberlin.aura.core.task.common;
 
-import io.netty.channel.Channel;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
+import de.tuberlin.aura.core.task.gates.InputGate;
+import de.tuberlin.aura.core.task.gates.OutputGate;
 
 /**
  * 
@@ -49,49 +46,20 @@ public final class TaskContext {
 		
 		this.invokeableClass = invokeableClass;
 		
-		if( taskBinding.inputGates.size() > 0 ) {
-			
-			inputChannels = new ArrayList<List<Channel>>( taskBinding.inputGates.size() );			
-			
-			inputQueues = new ArrayList<BlockingQueue<DataMessage>>( taskBinding.inputGates.size() );
-			
-			for( final List<TaskDescriptor> inputGate : taskBinding.inputGates ) {				
-				
-				final List<Channel> channelListPerGate = new ArrayList<Channel>( inputGate.size() );
-				for( int i = 0; i < inputGate.size(); ++i ) {
-					channelListPerGate.add( null );
-				}
-				
-				inputChannels.add( channelListPerGate );
-				
-				for( int i = 0; i < inputGate.size(); ++i )
-					inputQueues.add( new LinkedBlockingQueue<DataMessage>() );
-			}
-
+		if( taskBinding.inputGateBindings.size() > 0 ) {
+			this.inputGates = new ArrayList<InputGate>( taskBinding.inputGateBindings.size() );
+			for( final List<TaskDescriptor> inputGate : taskBinding.inputGateBindings ) 			
+				inputGates.add( new InputGate( inputGate.size() ) ); 
 		} else {
-			
-			this.inputQueues = null;
-			
-			this.inputChannels = null;
+			this.inputGates = null;
 		}
 		
-		if( taskBinding.outputGates.size() > 0 ) {
-			
-			outputChannels = new ArrayList<List<Channel>>( taskBinding.outputGates.size() );
-			
-			for( final List<TaskDescriptor> outputGate : taskBinding.outputGates ) {
-				
-				final List<Channel> channelListPerGate = new ArrayList<Channel>( outputGate.size() );
-				for( int i = 0; i < outputGate.size(); ++i ) {
-					channelListPerGate.add( null );
-				}								
-				
-				outputChannels.add( channelListPerGate );
-			}
-			
+		if( taskBinding.outputGateBindings.size() > 0 ) {
+			this.outputGates = new ArrayList<OutputGate>( taskBinding.outputGateBindings.size() );		
+			for( final List<TaskDescriptor> outputGate : taskBinding.outputGateBindings ) 
+				outputGates.add( new OutputGate( outputGate.size() ) ); 
 		} else {
-			
-			outputChannels = null;
+			this.outputGates = null;
 		}
 	}
 	
@@ -105,11 +73,9 @@ public final class TaskContext {
 	
 	public final Class<? extends TaskInvokeable> invokeableClass;
 	
-	public final List<List<Channel>> inputChannels;
+	public final List<InputGate> inputGates;
 	
-	public final List<List<Channel>> outputChannels;
-
-	public final List<BlockingQueue<DataMessage>> inputQueues; 		
+	public final List<OutputGate> outputGates;
 	
 	public TaskState state;
 	

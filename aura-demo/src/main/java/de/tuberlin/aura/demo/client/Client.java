@@ -40,8 +40,8 @@ public final class Client {
 				final byte[] data = new byte[65536];			
 			
 				final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid, 
-						context.taskBinding.outputGates.get( 0 ).get( 0 ).uid, data );
-				context.outputChannels.get( 0 ).get( 0 ).writeAndFlush( dm );
+						context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
+				context.outputGates.get( 0 ).getChannel( 0 ).writeAndFlush( dm );
 				
 				try {
 					Thread.sleep( 100 );
@@ -66,8 +66,8 @@ public final class Client {
 			for( int i = 0; i < 100; ++i ) {		
 				final byte[] data = new byte[65536];			
 				final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid, 
-						context.taskBinding.outputGates.get( 0 ).get( 0 ).uid, data );
-				context.outputChannels.get( 0 ).get( 0 ).writeAndFlush( dm );
+						context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
+				context.outputGates.get( 0 ).getChannel( 0 ).writeAndFlush( dm );
 				try {
 					Thread.sleep( 100 );
 				} catch (InterruptedException e) {
@@ -89,8 +89,8 @@ public final class Client {
 		@Override
 		public void execute() throws Exception {
 			for( int i = 0; i < 100; ++i ) {
-				final BlockingQueue<DataMessage> inputMsgs1 = context.inputQueues.get( 0 );			
-				final BlockingQueue<DataMessage> inputMsgs2 = context.inputQueues.get( 1 );
+				final BlockingQueue<DataMessage> inputMsgs1 = context.inputGates.get( 0 ).getInputQueue();			
+				final BlockingQueue<DataMessage> inputMsgs2 = context.inputGates.get( 1 ).getInputQueue();
 
 				try {
 					final DataMessage dm1 = inputMsgs1.take();
@@ -99,8 +99,8 @@ public final class Client {
 					LOG.info( "input2: received data message " + dm2.messageID + " from task " + dm2.srcTaskID );					
 					final byte[] data = new byte[65536];
 					final DataMessage dmOut = new DataMessage( UUID.randomUUID(), context.task.uid, 
-							context.taskBinding.outputGates.get( 0 ).get( 0 ).uid, data );
-					context.outputChannels.get( 0 ).get( 0 ).writeAndFlush( dmOut );
+							context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
+					context.outputGates.get( 0 ).getChannel( 0 ).writeAndFlush( dmOut );
 				} catch (InterruptedException e) {
 					LOG.info( e );
 				}		
@@ -120,7 +120,7 @@ public final class Client {
 		@Override
 		public void execute() throws Exception {
 			for( int i = 0; i < 100; ++i ) {			
-				final BlockingQueue<DataMessage> inputMsgs = context.inputQueues.get( 0 );
+				final BlockingQueue<DataMessage> inputMsgs = context.inputGates.get( 0 ).getInputQueue();
 				try {			
 					final DataMessage dm = inputMsgs.take();
 					LOG.info( "received data message " + dm.messageID + " from task " + dm.srcTaskID );

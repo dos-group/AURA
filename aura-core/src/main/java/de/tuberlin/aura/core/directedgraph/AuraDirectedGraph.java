@@ -37,13 +37,16 @@ public class AuraDirectedGraph {
 	    // Constructor.
 	    //---------------------------------------------------
 		
-		public AuraTopology( final Map<String,Node> nodeMap, 
+		public AuraTopology( final UUID uid,
+							 final Map<String,Node> nodeMap, 
 							 final Map<String,Node> sourceMap,
 							 final Map<String,Node> sinkMap,
 							 final Map<Pair<String,String>,Edge> edges, 
 							 final Map<String,UserCode> userCodeMap ) {
 			
 			// sanity check.
+			if( uid == null )
+				throw new IllegalArgumentException( "uid == null" );
 			if( nodeMap == null )
 				throw new IllegalArgumentException( "nodeMap == null" );
 			if( sourceMap == null )
@@ -54,6 +57,8 @@ public class AuraDirectedGraph {
 				throw new IllegalArgumentException( "edges == null" );
 			if( userCodeMap == null )
 				throw new IllegalArgumentException( "userCodeMap == null" );
+			
+			this.uid = uid;
 			
 			this.nodeMap = Collections.unmodifiableMap( nodeMap );
 			
@@ -69,7 +74,9 @@ public class AuraDirectedGraph {
 		//---------------------------------------------------
 	    // Fields.
 	    //---------------------------------------------------
-				
+		
+		public final UUID uid;
+		
 		public final Map<String,Node> nodeMap;
 		
 		public final Map<String,Node> sourceMap;
@@ -264,7 +271,10 @@ public class AuraDirectedGraph {
 				isBuilded = true;
 			}
 			
-			return new AuraTopology( nodeMap, sourceMap, sinkMap, edges, userCodeMap );
+			// Every call to build gives us the same topology with a new id. 
+			final UUID topologyID = UUID.randomUUID();
+			
+			return new AuraTopology( topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap );
 		}
 	
 		private boolean validateBackCouplingEdge( final Set<Node> visitedNodes, final Node currentNode, final Node destNode ) {
@@ -287,7 +297,7 @@ public class AuraDirectedGraph {
 	/**
 	 * 
 	 */
-	public static final class Node implements Serializable {
+	public static final class Node implements Visitable<Node>, Serializable {
 
 		private static final long serialVersionUID = -7726710143171176855L;
 		
@@ -410,7 +420,7 @@ public class AuraDirectedGraph {
 	/**
 	 * 
 	 */
-	public static final class ExecutionNode {
+	public static final class ExecutionNode implements Visitable<ExecutionNode> {
 
 		//---------------------------------------------------
 	    // Constructors.
@@ -494,6 +504,10 @@ public class AuraDirectedGraph {
 					.append( " taskDescriptor = " + taskDescriptor.toString() + ", " )
 					.append( " taskBindingDescriptor = " + taskBindingDescriptor.toString() )
 					.append( " }" ).toString();
+		}
+		
+		public void accept( final Visitor<ExecutionNode> visitor ) {			
+			visitor.visit( this );			
 		}
 	}
 	
@@ -641,6 +655,15 @@ public class AuraDirectedGraph {
 	/**
 	 * 
 	 */
+	public static interface Visitable<T> {
+		
+		public abstract void accept( final Visitor<T> visitor );
+	}
+	
+	
+	/**
+	 * 
+	 */
 	public static final class TopologyBreadthFirstTraverser {
 	
 		public static void traverse( final AuraTopology topology, final Visitor<Node> visitor ) {
@@ -686,7 +709,7 @@ public class AuraDirectedGraph {
 						visitedNodes.add( nextNode );
 					}
 				}
-			}			
+			}		
 		}
 	}
 	

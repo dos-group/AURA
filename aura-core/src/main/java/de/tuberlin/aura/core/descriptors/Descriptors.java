@@ -157,28 +157,28 @@ public final class Descriptors {
 		private static final long serialVersionUID = -2803770527065206844L;
 
 		public TaskBindingDescriptor( final TaskDescriptor task, 
-			                          final List<List<TaskDescriptor>> inputGates, 
-			                          final List<List<TaskDescriptor>> outputGates ) {
+			                          final List<List<TaskDescriptor>> inputGateBindings, 
+			                          final List<List<TaskDescriptor>> outputGateBindings ) {
 			// sanity check.
 			if( task == null )
 			throw new IllegalArgumentException( "taskID == null" );
-			if( inputGates == null )
-			throw new IllegalArgumentException( "inputGate == null" );
-			if( outputGates == null )
-			throw new IllegalArgumentException( "outputGate == null" );
+			if( inputGateBindings == null )
+			throw new IllegalArgumentException( "inputGateBindings == null" );
+			if( outputGateBindings == null )
+			throw new IllegalArgumentException( "outputGateBindings == null" );
 			
 			this.task = task;
 			
-			this.inputGates = Collections.unmodifiableList( inputGates );
+			this.inputGateBindings = Collections.unmodifiableList( inputGateBindings );
 			
-			this.outputGates = Collections.unmodifiableList( outputGates );
+			this.outputGateBindings = Collections.unmodifiableList( outputGateBindings );
 		}
 		
 		public final TaskDescriptor task;
 		
-		public final List<List<TaskDescriptor>> inputGates;
+		public final List<List<TaskDescriptor>> inputGateBindings;
 		
-		public final List<List<TaskDescriptor>> outputGates;
+		public final List<List<TaskDescriptor>> outputGateBindings;
 		
 		@Override
 		public boolean equals( Object other ) { 
@@ -188,9 +188,9 @@ public final class Descriptors {
 		
 			if( !( task.equals( ( (TaskBindingDescriptor)other ).task ) ) ) 
 				return false; 
-			if( !( inputGates.equals( ( (TaskBindingDescriptor)other ).inputGates ) ) ) 
+			if( !( inputGateBindings.equals( ( (TaskBindingDescriptor)other ).inputGateBindings ) ) ) 
 				return false; 
-			if( !( outputGates.equals( ( (TaskBindingDescriptor)other ).outputGates ) ) ) 
+			if( !( outputGateBindings.equals( ( (TaskBindingDescriptor)other ).outputGateBindings ) ) ) 
 				return false; 
 			return true; 
 		}
@@ -199,9 +199,9 @@ public final class Descriptors {
 		public String toString() {
 			return (new StringBuilder())
 					.append( "TaskBindingDescriptor = {" )
-					.append( " task = " + task.toString() + ", " )
-					.append( " inputGates = " + inputGates.toString() + ", " )
-					.append( " outputGates = " + outputGates.toString() )
+					//.append( " task = " + task.toString() + ", " )
+					.append( " inputGates = " + inputGateBindings.toString() + ", " )
+					.append( " outputGates = " + outputGateBindings.toString() )
 					.append( " }" ).toString();
 		}
 	}
