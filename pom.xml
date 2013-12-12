@@ -1,76 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-	 
-	<!-- ================================= --> 
-	<!-- MAVEN HEADER. 					   -->
-	<!-- ================================= --> 
 
-	<modelVersion>4.0.0</modelVersion>
-	<groupId>de.tuberlin.aura</groupId>
-	<artifactId>aura</artifactId>
-	<packaging>pom</packaging>
-	<version>1.0-SNAPSHOT</version>
-	<name>aura</name>
-	<url>http://maven.apache.org</url>
+  <!-- ================================= -->
+  <!-- MAVEN HEADER. 					   -->
+  <!-- ================================= -->
 
-	<!-- ================================= --> 
-	<!-- AURA PROJECT CONFIGURATION.	   -->
-	<!-- ================================= -->
-	
-	<properties>
-		<!-- JAVA -->	
-		<aura-jdk-version>1.7</aura-jdk-version>
-		<aura-maven-compiler-plugin-version>2.0.2</aura-maven-compiler-plugin-version>
-		<aura-maven-jar-plugin>2.4</aura-maven-jar-plugin>            
-	</properties>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>de.tuberlin.aura</groupId>
+  <artifactId>aura</artifactId>
+  <packaging>pom</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>aura</name>
+  <url>http://maven.apache.org</url>
 
-	<!-- ================================= --> 
-	<!-- MAVEN DEPENDENCIES.    		   -->
-	<!-- ================================= --> 
-   
-	<dependencies>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>3.8.1</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
-			<version>1.2.17</version>
-		</dependency>
-	</dependencies>
+  <!-- ================================= -->
+  <!-- AURA PROJECT CONFIGURATION.	   -->
+  <!-- ================================= -->
 
-	<!-- ================================= --> 
-	<!-- MAVEN BUILD.    		   		   -->
-	<!-- ================================= --> 
+  <properties>
+    <!-- JAVA -->
+    <aura-jdk-version>1.7</aura-jdk-version>
+    <aura-maven-compiler-plugin-version>2.0.2</aura-maven-compiler-plugin-version>
+    <aura-maven-jar-plugin>2.4</aura-maven-jar-plugin>
+  </properties>
 
-	<build>
-		<plugins>
-			
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${aura-maven-compiler-plugin-version}</version>
-				<configuration>
-					<source>${aura-jdk-version}</source>
-					<target>${aura-jdk-version}</target>
-				</configuration>
-			</plugin>
+  <!-- ================================= -->
+  <!-- MAVEN DEPENDENCIES.    		   -->
+  <!-- ================================= -->
 
-		</plugins>
-	</build>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
+      <version>1.2.17</version>
+    </dependency>
+  </dependencies>
 
-	<!-- ================================= --> 
-	<!-- MAVEN MODULES.    		   		   -->
-	<!-- ================================= --> 
+  <!-- ================================= -->
+  <!-- MAVEN BUILD.    		   		   -->
+  <!-- ================================= -->
 
-	<modules>
-		<module>aura-core</module>
-		<module>aura-tm</module>
-		<module>aura-wm</module>
-		<module>aura-demo</module>
-	</modules>
-	
+  <build>
+    <plugins>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${aura-maven-compiler-plugin-version}</version>
+        <configuration>
+          <source>${aura-jdk-version}</source>
+          <target>${aura-jdk-version}</target>
+        </configuration>
+      </plugin>
+
+    </plugins>
+  </build>
+
+  <!-- ================================= -->
+  <!-- MAVEN MODULES.    		   		   -->
+  <!-- ================================= -->
+
+  <modules>
+    <module>aura-core</module>
+    <module>aura-tm</module>
+    <module>aura-wm</module>
+    <module>aura-demo</module>
+  </modules>
+
 </project>

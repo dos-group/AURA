@@ -4,6 +4,6 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
 
 public interface ITopologyParallelizer {
 
-	public abstract void parallelizeTopology( final AuraTopology topology ); 
-	
+    public abstract void parallelizeTopology( final AuraTopology topology );
+
 }

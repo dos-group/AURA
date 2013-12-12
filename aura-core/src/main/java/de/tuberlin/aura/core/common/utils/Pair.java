@@ -3,10 +3,10 @@ package de.tuberlin.aura.core.common.utils;
 import java.io.Serializable;
 
 public class Pair<A, B> implements Serializable {
-    
-	private static final long serialVersionUID = 1L;
-	
-	private final A first;
+
+    private static final long serialVersionUID = 1L;
+
+    private final A first;
     private final B second;
 
     public Pair(A first, B second) {
@@ -21,12 +21,12 @@ public class Pair<A, B> implements Serializable {
 
         return (hashFirst + hashSecond) * hashSecond + hashFirst;
     }
-    
+
     public boolean equals(Object other) {
         if (other instanceof Pair) {
                 @SuppressWarnings("unchecked")
-				Pair<A,B> otherPair = (Pair<A,B>) other;
-                return 
+                Pair<A,B> otherPair = (Pair<A,B>) other;
+                return
                 ((  this.first == otherPair.first ||
                         ( this.first != null && otherPair.first != null &&
                           this.first.equals(otherPair.first))) &&
@@ -38,8 +38,8 @@ public class Pair<A, B> implements Serializable {
         return false;
     }
 
-    public String toString(){ 
-           return "(" + first + ", " + second + ")"; 
+    public String toString(){
+           return "(" + first + ", " + second + ")";
     }
 
     public A getFirst() {
