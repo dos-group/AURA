@@ -54,11 +54,11 @@ public class WorkloadManager implements ClientWMProtocol {
 	
 	private final MachineDescriptor machine;
 	
-	public final IOManager ioManager; 
+	private final IOManager ioManager; 
 
-	public final RPCManager rpcManager;
+	private final RPCManager rpcManager;
 	
-	public final List<MachineDescriptor> workerMachines;
+	private final List<MachineDescriptor> workerMachines;
 	
 	private final TopologyParallelizer topologyParallelizer;
 	
