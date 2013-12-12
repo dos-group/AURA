@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.UUID;
 
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
@@ -294,12 +295,14 @@ public class AuraDirectedGraph {
 	    // Constructors.
 	    //---------------------------------------------------
 
-		public Node( final String name, final Class<?> userClazz ) {
-			this( name, userClazz, 1, 1 );
+		public Node( final UUID uid, final String name, final Class<?> userClazz ) {
+			this( uid, name, userClazz, 1, 1 );
 		} 
 		
-		public Node( final String name, final Class<?> userClazz, int degreeOfParallelism, int perWorkerParallelism ) {
+		public Node( final UUID uid, final String name, final Class<?> userClazz, int degreeOfParallelism, int perWorkerParallelism ) {
 			// sanity check.
+			if( uid == null )
+				throw new IllegalArgumentException( "uid == null" );
 			if( name == null )
 				throw new IllegalArgumentException( "name == null" );
 			if( userClazz == null )
@@ -308,6 +311,8 @@ public class AuraDirectedGraph {
 				throw new IllegalArgumentException( "degreeOfParallelism < 1" );
 			if( perWorkerParallelism < 1 )
 				throw new IllegalArgumentException( "perWorkerParallelism < 1" );
+			
+			this.uid = uid;
 			
 			this.name = name;
 			
@@ -327,6 +332,8 @@ public class AuraDirectedGraph {
 		//---------------------------------------------------
 	    // Fields.
 	    //---------------------------------------------------
+		
+		public final UUID uid;
 		
 		public final String name;
 		
@@ -409,11 +416,14 @@ public class AuraDirectedGraph {
 	    // Constructors.
 	    //---------------------------------------------------
 
-		public ExecutionNode( final Node logicalNode ) {
-			
+		public ExecutionNode( final UUID uid, final Node logicalNode ) {		
 			// sanity check.
+			if( uid == null )
+				throw new IllegalArgumentException( "uid == null" );
 			if( logicalNode == null )
 				throw new IllegalArgumentException( "logicalNode == null" );
+			
+			this.uid = uid;
 			
 			this.logicalNode = logicalNode;
 		}
@@ -422,6 +432,8 @@ public class AuraDirectedGraph {
 	    // Fields.
 	    //---------------------------------------------------
 
+		public final UUID uid;
+		
 		public final Node logicalNode;
 		
 		private TaskDescriptor taskDescriptor;
@@ -478,6 +490,7 @@ public class AuraDirectedGraph {
 		public String toString() {
 			return (new StringBuilder())
 					.append( "ExecutionNode = {" )				
+					.append( " uid = " + uid.toString() + ", " )
 					.append( " taskDescriptor = " + taskDescriptor.toString() + ", " )
 					.append( " taskBindingDescriptor = " + taskBindingDescriptor.toString() )
 					.append( " }" ).toString();
@@ -675,8 +688,6 @@ public class AuraDirectedGraph {
 				}
 			}			
 		}
-		
-		
 	}
 	
 	/**

@@ -38,15 +38,16 @@ public final class Client {
 		public void execute() throws Exception {
 			for( int i = 0; i < 100; ++i ) {
 				final byte[] data = new byte[65536];			
+			
 				final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid, 
-						context.taskBinding.outputs.get( 0 ).uid, data );
-				context.outputChannel[0].writeAndFlush( dm );
+						context.taskBinding.outputGates.get( 0 ).get( 0 ).uid, data );
+				context.outputChannels.get( 0 ).get( 0 ).writeAndFlush( dm );
 				
-				/*try {
-					Thread.sleep( 50 );
+				try {
+					Thread.sleep( 100 );
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				}*/
+				}
 			}
 		}
 	}
@@ -65,13 +66,13 @@ public final class Client {
 			for( int i = 0; i < 100; ++i ) {		
 				final byte[] data = new byte[65536];			
 				final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid, 
-						context.taskBinding.outputs.get( 0 ).uid, data );
-				context.outputChannel[0].writeAndFlush( dm );
-				/*try {
-					Thread.sleep( 50 );
+						context.taskBinding.outputGates.get( 0 ).get( 0 ).uid, data );
+				context.outputChannels.get( 0 ).get( 0 ).writeAndFlush( dm );
+				try {
+					Thread.sleep( 100 );
 				} catch (InterruptedException e) {
 					e.printStackTrace();
-				}*/
+				}
 			}
 		}
 	}
@@ -98,8 +99,8 @@ public final class Client {
 					LOG.info( "input2: received data message " + dm2.messageID + " from task " + dm2.srcTaskID );					
 					final byte[] data = new byte[65536];
 					final DataMessage dmOut = new DataMessage( UUID.randomUUID(), context.task.uid, 
-							context.taskBinding.outputs.get( 0 ).uid, data );
-					context.outputChannel[0].writeAndFlush( dmOut );
+							context.taskBinding.outputGates.get( 0 ).get( 0 ).uid, data );
+					context.outputChannels.get( 0 ).get( 0 ).writeAndFlush( dmOut );
 				} catch (InterruptedException e) {
 					LOG.info( e );
 				}		
@@ -119,7 +120,7 @@ public final class Client {
 		@Override
 		public void execute() throws Exception {
 			for( int i = 0; i < 100; ++i ) {			
-				final BlockingQueue<DataMessage> inputMsgs = context.inputQueues.get( 0 );			
+				final BlockingQueue<DataMessage> inputMsgs = context.inputQueues.get( 0 );
 				try {			
 					final DataMessage dm = inputMsgs.take();
 					LOG.info( "received data message " + dm.messageID + " from task " + dm.srcTaskID );
@@ -139,7 +140,7 @@ public final class Client {
         final SimpleLayout layout = new SimpleLayout();
         final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
         LOG.addAppender( consoleAppender );
-                
+       
         // Run the demo:
         // Start WM
         // Start TM 1-4
@@ -148,21 +149,21 @@ public final class Client {
         final AuraClient ac = new AuraClient( LocalDeployment.MACHINE_6_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR ); 
         
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-        atb1.addNode( new Node( "Task1", Task1Exe.class, 2, 1 ) )
-            .connectTo( "Task3", Edge.TransferType.ALL_TO_ALL )
-            .addNode( new Node( "Task2", Task2Exe.class, 2, 1 ) )
-            .connectTo( "Task3", Edge.TransferType.ALL_TO_ALL )
-            .addNode( new Node( "Task3", Task3Exe.class, 2, 1 ) )
+        atb1.addNode( new Node( UUID.randomUUID(), "Task1", Task1Exe.class, 1, 1 ) )
+            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
+            .addNode( new Node( UUID.randomUUID(), "Task2", Task2Exe.class, 1, 1 ) )
+            .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )
+            .addNode( new Node( UUID.randomUUID(), "Task3", Task3Exe.class, 1, 1 ) )
             .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
-            .addNode( new Node( "Task4", Task4Exe.class, 2, 1 ) ); 
+            .addNode( new Node( UUID.randomUUID(), "Task4", Task4Exe.class, 1, 1 ) );
         
         final AuraTopology at1 = atb1.build();        
         ac.submitTopology( at1 );
         
         /*final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-        atb2.addNode( new Node( "Task1", Task1Exe.class, 2, 1 ) )
+        atb2.addNode( new Node( UUID.randomUUID(), "Task1", Task1Exe.class, 1, 1 ) )
         	.connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
-        	.addNode( new Node( "Task4", Task4Exe.class, 5, 1 ) );
+        	.addNode( new Node( UUID.randomUUID(), "Task4", Task4Exe.class, 1, 1 ) );
 		
         final AuraTopology at2 = atb2.build();
         ac.submitTopology( at2 );*/

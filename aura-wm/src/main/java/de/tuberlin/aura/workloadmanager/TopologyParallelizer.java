@@ -1,7 +1,7 @@
 package de.tuberlin.aura.workloadmanager;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -23,8 +23,14 @@ import de.tuberlin.aura.workloadmanager.spi.ITopologyParallelizer;
 public class TopologyParallelizer implements ITopologyParallelizer {
 			
 	//---------------------------------------------------
-    // Inner Classes.
-    //---------------------------------------------------
+    // Fields.
+    //--------------------------------------------------- 
+	
+	//private static final Logger LOG = Logger.getLogger( TopologyParallelizer.class );
+	
+	//---------------------------------------------------
+    // Public.
+    //--------------------------------------------------- 
 	
 	@Override
 	public void parallelizeTopology( final AuraTopology topology ) {
@@ -41,7 +47,8 @@ public class TopologyParallelizer implements ITopologyParallelizer {
 				for( int index = 0; index < element.degreeOfParallelism; ++index ) {					
 					final UUID taskID = UUID.randomUUID();
 					final TaskDescriptor taskDescriptor = new TaskDescriptor( taskID, element.name, userCode );							
-					final ExecutionNode executionNode = new ExecutionNode( element );					
+					final UUID executionNodeID = UUID.randomUUID();
+					final ExecutionNode executionNode = new ExecutionNode( executionNodeID, element );					
 					executionNode.setTaskDescriptor( taskDescriptor );					
 					element.addExecutionNode( executionNode );
 				}
@@ -57,25 +64,34 @@ public class TopologyParallelizer implements ITopologyParallelizer {
 				// TODO: reduce code!
 				
 				// Bind inputs of the execution nodes. 
-				final Map<UUID,List<TaskDescriptor>> executionNodeInputs = new HashMap<UUID,List<TaskDescriptor>>();
-				for( final Node n : element.getInputs() ) {
+				final Map<UUID,Map<UUID,List<TaskDescriptor>>> gateExecutionNodeInputs = new HashMap<UUID,Map<UUID,List<TaskDescriptor>>>();
+				for( final Node n : element.getInputs() ) {					
+					
 					final Edge ie = topology.edges.get( new Pair<String,String>( n.name, element.name ) );					
 					switch( ie.transferType ) {
 						
 						case ALL_TO_ALL: {		
 							
 							for( final ExecutionNode dstEN : element.getExecutionNodes() ) {
-								final List<TaskDescriptor> inputDescriptors = new ArrayList<TaskDescriptor>();
+								
+								Map<UUID,List<TaskDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get( dstEN.uid ); 
+								if( executionNodeInputs == null ) {
+									executionNodeInputs = new HashMap<UUID,List<TaskDescriptor>>();
+									gateExecutionNodeInputs.put( dstEN.uid, executionNodeInputs );
+								}
+								
+								List<TaskDescriptor> inputDescriptors = executionNodeInputs.get( n.uid );
+								if( inputDescriptors == null ) {
+									inputDescriptors = new ArrayList<TaskDescriptor>(); 
+									executionNodeInputs.put( n.uid, inputDescriptors );
+								}
 								
 								for( final ExecutionNode srcEN : n.getExecutionNodes() )
 									inputDescriptors.add( srcEN.getTaskDescriptor() );			
-								
-								executionNodeInputs.put( dstEN.getTaskDescriptor().uid, 
-										Collections.unmodifiableList( inputDescriptors ) ); 									
 							}
 							
 						} break;
-						
+												
 						case POINT_TO_POINT: {
 							
 							final int dstDegree = element.degreeOfParallelism;	
@@ -96,10 +112,20 @@ public class TopologyParallelizer implements ITopologyParallelizer {
 									int i = 0;
 									while( i++ < numOfLinks ) {																	
 										final ExecutionNode dstEN = dstIter.next();										
-										final List<TaskDescriptor> inputDescriptors = new ArrayList<TaskDescriptor>();										
+																				
+										Map<UUID,List<TaskDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get( dstEN.uid ); 
+										if( executionNodeInputs == null ) {
+											executionNodeInputs = new HashMap<UUID,List<TaskDescriptor>>();
+											gateExecutionNodeInputs.put( dstEN.uid, executionNodeInputs );
+										}
+										
+										List<TaskDescriptor> inputDescriptors = executionNodeInputs.get( n.uid );										
+										if( inputDescriptors == null ) {
+											inputDescriptors = new ArrayList<TaskDescriptor>(); 
+											executionNodeInputs.put( n.uid, inputDescriptors );
+										}
+																				
 										inputDescriptors.add( srcEN.getTaskDescriptor() );										
-										executionNodeInputs.put( dstEN.getTaskDescriptor().uid, 
-												Collections.unmodifiableList( inputDescriptors ) );
 									}
 								}
 								
@@ -112,7 +138,17 @@ public class TopologyParallelizer implements ITopologyParallelizer {
 								int index = 0;				
 								for( final ExecutionNode dstEN : element.getExecutionNodes() ) {
 									
-									final List<TaskDescriptor> inputDescriptors = new ArrayList<TaskDescriptor>();
+									Map<UUID,List<TaskDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get( dstEN.uid ); 
+									if( executionNodeInputs == null ) {
+										executionNodeInputs = new HashMap<UUID,List<TaskDescriptor>>();
+										gateExecutionNodeInputs.put( dstEN.uid, executionNodeInputs );
+									}
+									
+									List<TaskDescriptor> inputDescriptors = executionNodeInputs.get( n.uid );										
+									if( inputDescriptors == null ) {
+										inputDescriptors = new ArrayList<TaskDescriptor>(); 
+										executionNodeInputs.put( n.uid, inputDescriptors );
+									}
 									
 									final int numOfLinks = numOfDstLinks + 
 											( index++ < numOfNodesWithOneAdditionalLink ? 1 : 0 );
@@ -122,32 +158,38 @@ public class TopologyParallelizer implements ITopologyParallelizer {
 										final ExecutionNode srcEN = srcIter.next();
 										inputDescriptors.add( srcEN.getTaskDescriptor() );
 									}
-									
-									executionNodeInputs.put( dstEN.getTaskDescriptor().uid, 
-											Collections.unmodifiableList( inputDescriptors ) );
 								}								
 							}							
 							
-						} break;						
+						} break;					
 					}
 				}
 				
 				// Bind outputs of the execution nodes. 
-				final Map<UUID,List<TaskDescriptor>> executionNodeOutputs = new HashMap<UUID,List<TaskDescriptor>>();
+				final Map<UUID,Map<UUID,List<TaskDescriptor>>> gateExecutionNodeOutputs = new HashMap<UUID,Map<UUID,List<TaskDescriptor>>>();
 				for( final Node n : element.getOutputs() ) {
+					
 					final Edge ie = topology.edges.get( new Pair<String,String>( element.name, n.name ) );					
 					switch( ie.transferType ) {
 						
 						case ALL_TO_ALL: {
 							
 							for( final ExecutionNode srcEN : element.getExecutionNodes() ) {
-								final List<TaskDescriptor> outputDescriptors = new ArrayList<TaskDescriptor>();
 								
+								Map<UUID,List<TaskDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get( srcEN.uid );
+								if( executionNodeOutputs == null ) {
+									executionNodeOutputs = new HashMap<UUID,List<TaskDescriptor>>();
+									gateExecutionNodeOutputs.put( srcEN.uid, executionNodeOutputs );
+								}
+								
+								List<TaskDescriptor> outputDescriptors = executionNodeOutputs.get( n.uid );
+								if( outputDescriptors == null ) {
+									outputDescriptors = new ArrayList<TaskDescriptor>(); 
+									executionNodeOutputs.put( n.uid, outputDescriptors );
+								}
+																
 								for( final ExecutionNode dstEN : n.getExecutionNodes() )
-									outputDescriptors.add( dstEN.getTaskDescriptor() );			
-								
-								executionNodeOutputs.put( srcEN.getTaskDescriptor().uid, 
-										Collections.unmodifiableList( outputDescriptors ) ); 									
+									outputDescriptors.add( dstEN.getTaskDescriptor() );			 									
 							}
 							
 						} break;
@@ -166,7 +208,18 @@ public class TopologyParallelizer implements ITopologyParallelizer {
 								int index = 0;						
 								for( final ExecutionNode srcEN : element.getExecutionNodes() ) {
 									
-									final List<TaskDescriptor> outputDescriptors = new ArrayList<TaskDescriptor>();
+									
+									Map<UUID,List<TaskDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get( srcEN.uid );
+									if( executionNodeOutputs == null ) {
+										executionNodeOutputs = new HashMap<UUID,List<TaskDescriptor>>();
+										gateExecutionNodeOutputs.put( srcEN.uid, executionNodeOutputs );
+									}
+									
+									List<TaskDescriptor> outputDescriptors = executionNodeOutputs.get( n.uid );
+									if( outputDescriptors == null ) {
+										outputDescriptors = new ArrayList<TaskDescriptor>(); 
+										executionNodeOutputs.put( n.uid, outputDescriptors );
+									}
 									
 									final int numOfLinks = numOfSrcLinks + 
 											( index++ < numOfNodesWithOneAdditionalLink ? 1 : 0 );
@@ -176,9 +229,6 @@ public class TopologyParallelizer implements ITopologyParallelizer {
 										final ExecutionNode dstEN = dstIter.next();
 										outputDescriptors.add( dstEN.getTaskDescriptor() );
 									}
-									
-									executionNodeOutputs.put( srcEN.getTaskDescriptor().uid, 
-											Collections.unmodifiableList( outputDescriptors ) );
 								}
 				
 							} else { // dstDegree < srcDegree
@@ -196,28 +246,57 @@ public class TopologyParallelizer implements ITopologyParallelizer {
 									int i = 0;
 									while( i++ < numOfLinks ) {																	
 										final ExecutionNode srcEN = srcIter.next();										
-										final List<TaskDescriptor> outputDescriptors = new ArrayList<TaskDescriptor>();										
+
+										Map<UUID,List<TaskDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get( srcEN.uid );
+										if( executionNodeOutputs == null ) {
+											executionNodeOutputs = new HashMap<UUID,List<TaskDescriptor>>();
+											gateExecutionNodeOutputs.put( srcEN.uid, executionNodeOutputs );
+										}
+										
+										List<TaskDescriptor> outputDescriptors = executionNodeOutputs.get( n.uid );
+										if( outputDescriptors == null ) {
+											outputDescriptors = new ArrayList<TaskDescriptor>(); 
+											executionNodeOutputs.put( n.uid, outputDescriptors );
+										}
+																				
 										outputDescriptors.add( dstEN.getTaskDescriptor() );										
-										executionNodeInputs.put( srcEN.getTaskDescriptor().uid, 
-												Collections.unmodifiableList( outputDescriptors ) );
 									}									
 								}
 							}
 
-						} break;						
+						} break;					
 					}
 				}
 
 				// Assign the binding descriptors to the execution nodes.
 				for( final ExecutionNode en : element.getExecutionNodes() ) {				
 					
-					List<TaskDescriptor> inputs = executionNodeInputs.get( en.getTaskDescriptor().uid );
-					List<TaskDescriptor> outputs = executionNodeOutputs.get( en.getTaskDescriptor().uid );										
+					final Map<UUID,List<TaskDescriptor>> inputsPerGate = gateExecutionNodeInputs.get( en.uid );
+					final Map<UUID,List<TaskDescriptor>> outputsPerGate = gateExecutionNodeOutputs.get( en.uid );										
+					
+					List<List<TaskDescriptor>> outputsPerGateList = null; 
+					List<List<TaskDescriptor>> inputsPerGateList = null;
+					
+					if( inputsPerGate != null ) { 
+						final Collection<List<TaskDescriptor>> inputsPerGateCollection = inputsPerGate.values();
+						if( inputsPerGateCollection instanceof List )
+							inputsPerGateList = (List<List<TaskDescriptor>>)inputsPerGateCollection;
+						else
+							inputsPerGateList = new ArrayList<List<TaskDescriptor>>( inputsPerGateCollection );
+					}
+					
+					if( outputsPerGate != null ) {
+						final Collection<List<TaskDescriptor>> outputsPerGateCollection = outputsPerGate.values();
+						if( outputsPerGateCollection instanceof List )
+							outputsPerGateList = (List<List<TaskDescriptor>>)outputsPerGate.values();
+						else
+							outputsPerGateList = new ArrayList<List<TaskDescriptor>>( outputsPerGate.values() );
+					}	
 					
 					final TaskBindingDescriptor bindingDescriptor = 
-							new TaskBindingDescriptor( en.getTaskDescriptor(), 
-													   inputs  != null ? inputs  : new ArrayList<TaskDescriptor>(),
-													   outputs != null ? outputs : new ArrayList<TaskDescriptor>() );					
+					        new TaskBindingDescriptor( en.getTaskDescriptor(), 
+					        		inputsPerGateList  != null ? inputsPerGateList  : new ArrayList<List<TaskDescriptor>>(),
+					        		outputsPerGateList != null ? outputsPerGateList : new ArrayList<List<TaskDescriptor>>() );					
 					
 					en.setTaskBindingDescriptor( bindingDescriptor );
 				}

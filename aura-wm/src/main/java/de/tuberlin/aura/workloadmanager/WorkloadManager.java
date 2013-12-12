@@ -73,7 +73,7 @@ public class WorkloadManager implements ClientWMProtocol {
 		// sanity check.
 		if( topology == null )
 			throw new IllegalArgumentException( "topology == null" );
-		
+
 		// Parallelizing.
 		topologyParallelizer.parallelizeTopology( topology );
 		
@@ -84,11 +84,9 @@ public class WorkloadManager implements ClientWMProtocol {
 			
 			@Override
 			public void visit( final Node element ) {
-			
 				for( final ExecutionNode en : element.getExecutionNodes() ) {	
 					en.getTaskDescriptor().setMachineDescriptor( workerMachines.get( machineIdx ) );
 				}
-				
 				++machineIdx;
 			}
 		} );	
@@ -97,17 +95,14 @@ public class WorkloadManager implements ClientWMProtocol {
 		TopologyBreadthFirstTraverser.traverseBackwards( topology, new Visitor<Node>() {			
 			
 			@Override
-			public void visit( final Node element ) {
-				
-				for( final ExecutionNode en : element.getExecutionNodes() ) {
-					
+			public void visit( final Node element ) {				
+				for( final ExecutionNode en : element.getExecutionNodes() ) {					
 					final TaskDeploymentDescriptor tdd = 
 							new TaskDeploymentDescriptor( en.getTaskDescriptor(), 
 						 	 							  en.getTaskBindingDescriptor() );
 					final WM2TMProtocol tmProtocol = 
 							rpcManager.getRPCProtocolProxy( WM2TMProtocol.class, 
-									 						en.getTaskDescriptor().getMachineDescriptor() );
-					
+									 						en.getTaskDescriptor().getMachineDescriptor() );			
 					tmProtocol.installTask( tdd );
 					LOG.info( "deploy task : " + tdd.toString() );
 				}

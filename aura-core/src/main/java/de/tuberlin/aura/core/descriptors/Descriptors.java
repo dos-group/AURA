@@ -128,9 +128,9 @@ public final class Descriptors {
 			if( other == null ) return false; 
 			if( other.getClass() != getClass() ) return false;
 		
-			/*if( ( machine == null && ((TaskDescriptor)other).machine == null ) || 
+			if( ( machine == null && ((TaskDescriptor)other).machine == null ) || 
 				!( machine.equals( ( (TaskDescriptor)other ).machine ) ) ) 
-				return false;*/ 
+				return false;
 			if( !( uid.equals( ( (TaskDescriptor)other ).uid ) ) ) 
 				return false; 
 			if( !( name.equals( ( (TaskDescriptor)other ).name ) ) ) 
@@ -142,7 +142,7 @@ public final class Descriptors {
 		public String toString() {
 			return (new StringBuilder())
 					.append( "TaskDescriptor = {" )
-					//.append( " machine = " + machine.toString() + ", " )
+					.append( " machine = " + machine.toString() + ", " )
 					.append( " uid = " + uid.toString() + ", " )
 					.append( " name = " + name )
 					.append( " }" ).toString();
@@ -156,27 +156,29 @@ public final class Descriptors {
 		
 		private static final long serialVersionUID = -2803770527065206844L;
 
-		public TaskBindingDescriptor( TaskDescriptor task, List<TaskDescriptor> inputs, List<TaskDescriptor> outputs ) {
+		public TaskBindingDescriptor( final TaskDescriptor task, 
+			                          final List<List<TaskDescriptor>> inputGates, 
+			                          final List<List<TaskDescriptor>> outputGates ) {
 			// sanity check.
 			if( task == null )
-				throw new IllegalArgumentException( "taskID == null" );
-			if( inputs == null )
-				throw new IllegalArgumentException( "inputs == null" );
-			if( outputs == null )
-				throw new IllegalArgumentException( "outputs == null" );
+			throw new IllegalArgumentException( "taskID == null" );
+			if( inputGates == null )
+			throw new IllegalArgumentException( "inputGate == null" );
+			if( outputGates == null )
+			throw new IllegalArgumentException( "outputGate == null" );
 			
 			this.task = task;
 			
-			this.inputs = Collections.unmodifiableList( inputs );
+			this.inputGates = Collections.unmodifiableList( inputGates );
 			
-			this.outputs = Collections.unmodifiableList( outputs );;
-		}		
+			this.outputGates = Collections.unmodifiableList( outputGates );
+		}
 		
 		public final TaskDescriptor task;
 		
-		public final List<TaskDescriptor> inputs;
+		public final List<List<TaskDescriptor>> inputGates;
 		
-		public final List<TaskDescriptor> outputs;
+		public final List<List<TaskDescriptor>> outputGates;
 		
 		@Override
 		public boolean equals( Object other ) { 
@@ -186,9 +188,9 @@ public final class Descriptors {
 		
 			if( !( task.equals( ( (TaskBindingDescriptor)other ).task ) ) ) 
 				return false; 
-			if( !( inputs.equals( ( (TaskBindingDescriptor)other ).inputs ) ) ) 
+			if( !( inputGates.equals( ( (TaskBindingDescriptor)other ).inputGates ) ) ) 
 				return false; 
-			if( !( outputs.equals( ( (TaskBindingDescriptor)other ).outputs ) ) ) 
+			if( !( outputGates.equals( ( (TaskBindingDescriptor)other ).outputGates ) ) ) 
 				return false; 
 			return true; 
 		}
@@ -198,12 +200,15 @@ public final class Descriptors {
 			return (new StringBuilder())
 					.append( "TaskBindingDescriptor = {" )
 					.append( " task = " + task.toString() + ", " )
-					.append( " inputChannels = " + inputs.toString() + ", " )
-					.append( " outputChannels = " + outputs.toString() )
+					.append( " inputGates = " + inputGates.toString() + ", " )
+					.append( " outputGates = " + outputGates.toString() )
 					.append( " }" ).toString();
 		}
 	}
 	
+	/**
+	 * 
+	 */	
 	public static final class TaskDeploymentDescriptor implements Serializable {
 		
 		private static final long serialVersionUID = 6533439159854768522L;

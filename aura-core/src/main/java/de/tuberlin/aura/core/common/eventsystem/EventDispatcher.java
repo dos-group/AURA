@@ -30,7 +30,7 @@ public class EventDispatcher implements IEventDispatcher {
      * @param listener The handler for this event.
      */
     @Override
-    public void addEventListener( String type, IEventHandler listener ) {
+    public synchronized void addEventListener( String type, IEventHandler listener ) {
         // sanity check.
         if( type == null )
             throw new NullPointerException();
@@ -51,7 +51,7 @@ public class EventDispatcher implements IEventDispatcher {
      * @param listener The handler for this event.
      */
     @Override
-    public boolean removeEventListener( String type, IEventHandler listener ) {
+    public synchronized boolean removeEventListener( String type, IEventHandler listener ) {
         // sanity check.
         if( type == null )
             throw new NullPointerException();
@@ -76,7 +76,7 @@ public class EventDispatcher implements IEventDispatcher {
      * @param event The event to dispatch.
      */
     @Override
-    public void dispatchEvent( Event event ) {
+    public synchronized void dispatchEvent( Event event ) {
         // sanity check.
         if( event == null )
             throw new NullPointerException();

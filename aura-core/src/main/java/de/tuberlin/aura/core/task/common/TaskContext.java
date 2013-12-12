@@ -3,7 +3,6 @@ package de.tuberlin.aura.core.task.common;
 import io.netty.channel.Channel;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -50,26 +49,49 @@ public final class TaskContext {
 		
 		this.invokeableClass = invokeableClass;
 		
-		if( taskBinding.inputs.size() > 0 ) {
+		if( taskBinding.inputGates.size() > 0 ) {
 			
-			this.inputChannel = new Channel[taskBinding.inputs.size()];
+			inputChannels = new ArrayList<List<Channel>>( taskBinding.inputGates.size() );			
 			
-			final List<BlockingQueue<DataMessage>> tmpInputQueues = 
-					new ArrayList<BlockingQueue<DataMessage>>( taskBinding.inputs.size() );						
-			// TODO: Give the queues a fixed size!
-			for( int i = 0; i < taskBinding.inputs.size(); ++i )
-				tmpInputQueues.add( new LinkedBlockingQueue<DataMessage>() ); 								
-			this.inputQueues = Collections.unmodifiableList( tmpInputQueues );
+			inputQueues = new ArrayList<BlockingQueue<DataMessage>>( taskBinding.inputGates.size() );
 			
+			for( final List<TaskDescriptor> inputGate : taskBinding.inputGates ) {				
+				
+				final List<Channel> channelListPerGate = new ArrayList<Channel>( inputGate.size() );
+				for( int i = 0; i < inputGate.size(); ++i ) {
+					channelListPerGate.add( null );
+				}
+				
+				inputChannels.add( channelListPerGate );
+				
+				for( int i = 0; i < inputGate.size(); ++i )
+					inputQueues.add( new LinkedBlockingQueue<DataMessage>() );
+			}
+
 		} else {
+			
 			this.inputQueues = null;
-			this.inputChannel = null;
-		}
 			
-		if( taskBinding.outputs.size() > 0 ) {
-			this.outputChannel = new Channel[taskBinding.outputs.size()];
+			this.inputChannels = null;
+		}
+		
+		if( taskBinding.outputGates.size() > 0 ) {
+			
+			outputChannels = new ArrayList<List<Channel>>( taskBinding.outputGates.size() );
+			
+			for( final List<TaskDescriptor> outputGate : taskBinding.outputGates ) {
+				
+				final List<Channel> channelListPerGate = new ArrayList<Channel>( outputGate.size() );
+				for( int i = 0; i < outputGate.size(); ++i ) {
+					channelListPerGate.add( null );
+				}								
+				
+				outputChannels.add( channelListPerGate );
+			}
+			
 		} else {
-			this.outputChannel = null;
+			
+			outputChannels = null;
 		}
 	}
 	
@@ -83,9 +105,9 @@ public final class TaskContext {
 	
 	public final Class<? extends TaskInvokeable> invokeableClass;
 	
-	public final Channel[] inputChannel;
+	public final List<List<Channel>> inputChannels;
 	
-	public final Channel[] outputChannel;
+	public final List<List<Channel>> outputChannels;
 
 	public final List<BlockingQueue<DataMessage>> inputQueues; 		
 	
