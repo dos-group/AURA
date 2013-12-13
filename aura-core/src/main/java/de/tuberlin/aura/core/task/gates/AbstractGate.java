@@ -5,9 +5,8 @@ import io.netty.channel.Channel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.task.common.TaskContext;
 
 public abstract class AbstractGate {
 
@@ -15,37 +14,35 @@ public abstract class AbstractGate {
     // Constructors.
     //---------------------------------------------------
 
-    public AbstractGate( final UUID taskID, final List<TaskDescriptor> gateBinding ) {
+    public AbstractGate( final TaskContext context, int gateIndex, int numChannels ) {
         // sanity check.
-        if( taskID == null )
-            throw new IllegalArgumentException( "taskID == null" );
-        if( gateBinding == null )
-            throw new IllegalArgumentException( "gateBinding == null" );
+        if( context == null )
+            throw new IllegalArgumentException( "context == null" );
 
-        this.taskID= taskID;
+        this.context= context;
 
-        this.numChannels = gateBinding.size();
+        this.numChannels = numChannels;
+
+        this.gateIndex = gateIndex;
 
         if( numChannels > 0 ) {
             channels = new ArrayList<Channel>( Collections.nCopies( numChannels, (Channel)null ) );
         } else { // numChannels == 0
             channels = null;
         }
-
-        this.gateBinding = gateBinding;
     }
 
     //---------------------------------------------------
     // Fields.
     //---------------------------------------------------
 
-    protected final UUID taskID;
+    protected TaskContext context;
 
     protected final int numChannels;
 
-    protected final List<Channel> channels;
+    protected final int gateIndex;
 
-    protected final List<TaskDescriptor> gateBinding;
+    protected final List<Channel> channels;
 
     //---------------------------------------------------
     // Public.

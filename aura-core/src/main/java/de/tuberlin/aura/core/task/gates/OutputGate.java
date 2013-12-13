@@ -3,16 +3,14 @@ package de.tuberlin.aura.core.task.gates;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
-import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.IODataChannelEvent;
 import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
+import de.tuberlin.aura.core.task.common.TaskContext;
 
 public final class OutputGate extends AbstractGate {
 
@@ -22,14 +20,8 @@ public final class OutputGate extends AbstractGate {
     // Constructors.
     //---------------------------------------------------
 
-    public OutputGate( final UUID taskID,
-                       final List<TaskDescriptor> gateBinding,
-                       final IEventDispatcher taskEventDispatcher ) {
-
-        super( taskID, gateBinding );
-        // sanity check.
-        if( taskEventDispatcher == null )
-            throw new IllegalArgumentException( "taskEventDispatcher == null" );
+    public OutputGate( final TaskContext context, int gateIndex ) {
+        super( context, gateIndex, context.taskBinding.outputGateBindings.get( gateIndex ).size() );
 
         // All channels are by default are closed.
         this.openChannelList = new ArrayList<Boolean>( Collections.nCopies( numChannels, false ) );
@@ -47,37 +39,11 @@ public final class OutputGate extends AbstractGate {
                     switch( event.type ) {
 
                         case IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN: {
-
-                            int channelIndex = 0;
-                            for( final TaskDescriptor td :  self.gateBinding ) {
-                                if( event.srcTaskID.equals( td.uid ) ) {
-                                    self.openChannelList.set( channelIndex, true );
-                                    break;
-                                }
-                                ++channelIndex;
-                            }
-
-                            // check postcondition.
-                            if( channelIndex == self.numChannels - 1 )
-                                throw new IllegalStateException( "could not find channel to be opened" );
-
+                            self.openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), true );
                         } break;
 
                         case IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE: {
-
-                            int channelIndex = 0;
-                            for( final TaskDescriptor td :  self.gateBinding ) {
-                                if( event.srcTaskID.equals( td.uid ) ) {
-                                    self.openChannelList.set( channelIndex, false );
-                                    break;
-                                }
-                                ++channelIndex;
-                            }
-
-                            // check postcondition.
-                            if( channelIndex == self.numChannels - 1 )
-                                throw new IllegalStateException( "could not find channel to be closed" );
-
+                            self.openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), false );
                         } break;
 
                         default: {
@@ -88,8 +54,8 @@ public final class OutputGate extends AbstractGate {
             }
         };
 
-        taskEventDispatcher.addEventListener( IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN, gateEventHandler );
-        taskEventDispatcher.addEventListener( IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE, gateEventHandler );
+        context.dispatcher.addEventListener( IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN, gateEventHandler );
+        context.dispatcher.addEventListener( IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE, gateEventHandler );
     }
 
     //---------------------------------------------------

@@ -51,16 +51,17 @@ public final class TaskContext {
 
         if( taskBinding.inputGateBindings.size() > 0 ) {
             this.inputGates = new ArrayList<InputGate>( taskBinding.inputGateBindings.size() );
-            for( final List<TaskDescriptor> inputGateBinding : taskBinding.inputGateBindings )
-                inputGates.add( new InputGate( task.uid, inputGateBinding ) );
+            
+            for( int gateIndex = 0; gateIndex < taskBinding.inputGateBindings.size(); ++gateIndex )
+                inputGates.add( new InputGate( this, gateIndex ) );
         } else {
             this.inputGates = null;
         }
 
         if( taskBinding.outputGateBindings.size() > 0 ) {
             this.outputGates = new ArrayList<OutputGate>( taskBinding.outputGateBindings.size() );
-            for( final List<TaskDescriptor> outputGateBinding : taskBinding.outputGateBindings )
-                outputGates.add( new OutputGate( task.uid, outputGateBinding, dispatcher ) );
+            for( int gateIndex = 0; gateIndex < taskBinding.outputGateBindings.size(); ++gateIndex )
+                outputGates.add( new OutputGate( this, gateIndex ) );
         } else {
             this.outputGates = null;
         }
@@ -106,7 +107,7 @@ public final class TaskContext {
                 .append( " state = " + state.toString() + ", " )
                 .append( " }" ).toString();
     }
-    
+
     public UUID getInputTaskIDFromChannelIndex( int channelIndex ) {
         return channelIndexToTaskID.get( channelIndex );
     }
