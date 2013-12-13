@@ -1,7 +1,10 @@
 package de.tuberlin.aura.core.task.common;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -61,7 +64,22 @@ public final class TaskContext {
         } else {
             this.outputGates = null;
         }
+
+        this.taskIDToChannelIndex = new HashMap<UUID,Integer>();
+        this.channelIndexToTaskID = new HashMap<Integer,UUID>();
+        int channelIndex = 0;
+        for( final List<TaskDescriptor> inputGate : taskBinding.inputGateBindings ) {
+            for( final TaskDescriptor inputTask : inputGate ) {
+                taskIDToChannelIndex.put( inputTask.uid, channelIndex );
+                channelIndexToTaskID.put( channelIndex, inputTask.uid );
+            }
+            ++channelIndex;
+        }
     }
+
+    public final Map<UUID,Integer> taskIDToChannelIndex;
+
+    public final Map<Integer,UUID> channelIndexToTaskID;
 
     public final TaskDescriptor task;
 
@@ -87,5 +105,13 @@ public final class TaskContext {
                 .append( " taskBinding = " + taskBinding + ", " )
                 .append( " state = " + state.toString() + ", " )
                 .append( " }" ).toString();
+    }
+    
+    public UUID getInputTaskIDFromChannelIndex( int channelIndex ) {
+        return channelIndexToTaskID.get( channelIndex );
+    }
+
+    public int getInputChannelIndexFromTaskID( final UUID taskID ) {
+        return taskIDToChannelIndex.get( taskID );
     }
 }

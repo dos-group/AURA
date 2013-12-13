@@ -31,7 +31,6 @@ public final class Handler {
                 throw new IllegalArgumentException( "context == null" );
 
             this.context = context;
-            initHandler();
         }
 
         @Override
@@ -60,8 +59,6 @@ public final class Handler {
                 throw new IllegalStateException( "Can not handle this event type." );
             }
         }
-
-        protected abstract void initHandler();
 
         protected abstract void handleTaskInputDataChannelConnect( UUID srcTaskID, UUID dstTaskID, Channel channel );
 

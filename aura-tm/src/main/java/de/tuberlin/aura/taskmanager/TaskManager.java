@@ -2,7 +2,6 @@ package de.tuberlin.aura.taskmanager;
 
 import io.netty.channel.Channel;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -79,19 +78,6 @@ public final class TaskManager implements WM2TMProtocol {
      *
      */
     private final class TaskEventHandler extends AbstractTaskEventHandler {
-
-        private Map<UUID,Integer> taskIDToChannelIndex;
-
-        @Override
-        protected void initHandler() {
-            taskIDToChannelIndex = new HashMap<UUID,Integer>();
-            int channelIndex = 0;
-            for( final List<TaskDescriptor> inputGate : context.taskBinding.inputGateBindings ) {
-                for( final TaskDescriptor inputTask : inputGate )
-                    taskIDToChannelIndex.put( inputTask.uid, channelIndex );
-                ++channelIndex;
-            }
-        }
 
         @Override
         protected void handleTaskInputDataChannelConnect( UUID srcTaskID, UUID dstTaskID, Channel channel ) {
@@ -186,9 +172,7 @@ public final class TaskManager implements WM2TMProtocol {
 
         @Override
         protected void handleInputData( DataMessage message ) {
-            // TODO: we should provide in TaskContext mappings in both direction
-            // between channelIndex and taskID for task inputs and outputs!
-            context.inputGates.get( taskIDToChannelIndex.get( message.srcTaskID ) ).addToInputQueue( message );
+            context.inputGates.get( context.getInputChannelIndexFromTaskID( message.srcTaskID ) ).addToInputQueue( message );
         }
 
         @Override
