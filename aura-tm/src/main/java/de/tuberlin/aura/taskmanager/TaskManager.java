@@ -316,6 +316,8 @@ public final class TaskManager implements WM2TMProtocol {
     private IEventDispatcher registerTaskEvents( final IEventDispatcher dispatcher, final IEventHandler handler ) {
         dispatcher.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED, handler );
         dispatcher.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED, handler );
+        dispatcher.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN, handler );
+        dispatcher.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE, handler );
         dispatcher.addEventListener( IOEvents.IODataEvent.IO_EVENT_RECEIVED_DATA, handler );
         dispatcher.addEventListener( TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT, handler );
         return dispatcher;
