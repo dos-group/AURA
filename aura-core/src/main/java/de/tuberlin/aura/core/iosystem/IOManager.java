@@ -172,18 +172,16 @@ public final class IOManager extends EventDispatcher {
             final Bootstrap bootstrap = new Bootstrap();
             bootstrap.group( netOutputEventLoopGroup )
                      .channel( NioSocketChannel.class )
-                     .handler( new ObjectEncoder() );
-
-            /*.handler( new ChannelInitializer<LocalChannel>() {
-
-                @Override
-                public void initChannel(LocalChannel ch) throws Exception {
-
-                    ch.pipeline().addFirst( new ObjectEncoder() );
-                    ch.pipeline().addFirst( new DataChannelGateHandler() );
-                    ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
-                }
-            } );*/
+                     //.handler( new ObjectEncoder() );
+                    .handler( new ChannelInitializer<SocketChannel>() {
+        
+                        @Override
+                        public void initChannel(SocketChannel ch) throws Exception {
+                            ch.pipeline().addFirst( new ObjectEncoder() );
+                            ch.pipeline().addFirst( new DataChannelGateHandler() );
+                            ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
+                        }
+                    } );
 
 
             final ChannelFuture cf = bootstrap.connect( socketAddress );
@@ -217,7 +215,7 @@ public final class IOManager extends EventDispatcher {
 
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        //ch.pipeline().addFirst( new DataChannelGateHandler() );
+                        ch.pipeline().addFirst( new DataChannelGateHandler() );
                     }
                 } );
 
