@@ -48,16 +48,16 @@ public final class TaskContext {
 
         if( taskBinding.inputGateBindings.size() > 0 ) {
             this.inputGates = new ArrayList<InputGate>( taskBinding.inputGateBindings.size() );
-            for( final List<TaskDescriptor> inputGate : taskBinding.inputGateBindings )
-                inputGates.add( new InputGate( inputGate.size() ) );
+            for( final List<TaskDescriptor> inputGateBinding : taskBinding.inputGateBindings )
+                inputGates.add( new InputGate( task.uid, inputGateBinding ) );
         } else {
             this.inputGates = null;
         }
 
         if( taskBinding.outputGateBindings.size() > 0 ) {
             this.outputGates = new ArrayList<OutputGate>( taskBinding.outputGateBindings.size() );
-            for( final List<TaskDescriptor> outputGate : taskBinding.outputGateBindings )
-                outputGates.add( new OutputGate( outputGate.size() ) );
+            for( final List<TaskDescriptor> outputGateBinding : taskBinding.outputGateBindings )
+                outputGates.add( new OutputGate( task.uid, outputGateBinding, dispatcher ) );
         } else {
             this.outputGates = null;
         }

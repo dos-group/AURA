@@ -33,6 +33,7 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOMessages.ChannelHandshakeMessage;
 import de.tuberlin.aura.core.iosystem.IOMessages.ControlMessage;
+import de.tuberlin.aura.core.iosystem.IOMessages.DataChannelGateMessage;
 import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
 import de.tuberlin.aura.core.iosystem.RPCManager.RPCCalleeMessage;
 import de.tuberlin.aura.core.iosystem.RPCManager.RPCCallerMessage;
@@ -57,6 +58,28 @@ public final class IOManager extends EventDispatcher {
                     chsm.srcTaskID, chsm.dstTaskID, ctx.channel() ) );
         }
     }
+
+    /**
+    *
+    */
+   private final class DataChannelGateHandler extends SimpleChannelInboundHandler<DataChannelGateMessage> {
+
+       @Override
+       protected void channelRead0(ChannelHandlerContext ctx, DataChannelGateMessage dcgm )
+               throws Exception {
+
+           final String gateMessage;
+           if( DataChannelGateMessage.DATA_CHANNEL_OUTPUT_GATE_OPEN.equals( dcgm.msgType ) ) {
+               gateMessage = IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN;
+           } else if( DataChannelGateMessage.DATA_CHANNEL_OUTPUT_GATE_CLOSE.equals( dcgm.msgType ) ) {
+               gateMessage = IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE;
+           } else {
+               throw new IllegalStateException();
+           }
+
+           dispatchEvent( new IOEvents.IODataChannelEvent( gateMessage, dcgm.srcTaskID, dcgm.dstTaskID, ctx.channel() ) );
+       }
+   }
 
     /**
      *
@@ -151,13 +174,24 @@ public final class IOManager extends EventDispatcher {
                      .channel( NioSocketChannel.class )
                      .handler( new ObjectEncoder() );
 
+            /*.handler( new ChannelInitializer<LocalChannel>() {
+
+                @Override
+                public void initChannel(LocalChannel ch) throws Exception {
+
+                    ch.pipeline().addFirst( new ObjectEncoder() );
+                    ch.pipeline().addFirst( new DataChannelGateHandler() );
+                    ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
+                }
+            } );*/
+
+
             final ChannelFuture cf = bootstrap.connect( socketAddress );
             cf.addListener( new ChannelFutureListener() {
 
                 @Override
                 public void operationComplete(ChannelFuture cf)
                         throws Exception {
-
                     if( cf.isSuccess() ) {
                         cf.channel().writeAndFlush( new ChannelHandshakeMessage( srcTaskID, dstTaskID ) );
                         dispatchEvent( new IOEvents.IODataChannelEvent( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED,
@@ -179,9 +213,11 @@ public final class IOManager extends EventDispatcher {
             final Bootstrap bootstrap = new Bootstrap();
             bootstrap.group( netOutputEventLoopGroup )
                 .channel( LocalChannel.class )
-                .handler(new ChannelInitializer<LocalChannel>() {
+                .handler( new ChannelInitializer<LocalChannel>() {
+
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
+                        //ch.pipeline().addFirst( new DataChannelGateHandler() );
                     }
                 } );
 
@@ -191,7 +227,6 @@ public final class IOManager extends EventDispatcher {
                 @Override
                 public void operationComplete(ChannelFuture cf)
                         throws Exception {
-
                     if( cf.isSuccess() ) {
                         cf.channel().writeAndFlush( new ChannelHandshakeMessage( srcTaskID, dstTaskID ) );
                         dispatchEvent( new IOEvents.IODataChannelEvent( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED,
@@ -212,14 +247,13 @@ public final class IOManager extends EventDispatcher {
             bootstrap.group( netOutputEventLoopGroup )
                      .channel( NioSocketChannel.class )
                      .handler( new ChannelInitializer<SocketChannel>() {
+
                             @Override
                             public void initChannel(SocketChannel ch) throws Exception {
-
                                 ch.pipeline().addFirst( new ObjectEncoder() );
-                                   ch.pipeline().addFirst( new RPCCallerHandler() );
-                                   ch.pipeline().addFirst( new RPCCalleeHandler() );
+                                ch.pipeline().addFirst( new RPCCallerHandler() );
+                                ch.pipeline().addFirst( new RPCCalleeHandler() );
                                 ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
-
                             }
                      } );
 
@@ -356,7 +390,7 @@ public final class IOManager extends EventDispatcher {
                     @Override
                     protected void initChannel(SocketChannel ch)
                             throws Exception {
-
+                        ch.pipeline().addFirst( new ObjectEncoder() );
                         ch.pipeline().addFirst( new DataChannelHandshakeHandler() );
                         ch.pipeline().addFirst( new DataMessageReceiveHandler() );
                         ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
@@ -369,7 +403,6 @@ public final class IOManager extends EventDispatcher {
             @Override
             public void operationComplete(ChannelFuture future)
                     throws Exception {
-
                 if( cf.isSuccess() ) {
                     LOG.info( "network server bound to adress " + machine.dataAddress );
                 } else {
@@ -397,7 +430,6 @@ public final class IOManager extends EventDispatcher {
                 @Override
                 protected void initChannel(LocalChannel ch)
                         throws Exception {
-
                     ch.pipeline().addFirst( new DataChannelHandshakeHandler() );
                     ch.pipeline().addFirst( new DataMessageReceiveHandler() );
                 }
@@ -409,7 +441,6 @@ public final class IOManager extends EventDispatcher {
             @Override
             public void operationComplete(ChannelFuture future)
                     throws Exception {
-
                 if( cf.isSuccess() ) {
                     LOG.info( "local server bound to adress " + machine.dataAddress );
                 } else {
@@ -436,7 +467,6 @@ public final class IOManager extends EventDispatcher {
                     @Override
                     protected void initChannel(SocketChannel ch)
                             throws Exception {
-
                         ch.pipeline().addFirst( new ObjectEncoder() );
                         ch.pipeline().addFirst( new RPCCallerHandler() );
                         ch.pipeline().addFirst( new RPCCalleeHandler() );
@@ -452,7 +482,6 @@ public final class IOManager extends EventDispatcher {
             @Override
             public void operationComplete(ChannelFuture future)
                     throws Exception {
-
                 if( cf.isSuccess() ) {
                     LOG.info( "network server bound to adress " + machine.dataAddress );
                 } else {

@@ -21,6 +21,10 @@ public final class IOEvents {
 
         public static final String IO_EVENT_OUTPUT_CHANNEL_CONNECTED = "IO_EVENT_OUTPUT_CHANNEL_CONNECTED";
 
+        public static final String IO_EVENT_OUTPUT_GATE_OPEN = "IO_EVENT_OUTPUT_GATE_OPEN";
+
+        public static final String IO_EVENT_OUTPUT_GATE_CLOSE = "IO_EVENT_OUTPUT_GATE_CLOSE";
+        
         public IODataChannelEvent( final String type, final UUID srcTaskID, final UUID dstTaskID, final Channel channel ) {
             super( type );
             // sanity check.

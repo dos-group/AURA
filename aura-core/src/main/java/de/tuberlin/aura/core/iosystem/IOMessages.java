@@ -11,6 +11,40 @@ public final class IOMessages {
     /**
      *
      */
+    public static final class DataChannelGateMessage implements Serializable {
+
+        private static final long serialVersionUID = -3242583979326543776L;
+
+        public static final String DATA_CHANNEL_OUTPUT_GATE_OPEN = "DATA_CHANNEL_OUTPUT_GATE_OPEN";
+
+        public static final String DATA_CHANNEL_OUTPUT_GATE_CLOSE = "DATA_CHANNEL_OUTPUT_GATE_CLOSE";
+
+        public DataChannelGateMessage( final UUID srcTaskID, final UUID dstTaskID, final String msgType ) {
+            // sanity check.
+            if( srcTaskID == null )
+                throw new IllegalArgumentException( "srcTaskID == null" );
+            if( dstTaskID == null )
+                throw new IllegalArgumentException( "dstTaskID == null" );
+            if( msgType == null )
+                throw new IllegalArgumentException( "msgType == null" );
+
+            this.srcTaskID = srcTaskID;
+
+            this.dstTaskID = dstTaskID;
+
+            this.msgType = msgType;
+        }
+
+        public final UUID srcTaskID;
+
+        public final UUID dstTaskID;
+
+        public final String msgType;
+    }
+
+    /**
+     *
+     */
     public static final class ChannelHandshakeMessage implements Serializable {
 
         private static final long serialVersionUID = 4015271410077813454L;
@@ -27,9 +61,9 @@ public final class IOMessages {
             this.dstTaskID = dstTaskID;
         }
 
-        public UUID srcTaskID;
+        public final UUID srcTaskID;
 
-        public UUID dstTaskID;
+        public final UUID dstTaskID;
 
         @Override
         public String toString() {
@@ -68,13 +102,13 @@ public final class IOMessages {
             this.data = data;
         }
 
-        public UUID messageID;
+        public final UUID messageID;
 
-        public UUID srcTaskID;
+        public final UUID srcTaskID;
 
-        public UUID dstTaskID;
+        public final UUID dstTaskID;
 
-        public byte[] data;
+        public final byte[] data;
 
         @Override
         public String toString() {
@@ -112,11 +146,11 @@ public final class IOMessages {
             this.data = data;
         }
 
-        public UUID messageID;
+        public final UUID messageID;
 
-        public UUID srcTaskManagerID;
+        public final UUID srcTaskManagerID;
 
-        public Object data;
+        public final Object data;
 
         @Override
         public String toString() {

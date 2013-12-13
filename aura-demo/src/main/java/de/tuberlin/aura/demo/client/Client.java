@@ -41,7 +41,8 @@ public final class Client {
 
                 final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid,
                         context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
-                context.outputGates.get( 0 ).getChannel( 0 ).writeAndFlush( dm );
+
+                context.outputGates.get( 0 ).writeDataToChannel( 0, dm );
 
                 try {
                     Thread.sleep( 100 );
@@ -67,7 +68,7 @@ public final class Client {
                 final byte[] data = new byte[65536];
                 final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid,
                         context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
-                context.outputGates.get( 0 ).getChannel( 0 ).writeAndFlush( dm );
+                context.outputGates.get( 0 ).writeDataToChannel( 0, dm );
                 try {
                     Thread.sleep( 100 );
                 } catch (InterruptedException e) {
@@ -100,7 +101,7 @@ public final class Client {
                     final byte[] data = new byte[65536];
                     final DataMessage dmOut = new DataMessage( UUID.randomUUID(), context.task.uid,
                             context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
-                    context.outputGates.get( 0 ).getChannel( 0 ).writeAndFlush( dmOut );
+                    context.outputGates.get( 0 ).writeDataToChannel( 0, dmOut );
                 } catch (InterruptedException e) {
                     LOG.info( e );
                 }

@@ -78,7 +78,7 @@ public final class TaskManager implements WM2TMProtocol {
     /**
      *
      */
-    public final class TaskEventHandler extends AbstractTaskEventHandler {
+    private final class TaskEventHandler extends AbstractTaskEventHandler {
 
         private Map<UUID,Integer> taskIDToChannelIndex;
 
@@ -104,14 +104,12 @@ public final class TaskManager implements WM2TMProtocol {
                 for( TaskDescriptor inputTask : inputGate ) {
                     // Set the channel on right position.
                     if( inputTask.uid.equals( srcTaskID ) ) {
-                        //context.inputChannels.get( gateIndex ).set( channelIndex, channel );
                         context.inputGates.get( gateIndex ).setChannel( channelIndex, channel );
                         LOG.info( "input connection from " + inputTask.name + " [" + inputTask.uid + "] to task "
                                 + context.task.name + " [" + context.task.uid + "] is established" );
                         connectingToCorrectTask |= true;
                     }
                     // all data outputs are connected...
-                    //allInputChannelsPerGateConnected &= ( context.inputChannels.get( gateIndex ).get(channelIndex++) != null );
                     allInputChannelsPerGateConnected &= ( context.inputGates.get( gateIndex ).getChannel( channelIndex++ ) != null );
                 }
 
@@ -139,13 +137,11 @@ public final class TaskManager implements WM2TMProtocol {
                 for( TaskDescriptor outputTask : outputGate ) {
                     // Set the channel on right position.
                     if( outputTask.uid.equals( dstTaskID ) ) {
-                        //context.outputChannels.get( gateIndex ).set( channelIndex, channel );
                         context.outputGates.get( gateIndex ).setChannel( channelIndex, channel );
                         LOG.info( "output connection from " + context.task.name + " [" + context.task.uid + "] to task "
                                 + outputTask.name + " [" + outputTask.uid + "] is established" );
                     }
                     // all data outputs are connected...
-                    //allOutputChannelsPerGateConnected &= ( context.outputChannels.get( gateIndex ).get(channelIndex++) != null );
                     allOutputChannelsPerGateConnected &= ( context.outputGates.get( gateIndex ).getChannel( channelIndex++ ) != null );
                 }
                 allOutputGatesConnected &= allOutputChannelsPerGateConnected;
@@ -192,7 +188,6 @@ public final class TaskManager implements WM2TMProtocol {
         protected void handleInputData( DataMessage message ) {
             // TODO: we should provide in TaskContext mappings in both direction
             // between channelIndex and taskID for task inputs and outputs!
-            //context.inputQueues.get( taskIDToChannelIndex.get( message.srcTaskID ) ).add( message );
             context.inputGates.get( taskIDToChannelIndex.get( message.srcTaskID ) ).addToInputQueue( message );
         }
 

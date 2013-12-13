@@ -38,7 +38,7 @@ public class TopologyParallelizer implements ITopologyParallelizer {
         if( topology == null )
             throw new IllegalArgumentException( "topology == null" );
 
-        // First pass, create task descriptors (and later a clever worker machine assignment!).
+        // First pass, create task descriptors.
         TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {
 
             @Override
@@ -272,11 +272,8 @@ public class TopologyParallelizer implements ITopologyParallelizer {
                 for( final ExecutionNode en : element.getExecutionNodes() ) {
 
                     final Map<UUID,List<TaskDescriptor>> inputsPerGate = gateExecutionNodeInputs.get( en.uid );
-                    final Map<UUID,List<TaskDescriptor>> outputsPerGate = gateExecutionNodeOutputs.get( en.uid );
 
-                    List<List<TaskDescriptor>> outputsPerGateList = null;
                     List<List<TaskDescriptor>> inputsPerGateList = null;
-
                     if( inputsPerGate != null ) {
                         final Collection<List<TaskDescriptor>> inputsPerGateCollection = inputsPerGate.values();
                         if( inputsPerGateCollection instanceof List )
@@ -285,6 +282,9 @@ public class TopologyParallelizer implements ITopologyParallelizer {
                             inputsPerGateList = new ArrayList<List<TaskDescriptor>>( inputsPerGateCollection );
                     }
 
+                    final Map<UUID,List<TaskDescriptor>> outputsPerGate = gateExecutionNodeOutputs.get( en.uid );
+
+                    List<List<TaskDescriptor>> outputsPerGateList = null;
                     if( outputsPerGate != null ) {
                         final Collection<List<TaskDescriptor>> outputsPerGateCollection = outputsPerGate.values();
                         if( outputsPerGateCollection instanceof List )
