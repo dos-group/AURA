@@ -254,7 +254,7 @@ public final class TaskManager implements WM2TMProtocol {
                              final Class<? extends TaskInvokeable> executableClass ) {
 
         final TaskEventHandler handler = new TaskEventHandler();
-        final IEventDispatcher dispatcher = registerTaskEvents( new EventDispatcher(), handler );
+        final IEventDispatcher dispatcher = registerTaskEvents( new EventDispatcher( true ), handler );
         final TaskContext taskContext = new TaskContext( taskDescriptor, taskBindingDescriptor, handler, dispatcher, executableClass );
         handler.setContext( taskContext );
         taskContextMap.put( taskDescriptor.uid, new Pair<TaskContext,IEventDispatcher>( taskContext, dispatcher ) );

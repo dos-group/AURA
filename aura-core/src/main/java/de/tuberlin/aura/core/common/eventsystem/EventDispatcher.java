@@ -3,26 +3,79 @@ package de.tuberlin.aura.core.common.eventsystem;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.log4j.Logger;
 
 /**
  * The EventDispatcher is responsible for adding and removing listeners and
- * for dispatching event to this listeners. This EventDispatcher implementation is not thread safe!
+ * for dispatching event to this listeners.
  *
  * @author Tobias Herb
  *
  */
 public class EventDispatcher implements IEventDispatcher {
 
-    /**
-     * Constructor.
-     */
+    //---------------------------------------------------
+    // Constructors.
+    //---------------------------------------------------
+
     public EventDispatcher() {
-        this.listenerMap = new ConcurrentHashMap<String, List<IEventHandler>>();
+        this( false );
     }
 
-    /** Hold the listeners for a specific event. */
-    final Map<String,List<IEventHandler>> listenerMap;
+    public EventDispatcher( boolean useDispatchThread ) {
+
+        this.listenerMap = new ConcurrentHashMap<String, List<IEventHandler>>();
+
+        this.useDispatchThread = useDispatchThread;
+
+        this.isRunning = new AtomicBoolean( useDispatchThread );
+
+        this.eventQueue = useDispatchThread ? new LinkedBlockingQueue<Event>() : null;
+
+        this.dispatcherThread = new Runnable() {
+
+            @Override
+            public void run() {
+                while( isRunning.get() ) {
+                    try {
+                        final Event event = eventQueue.take();
+                        dispatch( event );
+                    } catch (InterruptedException e) {
+                        LOG.error( e );
+                    }
+                }
+            }
+        };
+
+        if( useDispatchThread ) {
+            new Thread( dispatcherThread ).start();
+        }
+    }
+
+    //---------------------------------------------------
+    // Fields.
+    //---------------------------------------------------
+
+    private static final Logger LOG = Logger.getLogger( EventDispatcher.class );
+
+    private final Map<String,List<IEventHandler>> listenerMap;
+
+    private final boolean useDispatchThread;
+
+    private final Runnable dispatcherThread;
+
+    private final AtomicBoolean isRunning;
+
+    private final BlockingQueue<Event> eventQueue;
+
+    //---------------------------------------------------
+    // Public.
+    //---------------------------------------------------
 
     /**
      * Add a listener for a specific event.
@@ -30,12 +83,12 @@ public class EventDispatcher implements IEventDispatcher {
      * @param listener The handler for this event.
      */
     @Override
-    public synchronized void addEventListener( String type, IEventHandler listener ) {
+    public synchronized void addEventListener( final String type, final IEventHandler listener ) {
         // sanity check.
         if( type == null )
-            throw new NullPointerException();
+            throw new IllegalArgumentException( "type == null" );
         if( listener == null )
-            throw new NullPointerException();
+            throw new IllegalArgumentException( "listener == null" );
 
         List<IEventHandler> listeners = listenerMap.get( type );
         if( listeners == null ) {
@@ -51,12 +104,12 @@ public class EventDispatcher implements IEventDispatcher {
      * @param listener The handler for this event.
      */
     @Override
-    public synchronized boolean removeEventListener( String type, IEventHandler listener ) {
+    public synchronized boolean removeEventListener( final String type, final IEventHandler listener ) {
         // sanity check.
         if( type == null )
-            throw new NullPointerException();
+            throw new IllegalArgumentException( "type == null" );
         if( listener == null )
-            throw new NullPointerException();
+            throw new IllegalArgumentException( "listener == null" );
 
         final List<IEventHandler> listeners = listenerMap.get( type );
         if( listeners != null ) {
@@ -76,16 +129,15 @@ public class EventDispatcher implements IEventDispatcher {
      * @param event The event to dispatch.
      */
     @Override
-    public synchronized void dispatchEvent( Event event ) {
+    public void dispatchEvent( final Event event ) {
         // sanity check.
         if( event == null )
-            throw new NullPointerException();
+            throw new IllegalArgumentException( "event == null" );
 
-        List<IEventHandler> listeners = listenerMap.get( event.type );
-        if( listeners != null ) {
-            for( IEventHandler el : listeners ) {
-                el.handleEvent( event );
-            }
+        if( useDispatchThread ) {
+            eventQueue.add( event );
+        } else {
+            dispatch( event );
         }
     }
 
@@ -95,10 +147,26 @@ public class EventDispatcher implements IEventDispatcher {
      * @return True if a listener is installed, else false.
      */
     @Override
-    public boolean hasEventListener( String type ) {
+    public boolean hasEventListener( final String type ) {
         // sanity check.
         if( type == null )
-            throw new NullPointerException();
+            throw new IllegalArgumentException( "type == null" );
+
         return listenerMap.get( type ) != null;
+    }
+
+    public void shutdownEventQueue() {
+        isRunning.set( false );
+    }
+
+    private synchronized void dispatch( final Event event ) {
+        final List<IEventHandler> listeners = listenerMap.get( event.type );
+        if( listeners != null ) {
+            for( final IEventHandler el : listeners ) {
+                el.handleEvent( event );
+            }
+        } else { // listeners == null
+            throw new IllegalStateException( "listeners == null" );
+        }
     }
 }
