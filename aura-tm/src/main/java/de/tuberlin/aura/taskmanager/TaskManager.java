@@ -1,7 +1,5 @@
 package de.tuberlin.aura.taskmanager;
 
-import io.netty.channel.Channel;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -9,8 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
-import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
@@ -20,7 +18,6 @@ import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
-import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.common.TaskContext;
@@ -29,7 +26,6 @@ import de.tuberlin.aura.core.task.common.TaskStateMachine;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
-import de.tuberlin.aura.taskmanager.Handler.AbstractTaskEventHandler;
 import de.tuberlin.aura.taskmanager.TaskEvents.TaskStateTransitionEvent;
 
 public final class TaskManager implements WM2TMProtocol {
@@ -41,47 +37,43 @@ public final class TaskManager implements WM2TMProtocol {
     /**
      *
      */
-    private final class IOHandler implements IEventHandler {
+    private final class IORedispatcher extends EventHandler {
 
-        @Override
-        public void handleEvent( final Event e) {
-            if( e instanceof IOEvents.IODataChannelEvent ) {
+        @Handle( event = IOEvents.IODataChannelEvent.class )
+        private void handleDataChannelEvent( final IOEvents.IODataChannelEvent event ) {
 
-                final IOEvents.IODataChannelEvent event = (IOEvents.IODataChannelEvent)e;
-                Pair<TaskContext,IEventDispatcher> contextAndHandler = null;
-                // Call the correct handler!
-                if( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED.equals( event.type ) )
-                    contextAndHandler = taskContextMap.get( event.srcTaskID );
-                if( IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED.equals( event.type ) )
-                    contextAndHandler = taskContextMap.get( event.dstTaskID );
-                // check state.
-                if( contextAndHandler == null )
-                    throw new IllegalStateException( "contextAndHandler for task "
-                                + event.dstTaskID + " == null" );
-                final IEventDispatcher dispatcher = contextAndHandler.getSecond();
-                dispatcher.dispatchEvent( event );
+            Pair<TaskContext,IEventDispatcher> contextAndHandler = null;
+            // Call the correct handler!
+            if( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED.equals( event.type ) )
+                contextAndHandler = taskContextMap.get( event.srcTaskID );
+            if( IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED.equals( event.type ) )
+                contextAndHandler = taskContextMap.get( event.dstTaskID );
+            // check state.
+            if( contextAndHandler == null )
+                throw new IllegalStateException( "contextAndHandler for task "
+                            + event.dstTaskID + " == null" );
+            final IEventDispatcher dispatcher = contextAndHandler.getSecond();
+            dispatcher.dispatchEvent( event );
+        }
 
-            } else if( e instanceof IOEvents.IODataEvent ) {
+        @Handle( event = IOEvents.IODataEvent.class )
+        private void handleDataEvent( final IOEvents.IODataEvent event ) {
 
-                final IOEvents.IODataEvent event = (IOEvents.IODataEvent)e;
-                final Pair<TaskContext,IEventDispatcher> contextAndHandler =
-                        taskContextMap.get( event.message.dstTaskID );
-                contextAndHandler.getSecond().dispatchEvent( event );
-
-            } else {
-                throw new IllegalStateException( "unknown IO event" );
-            }
+            final Pair<TaskContext,IEventDispatcher> contextAndHandler =
+                    taskContextMap.get( event.message.dstTaskID );
+            contextAndHandler.getSecond().dispatchEvent( event );
         }
     }
 
     /**
      *
      */
-    private final class TaskEventHandler extends AbstractTaskEventHandler {
+    private final class TaskEventHandler extends EventHandler {
 
-        @Override
-        protected void handleTaskInputDataChannelConnect( UUID srcTaskID, UUID dstTaskID, Channel channel ) {
+        public TaskContext context;
 
+        @Handle( event = IOEvents.IODataChannelEvent.class, type = IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED )
+        private void handleTaskInputDataChannelConnect( final IOEvents.IODataChannelEvent event ) {
             int gateIndex = 0;
             boolean allInputGatesConnected = true, connectingToCorrectTask = false;
             for( final List<TaskDescriptor> inputGate : context.taskBinding.inputGateBindings ) {
@@ -89,8 +81,8 @@ public final class TaskManager implements WM2TMProtocol {
                 boolean allInputChannelsPerGateConnected = true;
                 for( TaskDescriptor inputTask : inputGate ) {
                     // Set the channel on right position.
-                    if( inputTask.uid.equals( srcTaskID ) ) {
-                        context.inputGates.get( gateIndex ).setChannel( channelIndex, channel );
+                    if( inputTask.uid.equals( event.srcTaskID ) ) {
+                        context.inputGates.get( gateIndex ).setChannel( channelIndex, event.channel );
                         LOG.info( "input connection from " + inputTask.name + " [" + inputTask.uid + "] to task "
                                 + context.task.name + " [" + context.task.uid + "] is established" );
                         connectingToCorrectTask |= true;
@@ -112,9 +104,8 @@ public final class TaskManager implements WM2TMProtocol {
             }
         }
 
-        @Override
-        protected void handleTaskOutputDataChannelConnect( UUID srcTaskID, UUID dstTaskID, Channel channel ) {
-
+        @Handle( event = IOEvents.IODataChannelEvent.class, type = IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED )
+        private void handleTaskOutputDataChannelConnect( final IOEvents.IODataChannelEvent event ) {
             int gateIndex = 0;
             boolean allOutputGatesConnected = true;
             for( final List<TaskDescriptor> outputGate : context.taskBinding.outputGateBindings ) {
@@ -122,8 +113,8 @@ public final class TaskManager implements WM2TMProtocol {
                 boolean allOutputChannelsPerGateConnected = true;
                 for( TaskDescriptor outputTask : outputGate ) {
                     // Set the channel on right position.
-                    if( outputTask.uid.equals( dstTaskID ) ) {
-                        context.outputGates.get( gateIndex ).setChannel( channelIndex, channel );
+                    if( outputTask.uid.equals( event.dstTaskID ) ) {
+                        context.outputGates.get( gateIndex ).setChannel( channelIndex, event.channel );
                         LOG.info( "output connection from " + context.task.name + " [" + context.task.uid + "] to task "
                                 + outputTask.name + " [" + outputTask.uid + "] is established" );
                     }
@@ -139,13 +130,19 @@ public final class TaskManager implements WM2TMProtocol {
             }
         }
 
-        @Override
-        protected void handleTaskStateTransition( TaskState currentState, TaskTransition transition ) {
+        @Handle( event = IOEvents.IODataEvent.class )
+        private void handleTaskInputData( final IOEvents.IODataEvent event ) {
+            context.inputGates.get( context.getInputChannelIndexFromTaskID( event.message.srcTaskID ) )
+                .addToInputQueue( event.message );
+        }
+
+        @Handle( event = TaskStateTransitionEvent.class )
+        private void handleTaskStateTransition( final TaskStateTransitionEvent event ) {
             synchronized( context.state ) { // serialize task state transitions!
                 final TaskState oldState = context.state;
                 final Map<TaskTransition,TaskState> transitionsSpace =
                         TaskStateMachine.TASK_STATE_TRANSITION_MATRIX.get( context.state );
-                final TaskState nextState = transitionsSpace.get( transition );
+                final TaskState nextState = transitionsSpace.get( event.transition );
                 context.state = nextState;
                 // Trigger state dependent actions. Realization of a classic Moore automata.
                 switch( context.state ) {
@@ -169,15 +166,6 @@ public final class TaskManager implements WM2TMProtocol {
                         + oldState + " to " + context.state );
             }
         }
-
-        @Override
-        protected void handleInputData( DataMessage message ) {
-            context.inputGates.get( context.getInputChannelIndexFromTaskID( message.srcTaskID ) ).addToInputQueue( message );
-        }
-
-        @Override
-        protected void handleTaskException() {
-        }
     }
 
     //---------------------------------------------------
@@ -195,7 +183,7 @@ public final class TaskManager implements WM2TMProtocol {
 
         this.rpcManager = new RPCManager( ioManager );
 
-        this.ioHandler = new IOHandler();
+        this.ioHandler = new IORedispatcher();
 
         this.codeImplanter = new UserCodeImplanter( this.getClass().getClassLoader() );
 
@@ -209,6 +197,8 @@ public final class TaskManager implements WM2TMProtocol {
         registerIOEvents( ioHandler );
 
         rpcManager.registerRPCProtocolImpl( this, WM2TMProtocol.class );
+
+        //TaskEventHandler teh = new TaskEventHandler();
     }
 
     //---------------------------------------------------
@@ -221,7 +211,7 @@ public final class TaskManager implements WM2TMProtocol {
 
     private final IOManager ioManager;
 
-    private final IOHandler ioHandler;
+    private final IORedispatcher ioHandler;
 
     private final RPCManager rpcManager;
 
@@ -256,7 +246,7 @@ public final class TaskManager implements WM2TMProtocol {
         final TaskEventHandler handler = new TaskEventHandler();
         final IEventDispatcher dispatcher = registerTaskEvents( new EventDispatcher( true ), handler );
         final TaskContext taskContext = new TaskContext( taskDescriptor, taskBindingDescriptor, handler, dispatcher, executableClass );
-        handler.setContext( taskContext );
+        handler.context = taskContext;
         taskContextMap.put( taskDescriptor.uid, new Pair<TaskContext,IEventDispatcher>( taskContext, dispatcher ) );
 
         if( taskBindingDescriptor.inputGateBindings.size() == 0 ) {

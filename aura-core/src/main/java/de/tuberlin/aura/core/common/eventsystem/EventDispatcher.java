@@ -37,7 +37,7 @@ public class EventDispatcher implements IEventDispatcher {
 
         this.eventQueue = useDispatchThread ? new LinkedBlockingQueue<Event>() : null;
 
-        this.dispatcherThread = new Runnable() {
+        this.dispatcherThread = useDispatchThread ? new Runnable() {
 
             @Override
             public void run() {
@@ -50,7 +50,7 @@ public class EventDispatcher implements IEventDispatcher {
                     }
                 }
             }
-        };
+        } : null;
 
         if( useDispatchThread ) {
             new Thread( dispatcherThread ).start();
@@ -158,6 +158,10 @@ public class EventDispatcher implements IEventDispatcher {
     public void shutdownEventQueue() {
         isRunning.set( false );
     }
+
+    //---------------------------------------------------
+    // Private.
+    //---------------------------------------------------
 
     private synchronized void dispatch( final Event event ) {
         final List<IEventHandler> listeners = listenerMap.get( event.type );
