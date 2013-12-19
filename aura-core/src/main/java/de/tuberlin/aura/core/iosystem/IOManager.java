@@ -29,14 +29,11 @@ import org.apache.log4j.Logger;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
-import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.iosystem.IOMessages.ChannelHandshakeMessage;
-import de.tuberlin.aura.core.iosystem.IOMessages.ControlMessage;
-import de.tuberlin.aura.core.iosystem.IOMessages.DataChannelGateMessage;
-import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
-import de.tuberlin.aura.core.iosystem.RPCManager.RPCCalleeMessage;
-import de.tuberlin.aura.core.iosystem.RPCManager.RPCCallerMessage;
+import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 
 
 public final class IOManager extends EventDispatcher {
@@ -45,110 +42,23 @@ public final class IOManager extends EventDispatcher {
     // Inner Classes.
     //---------------------------------------------------
 
-    /**
-     *
-     */
-    private final class DataChannelHandshakeHandler extends SimpleChannelInboundHandler<ChannelHandshakeMessage> {
+    private final class DataIOChannelHandler extends SimpleChannelInboundHandler<DataIOEvent> {
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ChannelHandshakeMessage chsm)
+        protected void channelRead0( final ChannelHandlerContext ctx, final DataIOEvent event )
                 throws Exception {
-
-            dispatchEvent( new IOEvents.IODataChannelEvent( IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED,
-                    chsm.srcTaskID, chsm.dstTaskID, ctx.channel() ) );
+            event.setChannel( ctx.channel() );
+            dispatchEvent( event );
         }
     }
 
-    /**
-    *
-    */
-   private final class DataChannelGateHandler extends SimpleChannelInboundHandler<DataChannelGateMessage> {
-
-       @Override
-       protected void channelRead0(ChannelHandlerContext ctx, DataChannelGateMessage dcgm )
-               throws Exception {
-
-           final String gateMessage;
-           if( DataChannelGateMessage.DATA_CHANNEL_OUTPUT_GATE_OPEN.equals( dcgm.msgType ) ) {
-               gateMessage = IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN;
-           } else if( DataChannelGateMessage.DATA_CHANNEL_OUTPUT_GATE_CLOSE.equals( dcgm.msgType ) ) {
-               gateMessage = IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE;
-           } else {
-               throw new IllegalStateException();
-           }
-
-           dispatchEvent( new IOEvents.IODataChannelEvent( gateMessage, dcgm.srcTaskID, dcgm.dstTaskID, ctx.channel() ) );
-       }
-   }
-
-    /**
-     *
-     */
-    private final class DataMessageReceiveHandler extends SimpleChannelInboundHandler<DataMessage> {
+    private final class ControlIOChannelHandler extends SimpleChannelInboundHandler<ControlIOEvent> {
 
         @Override
-        protected void channelRead0(ChannelHandlerContext ctx, DataMessage dm )
+        protected void channelRead0( final ChannelHandlerContext ctx, final ControlIOEvent event )
                 throws Exception {
-
-            dispatchEvent( new IOEvents.IODataEvent( dm ) );
-        }
-    }
-
-    /**
-     *
-     */
-    public static final class RPCCallerHandler extends SimpleChannelInboundHandler<RPCCallerMessage> {
-
-        @Override
-        protected void channelRead0( final ChannelHandlerContext ctx, final RPCCallerMessage msg ) throws Exception {
-
-            // Execute remote call in a dedicated thread.
-            // TODO: use ThreadPool!
-            new Thread( new Runnable() {
-
-                @Override
-                public void run() {
-                    final RPCCalleeMessage calleeMsg =
-                            RPCManager.ProtocolCalleeProxy.callMethod( msg.callUID, msg.methodSignature );
-                    ctx.channel().writeAndFlush( calleeMsg );
-                }
-
-            } ).start();
-        }
-    }
-
-    /**
-     *
-     */
-    public static final class RPCCalleeHandler extends SimpleChannelInboundHandler<RPCCalleeMessage> {
-
-        @Override
-        protected void channelRead0( ChannelHandlerContext ctx, RPCCalleeMessage msg ) throws Exception {
-
-            RPCManager.ProtocolCallerProxy.notifyCaller( msg.callUID, msg.result );
-        }
-    }
-
-    /**
-     *
-     */
-    public final class ControlChannelHandshakeHandler extends SimpleChannelInboundHandler<Pair<UUID,UUID>> {
-
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Pair<UUID,UUID> machineIDs )
-                throws Exception {
-            dispatchEvent( new IOEvents.IOControlChannelEvent( true, machineIDs.getFirst(), machineIDs.getSecond(), ctx.channel() ) );
-        }
-    }
-
-    /**
-     *
-     */
-    public final class ControlMessageReceiveHandler extends SimpleChannelInboundHandler<ControlMessage> {
-
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, ControlMessage cm )
-                throws Exception {
+            event.setChannel( ctx.channel() );
+            dispatchEvent( event );
         }
     }
 
@@ -174,11 +84,11 @@ public final class IOManager extends EventDispatcher {
                      .channel( NioSocketChannel.class )
                      //.handler( new ObjectEncoder() );
                     .handler( new ChannelInitializer<SocketChannel>() {
-        
+
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline().addFirst( new ObjectEncoder() );
-                            ch.pipeline().addFirst( new DataChannelGateHandler() );
+                            ch.pipeline().addFirst( new DataIOChannelHandler() );
                             ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
                         }
                     } );
@@ -191,9 +101,10 @@ public final class IOManager extends EventDispatcher {
                 public void operationComplete(ChannelFuture cf)
                         throws Exception {
                     if( cf.isSuccess() ) {
-                        cf.channel().writeAndFlush( new ChannelHandshakeMessage( srcTaskID, dstTaskID ) );
-                        dispatchEvent( new IOEvents.IODataChannelEvent( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                srcTaskID, dstTaskID, cf.channel() ) );
+                        cf.channel().writeAndFlush( new DataIOEvent( DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID ) );
+                        final DataIOEvent event = new DataIOEvent( DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID );
+                        event.setChannel( cf.channel() );
+                        dispatchEvent( event );
                     } else {
                         LOG.error( "connection attempt failed: " + cf.cause().getLocalizedMessage() );
                     }
@@ -215,7 +126,7 @@ public final class IOManager extends EventDispatcher {
 
                     @Override
                     public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addFirst( new DataChannelGateHandler() );
+                        ch.pipeline().addFirst( new DataIOChannelHandler() );
                     }
                 } );
 
@@ -226,9 +137,10 @@ public final class IOManager extends EventDispatcher {
                 public void operationComplete(ChannelFuture cf)
                         throws Exception {
                     if( cf.isSuccess() ) {
-                        cf.channel().writeAndFlush( new ChannelHandshakeMessage( srcTaskID, dstTaskID ) );
-                        dispatchEvent( new IOEvents.IODataChannelEvent( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                srcTaskID, dstTaskID, cf.channel() ) );
+                        cf.channel().writeAndFlush( new DataIOEvent( DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID ) );
+                        final DataIOEvent event = new DataIOEvent( DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID );
+                        event.setChannel( cf.channel() );
+                        dispatchEvent( event );
                     } else {
                         LOG.error( "connection attempt failed: " + cf.cause().getLocalizedMessage() );
                     }
@@ -249,8 +161,7 @@ public final class IOManager extends EventDispatcher {
                             @Override
                             public void initChannel(SocketChannel ch) throws Exception {
                                 ch.pipeline().addFirst( new ObjectEncoder() );
-                                ch.pipeline().addFirst( new RPCCallerHandler() );
-                                ch.pipeline().addFirst( new RPCCalleeHandler() );
+                                ch.pipeline().addFirst( new ControlIOChannelHandler() );
                                 ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
                             }
                      } );
@@ -263,8 +174,10 @@ public final class IOManager extends EventDispatcher {
                         throws Exception {
 
                     if( cf.isSuccess() ) {
-                        cf.channel().writeAndFlush( new Pair<UUID,UUID>( srcMachineID, dstMachineID ) );
-                        dispatchEvent( new IOEvents.IOControlChannelEvent( false, srcMachineID, dstMachineID, cf.channel() ) );
+                        cf.channel().writeAndFlush( new ControlIOEvent( ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED, srcMachineID, dstMachineID ) );
+                        final ControlIOEvent event = new ControlIOEvent( ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, srcMachineID, dstMachineID );
+                        event.setChannel( cf.channel() );
+                        dispatchEvent( event );
                     } else {
                         LOG.error( "connection attempt failed: " + cf.cause().getLocalizedMessage() );
                     }
@@ -278,6 +191,8 @@ public final class IOManager extends EventDispatcher {
     //---------------------------------------------------
 
     public IOManager( final MachineDescriptor machine ) {
+        super( false );
+
         // sanity check.
         if( machine == null )
             throw new IllegalArgumentException( "machine == null" );
@@ -288,9 +203,9 @@ public final class IOManager extends EventDispatcher {
 
         final NioEventLoopGroup nioInputEventLoopGroup = new NioEventLoopGroup();
 
-        startNetworkDataMessageServer( this.machine,  nioInputEventLoopGroup );
+        startNetworkDataMessageServer( this.machine, nioInputEventLoopGroup );
 
-        startNetworkControlMessageServer( this.machine,  nioInputEventLoopGroup );
+        startNetworkControlMessageServer( this.machine, nioInputEventLoopGroup );
 
         startLocalDataMessageServer( nioInputEventLoopGroup );
     }
@@ -301,7 +216,7 @@ public final class IOManager extends EventDispatcher {
 
     private static final Logger LOG = Logger.getLogger( IOManager.class );
 
-    private final MachineDescriptor machine;
+    public final MachineDescriptor machine;
 
     private final ChannelBuilder channelBuilder;
 
@@ -346,20 +261,18 @@ public final class IOManager extends EventDispatcher {
                 // runs in the channel thread...
                 @Override
                 public void handleEvent(Event e) {
-                    if( e instanceof IOEvents.IOControlChannelEvent ) {
-                        final IOEvents.IOControlChannelEvent event = (IOEvents.IOControlChannelEvent)e;
-                        if( !event.isIncoming ) {
-                            if( dstMachineID.equals( event.dstMachineID ) ) {
-                                threadLock.lock();
-                                    condition.signal();
-                                threadLock.unlock();
-                            }
+                    if( e instanceof ControlIOEvent ) {
+                        final ControlIOEvent event = (ControlIOEvent)e;
+                        if( dstMachineID.equals( event.dstMachineID ) ) {
+                            threadLock.lock();
+                                condition.signal();
+                            threadLock.unlock();
                         }
                     }
                 }
             };
 
-        addEventListener( IOEvents.IOControlChannelEvent.IO_EVENT_MESSAGE_CHANNEL_CONNECTED, localHandler );
+        addEventListener( ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler );
 
         channelBuilder.buildNetworkControlChannel( machine.uid, dstMachineID, socketAddress );
 
@@ -372,7 +285,7 @@ public final class IOManager extends EventDispatcher {
             threadLock.unlock();
         }
 
-        removeEventListener( IOEvents.IOControlChannelEvent.IO_EVENT_MESSAGE_CHANNEL_CONNECTED, localHandler );
+        removeEventListener( ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler );
     }
 
     //---------------------------------------------------
@@ -389,8 +302,7 @@ public final class IOManager extends EventDispatcher {
                     protected void initChannel(SocketChannel ch)
                             throws Exception {
                         ch.pipeline().addFirst( new ObjectEncoder() );
-                        ch.pipeline().addFirst( new DataChannelHandshakeHandler() );
-                        ch.pipeline().addFirst( new DataMessageReceiveHandler() );
+                        ch.pipeline().addFirst( new DataIOChannelHandler() );
                         ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
                     }
                 } );
@@ -428,8 +340,7 @@ public final class IOManager extends EventDispatcher {
                 @Override
                 protected void initChannel(LocalChannel ch)
                         throws Exception {
-                    ch.pipeline().addFirst( new DataChannelHandshakeHandler() );
-                    ch.pipeline().addFirst( new DataMessageReceiveHandler() );
+                    ch.pipeline().addFirst( new DataIOChannelHandler() );
                 }
             });
 
@@ -466,10 +377,7 @@ public final class IOManager extends EventDispatcher {
                     protected void initChannel(SocketChannel ch)
                             throws Exception {
                         ch.pipeline().addFirst( new ObjectEncoder() );
-                        ch.pipeline().addFirst( new RPCCallerHandler() );
-                        ch.pipeline().addFirst( new RPCCalleeHandler() );
-                        ch.pipeline().addFirst( new ControlChannelHandshakeHandler() );
-                        ch.pipeline().addFirst( new ControlMessageReceiveHandler() );
+                        ch.pipeline().addFirst( new ControlIOChannelHandler() );
                         ch.pipeline().addFirst( new ObjectDecoder( ClassResolvers.cacheDisabled( getClass().getClassLoader() ) ) );
                     }
                 } );

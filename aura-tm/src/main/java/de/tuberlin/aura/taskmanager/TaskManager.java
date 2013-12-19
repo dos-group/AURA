@@ -16,8 +16,10 @@ import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.common.TaskContext;
@@ -39,14 +41,14 @@ public final class TaskManager implements WM2TMProtocol {
      */
     private final class IORedispatcher extends EventHandler {
 
-        @Handle( event = IOEvents.IODataChannelEvent.class )
-        private void handleDataChannelEvent( final IOEvents.IODataChannelEvent event ) {
+        @Handle( event = DataIOEvent.class )
+        private void handleDataChannelEvent( final DataIOEvent event ) {
 
             Pair<TaskContext,IEventDispatcher> contextAndHandler = null;
             // Call the correct handler!
-            if( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED.equals( event.type ) )
+            if( DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED.equals( event.type ) )
                 contextAndHandler = taskContextMap.get( event.srcTaskID );
-            if( IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED.equals( event.type ) )
+            if( DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED.equals( event.type ) )
                 contextAndHandler = taskContextMap.get( event.dstTaskID );
             // check state.
             if( contextAndHandler == null )
@@ -56,11 +58,11 @@ public final class TaskManager implements WM2TMProtocol {
             dispatcher.dispatchEvent( event );
         }
 
-        @Handle( event = IOEvents.IODataEvent.class )
-        private void handleDataEvent( final IOEvents.IODataEvent event ) {
+        @Handle( event = DataBufferEvent.class )
+        private void handleDataEvent( final DataBufferEvent event ) {
 
             final Pair<TaskContext,IEventDispatcher> contextAndHandler =
-                    taskContextMap.get( event.message.dstTaskID );
+                    taskContextMap.get( event.dstTaskID );
             contextAndHandler.getSecond().dispatchEvent( event );
         }
     }
@@ -72,8 +74,8 @@ public final class TaskManager implements WM2TMProtocol {
 
         public TaskContext context;
 
-        @Handle( event = IOEvents.IODataChannelEvent.class, type = IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED )
-        private void handleTaskInputDataChannelConnect( final IOEvents.IODataChannelEvent event ) {
+        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED )
+        private void handleTaskInputDataChannelConnect( final DataIOEvent event ) {
             int gateIndex = 0;
             boolean allInputGatesConnected = true, connectingToCorrectTask = false;
             for( final List<TaskDescriptor> inputGate : context.taskBinding.inputGateBindings ) {
@@ -82,12 +84,12 @@ public final class TaskManager implements WM2TMProtocol {
                 for( TaskDescriptor inputTask : inputGate ) {
                     // Set the channel on right position.
                     if( inputTask.uid.equals( event.srcTaskID ) ) {
-                        context.inputGates.get( gateIndex ).setChannel( channelIndex, event.channel );
+                        context.inputGates.get( gateIndex ).setChannel( channelIndex, event.getChannel() );
                         LOG.info( "input connection from " + inputTask.name + " [" + inputTask.uid + "] to task "
                                 + context.task.name + " [" + context.task.uid + "] is established" );
                         connectingToCorrectTask |= true;
                     }
-                    // all data outputs are connected...
+                    // all data inputs are connected...
                     allInputChannelsPerGateConnected &= ( context.inputGates.get( gateIndex ).getChannel( channelIndex++ ) != null );
                 }
 
@@ -104,8 +106,8 @@ public final class TaskManager implements WM2TMProtocol {
             }
         }
 
-        @Handle( event = IOEvents.IODataChannelEvent.class, type = IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED )
-        private void handleTaskOutputDataChannelConnect( final IOEvents.IODataChannelEvent event ) {
+        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED )
+        private void handleTaskOutputDataChannelConnect( final DataIOEvent event ) {
             int gateIndex = 0;
             boolean allOutputGatesConnected = true;
             for( final List<TaskDescriptor> outputGate : context.taskBinding.outputGateBindings ) {
@@ -114,7 +116,7 @@ public final class TaskManager implements WM2TMProtocol {
                 for( TaskDescriptor outputTask : outputGate ) {
                     // Set the channel on right position.
                     if( outputTask.uid.equals( event.dstTaskID ) ) {
-                        context.outputGates.get( gateIndex ).setChannel( channelIndex, event.channel );
+                        context.outputGates.get( gateIndex ).setChannel( channelIndex, event.getChannel() );
                         LOG.info( "output connection from " + context.task.name + " [" + context.task.uid + "] to task "
                                 + outputTask.name + " [" + outputTask.uid + "] is established" );
                     }
@@ -130,10 +132,10 @@ public final class TaskManager implements WM2TMProtocol {
             }
         }
 
-        @Handle( event = IOEvents.IODataEvent.class )
-        private void handleTaskInputData( final IOEvents.IODataEvent event ) {
-            context.inputGates.get( context.getInputChannelIndexFromTaskID( event.message.srcTaskID ) )
-                .addToInputQueue( event.message );
+        @Handle( event = DataBufferEvent.class )
+        private void handleTaskInputData( final DataBufferEvent event ) {
+            context.inputGates.get( context.getInputChannelIndexFromTaskID( event.srcTaskID ) )
+                .addToInputQueue( event );
         }
 
         @Handle( event = TaskStateTransitionEvent.class )
@@ -282,17 +284,19 @@ public final class TaskManager implements WM2TMProtocol {
     }
 
     private void registerIOEvents( final IEventHandler handler ) {
-        this.ioManager.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED, handler );
-        this.ioManager.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED, handler );
-        this.ioManager.addEventListener( IOEvents.IODataEvent.IO_EVENT_RECEIVED_DATA, handler );
+        this.ioManager.addEventListener( DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, handler );
+        this.ioManager.addEventListener( DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, handler );
+        this.ioManager.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, handler );
+        this.ioManager.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, handler );
+        this.ioManager.addEventListener( DataEventType.DATA_EVENT_BUFFER, handler );
     }
 
     private IEventDispatcher registerTaskEvents( final IEventDispatcher dispatcher, final IEventHandler handler ) {
-        dispatcher.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_CHANNEL_CONNECTED, handler );
-        dispatcher.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_INPUT_CHANNEL_CONNECTED, handler );
-        dispatcher.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN, handler );
-        dispatcher.addEventListener( IOEvents.IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE, handler );
-        dispatcher.addEventListener( IOEvents.IODataEvent.IO_EVENT_RECEIVED_DATA, handler );
+        dispatcher.addEventListener( DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, handler );
+        dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, handler );
+        dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, handler );
+        dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, handler );
+        dispatcher.addEventListener( DataEventType.DATA_EVENT_BUFFER, handler );
         dispatcher.addEventListener( TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT, handler );
         return dispatcher;
     }

@@ -1,34 +1,33 @@
 package de.tuberlin.aura.core.common.eventsystem;
 
+import java.io.Serializable;
+
 /**
- * The std class for all dispatched events.
+ * The base class for all dispatched events.
  * @author Tobias Herb
  *
  */
-public class Event {
+public class Event implements Serializable {
 
-    /**
-     * Constructor.
-     */
-    public Event( String type ) {
-        this( type, null );
-    }
+    private static final long serialVersionUID = 1L;
 
-    /**
-     * Constructor.
-     */
-    public Event( String type, Object data ) {
+    public Event( final String type ) {
         // sanity check.
         if( type == null )
-            throw new NullPointerException();
+            throw new IllegalArgumentException( "type == null" );
 
-        this.type    = type;
-        this.data = data;
+        this.type = type;
     }
 
-    /** Defines the type of the event. */
     public final String type;
 
-    /** The event user data. */
-    public final Object data;
+    private Object payload;
+
+    public void setPayload( final Object payload ) {
+        this.payload = payload;
+    }
+
+    public Object getPayload() {
+        return this.payload;
+    }
 }

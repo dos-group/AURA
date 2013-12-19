@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-
 public abstract class EventHandler implements IEventHandler {
 
     //---------------------------------------------------
@@ -41,7 +39,7 @@ public abstract class EventHandler implements IEventHandler {
     // Fields.
     //---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger( EventHandler.class );
+    //private static final Logger LOG = Logger.getLogger( EventHandler.class );
 
     private final Map<Class<?>,Method> eventHandlerMap;
 
@@ -98,10 +96,9 @@ public abstract class EventHandler implements IEventHandler {
 
     private void register( final Class<?> clazz ) {
         for( final Method m : clazz.getDeclaredMethods() ) {
-            LOG.info( m.getName() );
             if( m.isAnnotationPresent( Handle.class ) ) {
-                //final Class<?>[] argumentTypes = m.getParameterTypes();
-                //if( argumentTypes.length == 1 && argumentTypes[0].isAssignableFrom( Event.class ) ) {
+                final Class<?>[] argumentTypes = m.getParameterTypes();
+                if( argumentTypes.length == 1 && Event.class.isAssignableFrom( argumentTypes[0] ) ) {
                     final Handle handle = m.getAnnotation( Handle.class );
                     if( "".equals( handle.type() ) ) {
 
@@ -122,7 +119,9 @@ public abstract class EventHandler implements IEventHandler {
 
                         handlerTable.put( handle.type(), m );
                     }
-                //}
+                } else {
+                    throw new IllegalStateException( m + " is not a event handler method" );
+                }
             }
         }
     }

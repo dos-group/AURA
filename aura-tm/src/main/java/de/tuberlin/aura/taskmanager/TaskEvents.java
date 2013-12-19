@@ -11,6 +11,7 @@ public final class TaskEvents {
     /**
      *
      */
+    @SuppressWarnings("serial")
     public static final class TaskStateTransitionEvent extends Event {
 
         public static final String TASK_STATE_TRANSITION_EVENT = "TASK_STATE_TRANSITION_EVENT";

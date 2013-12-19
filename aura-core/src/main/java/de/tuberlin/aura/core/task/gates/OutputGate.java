@@ -8,8 +8,9 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
-import de.tuberlin.aura.core.iosystem.IOEvents.IODataChannelEvent;
-import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.task.common.TaskContext;
 
 public final class OutputGate extends AbstractGate {
@@ -33,16 +34,16 @@ public final class OutputGate extends AbstractGate {
             @Override
             public void handleEvent( Event e ) {
 
-                if( e instanceof IODataChannelEvent ) {
-                    final IODataChannelEvent event = (IODataChannelEvent)e;
+                if( e instanceof DataIOEvent ) {
+                    final DataIOEvent event = (DataIOEvent)e;
 
                     switch( event.type ) {
 
-                        case IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN: {
+                        case DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN: {
                             self.openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), true );
                         } break;
 
-                        case IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE: {
+                        case DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE: {
                             self.openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), false );
                         } break;
 
@@ -54,8 +55,8 @@ public final class OutputGate extends AbstractGate {
             }
         };
 
-        context.dispatcher.addEventListener( IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN, gateEventHandler );
-        context.dispatcher.addEventListener( IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE, gateEventHandler );
+        context.dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, gateEventHandler );
+        context.dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, gateEventHandler );
     }
 
     //---------------------------------------------------
@@ -70,20 +71,20 @@ public final class OutputGate extends AbstractGate {
     // Public.
     //---------------------------------------------------
 
-    public void writeDataToChannel( int channelIndex, DataMessage dataMessage ) {
+    public void writeDataToChannel( final int channelIndex, final DataBufferEvent data ) {
         // sanity check.
-        if( dataMessage == null )
-            throw new IllegalArgumentException( "message == null" );
+        if( data == null )
+            throw new IllegalArgumentException( "data == null" );
 
         if( isGateOpen( channelIndex ) ) {
             LOG.error( "channel is closed" );
         }
 
         // TODO: change insert in output queue!
-        getChannel( channelIndex ).writeAndFlush( dataMessage );
+        getChannel( channelIndex ).writeAndFlush( data );
     }
 
-    public boolean isGateOpen( int channelIndex ) {
+    public boolean isGateOpen( final int channelIndex ) {
         return openChannelList.get( channelIndex );
     }
 }

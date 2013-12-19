@@ -15,10 +15,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
-import de.tuberlin.aura.core.common.eventsystem.Event;
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
+import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.RPCCalleeResponseEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.RPCCallerRequestEvent;
 
 public final class RPCManager {
 
@@ -60,8 +63,6 @@ public final class RPCManager {
             if( arguments != null ) {
                 this.argumentTypes = argumentTypes;
                 this.arguments = arguments;
-                //this.arguments = new Object[arguments.length];
-                //System.arraycopy( arguments, 0, this.arguments, 0, arguments.length );
             } else {
                 this.argumentTypes = null;
                 this.arguments = null;
@@ -84,62 +85,26 @@ public final class RPCManager {
     /**
      *
      */
-    public static final class RPCCallerMessage implements Serializable {
-
-        private static final long serialVersionUID = -6373851435734281315L;
-
-        public RPCCallerMessage( final UUID callUID, final MethodSignature methodSignature ) {
-            // sanity check.
-            if( callUID == null )
-                throw new IllegalArgumentException( "callUID == null" );
-            if( methodSignature == null )
-                throw new IllegalArgumentException( "methodSignature == null" );
-
-            this.callUID = callUID;
-
-            this.methodSignature = methodSignature;
-        }
-
-        public UUID callUID;
-
-        public MethodSignature methodSignature;
-    }
-
-    /**
-     *
-     */
-    public static final class RPCCalleeMessage implements Serializable {
-
-        private static final long serialVersionUID = 7730876178491490347L;
-
-        public RPCCalleeMessage( final UUID callUID, final Object result ) {
-            // sanity check.
-            if( callUID == null )
-                throw new IllegalArgumentException( "callUID == null" );
-
-            this.callUID = callUID;
-
-            this.result = result;
-        }
-
-        public UUID callUID;
-
-        public Object result;
-    }
-
-    /**
-     *
-     */
     @SuppressWarnings("unused")
-    public static final class ProtocolCallerProxy implements InvocationHandler {
+    private static final class ProtocolCallerProxy implements InvocationHandler {
 
-        public ProtocolCallerProxy( Channel channel ) {
+        public ProtocolCallerProxy( final UUID srcMachineID,
+                                    final UUID dstMachineID,
+                                    final Channel channel ) {
             // sanity check.
             if( channel == null )
                 throw new IllegalArgumentException( "channel == null" );
 
+            this.srcMachineID = srcMachineID;
+
+            this.dstMachineID = dstMachineID;
+
             this.channel = channel;
         }
+
+        private final UUID srcMachineID;
+
+        private final UUID dstMachineID;
 
         private final Channel channel;
 
@@ -148,8 +113,12 @@ public final class RPCManager {
         private static final Map<UUID,Object> callerResultTable = new HashMap<UUID,Object>();
 
         @SuppressWarnings("unchecked")
-        public static <T> T getProtocolProxy( final Class<T> protocolInterface, final Channel channel ) {
-            final ProtocolCallerProxy pc = new ProtocolCallerProxy( channel );
+        public static <T> T getProtocolProxy( final UUID srcMachineID,
+                                              final UUID dstMachineID,
+                                              final Class<T> protocolInterface,
+                                              final Channel channel ) {
+
+            final ProtocolCallerProxy pc = new ProtocolCallerProxy( srcMachineID, dstMachineID, channel );
             return (T) Proxy.newProxyInstance( protocolInterface.getClassLoader(), new Class[] { protocolInterface }, pc );
         }
 
@@ -181,7 +150,7 @@ public final class RPCManager {
             callerTable.put( callUID, cdl );
 
             // send to server...
-            channel.writeAndFlush( new RPCCallerMessage( callUID, methodInfo ) );
+            channel.writeAndFlush( new RPCCallerRequestEvent( srcMachineID, dstMachineID, callUID, methodInfo ) );
 
             try {
                 if( RPC_RESPONSE_TIMEOUT > 0 ) {
@@ -226,7 +195,7 @@ public final class RPCManager {
     /**
      *
      */
-    public static final class ProtocolCalleeProxy {
+    private static final class ProtocolCalleeProxy {
 
         private static final Map<String,Object> calleeTable = new HashMap<String,Object>();
 
@@ -234,7 +203,10 @@ public final class RPCManager {
             calleeTable.put( protocolInterface.getSimpleName(), protocolImplementation );
         }
 
-        public static RPCCalleeMessage callMethod( final UUID callUID, final MethodSignature methodInfo ) {
+        public static RPCCalleeResponseEvent callMethod( final UUID srcMachineID,
+                                                         final UUID dstMachineID,
+                                                         final UUID callUID,
+                                                         final MethodSignature methodInfo ) {
             // sanity check.
             if( callUID == null )
                 throw new IllegalArgumentException( "callUID == null" );
@@ -244,7 +216,7 @@ public final class RPCManager {
             final Object protocolImplementation = calleeTable.get( methodInfo.className );
 
             if( protocolImplementation == null ) {
-                return new RPCCalleeMessage( callUID, new IllegalStateException( "found no protocol implementation" ) );
+                return new RPCCalleeResponseEvent( srcMachineID, dstMachineID, callUID, new IllegalStateException( "found no protocol implementation" ) );
             }
 
             synchronized( protocolImplementation ) {
@@ -254,11 +226,48 @@ public final class RPCManager {
                 try {
                     final Method method = protocolImplementation.getClass().getMethod( methodInfo.methodName, methodInfo.argumentTypes );
                     final Object result = method.invoke( protocolImplementation, methodInfo.arguments );
-                    return new RPCCalleeMessage( callUID, result );
+                    return new RPCCalleeResponseEvent( srcMachineID, dstMachineID, callUID, result );
                 } catch( Exception e ) {
-                    return new RPCCalleeMessage( callUID, e );
+                    return new RPCCalleeResponseEvent( srcMachineID, dstMachineID, callUID, e );
                 }
             }
+        }
+    }
+
+    /**
+     *
+     */
+    private final class RPCEventHandler extends EventHandler {
+
+        @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED )
+        private void handleControlChannelInputConnected( final ControlIOEvent event ) {
+            rpcChannelMap.put( event.srcMachineID, event.getChannel() );
+            LOG.info( "message connection between machine " + event.srcMachineID
+                    + " and " + event.dstMachineID + " established" );
+        }
+
+        @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED )
+        private void handleControlChannelOutputConnected( final ControlIOEvent event ) {
+            rpcChannelMap.put( event.dstMachineID, event.getChannel() );
+            LOG.info( "message connection between machine " + event.srcMachineID
+                    + " and " + event.dstMachineID + " established" );
+        }
+
+        @Handle( event = RPCCallerRequestEvent.class )
+        private void handleRPCRequest( final RPCCallerRequestEvent event ) {
+            new Thread( new Runnable() {
+                @Override
+                public void run() {
+                    final RPCCalleeResponseEvent calleeMsg =
+                            RPCManager.ProtocolCalleeProxy.callMethod( event.srcMachineID, event.dstMachineID, event.callUID, event.methodSignature );
+                    event.getChannel().writeAndFlush( calleeMsg );
+                }
+            } ).start();
+        }
+
+        @Handle( event = RPCCalleeResponseEvent.class )
+        private void handleRPCResponse( final RPCCalleeResponseEvent event ) {
+            ProtocolCallerProxy.notifyCaller( event.callUID, event.result );
         }
     }
 
@@ -275,22 +284,12 @@ public final class RPCManager {
 
         this.rpcChannelMap = new ConcurrentHashMap<UUID, Channel>();
 
-        this.ioManager.addEventListener( IOEvents.IOControlChannelEvent.IO_EVENT_MESSAGE_CHANNEL_CONNECTED,
-                new IEventHandler() {
+        this.rpcEventHandler = new RPCEventHandler();
 
-            @Override
-            public void handleEvent( Event e ) {
-                if( e instanceof IOEvents.IOControlChannelEvent ) {
-                    final IOEvents.IOControlChannelEvent event = (IOEvents.IOControlChannelEvent)e;
-                    if( event.isIncoming )
-                        rpcChannelMap.put( event.srcMachineID, event.controlChannel );
-                    else
-                        rpcChannelMap.put( event.dstMachineID, event.controlChannel );
-                    LOG.info( "message connection between machine " + event.srcMachineID
-                            + " and " + event.dstMachineID + " established" );
-                }
-            }
-        } );
+        this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED, rpcEventHandler );
+        this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, rpcEventHandler );
+        this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST, rpcEventHandler );
+        this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE, rpcEventHandler );
 
         this.cachedProxies = new HashMap<Pair<Class<?>,UUID>,Object>();
     }
@@ -306,6 +305,8 @@ public final class RPCManager {
     private final Map<UUID, Channel> rpcChannelMap;
 
     private final Map<Pair<Class<?>,UUID>,Object> cachedProxies;
+
+    private final RPCEventHandler rpcEventHandler;
 
     //---------------------------------------------------
     // Public.
@@ -344,7 +345,7 @@ public final class RPCManager {
         @SuppressWarnings("unchecked")
         T proxy = (T) cachedProxies.get( proxyKey );
         if( proxy == null ) {
-            proxy = ProtocolCallerProxy.getProtocolProxy( protocolInterface, channel );
+            proxy = ProtocolCallerProxy.getProtocolProxy( ioManager.machine.uid, dstMachine.uid, protocolInterface, channel );
             cachedProxies.put( proxyKey, proxy );
         }
         return proxy;

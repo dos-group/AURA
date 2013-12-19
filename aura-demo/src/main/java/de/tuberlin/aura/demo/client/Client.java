@@ -12,7 +12,7 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
@@ -39,7 +39,7 @@ public final class Client {
             for( int i = 0; i < 100; ++i ) {
                 final byte[] data = new byte[65536];
 
-                final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid,
+                final DataBufferEvent dm = new DataBufferEvent( UUID.randomUUID(), context.task.uid,
                         context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
 
                 context.outputGates.get( 0 ).writeDataToChannel( 0, dm );
@@ -66,7 +66,7 @@ public final class Client {
         public void execute() throws Exception {
             for( int i = 0; i < 100; ++i ) {
                 final byte[] data = new byte[65536];
-                final DataMessage dm = new DataMessage( UUID.randomUUID(), context.task.uid,
+                final DataBufferEvent dm = new DataBufferEvent( UUID.randomUUID(), context.task.uid,
                         context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
                 context.outputGates.get( 0 ).writeDataToChannel( 0, dm );
                 try {
@@ -90,16 +90,16 @@ public final class Client {
         @Override
         public void execute() throws Exception {
             for( int i = 0; i < 100; ++i ) {
-                final BlockingQueue<DataMessage> inputMsgs1 = context.inputGates.get( 0 ).getInputQueue();
-                final BlockingQueue<DataMessage> inputMsgs2 = context.inputGates.get( 1 ).getInputQueue();
+                final BlockingQueue<DataBufferEvent> inputMsgs1 = context.inputGates.get( 0 ).getInputQueue();
+                final BlockingQueue<DataBufferEvent> inputMsgs2 = context.inputGates.get( 1 ).getInputQueue();
 
                 try {
-                    final DataMessage dm1 = inputMsgs1.take();
-                    final DataMessage dm2 = inputMsgs2.take();
+                    final DataBufferEvent dm1 = inputMsgs1.take();
+                    final DataBufferEvent dm2 = inputMsgs2.take();
                     LOG.info( "input1: received data message " + dm1.messageID + " from task " + dm1.srcTaskID );
                     LOG.info( "input2: received data message " + dm2.messageID + " from task " + dm2.srcTaskID );
                     final byte[] data = new byte[65536];
-                    final DataMessage dmOut = new DataMessage( UUID.randomUUID(), context.task.uid,
+                    final DataBufferEvent dmOut = new DataBufferEvent( UUID.randomUUID(), context.task.uid,
                             context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
                     context.outputGates.get( 0 ).writeDataToChannel( 0, dmOut );
                 } catch (InterruptedException e) {
@@ -121,9 +121,9 @@ public final class Client {
         @Override
         public void execute() throws Exception {
             for( int i = 0; i < 100; ++i ) {
-                final BlockingQueue<DataMessage> inputMsgs = context.inputGates.get( 0 ).getInputQueue();
+                final BlockingQueue<DataBufferEvent> inputMsgs = context.inputGates.get( 0 ).getInputQueue();
                 try {
-                    final DataMessage dm = inputMsgs.take();
+                    final DataBufferEvent dm = inputMsgs.take();
                     LOG.info( "received data message " + dm.messageID + " from task " + dm.srcTaskID );
                 } catch (InterruptedException e) {
                     LOG.info( e );

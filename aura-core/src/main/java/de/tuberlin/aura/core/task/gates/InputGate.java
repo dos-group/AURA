@@ -6,8 +6,9 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import de.tuberlin.aura.core.iosystem.IOMessages.DataChannelGateMessage;
-import de.tuberlin.aura.core.iosystem.IOMessages.DataMessage;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.task.common.TaskContext;
 
 public final class InputGate extends AbstractGate {
@@ -16,19 +17,19 @@ public final class InputGate extends AbstractGate {
         super( context, gateIndex ,context.taskBinding.inputGateBindings.get( gateIndex ).size() );
 
         if( numChannels > 0 ) {
-            inputQueue = new LinkedBlockingQueue<DataMessage>();
+            inputQueue = new LinkedBlockingQueue<DataBufferEvent>();
         } else { // numChannels == 0
             inputQueue = null;
         }
     }
 
-    private final BlockingQueue<DataMessage> inputQueue;
+    private final BlockingQueue<DataBufferEvent> inputQueue;
 
-    public BlockingQueue<DataMessage> getInputQueue() {
+    public BlockingQueue<DataBufferEvent> getInputQueue() {
         return inputQueue;
     }
 
-    public void addToInputQueue( final DataMessage message ) {
+    public void addToInputQueue( final DataBufferEvent message ) {
         // sanity check.
         if( message == null )
             throw new IllegalArgumentException( "message == null" );
@@ -40,8 +41,7 @@ public final class InputGate extends AbstractGate {
         for( int i = 0; i < numChannels; ++i ) {
             final Channel ch = channels.get( i );
             final UUID srcID = context.taskBinding.inputGateBindings.get( gateIndex ).get( i ).uid;
-            ch.writeAndFlush( new DataChannelGateMessage( srcID, context.task.uid,
-                    DataChannelGateMessage.DATA_CHANNEL_OUTPUT_GATE_OPEN ) );
+            ch.writeAndFlush( new DataIOEvent( DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, context.task.uid ) );
         }
     }
 
@@ -49,8 +49,7 @@ public final class InputGate extends AbstractGate {
         for( int i = 0; i < numChannels; ++i ) {
             final Channel ch = channels.get( i );
             final UUID srcID = context.taskBinding.inputGateBindings.get( gateIndex ).get( i ).uid;
-            ch.writeAndFlush( new DataChannelGateMessage( srcID, context.task.uid,
-                    DataChannelGateMessage.DATA_CHANNEL_OUTPUT_GATE_CLOSE ) );
+            ch.writeAndFlush( new DataIOEvent( DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, context.task.uid ) );
         }
     }
 }
