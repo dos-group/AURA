@@ -13,6 +13,10 @@ import de.tuberlin.aura.core.task.common.TaskContext;
 
 public final class InputGate extends AbstractGate {
 
+    //---------------------------------------------------
+    // Constructors.
+    //---------------------------------------------------
+    
     public InputGate( final TaskContext context, int gateIndex ) {
         super( context, gateIndex ,context.taskBinding.inputGateBindings.get( gateIndex ).size() );
 
@@ -23,12 +27,16 @@ public final class InputGate extends AbstractGate {
         }
     }
 
+    //---------------------------------------------------
+    // Fields.
+    //---------------------------------------------------
+    
     private final BlockingQueue<DataBufferEvent> inputQueue;
 
-    public BlockingQueue<DataBufferEvent> getInputQueue() {
-        return inputQueue;
-    }
-
+    //---------------------------------------------------
+    // Public.
+    //---------------------------------------------------
+    
     public void addToInputQueue( final DataBufferEvent message ) {
         // sanity check.
         if( message == null )
@@ -51,5 +59,9 @@ public final class InputGate extends AbstractGate {
             final UUID srcID = context.taskBinding.inputGateBindings.get( gateIndex ).get( i ).uid;
             ch.writeAndFlush( new DataIOEvent( DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, context.task.uid ) );
         }
+    }
+    
+    public BlockingQueue<DataBufferEvent> getInputQueue() {
+        return inputQueue;
     }
 }

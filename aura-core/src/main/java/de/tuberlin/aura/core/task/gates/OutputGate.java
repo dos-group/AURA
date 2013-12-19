@@ -6,16 +6,32 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import de.tuberlin.aura.core.common.eventsystem.Event;
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
 
 public final class OutputGate extends AbstractGate {
 
     // TODO: wire it together with the Andi's send mechanism!
+
+    //---------------------------------------------------
+    // Inner Classes.
+    //---------------------------------------------------
+
+    private final class OutputGateEventHandler extends EventHandler {
+
+        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN )
+        private void handleOutputGateOpen( final DataIOEvent event ) {
+            openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), true );
+        }
+
+        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE )
+        private void handleOutputGateClose( final DataIOEvent event ) {
+            openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), false );
+        }
+    }
 
     //---------------------------------------------------
     // Constructors.
@@ -27,36 +43,9 @@ public final class OutputGate extends AbstractGate {
         // All channels are by default are closed.
         this.openChannelList = new ArrayList<Boolean>( Collections.nCopies( numChannels, false ) );
 
-        final OutputGate self = this;
-
-        final IEventHandler gateEventHandler = new IEventHandler() {
-
-            @Override
-            public void handleEvent( Event e ) {
-
-                if( e instanceof DataIOEvent ) {
-                    final DataIOEvent event = (DataIOEvent)e;
-
-                    switch( event.type ) {
-
-                        case DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN: {
-                            self.openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), true );
-                        } break;
-
-                        case DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE: {
-                            self.openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), false );
-                        } break;
-
-                        default: {
-                            throw new IllegalStateException( "not allowed to handle: " + e.type  );
-                        }
-                    }
-                }
-            }
-        };
-
-        context.dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, gateEventHandler );
-        context.dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, gateEventHandler );
+        final EventHandler outputGateEventHandler = new OutputGateEventHandler();
+        context.dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, outputGateEventHandler );
+        context.dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, outputGateEventHandler );
     }
 
     //---------------------------------------------------
