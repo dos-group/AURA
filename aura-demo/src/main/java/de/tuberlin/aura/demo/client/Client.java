@@ -158,16 +158,16 @@ public final class Client {
             .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
             .addNode( new Node( UUID.randomUUID(), "Task4", Task4Exe.class, 1, 1 ) );
 
-        final AuraTopology at1 = atb1.build();
+        final AuraTopology at1 = atb1.build( "Job 1" );
         ac.submitTopology( at1 );
 
-        /*final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
+        final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
         atb2.addNode( new Node( UUID.randomUUID(), "Task1", Task1Exe.class, 1, 1 ) )
             .connectTo( "Task4", Edge.TransferType.POINT_TO_POINT )
             .addNode( new Node( UUID.randomUUID(), "Task4", Task4Exe.class, 1, 1 ) );
 
-        final AuraTopology at2 = atb2.build();
-        ac.submitTopology( at2 );*/
+        final AuraTopology at2 = atb2.build( "Job 2" );
+        ac.submitTopology( at2 );/**/
 
         /* With Loops... (not working, loops not yet implemented in the runtime)
         final AuraTopologyBuilder atb = ac.createTopologyBuilder();

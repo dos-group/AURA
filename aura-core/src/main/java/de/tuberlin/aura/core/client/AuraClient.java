@@ -33,7 +33,7 @@ public final class AuraClient {
                            addStandardDependency( "io/netty" ).
                            addStandardDependency( "de/tuberlin/aura/core" );
 
-        rpcManager.connectToMessageServer( workloadManager );
+        ioManager.connectMessageChannelBlocking( workloadManager );
 
         clientProtocol = rpcManager.getRPCProtocolProxy( ClientWMProtocol.class, workloadManager );
 

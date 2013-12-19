@@ -37,7 +37,8 @@ public class AuraDirectedGraph {
         // Constructor.
         //---------------------------------------------------
 
-        public AuraTopology( final UUID uid,
+        public AuraTopology( final String name,
+                             final UUID uid,
                              final Map<String,Node> nodeMap,
                              final Map<String,Node> sourceMap,
                              final Map<String,Node> sinkMap,
@@ -45,6 +46,8 @@ public class AuraDirectedGraph {
                              final Map<String,UserCode> userCodeMap ) {
 
             // sanity check.
+            if( name == null )
+                throw new IllegalArgumentException( "name == null" );
             if( uid == null )
                 throw new IllegalArgumentException( "uid == null" );
             if( nodeMap == null )
@@ -57,6 +60,8 @@ public class AuraDirectedGraph {
                 throw new IllegalArgumentException( "edges == null" );
             if( userCodeMap == null )
                 throw new IllegalArgumentException( "userCodeMap == null" );
+
+            this.name = name;
 
             this.uid = uid;
 
@@ -74,6 +79,8 @@ public class AuraDirectedGraph {
         //---------------------------------------------------
         // Fields.
         //---------------------------------------------------
+
+        public final String name;
 
         public final UUID uid;
 
@@ -226,7 +233,10 @@ public class AuraDirectedGraph {
             return nodeConnector;
         }
 
-        public AuraTopology build() {
+        public AuraTopology build( final String name ) {
+            // sanity check.
+            if( name == null )
+                throw new IllegalArgumentException( "name == null" );
 
             if( !isBuilded ) {
 
@@ -274,7 +284,7 @@ public class AuraDirectedGraph {
             // Every call to build gives us the same topology with a new id.
             final UUID topologyID = UUID.randomUUID();
 
-            return new AuraTopology( topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap );
+            return new AuraTopology( name, topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap );
         }
 
         private boolean validateBackCouplingEdge( final Set<Node> visitedNodes, final Node currentNode, final Node destNode ) {

@@ -199,8 +199,6 @@ public final class TaskManager implements WM2TMProtocol {
         registerIOEvents( ioHandler );
 
         rpcManager.registerRPCProtocolImpl( this, WM2TMProtocol.class );
-
-        //TaskEventHandler teh = new TaskEventHandler();
     }
 
     //---------------------------------------------------
@@ -268,6 +266,10 @@ public final class TaskManager implements WM2TMProtocol {
         return rpcManager;
     }
 
+    public IOManager getIOManager() {
+        return ioManager;
+    }
+    
     //---------------------------------------------------
     // Private.
     //---------------------------------------------------

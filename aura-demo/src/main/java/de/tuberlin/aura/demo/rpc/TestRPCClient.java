@@ -27,7 +27,7 @@ public class TestRPCClient {
 
         final TaskManager taskManager = new TaskManager( LocalDeployment.MACHINE_1_DESCRIPTOR );
         taskManager.getRPCManager().registerRPCProtocolImpl( new BarImpl(), BarProtocol.class );
-        taskManager.getRPCManager().connectToMessageServer( LocalDeployment.MACHINE_2_DESCRIPTOR );
+        taskManager.getIOManager().connectMessageChannelBlocking( LocalDeployment.MACHINE_2_DESCRIPTOR );
 
         FooProtocol protocol = taskManager.getRPCManager()
                 .getRPCProtocolProxy( FooProtocol.class, LocalDeployment.MACHINE_2_DESCRIPTOR );

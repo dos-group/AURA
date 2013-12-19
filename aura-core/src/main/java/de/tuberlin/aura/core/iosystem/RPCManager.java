@@ -9,7 +9,6 @@ import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -19,7 +18,6 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
-import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.RPCCalleeResponseEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.RPCCallerRequestEvent;
 
@@ -239,20 +237,6 @@ public final class RPCManager {
      */
     private final class RPCEventHandler extends EventHandler {
 
-        @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED )
-        private void handleControlChannelInputConnected( final ControlIOEvent event ) {
-            rpcChannelMap.put( event.srcMachineID, event.getChannel() );
-            LOG.info( "message connection between machine " + event.srcMachineID
-                    + " and " + event.dstMachineID + " established" );
-        }
-
-        @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED )
-        private void handleControlChannelOutputConnected( final ControlIOEvent event ) {
-            rpcChannelMap.put( event.dstMachineID, event.getChannel() );
-            LOG.info( "message connection between machine " + event.srcMachineID
-                    + " and " + event.dstMachineID + " established" );
-        }
-
         @Handle( event = RPCCallerRequestEvent.class )
         private void handleRPCRequest( final RPCCallerRequestEvent event ) {
             new Thread( new Runnable() {
@@ -282,16 +266,12 @@ public final class RPCManager {
 
         this.ioManager = ioManager;
 
-        this.rpcChannelMap = new ConcurrentHashMap<UUID, Channel>();
-
         this.rpcEventHandler = new RPCEventHandler();
 
-        this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED, rpcEventHandler );
-        this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, rpcEventHandler );
+        this.cachedProxies = new HashMap<Pair<Class<?>,UUID>,Object>();
+
         this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST, rpcEventHandler );
         this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE, rpcEventHandler );
-
-        this.cachedProxies = new HashMap<Pair<Class<?>,UUID>,Object>();
     }
 
     //---------------------------------------------------
@@ -302,8 +282,6 @@ public final class RPCManager {
 
     private final IOManager ioManager;
 
-    private final Map<UUID, Channel> rpcChannelMap;
-
     private final Map<Pair<Class<?>,UUID>,Object> cachedProxies;
 
     private final RPCEventHandler rpcEventHandler;
@@ -311,14 +289,6 @@ public final class RPCManager {
     //---------------------------------------------------
     // Public.
     //---------------------------------------------------
-
-    public void connectToMessageServer( final MachineDescriptor dstMachine ) {
-        // sanity check.
-        if( dstMachine == null )
-            throw new IllegalArgumentException( "machine == null" );
-
-        ioManager.connectMessageChannelBlocking( dstMachine.uid, dstMachine.controlAddress );
-    }
 
     public void registerRPCProtocolImpl( Object protocolImplementation, Class<?> protocolInterface ) {
         // sanity check.
@@ -337,7 +307,7 @@ public final class RPCManager {
         if( dstMachine == null )
             throw new IllegalArgumentException( "dstMachine == null" );
 
-        final Channel channel = rpcChannelMap.get( dstMachine.uid );
+        final Channel channel = ioManager.getControlIOChannel( dstMachine );
         if( channel == null )
             throw new IllegalStateException( "channel == null" );
 
@@ -349,13 +319,5 @@ public final class RPCManager {
             cachedProxies.put( proxyKey, proxy );
         }
         return proxy;
-    }
-
-    public Channel getChannel( final MachineDescriptor machine ) {
-        // sanity check.
-        if( machine == null )
-            throw new IllegalArgumentException( "machine == null" );
-
-        return rpcChannelMap.get( machine.uid );
     }
 }

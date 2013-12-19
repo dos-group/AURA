@@ -2,6 +2,7 @@ package de.tuberlin.aura.core.iosystem;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -19,7 +20,9 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -28,7 +31,9 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
@@ -59,6 +64,26 @@ public final class IOManager extends EventDispatcher {
                 throws Exception {
             event.setChannel( ctx.channel() );
             dispatchEvent( event );
+        }
+    }
+
+    /**
+     *
+     */
+    private final class ControlIOChannelEventHandler extends EventHandler {
+
+        @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED )
+        private void handleControlChannelInputConnected( final ControlIOEvent event ) {
+            controlIOConnections.put( new Pair<UUID,UUID>( machine.uid, event.srcMachineID ), event.getChannel() );
+            LOG.info( "message connection between machine " + event.srcMachineID
+                    + " and " + event.dstMachineID + " established" );
+        }
+
+        @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED )
+        private void handleControlChannelOutputConnected( final ControlIOEvent event ) {
+            controlIOConnections.put( new Pair<UUID,UUID>( machine.uid, event.dstMachineID ), event.getChannel() );
+            LOG.info( "message connection between machine " + event.srcMachineID
+                    + " and " + event.dstMachineID + " established" );
         }
     }
 
@@ -199,15 +224,18 @@ public final class IOManager extends EventDispatcher {
 
         this.machine = machine;
 
-        channelBuilder = new ChannelBuilder();
+        this.controlIOConnections = new ConcurrentHashMap<Pair<UUID,UUID>,Channel>();
+
+        this.channelBuilder = new ChannelBuilder();
 
         final NioEventLoopGroup nioInputEventLoopGroup = new NioEventLoopGroup();
-
         startNetworkDataMessageServer( this.machine, nioInputEventLoopGroup );
-
         startNetworkControlMessageServer( this.machine, nioInputEventLoopGroup );
-
         startLocalDataMessageServer( nioInputEventLoopGroup );
+
+        this.controlEventHandler = new ControlIOChannelEventHandler();
+        this.addEventListener( ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED, controlEventHandler );
+        this.addEventListener( ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, controlEventHandler );
     }
 
     //---------------------------------------------------
@@ -218,9 +246,13 @@ public final class IOManager extends EventDispatcher {
 
     public final MachineDescriptor machine;
 
+    private final Map<Pair<UUID,UUID>,Channel> controlIOConnections;
+
     private final ChannelBuilder channelBuilder;
 
     private final LocalAddress localAddress = new LocalAddress( "1" );
+
+    private final EventHandler controlEventHandler;
 
     //---------------------------------------------------
     // Public.
@@ -242,12 +274,18 @@ public final class IOManager extends EventDispatcher {
         }
     }
 
-    public void connectMessageChannelBlocking( final UUID dstMachineID, final InetSocketAddress socketAddress ) {
+    public void connectMessageChannelBlocking( final MachineDescriptor dstMachine ) {
         // sanity check.
-        if( socketAddress == null )
-            throw new IllegalArgumentException( "socketAddress == null" );
-        if( machine.dataAddress.equals( socketAddress ) )
+        if( dstMachine == null )
+            throw new IllegalArgumentException( "dstMachine == null" );
+        if( machine.controlAddress.equals( dstMachine.controlAddress ) )
             throw new IllegalArgumentException( "can not setup message channel" );
+
+        // If connection already exists, we return.
+        if( controlIOConnections.get( new Pair<UUID,UUID>( machine.uid, dstMachine.uid ) ) != null ) {
+            LOG.info( "connection already established" );
+            return;
+        }
 
         // TODO: brrrr, use something different to make the call blocking until the channel is established!
         // Maybe a design with a Future?
@@ -263,7 +301,7 @@ public final class IOManager extends EventDispatcher {
                 public void handleEvent(Event e) {
                     if( e instanceof ControlIOEvent ) {
                         final ControlIOEvent event = (ControlIOEvent)e;
-                        if( dstMachineID.equals( event.dstMachineID ) ) {
+                        if( dstMachine.uid.equals( event.dstMachineID ) ) {
                             threadLock.lock();
                                 condition.signal();
                             threadLock.unlock();
@@ -273,8 +311,7 @@ public final class IOManager extends EventDispatcher {
             };
 
         addEventListener( ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler );
-
-        channelBuilder.buildNetworkControlChannel( machine.uid, dstMachineID, socketAddress );
+        channelBuilder.buildNetworkControlChannel( machine.uid, dstMachine.uid, dstMachine.controlAddress );
 
         threadLock.lock();
         try {
@@ -286,6 +323,14 @@ public final class IOManager extends EventDispatcher {
         }
 
         removeEventListener( ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler );
+    }
+
+    public Channel getControlIOChannel( final MachineDescriptor dstMachine ) {
+        // sanity check.
+        if( machine == null )
+            throw new IllegalArgumentException( "machine == null" );
+
+        return controlIOConnections.get( new Pair<UUID,UUID>( machine.uid, dstMachine.uid ) );
     }
 
     //---------------------------------------------------

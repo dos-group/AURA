@@ -1,22 +1,15 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.ExecutionNode;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.TopologyBreadthFirstTraverser;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
-import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.demo.deployment.LocalDeployment;
 
 public class WorkloadManager implements ClientWMProtocol {
 
@@ -35,15 +28,13 @@ public class WorkloadManager implements ClientWMProtocol {
 
         this.rpcManager = new RPCManager( ioManager );
 
-        this.workerMachines = new ArrayList<MachineDescriptor>();
-        workerMachines.add( LocalDeployment.MACHINE_1_DESCRIPTOR );
-        workerMachines.add( LocalDeployment.MACHINE_2_DESCRIPTOR );
-        workerMachines.add( LocalDeployment.MACHINE_3_DESCRIPTOR );
-        workerMachines.add( LocalDeployment.MACHINE_4_DESCRIPTOR );
+        this.infrastructureManager = new InfrastructureManager();
+
+        this.deploymentManager = new DeploymentManager( rpcManager );
+
+        this.registeredToplogies = new ConcurrentHashMap<String,TopologyController>();
 
         rpcManager.registerRPCProtocolImpl( this, ClientWMProtocol.class );
-
-        this.topologyParallelizer = new TopologyParallelizer();
     }
 
     //---------------------------------------------------
@@ -58,15 +49,15 @@ public class WorkloadManager implements ClientWMProtocol {
 
     private final RPCManager rpcManager;
 
-    private final List<MachineDescriptor> workerMachines;
+    private final InfrastructureManager infrastructureManager;
 
-    private final TopologyParallelizer topologyParallelizer;
+    private final DeploymentManager deploymentManager;
+
+    private final Map<String,TopologyController> registeredToplogies;
 
     //---------------------------------------------------
-    // Private.
+    // Public.
     //---------------------------------------------------
-
-    // TODO: check if connections already exist.
 
     @Override
     public void submitTopology( final AuraTopology topology ) {
@@ -74,39 +65,23 @@ public class WorkloadManager implements ClientWMProtocol {
         if( topology == null )
             throw new IllegalArgumentException( "topology == null" );
 
-        // Parallelizing.
-        topologyParallelizer.parallelizeTopology( topology );
+        if( registeredToplogies.containsKey( topology.name ) )
+            throw new IllegalStateException( "topology already submitted" );
 
-        // Scheduling.
-        TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {
+        LOG.info( "submit topology " + topology.name );
 
-            private int machineIdx = 0;
+        final TopologyController topologyController = new TopologyController( topology, infrastructureManager );
+        registeredToplogies.put( topology.name, topologyController );
 
-            @Override
-            public void visit( final Node element ) {
-                for( final ExecutionNode en : element.getExecutionNodes() ) {
-                    en.getTaskDescriptor().setMachineDescriptor( workerMachines.get( machineIdx ) );
-                }
-                ++machineIdx;
-            }
-        } );
+        final AuraTopology assembledTopology = topologyController.assembleTopology();
+        deploymentManager.deployTopology( assembledTopology );
+    }
 
-        // Deploying.
-        TopologyBreadthFirstTraverser.traverseBackwards( topology, new Visitor<Node>() {
+    public RPCManager getRPCManager() {
+        return rpcManager;
+    }
 
-            @Override
-            public void visit( final Node element ) {
-                for( final ExecutionNode en : element.getExecutionNodes() ) {
-                    final TaskDeploymentDescriptor tdd =
-                            new TaskDeploymentDescriptor( en.getTaskDescriptor(),
-                                                            en.getTaskBindingDescriptor() );
-                    final WM2TMProtocol tmProtocol =
-                            rpcManager.getRPCProtocolProxy( WM2TMProtocol.class,
-                                                             en.getTaskDescriptor().getMachineDescriptor() );
-                    tmProtocol.installTask( tdd );
-                    LOG.info( "deploy task : " + tdd.toString() );
-                }
-            }
-        } );
+    public IOManager getIOManager() {
+        return ioManager;
     }
 }
