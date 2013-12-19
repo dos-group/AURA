@@ -42,6 +42,16 @@
     </dependency>
 
     <!-- PROJECT DEPENDENCIES -->
+    <dependency>
+    	<groupId>org.apache.zookeeper</groupId>
+    	<artifactId>zookeeper</artifactId>
+    	<version>3.4.5</version>
+    </dependency>
+    <dependency>
+    	<groupId>net.jcip</groupId>
+    	<artifactId>jcip-annotations</artifactId>
+    	<version>1.0</version>
+    </dependency>
   </dependencies>
 
   <!-- ================================= -->
