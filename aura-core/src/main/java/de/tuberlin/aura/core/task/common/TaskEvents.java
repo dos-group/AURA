@@ -1,4 +1,4 @@
-package de.tuberlin.aura.taskmanager;
+package de.tuberlin.aura.core.task.common;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
@@ -11,8 +11,9 @@ public final class TaskEvents {
     /**
      *
      */
-    @SuppressWarnings("serial")
     public static final class TaskStateTransitionEvent extends Event {
+
+        private static final long serialVersionUID = 1L;
 
         public static final String TASK_STATE_TRANSITION_EVENT = "TASK_STATE_TRANSITION_EVENT";
 

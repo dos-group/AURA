@@ -6,10 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
+import de.tuberlin.aura.core.task.common.TaskEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.gates.InputGate;
 import de.tuberlin.aura.core.task.gates.OutputGate;
@@ -22,7 +25,6 @@ public final class TaskContext {
     public TaskContext( final TaskDescriptor task,
                         final TaskBindingDescriptor taskBinding,
                         final IEventHandler handler,
-                        final IEventDispatcher dispatcher,
                         final Class<? extends TaskInvokeable> invokeableClass ) {
 
         // sanity check.
@@ -31,8 +33,6 @@ public final class TaskContext {
         if( taskBinding == null )
             throw new IllegalArgumentException( "taskBinding == null" );
         if( handler == null )
-            throw new IllegalArgumentException( "taskEventListener == null" );
-        if( dispatcher == null )
             throw new IllegalArgumentException( "taskEventListener == null" );
         if( invokeableClass == null )
             throw new IllegalArgumentException( "invokeableClass == null" );
@@ -43,7 +43,7 @@ public final class TaskContext {
 
         this.handler = handler;
 
-        this.dispatcher = dispatcher;
+        this.dispatcher = new EventDispatcher( true );
 
         this.state = TaskState.TASK_STATE_NOT_CONNECTED;
 
@@ -51,7 +51,7 @@ public final class TaskContext {
 
         if( taskBinding.inputGateBindings.size() > 0 ) {
             this.inputGates = new ArrayList<InputGate>( taskBinding.inputGateBindings.size() );
-            
+
             for( int gateIndex = 0; gateIndex < taskBinding.inputGateBindings.size(); ++gateIndex )
                 inputGates.add( new InputGate( this, gateIndex ) );
         } else {
@@ -76,6 +76,16 @@ public final class TaskContext {
             }
             ++channelIndex;
         }
+
+        final String[] taskEvents =
+            { DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+              DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
+              DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
+              DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE,
+              DataEventType.DATA_EVENT_BUFFER,
+              TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT };
+
+        dispatcher.addEventListener( taskEvents, handler );
     }
 
     public final Map<UUID,Integer> taskIDToChannelIndex;

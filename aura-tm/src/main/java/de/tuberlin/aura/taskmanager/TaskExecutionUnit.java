@@ -8,9 +8,9 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
+import de.tuberlin.aura.core.task.common.TaskEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
-import de.tuberlin.aura.taskmanager.TaskEvents.TaskStateTransitionEvent;
 
 public final class TaskExecutionUnit {
 
@@ -26,22 +26,22 @@ public final class TaskExecutionUnit {
             while( isExecutionUnitRunning.get() ) {
 
                 try {
-                    executingTaskContext = taskQueue.take();
+                    context = taskQueue.take();
                 } catch (InterruptedException e) {
                     LOG.info( e );
                 }
 
                 // check precondition.
-                if( executingTaskContext == null )
+                if( context == null )
                     throw new IllegalStateException( "context == null" );
-                if( executingTaskContext.state != TaskState.TASK_STATE_READY )
+                if( context.state != TaskState.TASK_STATE_READY )
                     throw new IllegalStateException( "task is not in state ready" );
 
                 // create instance of that task and execute it.
                 TaskInvokeable invokeable = null;
                 try {
-                    invokeable = executingTaskContext.invokeableClass.getConstructor( TaskContext.class, Logger.class )
-                        .newInstance( executingTaskContext, LOG );
+                    invokeable = context.invokeableClass.getConstructor( TaskContext.class, Logger.class )
+                        .newInstance( context, LOG );
                 } catch( Exception e ) {
                     throw new IllegalStateException( e );
                 }
@@ -50,8 +50,7 @@ public final class TaskExecutionUnit {
                 if( invokeable == null )
                     throw new IllegalStateException( "invokeable == null" );
 
-                executingTaskContext.dispatcher.dispatchEvent(
-                        new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_RUN ) );
+                context.dispatcher.dispatchEvent( new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_RUN ) );
 
                 try {
                     invokeable.execute();
@@ -59,8 +58,7 @@ public final class TaskExecutionUnit {
 
                     LOG.error( e );
 
-                    executingTaskContext.dispatcher.dispatchEvent(
-                            new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_FAILURE ) );
+                    context.dispatcher.dispatchEvent( new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_FAILURE ) );
 
                     return;
 
@@ -68,8 +66,7 @@ public final class TaskExecutionUnit {
                     invokeable = null; // let the instance be collected from gc.
                 }
 
-                executingTaskContext.dispatcher.dispatchEvent(
-                        new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_FINISH ) );
+                context.dispatcher.dispatchEvent( new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_FINISH ) );
             }
         }
     }
@@ -91,7 +88,7 @@ public final class TaskExecutionUnit {
 
         this.isExecutionUnitRunning = new AtomicBoolean( false );
 
-        this.executingTaskContext = null;
+        this.context = null;
     }
 
     //---------------------------------------------------
@@ -108,7 +105,7 @@ public final class TaskExecutionUnit {
 
     private final AtomicBoolean isExecutionUnitRunning;
 
-    private TaskContext executingTaskContext;
+    private TaskContext context;
 
     //---------------------------------------------------
     // Public.
@@ -141,7 +138,7 @@ public final class TaskExecutionUnit {
     }
 
     public int getNumberOfEnqueuedTasks() {
-        return taskQueue.size() + ( executingTaskContext != null ? 1 : 0 );
+        return taskQueue.size() + ( context != null ? 1 : 0 );
     }
 
     public int getExecutionUnitID() {

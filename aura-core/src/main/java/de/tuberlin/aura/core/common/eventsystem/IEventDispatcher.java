@@ -13,14 +13,16 @@ public interface IEventDispatcher {
      * @param type The event type.
      * @param listener The handler for this event.
      */
-    void addEventListener( String type, IEventHandler listener );
+    public void addEventListener( String type, IEventHandler listener );
+
+    public void addEventListener( final String[] types, final IEventHandler listener );
 
     /**
      * Remove a listener for a specific event.
      * @param type The event type.
      * @param listener The handler for this event.
      */
-    boolean removeEventListener( String type, IEventHandler listener );
+    public boolean removeEventListener( String type, IEventHandler listener );
 
     /**
      * Dispatch a event.

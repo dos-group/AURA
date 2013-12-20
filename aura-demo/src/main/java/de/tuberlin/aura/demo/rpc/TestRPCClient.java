@@ -1,5 +1,7 @@
 package de.tuberlin.aura.demo.rpc;
 
+import java.util.ArrayList;
+
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
@@ -25,7 +27,7 @@ public class TestRPCClient {
         final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
         LOG.addAppender( consoleAppender );
 
-        final TaskManager taskManager = new TaskManager( LocalDeployment.MACHINE_1_DESCRIPTOR );
+        final TaskManager taskManager = new TaskManager( LocalDeployment.MACHINE_1_DESCRIPTOR, null );
         taskManager.getRPCManager().registerRPCProtocolImpl( new BarImpl(), BarProtocol.class );
         taskManager.getIOManager().connectMessageChannelBlocking( LocalDeployment.MACHINE_2_DESCRIPTOR );
 
@@ -35,6 +37,6 @@ public class TestRPCClient {
         //int i = protocol.foo( "foo on server", 10, UUID.randomUUID(), 5 );
         //LOG.info( "i = " + i );
 
-        protocol.foo1( null );
+        protocol.foo1( new ArrayList<Integer>() );
     }
 }

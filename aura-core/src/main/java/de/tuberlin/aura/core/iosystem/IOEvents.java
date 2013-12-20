@@ -161,6 +161,10 @@ public final class IOEvents {
 
        private static final long serialVersionUID = 1L;
 
+       public ControlIOEvent( final String type ) {
+           super( type );
+       }
+
        public ControlIOEvent( final String type,
                               final UUID srcMachineID,
                               final UUID dstMachineID ) {
@@ -176,9 +180,33 @@ public final class IOEvents {
            this.dstMachineID = dstMachineID;
        }
 
-       public final UUID srcMachineID;
+       private UUID srcMachineID;
 
-       public final UUID dstMachineID;
+       private UUID dstMachineID;
+
+       public void setSrcMachineID( final UUID srcMachineID ) {
+           // sanity check.
+           if( srcMachineID == null )
+               throw new IllegalArgumentException( "srcMachineID == null" );
+
+           this.srcMachineID = srcMachineID;
+       }
+
+       public UUID getSrcMachineID() {
+           return this.srcMachineID;
+       }
+
+       public void setDstMachineID( final UUID dstMachineID ) {
+           // sanity check.
+           if( dstMachineID == null )
+               throw new IllegalArgumentException( "dstMachineID == null" );
+
+           this.dstMachineID = dstMachineID;
+       }
+
+       public UUID getDstMachineID() {
+           return this.dstMachineID;
+       }
 
        @Override
        public String toString() {
@@ -191,19 +219,17 @@ public final class IOEvents {
        }
    }
 
-  /**
+   /**
    *
    */
    public static final class RPCCallerRequestEvent extends ControlIOEvent {
 
        private static final long serialVersionUID = 1L;
 
-       public RPCCallerRequestEvent( final UUID srcMachineID,
-                                     final UUID dstMachineID,
-                                     final UUID callUID,
+       public RPCCallerRequestEvent( final UUID callUID,
                                      final MethodSignature methodSignature ) {
 
-           super( ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST, srcMachineID, dstMachineID );
+           super( ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST );
            // sanity check.
            if( callUID == null )
                throw new IllegalArgumentException( "callUID == null" );
@@ -227,12 +253,10 @@ public final class IOEvents {
 
        private static final long serialVersionUID = 1L;
 
-       public RPCCalleeResponseEvent( final UUID srcMachineID,
-                                      final UUID dstMachineID,
-                                      final UUID callUID,
+       public RPCCalleeResponseEvent( final UUID callUID,
                                       final Object result ) {
 
-           super( ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE, srcMachineID, dstMachineID );
+           super( ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE );
            // sanity check.
            if( callUID == null )
                throw new IllegalArgumentException( "callUID == null" );

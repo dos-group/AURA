@@ -74,16 +74,16 @@ public final class IOManager extends EventDispatcher {
 
         @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED )
         private void handleControlChannelInputConnected( final ControlIOEvent event ) {
-            controlIOConnections.put( new Pair<UUID,UUID>( machine.uid, event.srcMachineID ), event.getChannel() );
-            LOG.info( "message connection between machine " + event.srcMachineID
-                    + " and " + event.dstMachineID + " established" );
+            controlIOConnections.put( new Pair<UUID,UUID>( machine.uid, event.getSrcMachineID() ), event.getChannel() );
+            LOG.info( "message connection between machine " + event.getSrcMachineID()
+                    + " and " + event.getDstMachineID() + " established" );
         }
 
         @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED )
         private void handleControlChannelOutputConnected( final ControlIOEvent event ) {
-            controlIOConnections.put( new Pair<UUID,UUID>( machine.uid, event.dstMachineID ), event.getChannel() );
-            LOG.info( "message connection between machine " + event.srcMachineID
-                    + " and " + event.dstMachineID + " established" );
+            controlIOConnections.put( new Pair<UUID,UUID>( machine.uid, event.getDstMachineID() ), event.getChannel() );
+            LOG.info( "message connection between machine " + event.getSrcMachineID()
+                    + " and " + event.getDstMachineID() + " established" );
         }
     }
 
@@ -301,7 +301,7 @@ public final class IOManager extends EventDispatcher {
                 public void handleEvent(Event e) {
                     if( e instanceof ControlIOEvent ) {
                         final ControlIOEvent event = (ControlIOEvent)e;
-                        if( dstMachine.uid.equals( event.dstMachineID ) ) {
+                        if( dstMachine.uid.equals( event.getDstMachineID() ) ) {
                             threadLock.lock();
                                 condition.signal();
                             threadLock.unlock();
@@ -331,6 +331,30 @@ public final class IOManager extends EventDispatcher {
             throw new IllegalArgumentException( "machine == null" );
 
         return controlIOConnections.get( new Pair<UUID,UUID>( machine.uid, dstMachine.uid ) );
+    }
+
+    public void sendEvent( final MachineDescriptor dstMachine, final ControlIOEvent event ) {
+        // sanity check.
+        if( dstMachine == null )
+            throw new IllegalArgumentException( "machine == null" );
+
+        sendEvent( dstMachine.uid, event );
+    }
+
+    public void sendEvent( final UUID dstMachineID, final ControlIOEvent event ) {
+        // sanity check.
+        if( dstMachineID == null )
+            throw new IllegalArgumentException( "machine == null" );
+        if( event == null )
+            throw new IllegalArgumentException( "event == null" );
+
+        final Channel channel = controlIOConnections.get( new Pair<UUID,UUID>( machine.uid, dstMachineID ) );
+        if( channel == null )
+            throw new IllegalStateException( "channel exists not" );
+
+        event.setSrcMachineID( machine.uid );
+        event.setDstMachineID( dstMachineID );
+        channel.writeAndFlush( event );
     }
 
     //---------------------------------------------------

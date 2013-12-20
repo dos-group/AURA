@@ -230,6 +230,14 @@ public final class Descriptors {
 
         public final TaskBindingDescriptor taskBindingDescriptor;
 
+        /*public final Edge.DeploymentType taskDeploymentType;
+
+        public final Edge.DataPersistenceType taskDataPersistenceType;
+
+        public final Edge.ExecutionType taskExecutionType;
+
+        public final Edge.PartitioningType taskPartitioningType;*/
+
         @Override
         public boolean equals( Object other ) {
             if( this == other ) return true;

@@ -70,7 +70,7 @@ public class WorkloadManager implements ClientWMProtocol {
 
         LOG.info( "submit topology " + topology.name );
 
-        final TopologyController topologyController = new TopologyController( topology, infrastructureManager );
+        final TopologyController topologyController = new TopologyController( topology, ioManager, infrastructureManager );
         registeredToplogies.put( topology.name, topologyController );
 
         final AuraTopology assembledTopology = topologyController.assembleTopology();

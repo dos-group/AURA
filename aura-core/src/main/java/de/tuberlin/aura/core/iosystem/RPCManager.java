@@ -1,7 +1,5 @@
 package de.tuberlin.aura.core.iosystem;
 
-import io.netty.channel.Channel;
-
 import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -86,37 +84,31 @@ public final class RPCManager {
     @SuppressWarnings("unused")
     private static final class ProtocolCallerProxy implements InvocationHandler {
 
-        public ProtocolCallerProxy( final UUID srcMachineID,
-                                    final UUID dstMachineID,
-                                    final Channel channel ) {
+        public ProtocolCallerProxy( final UUID dstMachineID,
+                                    final IOManager ioManager ) {
             // sanity check.
-            if( channel == null )
-                throw new IllegalArgumentException( "channel == null" );
-
-            this.srcMachineID = srcMachineID;
+            if( ioManager == null )
+                throw new IllegalArgumentException( "ioManager == null" );
 
             this.dstMachineID = dstMachineID;
 
-            this.channel = channel;
+            this.ioManager = ioManager;
         }
-
-        private final UUID srcMachineID;
 
         private final UUID dstMachineID;
 
-        private final Channel channel;
+        private final IOManager ioManager;
 
         private static final Map<UUID,CountDownLatch> callerTable = new HashMap<UUID, CountDownLatch>();
 
         private static final Map<UUID,Object> callerResultTable = new HashMap<UUID,Object>();
 
         @SuppressWarnings("unchecked")
-        public static <T> T getProtocolProxy( final UUID srcMachineID,
-                                              final UUID dstMachineID,
+        public static <T> T getProtocolProxy( final UUID dstMachineID,
                                               final Class<T> protocolInterface,
-                                              final Channel channel ) {
+                                              final IOManager ioManager ) {
 
-            final ProtocolCallerProxy pc = new ProtocolCallerProxy( srcMachineID, dstMachineID, channel );
+            final ProtocolCallerProxy pc = new ProtocolCallerProxy( dstMachineID, ioManager );
             return (T) Proxy.newProxyInstance( protocolInterface.getClassLoader(), new Class[] { protocolInterface }, pc );
         }
 
@@ -148,7 +140,7 @@ public final class RPCManager {
             callerTable.put( callUID, cdl );
 
             // send to server...
-            channel.writeAndFlush( new RPCCallerRequestEvent( srcMachineID, dstMachineID, callUID, methodInfo ) );
+            ioManager.sendEvent( dstMachineID, new RPCCallerRequestEvent( callUID, methodInfo ) );
 
             try {
                 if( RPC_RESPONSE_TIMEOUT > 0 ) {
@@ -201,9 +193,7 @@ public final class RPCManager {
             calleeTable.put( protocolInterface.getSimpleName(), protocolImplementation );
         }
 
-        public static RPCCalleeResponseEvent callMethod( final UUID srcMachineID,
-                                                         final UUID dstMachineID,
-                                                         final UUID callUID,
+        public static RPCCalleeResponseEvent callMethod( final UUID callUID,
                                                          final MethodSignature methodInfo ) {
             // sanity check.
             if( callUID == null )
@@ -214,7 +204,7 @@ public final class RPCManager {
             final Object protocolImplementation = calleeTable.get( methodInfo.className );
 
             if( protocolImplementation == null ) {
-                return new RPCCalleeResponseEvent( srcMachineID, dstMachineID, callUID, new IllegalStateException( "found no protocol implementation" ) );
+                return new RPCCalleeResponseEvent( callUID, new IllegalStateException( "found no protocol implementation" ) );
             }
 
             synchronized( protocolImplementation ) {
@@ -224,9 +214,9 @@ public final class RPCManager {
                 try {
                     final Method method = protocolImplementation.getClass().getMethod( methodInfo.methodName, methodInfo.argumentTypes );
                     final Object result = method.invoke( protocolImplementation, methodInfo.arguments );
-                    return new RPCCalleeResponseEvent( srcMachineID, dstMachineID, callUID, result );
+                    return new RPCCalleeResponseEvent( callUID, result );
                 } catch( Exception e ) {
-                    return new RPCCalleeResponseEvent( srcMachineID, dstMachineID, callUID, e );
+                    return new RPCCalleeResponseEvent( callUID, e );
                 }
             }
         }
@@ -243,8 +233,9 @@ public final class RPCManager {
                 @Override
                 public void run() {
                     final RPCCalleeResponseEvent calleeMsg =
-                            RPCManager.ProtocolCalleeProxy.callMethod( event.srcMachineID, event.dstMachineID, event.callUID, event.methodSignature );
-                    event.getChannel().writeAndFlush( calleeMsg );
+                            RPCManager.ProtocolCalleeProxy.callMethod( event.callUID, event.methodSignature );
+
+                    ioManager.sendEvent( event.getSrcMachineID(), calleeMsg );
                 }
             } ).start();
         }
@@ -307,15 +298,11 @@ public final class RPCManager {
         if( dstMachine == null )
             throw new IllegalArgumentException( "dstMachine == null" );
 
-        final Channel channel = ioManager.getControlIOChannel( dstMachine );
-        if( channel == null )
-            throw new IllegalStateException( "channel == null" );
-
         final Pair<Class<?>,UUID> proxyKey = new Pair<Class<?>,UUID>( protocolInterface, dstMachine.uid );
         @SuppressWarnings("unchecked")
         T proxy = (T) cachedProxies.get( proxyKey );
         if( proxy == null ) {
-            proxy = ProtocolCallerProxy.getProtocolProxy( ioManager.machine.uid, dstMachine.uid, protocolInterface, channel );
+            proxy = ProtocolCallerProxy.getProtocolProxy( dstMachine.uid, protocolInterface, ioManager );
             cachedProxies.put( proxyKey, proxy );
         }
         return proxy;

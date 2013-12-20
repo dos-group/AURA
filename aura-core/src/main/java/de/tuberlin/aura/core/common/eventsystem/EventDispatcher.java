@@ -98,6 +98,17 @@ public class EventDispatcher implements IEventDispatcher {
         listeners.add( listener );
     }
 
+    public void addEventListener( final String[] types, final IEventHandler listener ) {
+        // sanity check.
+        if( types == null )
+            throw new IllegalArgumentException( "types == null" );
+        if( listener == null )
+            throw new IllegalArgumentException( "listener == null" );
+
+        for( final String type : types )
+            addEventListener( type, listener );
+    }
+
     /**
      * Remove a listener for a specific event.
      * @param type The event type.

@@ -4,7 +4,6 @@ import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
 
-import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.demo.deployment.LocalDeployment;
 import de.tuberlin.aura.taskmanager.TaskManager;
 
@@ -18,7 +17,6 @@ public class TM3 {
         final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
         LOG.addAppender( consoleAppender );
 
-        final IOManager ioManager = new TaskManager( LocalDeployment.MACHINE_3_DESCRIPTOR ).getIOManager();
-        ioManager.connectMessageChannelBlocking( LocalDeployment.MACHINE_5_DESCRIPTOR );
+        new TaskManager( LocalDeployment.MACHINE_3_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR );
     }
 }
