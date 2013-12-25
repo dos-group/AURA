@@ -1,5 +1,6 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -17,11 +18,12 @@ import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.common.TaskContext;
-import de.tuberlin.aura.core.task.common.TaskEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.task.common.TaskStateMachine;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
@@ -61,6 +63,15 @@ public final class TaskManager implements WM2TMProtocol {
                     taskContextMap.get( event.dstTaskID );
             contextAndHandler.getSecond().dispatchEvent( event );
         }
+
+        @Handle( event = TaskStateTransitionEvent.class )
+        private void handleTaskStateTransitionEvent( final TaskStateTransitionEvent event ) {
+            final List<TaskContext> contextList = topologyTaskContextMap.get( event.topologyID );
+            if( contextList == null )
+                throw new IllegalArgumentException( "contextList == null" );
+            for( final TaskContext tc : contextList )
+                tc.dispatcher.dispatchEvent( event );
+        }
     }
 
     /**
@@ -79,10 +90,10 @@ public final class TaskManager implements WM2TMProtocol {
                 boolean allInputChannelsPerGateConnected = true;
                 for( TaskDescriptor inputTask : inputGate ) {
                     // Set the channel on right position.
-                    if( inputTask.uid.equals( event.srcTaskID ) ) {
+                    if( inputTask.taskID.equals( event.srcTaskID ) ) {
                         context.inputGates.get( gateIndex ).setChannel( channelIndex, event.getChannel() );
-                        LOG.info( "input connection from " + inputTask.name + " [" + inputTask.uid + "] to task "
-                                + context.task.name + " [" + context.task.uid + "] is established" );
+                        LOG.info( "INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
+                                + context.task.name + " [" + context.task.taskID + "] IS ESTABLISHED" );
                         connectingToCorrectTask |= true;
                     }
                     // all data inputs are connected...
@@ -111,10 +122,10 @@ public final class TaskManager implements WM2TMProtocol {
                 boolean allOutputChannelsPerGateConnected = true;
                 for( TaskDescriptor outputTask : outputGate ) {
                     // Set the channel on right position.
-                    if( outputTask.uid.equals( event.dstTaskID ) ) {
+                    if( outputTask.taskID.equals( event.dstTaskID ) ) {
                         context.outputGates.get( gateIndex ).setChannel( channelIndex, event.getChannel() );
-                        LOG.info( "output connection from " + context.task.name + " [" + context.task.uid + "] to task "
-                                + outputTask.name + " [" + outputTask.uid + "] is established" );
+                        LOG.info( "OUTPUT CONNECTION FROM " + context.task.name + " [" + context.task.taskID + "] TO TASK "
+                                + outputTask.name + " [" + outputTask.taskID + "] IS ESTABLISHED" );
                     }
                     // all data outputs are connected...
                     allOutputChannelsPerGateConnected &= ( context.outputGates.get( gateIndex ).getChannel( channelIndex++ ) != null );
@@ -148,22 +159,26 @@ public final class TaskManager implements WM2TMProtocol {
                     case TASK_STATE_INPUTS_CONNECTED: {} break;
                     case TASK_STATE_OUTPUTS_CONNECTED: {} break;
                     case TASK_STATE_READY: {
-
-                        scheduleTask( context );
-                        //ioManager.sendEvent( workloadManagerMachine, event );
-
+                        ioManager.sendEvent( wmMachine, new TaskStateEvent( context.task.topologyID, context.task.taskID, context.state ) );
                     } break;
-                    case TASK_STATE_RUNNING: {} break;
-                    case TASK_STATE_FINISHED: {} break;
+                    case TASK_STATE_RUNNING: {
+                        scheduleTask( context );
+                    } break;
+                    case TASK_STATE_FINISHED: {
+                        ioManager.sendEvent( wmMachine, new TaskStateEvent( context.task.topologyID, context.task.taskID, context.state ) );
+                        taskContextMap.remove( context.task.taskID );
+                        topologyTaskContextMap.get( context.task.topologyID ).remove( context );
+                        context.close();
+                    } break;
                     case TASK_STATE_FAILURE: {} break;
                     case TASK_STATE_RECOVER: {} break;
                     case TASK_STATE_UNDEFINED: {
-                        throw new IllegalStateException( "task " + context.task.name + " [" + context.task.uid + "] from state "
+                        throw new IllegalStateException( "task " + context.task.name + " [" + context.task.taskID + "] from state "
                                 + oldState + " to " + context.state + " is not defined" );
                     }
                 }
-                LOG.info( "change state of task " + context.task.name + " [" + context.task.uid + "] from "
-                        + oldState + " to " + context.state );
+                LOG.info( "CHANGE STATE OF TASK " + context.task.name + " [" + context.task.taskID + "] FROM "
+                        + oldState + " TO " + context.state );
             }
         }
     }
@@ -177,8 +192,9 @@ public final class TaskManager implements WM2TMProtocol {
         if( machine == null )
             throw new IllegalArgumentException( "machine == null" );
 
-        this.WMMachine = workloadManagerMachine;
+        this.wmMachine = workloadManagerMachine;
         this.taskContextMap = new ConcurrentHashMap<UUID, Pair<TaskContext,IEventDispatcher>>();
+        this.topologyTaskContextMap = new ConcurrentHashMap<UUID, List<TaskContext>>();
         this.ioManager = new IOManager( machine );
         this.rpcManager = new RPCManager( ioManager );
         this.ioHandler = new IORedispatcher();
@@ -196,7 +212,8 @@ public final class TaskManager implements WM2TMProtocol {
               DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
               DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
               DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE,
-              DataEventType.DATA_EVENT_BUFFER };
+              DataEventType.DATA_EVENT_BUFFER,
+              TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT };
 
         this.ioManager.addEventListener( IOEvents, ioHandler );
 
@@ -211,9 +228,11 @@ public final class TaskManager implements WM2TMProtocol {
 
     private static final Logger LOG = Logger.getLogger( TaskManager.class );
 
-    private final MachineDescriptor WMMachine;
+    private final MachineDescriptor wmMachine;
 
     private final Map<UUID, Pair<TaskContext,IEventDispatcher>> taskContextMap;
+
+    private final Map<UUID, List<TaskContext>> topologyTaskContextMap;
 
     private final IOManager ioManager;
 
@@ -252,7 +271,7 @@ public final class TaskManager implements WM2TMProtocol {
         final TaskEventHandler handler = new TaskEventHandler();
         final TaskContext context = new TaskContext( taskDescriptor, taskBindingDescriptor, handler, executableClass );
         handler.context = context;
-        taskContextMap.put( taskDescriptor.uid, new Pair<TaskContext,IEventDispatcher>( context, context.dispatcher ) );
+        taskContextMap.put( taskDescriptor.taskID, new Pair<TaskContext,IEventDispatcher>( context, context.dispatcher ) );
 
         if( taskBindingDescriptor.inputGateBindings.size() == 0 ) {
             context.dispatcher.dispatchEvent( new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED ) );
@@ -265,6 +284,13 @@ public final class TaskManager implements WM2TMProtocol {
         // TODO: To allow cycles in the execution graph we have to split up
         // installation and wiring of tasks in the deployment phase!
         wireOutputDataChannels( taskDescriptor, taskBindingDescriptor );
+
+        List<TaskContext> contextList = topologyTaskContextMap.get( taskDescriptor.topologyID );
+        if( contextList == null ) {
+            contextList = new ArrayList<TaskContext>();
+            topologyTaskContextMap.put( taskDescriptor.topologyID, contextList );
+        }
+        contextList.add( context );
     }
 
     public RPCManager getRPCManager() {
@@ -285,7 +311,7 @@ public final class TaskManager implements WM2TMProtocol {
         if( taskBindingDescriptor.outputGateBindings.size() > 0 ) {
             for( final List<TaskDescriptor> outputGate : taskBindingDescriptor.outputGateBindings )
                 for( final TaskDescriptor outputTask : outputGate )
-                    ioManager.connectDataChannel( taskDescriptor.uid, outputTask.uid, outputTask.getMachineDescriptor() );
+                    ioManager.connectDataChannel( taskDescriptor.taskID, outputTask.taskID, outputTask.getMachineDescriptor() );
         }
     }
 
@@ -305,7 +331,7 @@ public final class TaskManager implements WM2TMProtocol {
             }
         }
         executionUnit[selectedEU].enqueueTask( context );
-        LOG.info( "execute task " + context.task.name + " [" + context.task.uid + "]"
-                + " on ExecutionUnit (" + executionUnit[selectedEU].getExecutionUnitID() + ")" );
+        LOG.info( "EXECUTE TASK " + context.task.name + " [" + context.task.taskID + "]"
+                + " ON EXECUTIONUNIT (" + executionUnit[selectedEU].getExecutionUnitID() + ")" );
     }
 }

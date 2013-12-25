@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.common.eventsystem;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -92,7 +92,7 @@ public class EventDispatcher implements IEventDispatcher {
 
         List<IEventHandler> listeners = listenerMap.get( type );
         if( listeners == null ) {
-            listeners = new ArrayList<IEventHandler>();
+            listeners = new LinkedList<IEventHandler>();
             listenerMap.put( type, listeners );
         }
         listeners.add( listener );
@@ -133,6 +133,14 @@ public class EventDispatcher implements IEventDispatcher {
         } else {
             return false;
         }
+    }
+
+    @Override
+    public synchronized void removeAllEventListener() {
+        for( final List<IEventHandler> listeners : listenerMap.values() ) {
+            listeners.clear();
+        }
+        listenerMap.clear();
     }
 
     /**
@@ -181,7 +189,7 @@ public class EventDispatcher implements IEventDispatcher {
                 el.handleEvent( event );
             }
         } else { // listeners == null
-            throw new IllegalStateException( "listeners == null" );
+            LOG.error( "no listener registered for event " + event.type );
         }
     }
 }

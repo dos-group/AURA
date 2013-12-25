@@ -1,17 +1,33 @@
 package de.tuberlin.aura.workloadmanager;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 
 public class WorkloadManager implements ClientWMProtocol {
+
+    //---------------------------------------------------
+    // Inner Classes.
+    //---------------------------------------------------
+
+    private final class IORedispatcher extends EventHandler {
+
+       @Handle( event = TaskStateEvent.class )
+       private void handleTaskReadyEvent( final TaskStateEvent event ) {
+           registeredToplogies.get( event.topologyID ).dispatchEvent( event );
+       }
+    }
 
     //---------------------------------------------------
     // Constructors.
@@ -30,11 +46,15 @@ public class WorkloadManager implements ClientWMProtocol {
 
         this.infrastructureManager = new InfrastructureManager();
 
-        this.deploymentManager = new DeploymentManager( rpcManager );
-
-        this.registeredToplogies = new ConcurrentHashMap<String,TopologyController>();
+        this.registeredToplogies = new ConcurrentHashMap<UUID,TopologyController>();
 
         rpcManager.registerRPCProtocolImpl( this, ClientWMProtocol.class );
+
+        this.ioHandler = new IORedispatcher();
+
+        final String[] IOEvents = { ControlEventType.CONTROL_EVENT_TASK_STATE };
+
+        ioManager.addEventListener( IOEvents, ioHandler );
     }
 
     //---------------------------------------------------
@@ -51,9 +71,9 @@ public class WorkloadManager implements ClientWMProtocol {
 
     private final InfrastructureManager infrastructureManager;
 
-    private final DeploymentManager deploymentManager;
+    private final Map<UUID,TopologyController> registeredToplogies;
 
-    private final Map<String,TopologyController> registeredToplogies;
+    private final IORedispatcher ioHandler;
 
     //---------------------------------------------------
     // Public.
@@ -68,13 +88,27 @@ public class WorkloadManager implements ClientWMProtocol {
         if( registeredToplogies.containsKey( topology.name ) )
             throw new IllegalStateException( "topology already submitted" );
 
-        LOG.info( "submit topology " + topology.name );
+        LOG.info( "TOPOLOGY '" + topology.name + "' SUBMITTED" );
+        registerTopology( topology ).assembleTopology();
+    }
 
-        final TopologyController topologyController = new TopologyController( topology, ioManager, infrastructureManager );
-        registeredToplogies.put( topology.name, topologyController );
+    public TopologyController registerTopology( final AuraTopology topology ) {
+        // sanity check.
+        if( topology == null )
+            throw new IllegalArgumentException( "topology == null" );
 
-        final AuraTopology assembledTopology = topologyController.assembleTopology();
-        deploymentManager.deployTopology( assembledTopology );
+        final TopologyController topologyController = new TopologyController( this, topology );
+        registeredToplogies.put( topology.topologyID, topologyController );
+        return topologyController;
+    }
+
+    public void unregisterTopology( final UUID topologyID ) {
+        // sanity check.
+        if( topologyID == null )
+            throw new IllegalArgumentException( "topologyID == null" );
+
+        if( registeredToplogies.remove( topologyID ) == null )
+            throw new IllegalStateException( "topologyID not found" );
     }
 
     public RPCManager getRPCManager() {
@@ -83,5 +117,9 @@ public class WorkloadManager implements ClientWMProtocol {
 
     public IOManager getIOManager() {
         return ioManager;
+    }
+
+    public InfrastructureManager getInfrastructureManager() {
+        return infrastructureManager;
     }
 }

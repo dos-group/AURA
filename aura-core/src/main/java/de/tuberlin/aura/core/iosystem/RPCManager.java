@@ -261,8 +261,12 @@ public final class RPCManager {
 
         this.cachedProxies = new HashMap<Pair<Class<?>,UUID>,Object>();
 
-        this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST, rpcEventHandler );
-        this.ioManager.addEventListener( ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE, rpcEventHandler );
+        final String[] rpcEvents = {
+                ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST,
+                ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE
+        };
+
+        this.ioManager.addEventListener( rpcEvents, rpcEventHandler );
     }
 
     //---------------------------------------------------

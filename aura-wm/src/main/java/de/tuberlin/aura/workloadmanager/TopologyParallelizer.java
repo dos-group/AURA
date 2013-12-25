@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
@@ -18,25 +19,35 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.TopologyBreadthFirstTraverser;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.workloadmanager.spi.ITopologyParallelizer;
+import de.tuberlin.aura.workloadmanager.TopologyEvents.TopologyStateTransitionEvent;
+import de.tuberlin.aura.workloadmanager.TopologyStateMachine.TopologyTransition;
 
-public class TopologyParallelizer implements ITopologyParallelizer {
-
-    //---------------------------------------------------
-    // Fields.
-    //---------------------------------------------------
-
-    //private static final Logger LOG = Logger.getLogger( TopologyParallelizer.class );
+public class TopologyParallelizer extends AssemblyPhase<AuraTopology,AuraTopology> {
 
     //---------------------------------------------------
     // Public.
     //---------------------------------------------------
 
     @Override
-    public void parallelizeTopology( final AuraTopology topology ) {
+    public AuraTopology apply( AuraTopology topology ) {
+
+        parallelizeTopology( topology );
+
+        dispatcher.dispatchEvent( new TopologyStateTransitionEvent( TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE ) );
+
+        return topology;
+    }
+
+    //---------------------------------------------------
+    // Private.
+    //---------------------------------------------------
+
+    private void parallelizeTopology( final AuraTopology topology ) {
         // sanity check.
         if( topology == null )
             throw new IllegalArgumentException( "topology == null" );
+
+        final Map<UUID,ExecutionNode> executionNodeMap = new HashMap<UUID,ExecutionNode>();
 
         // First pass, create task descriptors.
         TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {
@@ -46,14 +57,17 @@ public class TopologyParallelizer implements ITopologyParallelizer {
                 final UserCode userCode = topology.userCodeMap.get( element.name );
                 for( int index = 0; index < element.degreeOfParallelism; ++index ) {
                     final UUID taskID = UUID.randomUUID();
-                    final TaskDescriptor taskDescriptor = new TaskDescriptor( taskID, element.name, userCode );
+                    final TaskDescriptor taskDescriptor = new TaskDescriptor( topology.topologyID, taskID, element.name, userCode );
                     final UUID executionNodeID = UUID.randomUUID();
                     final ExecutionNode executionNode = new ExecutionNode( executionNodeID, element );
                     executionNode.setTaskDescriptor( taskDescriptor );
                     element.addExecutionNode( executionNode );
+                    executionNodeMap.put( taskID, executionNode );
                 }
             }
         } );
+
+        topology.setExecutionNodes( executionNodeMap );
 
         // Second pass, create binding descriptors.
         TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {

@@ -84,23 +84,29 @@ public final class Descriptors {
 
         private static final long serialVersionUID = 7425151926496852885L;
 
-        public TaskDescriptor( UUID uid, String name, UserCode userCode ) {
+        public TaskDescriptor( final UUID topologyID, final UUID taskID, final String name, final UserCode userCode ) {
             // sanity check.
-            if( uid == null )
-                throw new IllegalArgumentException( "uid == null" );
+            if( topologyID == null )
+                throw new IllegalArgumentException( "topologyID == null" );
+            if( taskID == null )
+                throw new IllegalArgumentException( "taskID == null" );
             if( name == null )
                 throw new IllegalArgumentException( "name == null" );
             if( userCode == null )
                 throw new IllegalArgumentException( "userCode == null" );
 
-            this.uid = uid;
+            this.topologyID = topologyID;
+
+            this.taskID = taskID;
 
             this.name = name;
 
             this.userCode = userCode;
         }
 
-        public final UUID uid;
+        public final UUID topologyID;
+
+        public final UUID taskID;
 
         public final String name;
 
@@ -131,7 +137,7 @@ public final class Descriptors {
             if( ( machine == null && ((TaskDescriptor)other).machine == null ) ||
                 !( machine.equals( ( (TaskDescriptor)other ).machine ) ) )
                 return false;
-            if( !( uid.equals( ( (TaskDescriptor)other ).uid ) ) )
+            if( !( taskID.equals( ( (TaskDescriptor)other ).taskID ) ) )
                 return false;
             if( !( name.equals( ( (TaskDescriptor)other ).name ) ) )
                 return false;
@@ -143,7 +149,7 @@ public final class Descriptors {
             return (new StringBuilder())
                     .append( "TaskDescriptor = {" )
                     .append( " machine = " + machine.toString() + ", " )
-                    .append( " uid = " + uid.toString() + ", " )
+                    .append( " uid = " + taskID.toString() + ", " )
                     .append( " name = " + name )
                     .append( " }" ).toString();
         }

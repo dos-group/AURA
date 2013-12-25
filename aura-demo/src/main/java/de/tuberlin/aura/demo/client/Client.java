@@ -39,8 +39,8 @@ public final class Client {
             for( int i = 0; i < 100; ++i ) {
                 final byte[] data = new byte[65536];
 
-                final DataBufferEvent dm = new DataBufferEvent( UUID.randomUUID(), context.task.uid,
-                        context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
+                final DataBufferEvent dm = new DataBufferEvent( UUID.randomUUID(), context.task.taskID,
+                        context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).taskID, data );
 
                 context.outputGates.get( 0 ).writeDataToChannel( 0, dm );
 
@@ -66,8 +66,8 @@ public final class Client {
         public void execute() throws Exception {
             for( int i = 0; i < 100; ++i ) {
                 final byte[] data = new byte[65536];
-                final DataBufferEvent dm = new DataBufferEvent( UUID.randomUUID(), context.task.uid,
-                        context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
+                final DataBufferEvent dm = new DataBufferEvent( UUID.randomUUID(), context.task.taskID,
+                        context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).taskID, data );
                 context.outputGates.get( 0 ).writeDataToChannel( 0, dm );
                 try {
                     Thread.sleep( 100 );
@@ -98,9 +98,10 @@ public final class Client {
                     final DataBufferEvent dm2 = inputMsgs2.take();
                     LOG.info( "input1: received data message " + dm1.messageID + " from task " + dm1.srcTaskID );
                     LOG.info( "input2: received data message " + dm2.messageID + " from task " + dm2.srcTaskID );
+
                     final byte[] data = new byte[65536];
-                    final DataBufferEvent dmOut = new DataBufferEvent( UUID.randomUUID(), context.task.uid,
-                            context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).uid, data );
+                    final DataBufferEvent dmOut = new DataBufferEvent( UUID.randomUUID(), context.task.taskID,
+                            context.taskBinding.outputGateBindings.get( 0 ).get( 0 ).taskID, data );
                     context.outputGates.get( 0 ).writeDataToChannel( 0, dmOut );
                 } catch (InterruptedException e) {
                     LOG.info( e );
@@ -167,7 +168,7 @@ public final class Client {
             .addNode( new Node( UUID.randomUUID(), "Task4", Task4Exe.class, 1, 1 ) );
 
         final AuraTopology at2 = atb2.build( "Job 2" );
-        ac.submitTopology( at2 );/**/
+        ac.submitTopology( at2 );
 
         /* With Loops... (not working, loops not yet implemented in the runtime)
         final AuraTopologyBuilder atb = ac.createTopologyBuilder();

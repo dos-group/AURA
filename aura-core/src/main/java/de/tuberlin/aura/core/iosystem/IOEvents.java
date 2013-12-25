@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 
 public final class IOEvents {
 
@@ -47,6 +49,8 @@ public final class IOEvents {
         public static final String CONTROL_EVENT_RPC_CALLER_REQUEST = "CONTROL_EVENT_RPC_CALLER_REQUEST";
 
         public static final String CONTROL_EVENT_RPC_CALLEE_RESPONSE = "CONTROL_EVENT_RPC_CALLEE_RESPONSE";
+
+        public static final String CONTROL_EVENT_TASK_STATE = "CONTROL_EVENT_TASK_STATE";
     }
 
     /**
@@ -270,4 +274,67 @@ public final class IOEvents {
 
        public Object result;
    }
+
+   /**
+    *
+    */
+   public static final class TaskStateEvent extends ControlIOEvent {
+
+       private static final long serialVersionUID = 1L;
+
+       public TaskStateEvent( final UUID topologyID, final UUID taskID, final TaskState state ) {
+           super( ControlEventType.CONTROL_EVENT_TASK_STATE );
+
+           this.topologyID = topologyID;
+
+           this.taskID = taskID;
+
+           this.state = state;
+       }
+
+       public final UUID topologyID;
+
+       public final UUID taskID;
+
+       public final TaskState state;
+   }
+
+   /**
+   *
+   */
+  public static final class TaskStateTransitionEvent extends ControlIOEvent {
+
+      private static final long serialVersionUID = 1L;
+
+      public static final String TASK_STATE_TRANSITION_EVENT = "TASK_STATE_TRANSITION_EVENT";
+
+      public TaskStateTransitionEvent( final TaskTransition transition  ) {
+          this( null, transition );
+      }
+
+      public TaskStateTransitionEvent( final UUID topologyID, final TaskTransition transition  ) {
+          super( TASK_STATE_TRANSITION_EVENT );
+          // sanity check.
+          if( transition == null )
+              throw new IllegalArgumentException( "transition == null" );
+
+          this.topologyID = topologyID;
+
+          this.transition = transition;
+      }
+
+      public final TaskTransition transition;
+
+      public final UUID topologyID;
+
+      @Override
+      public String toString() {
+          return (new StringBuilder())
+                  .append( "TaskChangeStateEvent = {" )
+                  .append( " type = " + super.type + ", " )
+                  .append( " taskID = " + topologyID + ", " )
+                  .append( " transition = " + transition.toString() )
+                  .append( " }" ).toString();
+      }
+  }
 }

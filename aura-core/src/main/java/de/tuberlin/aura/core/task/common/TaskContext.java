@@ -1,10 +1,14 @@
 package de.tuberlin.aura.core.task.common;
 
+import io.netty.channel.Channel;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
@@ -12,7 +16,7 @@ import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
-import de.tuberlin.aura.core.task.common.TaskEvents.TaskStateTransitionEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.gates.InputGate;
 import de.tuberlin.aura.core.task.gates.OutputGate;
@@ -71,8 +75,8 @@ public final class TaskContext {
         int channelIndex = 0;
         for( final List<TaskDescriptor> inputGate : taskBinding.inputGateBindings ) {
             for( final TaskDescriptor inputTask : inputGate ) {
-                taskIDToChannelIndex.put( inputTask.uid, channelIndex );
-                channelIndexToTaskID.put( channelIndex, inputTask.uid );
+                taskIDToChannelIndex.put( inputTask.taskID, channelIndex );
+                channelIndexToTaskID.put( channelIndex, inputTask.taskID );
             }
             ++channelIndex;
         }
@@ -87,6 +91,8 @@ public final class TaskContext {
 
         dispatcher.addEventListener( taskEvents, handler );
     }
+
+    private static final Logger LOG = Logger.getLogger( TaskContext.class );
 
     public final Map<UUID,Integer> taskIDToChannelIndex;
 
@@ -124,5 +130,27 @@ public final class TaskContext {
 
     public int getInputChannelIndexFromTaskID( final UUID taskID ) {
         return taskIDToChannelIndex.get( taskID );
+    }
+
+    public void close() {
+        if( outputGates != null ) {
+            for( final OutputGate og : outputGates ) {
+                for( final Channel c : og.getAllChannels() ) {
+                    try {
+                        c.disconnect().sync();
+                        c.close().sync();
+                        LOG.info( "CLOSE CHANNEL " + c.toString() );
+                    } catch (InterruptedException e) {
+                        LOG.error( e );
+                    }
+                }
+            }
+        }
+
+        taskIDToChannelIndex.clear();
+
+        channelIndexToTaskID.clear();
+
+        dispatcher.removeAllEventListener();
     }
 }

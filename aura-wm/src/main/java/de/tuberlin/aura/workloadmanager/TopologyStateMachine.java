@@ -64,7 +64,7 @@ public class TopologyStateMachine {
 
         final Map<TopologyTransition,TopologyState> t1 = new HashMap<TopologyTransition,TopologyState>();
 
-        t1.put( TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE, 	TopologyState.TOPOLOGY_STATE_UNDEFINED );
+        t1.put( TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE, 	TopologyState.TOPOLOGY_STATE_PARALLELIZED );
         t1.put( TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, 		TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t1.put( TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t1.put( TopologyTransition.TOPOLOGY_TRANSITION_RUN, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
@@ -76,7 +76,7 @@ public class TopologyStateMachine {
         final Map<TopologyTransition,TopologyState> t2 = new HashMap<TopologyTransition,TopologyState>();
 
         t2.put( TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE, 	TopologyState.TOPOLOGY_STATE_UNDEFINED );
-        t2.put( TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, 		TopologyState.TOPOLOGY_STATE_UNDEFINED );
+        t2.put( TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, 		TopologyState.TOPOLOGY_STATE_SCHEDULED );
         t2.put( TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t2.put( TopologyTransition.TOPOLOGY_TRANSITION_RUN, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t2.put( TopologyTransition.TOPOLOGY_TRANSITION_FINISH, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
@@ -88,7 +88,7 @@ public class TopologyStateMachine {
 
         t3.put( TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE, 	TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t3.put( TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, 		TopologyState.TOPOLOGY_STATE_UNDEFINED );
-        t3.put( TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
+        t3.put( TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, 			TopologyState.TOPOLOGY_STATE_DEPLOYED );
         t3.put( TopologyTransition.TOPOLOGY_TRANSITION_RUN, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t3.put( TopologyTransition.TOPOLOGY_TRANSITION_FINISH, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t3.put( TopologyTransition.TOPOLOGY_TRANSITION_FAIL, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
@@ -100,7 +100,7 @@ public class TopologyStateMachine {
         t4.put( TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE, 	TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t4.put( TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, 		TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t4.put( TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
-        t4.put( TopologyTransition.TOPOLOGY_TRANSITION_RUN, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
+        t4.put( TopologyTransition.TOPOLOGY_TRANSITION_RUN, 			TopologyState.TOPOLOGY_STATE_RUNNING );
         t4.put( TopologyTransition.TOPOLOGY_TRANSITION_FINISH, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t4.put( TopologyTransition.TOPOLOGY_TRANSITION_FAIL, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
 
@@ -112,8 +112,8 @@ public class TopologyStateMachine {
         t5.put( TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, 		TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t5.put( TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
         t5.put( TopologyTransition.TOPOLOGY_TRANSITION_RUN, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
-        t5.put( TopologyTransition.TOPOLOGY_TRANSITION_FINISH, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
-        t5.put( TopologyTransition.TOPOLOGY_TRANSITION_FAIL, 			TopologyState.TOPOLOGY_STATE_UNDEFINED );
+        t5.put( TopologyTransition.TOPOLOGY_TRANSITION_FINISH, 			TopologyState.TOPOLOGY_STATE_FINISHED );
+        t5.put( TopologyTransition.TOPOLOGY_TRANSITION_FAIL, 			TopologyState.TOPOLOGY_STATE_FAILURE );
 
         mtx.put( TopologyState.TOPOLOGY_STATE_RUNNING, Collections.unmodifiableMap( t5 ) );
 

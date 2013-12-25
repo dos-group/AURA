@@ -24,6 +24,8 @@ public interface IEventDispatcher {
      */
     public boolean removeEventListener( String type, IEventHandler listener );
 
+    public void removeAllEventListener();
+
     /**
      * Dispatch a event.
      * @param event The event to dispatch.

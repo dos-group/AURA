@@ -38,18 +38,19 @@ public class AuraDirectedGraph {
         //---------------------------------------------------
 
         public AuraTopology( final String name,
-                             final UUID uid,
+                             final UUID topologyID,
                              final Map<String,Node> nodeMap,
                              final Map<String,Node> sourceMap,
                              final Map<String,Node> sinkMap,
                              final Map<Pair<String,String>,Edge> edges,
-                             final Map<String,UserCode> userCodeMap ) {
+                             final Map<String,UserCode> userCodeMap,
+                             final Map<UUID,Node> uidNodeMap ) {
 
             // sanity check.
             if( name == null )
                 throw new IllegalArgumentException( "name == null" );
-            if( uid == null )
-                throw new IllegalArgumentException( "uid == null" );
+            if( topologyID == null )
+                throw new IllegalArgumentException( "topologyID == null" );
             if( nodeMap == null )
                 throw new IllegalArgumentException( "nodeMap == null" );
             if( sourceMap == null )
@@ -60,10 +61,12 @@ public class AuraDirectedGraph {
                 throw new IllegalArgumentException( "edges == null" );
             if( userCodeMap == null )
                 throw new IllegalArgumentException( "userCodeMap == null" );
+            if( uidNodeMap == null )
+                throw new IllegalArgumentException( "uidNodeMap == null" );
 
             this.name = name;
 
-            this.uid = uid;
+            this.topologyID = topologyID;
 
             this.nodeMap = Collections.unmodifiableMap( nodeMap );
 
@@ -74,6 +77,10 @@ public class AuraDirectedGraph {
             this.edges = Collections.unmodifiableMap( edges );
 
             this.userCodeMap = Collections.unmodifiableMap( userCodeMap );
+
+            this.uidNodeMap = Collections.unmodifiableMap( uidNodeMap );
+
+            this.executionNodeMap = null;
         }
 
         //---------------------------------------------------
@@ -82,7 +89,7 @@ public class AuraDirectedGraph {
 
         public final String name;
 
-        public final UUID uid;
+        public final UUID topologyID;
 
         public final Map<String,Node> nodeMap;
 
@@ -93,6 +100,24 @@ public class AuraDirectedGraph {
         public final Map<Pair<String,String>,Edge> edges;
 
         public final Map<String,UserCode> userCodeMap;
+
+        public final Map<UUID,Node> uidNodeMap;
+
+        public Map<UUID,ExecutionNode> executionNodeMap;
+
+        //---------------------------------------------------
+        // Public.
+        //---------------------------------------------------
+
+        public void setExecutionNodes( final Map<UUID,ExecutionNode> executionNodeMap ) {
+            // sanity check.
+            if( executionNodeMap == null )
+                throw new IllegalArgumentException( "executionNodes == null" );
+            if( this.executionNodeMap != null )
+                throw new IllegalStateException( "execution nodes already set" );
+
+            this.executionNodeMap = Collections.unmodifiableMap( executionNodeMap );
+        }
     }
 
     /**
@@ -188,6 +213,8 @@ public class AuraDirectedGraph {
             this.codeExtractor = codeExtractor;
 
             this.userCodeMap = new HashMap<String,UserCode>();
+
+            this.uidNodeMap = new HashMap<UUID,Node>();
         }
 
         //---------------------------------------------------
@@ -208,6 +235,8 @@ public class AuraDirectedGraph {
 
         private final Map<String,UserCode> userCodeMap;
 
+        private final Map<UUID,Node> uidNodeMap;
+
         private boolean isBuilded = false;
 
         //---------------------------------------------------
@@ -225,6 +254,7 @@ public class AuraDirectedGraph {
             nodeMap.put( node.name, node );
             sourceMap.put( node.name, node );
             sinkMap.put( node.name, node );
+            uidNodeMap.put( node.uid, node );
 
             return nodeConnector.currentSource( node );
         }
@@ -284,7 +314,7 @@ public class AuraDirectedGraph {
             // Every call to build gives us the same topology with a new id.
             final UUID topologyID = UUID.randomUUID();
 
-            return new AuraTopology( name, topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap );
+            return new AuraTopology( name, topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap, uidNodeMap );
         }
 
         private boolean validateBackCouplingEdge( final Set<Node> visitedNodes, final Node currentNode, final Node destNode ) {
@@ -346,7 +376,7 @@ public class AuraDirectedGraph {
 
             this.outputs = new ArrayList<Node>();
 
-            this.executionNodes = new ArrayList<ExecutionNode>();
+            this.executionNodes = new HashMap<UUID,ExecutionNode>();
         }
 
         //---------------------------------------------------
@@ -367,7 +397,7 @@ public class AuraDirectedGraph {
 
         private final List<Node> outputs;
 
-        private final List<ExecutionNode> executionNodes;
+        private final Map<UUID,ExecutionNode> executionNodes;
 
         //---------------------------------------------------
         // Public.
@@ -406,11 +436,11 @@ public class AuraDirectedGraph {
             if( exeNode == null )
                 throw new IllegalArgumentException( "exeNode == null" );
 
-            executionNodes.add( exeNode );
+            executionNodes.put( exeNode.uid, exeNode );
         }
 
         public List<ExecutionNode> getExecutionNodes() {
-            return Collections.unmodifiableList( executionNodes );
+            return Collections.unmodifiableList( new ArrayList<ExecutionNode>( executionNodes.values() ) );
         }
 
         @Override

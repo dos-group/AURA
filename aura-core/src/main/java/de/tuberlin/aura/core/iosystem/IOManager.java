@@ -75,15 +75,15 @@ public final class IOManager extends EventDispatcher {
         @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED )
         private void handleControlChannelInputConnected( final ControlIOEvent event ) {
             controlIOConnections.put( new Pair<UUID,UUID>( machine.uid, event.getSrcMachineID() ), event.getChannel() );
-            LOG.info( "message connection between machine " + event.getSrcMachineID()
-                    + " and " + event.getDstMachineID() + " established" );
+            LOG.info( "CONTROL I/O CONNECTION BETWEEN MACHINE " + event.getSrcMachineID()
+                    + " AND " + event.getDstMachineID() + " ESTABLISHED" );
         }
 
         @Handle( event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED )
         private void handleControlChannelOutputConnected( final ControlIOEvent event ) {
             controlIOConnections.put( new Pair<UUID,UUID>( machine.uid, event.getDstMachineID() ), event.getChannel() );
-            LOG.info( "message connection between machine " + event.getSrcMachineID()
-                    + " and " + event.getDstMachineID() + " established" );
+            LOG.info( "CONTROL I/O CONNECTION BETWEEN MACHINE " + event.getSrcMachineID()
+                    + " AND " + event.getDstMachineID() + " ESTABLISHED" );
         }
     }
 
@@ -274,6 +274,20 @@ public final class IOManager extends EventDispatcher {
         }
     }
 
+    public void disconnectDataChannel( final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine ) {
+        // sanity check.
+        if( srcTaskID == null  )
+            throw new IllegalArgumentException( "srcTask == null" );
+        if( dstTaskID == null  )
+            throw new IllegalArgumentException( "dstTask == null" );
+        if( dstMachine == null  )
+            throw new IllegalArgumentException( "dstTask == null" );
+
+
+
+
+    }
+
     public void connectMessageChannelBlocking( final MachineDescriptor dstMachine ) {
         // sanity check.
         if( dstMachine == null )
@@ -350,7 +364,7 @@ public final class IOManager extends EventDispatcher {
 
         final Channel channel = controlIOConnections.get( new Pair<UUID,UUID>( machine.uid, dstMachineID ) );
         if( channel == null )
-            throw new IllegalStateException( "channel exists not" );
+            throw new IllegalStateException( "channel is not registered" );
 
         event.setSrcMachineID( machine.uid );
         event.setDstMachineID( dstMachineID );

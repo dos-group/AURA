@@ -23,8 +23,9 @@ public final class AuraClient {
         if( workloadManager == null )
             throw new IllegalArgumentException( "workloadManager == null" );
 
-        this.ioManager = new IOManager( clientMachine );
+        LOG.info( "CLIENT STARTED" );
 
+        this.ioManager = new IOManager( clientMachine );
         this.rpcManager = new RPCManager( ioManager );
 
         this.codeExtractor = new UserCodeExtractor( true );
@@ -34,10 +35,7 @@ public final class AuraClient {
                            addStandardDependency( "de/tuberlin/aura/core" );
 
         ioManager.connectMessageChannelBlocking( workloadManager );
-
         clientProtocol = rpcManager.getRPCProtocolProxy( ClientWMProtocol.class, workloadManager );
-
-        LOG.info( "Started AURA client" );
     }
 
     //---------------------------------------------------

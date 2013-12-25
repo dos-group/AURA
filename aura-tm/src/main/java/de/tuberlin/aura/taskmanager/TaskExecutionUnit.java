@@ -6,9 +6,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 
+import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
-import de.tuberlin.aura.core.task.common.TaskEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 
@@ -34,7 +34,7 @@ public final class TaskExecutionUnit {
                 // check precondition.
                 if( context == null )
                     throw new IllegalStateException( "context == null" );
-                if( context.state != TaskState.TASK_STATE_READY )
+                if( context.state != TaskState.TASK_STATE_RUNNING )
                     throw new IllegalStateException( "task is not in state ready" );
 
                 // create instance of that task and execute it.
@@ -50,7 +50,7 @@ public final class TaskExecutionUnit {
                 if( invokeable == null )
                     throw new IllegalStateException( "invokeable == null" );
 
-                context.dispatcher.dispatchEvent( new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_RUN ) );
+                //context.dispatcher.dispatchEvent( new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_RUN ) );
 
                 try {
                     invokeable.execute();
@@ -67,6 +67,8 @@ public final class TaskExecutionUnit {
                 }
 
                 context.dispatcher.dispatchEvent( new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_FINISH ) );
+
+                context = null;
             }
         }
     }

@@ -44,8 +44,13 @@ public final class OutputGate extends AbstractGate {
         this.openChannelList = new ArrayList<Boolean>( Collections.nCopies( numChannels, false ) );
 
         final EventHandler outputGateEventHandler = new OutputGateEventHandler();
-        context.dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, outputGateEventHandler );
-        context.dispatcher.addEventListener( DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, outputGateEventHandler );
+
+        final String[] gateEvents = {
+                DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
+                DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE
+        };
+
+        context.dispatcher.addEventListener( gateEvents, outputGateEventHandler );
     }
 
     //---------------------------------------------------

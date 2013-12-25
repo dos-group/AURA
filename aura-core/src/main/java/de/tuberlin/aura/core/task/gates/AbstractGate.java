@@ -36,7 +36,7 @@ public abstract class AbstractGate {
     // Fields.
     //---------------------------------------------------
 
-    protected TaskContext context;
+    protected final TaskContext context;
 
     protected final int numChannels;
 
@@ -70,5 +70,9 @@ public abstract class AbstractGate {
             throw new IllegalStateException( "channels == null" );
 
         return channels.get( channelIndex );
+    }
+
+    public List<Channel> getAllChannels() {
+        return Collections.unmodifiableList( channels );
     }
 }

@@ -2,6 +2,7 @@ package de.tuberlin.aura.workloadmanager;
 
 import org.apache.log4j.Logger;
 
+import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.ExecutionNode;
@@ -10,15 +11,16 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.TopologyBreadthFirs
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.workloadmanager.spi.IDeploymentManager;
+import de.tuberlin.aura.workloadmanager.TopologyEvents.TopologyStateTransitionEvent;
+import de.tuberlin.aura.workloadmanager.TopologyStateMachine.TopologyTransition;
 
-public class DeploymentManager implements IDeploymentManager {
+public class TopologyDeployer extends AssemblyPhase<AuraTopology,AuraTopology> {
 
     //---------------------------------------------------
     // Constructors.
     //---------------------------------------------------
 
-    public DeploymentManager( final RPCManager rpcManager ) {
+    public TopologyDeployer( final RPCManager rpcManager ) {
         // sanity check.
         if( rpcManager == null )
             throw new IllegalArgumentException( "rpcManager == null" );
@@ -30,7 +32,7 @@ public class DeploymentManager implements IDeploymentManager {
     // Fields.
     //---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger( DeploymentManager.class );
+    private static final Logger LOG = Logger.getLogger( TopologyDeployer.class );
 
     private final RPCManager rpcManager;
 
@@ -39,7 +41,20 @@ public class DeploymentManager implements IDeploymentManager {
     //---------------------------------------------------
 
     @Override
-    public synchronized void deployTopology( final AuraTopology topology ) {
+    public AuraTopology apply( AuraTopology topology ) {
+
+        deployTopology( topology );
+
+        dispatcher.dispatchEvent( new TopologyStateTransitionEvent( TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY ) );
+
+        return topology;
+    }
+
+    //---------------------------------------------------
+    // Private.
+    //---------------------------------------------------
+
+    private synchronized void deployTopology( final AuraTopology topology ) {
 
         // Deploying.
         TopologyBreadthFirstTraverser.traverseBackwards( topology, new Visitor<Node>() {
@@ -54,7 +69,7 @@ public class DeploymentManager implements IDeploymentManager {
                             rpcManager.getRPCProtocolProxy( WM2TMProtocol.class,
                                                             en.getTaskDescriptor().getMachineDescriptor() );
                     tmProtocol.installTask( tdd );
-                    LOG.info( "deploy task : " + tdd.toString() );
+                    LOG.info( "TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString() );
                 }
             }
         } );
