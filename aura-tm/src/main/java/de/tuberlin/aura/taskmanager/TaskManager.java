@@ -43,46 +43,26 @@ public final class TaskManager implements WM2TMProtocol {
 
         @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED )
         private void handleDataOutputChannelEvent( final DataIOEvent event ) {
-            Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
-            // check state.
-            if( contextAndHandler == null )
-                throw new IllegalStateException( "contextAndHandler for task "
-                            + event.dstTaskID + " == null" );
-            final IEventDispatcher dispatcher = contextAndHandler.getSecond();
-            dispatcher.dispatchEvent( event );
+            final Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
+            contextAndHandler.getSecond().dispatchEvent( event );
         }
 
         @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED )
         private void handleDataInputChannelEvent( final DataIOEvent event ) {
-            Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.dstTaskID );
-            // check state.
-            if( contextAndHandler == null )
-                throw new IllegalStateException( "contextAndHandler for task "
-                            + event.dstTaskID + " == null" );
-            final IEventDispatcher dispatcher = contextAndHandler.getSecond();
-            dispatcher.dispatchEvent( event );
+            final Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.dstTaskID );
+            contextAndHandler.getSecond().dispatchEvent( event );
         }
 
         @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN )
         private void handleDataChannelGateOpenEvent( final DataIOEvent event ) {
-            Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
-            // check state.
-            if( contextAndHandler == null )
-                throw new IllegalStateException( "contextAndHandler for task "
-                            + event.dstTaskID + " == null" );
-            final IEventDispatcher dispatcher = contextAndHandler.getSecond();
-            dispatcher.dispatchEvent( event );
+            final Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
+            contextAndHandler.getSecond().dispatchEvent( event );
         }
 
         @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE )
         private void handleDataChannelGateCloseEvent( final DataIOEvent event ) {
-            Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
-            // check state.
-            if( contextAndHandler == null )
-                throw new IllegalStateException( "contextAndHandler for task "
-                            + event.dstTaskID + " == null" );
-            final IEventDispatcher dispatcher = contextAndHandler.getSecond();
-            dispatcher.dispatchEvent( event );
+            final Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
+            contextAndHandler.getSecond().dispatchEvent( event );
         }
 
         @Handle( event = DataBufferEvent.class )
