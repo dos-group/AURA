@@ -81,6 +81,15 @@ public final class TaskContext {
             ++channelIndex;
         }
 
+        channelIndex = 0;
+        for( final List<TaskDescriptor> outputGate : taskBinding.outputGateBindings ) {
+            for( final TaskDescriptor outputTask : outputGate ) {
+                taskIDToChannelIndex.put( outputTask.taskID, channelIndex );
+                channelIndexToTaskID.put( channelIndex, outputTask.taskID );
+            }
+            ++channelIndex;
+        }
+
         final String[] taskEvents =
             { DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
               DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,

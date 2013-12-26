@@ -41,14 +41,42 @@ public final class TaskManager implements WM2TMProtocol {
      */
     private final class IORedispatcher extends EventHandler {
 
-        @Handle( event = DataIOEvent.class )
-        private void handleDataChannelEvent( final DataIOEvent event ) {
-            Pair<TaskContext,IEventDispatcher> contextAndHandler = null;
-            // Call the correct handler!
-            if( DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED.equals( event.type ) )
-                contextAndHandler = taskContextMap.get( event.srcTaskID );
-            if( DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED.equals( event.type ) )
-                contextAndHandler = taskContextMap.get( event.dstTaskID );
+        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED )
+        private void handleDataOutputChannelEvent( final DataIOEvent event ) {
+            Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
+            // check state.
+            if( contextAndHandler == null )
+                throw new IllegalStateException( "contextAndHandler for task "
+                            + event.dstTaskID + " == null" );
+            final IEventDispatcher dispatcher = contextAndHandler.getSecond();
+            dispatcher.dispatchEvent( event );
+        }
+
+        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED )
+        private void handleDataInputChannelEvent( final DataIOEvent event ) {
+            Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.dstTaskID );
+            // check state.
+            if( contextAndHandler == null )
+                throw new IllegalStateException( "contextAndHandler for task "
+                            + event.dstTaskID + " == null" );
+            final IEventDispatcher dispatcher = contextAndHandler.getSecond();
+            dispatcher.dispatchEvent( event );
+        }
+
+        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN )
+        private void handleDataChannelGateOpenEvent( final DataIOEvent event ) {
+            Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
+            // check state.
+            if( contextAndHandler == null )
+                throw new IllegalStateException( "contextAndHandler for task "
+                            + event.dstTaskID + " == null" );
+            final IEventDispatcher dispatcher = contextAndHandler.getSecond();
+            dispatcher.dispatchEvent( event );
+        }
+
+        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE )
+        private void handleDataChannelGateCloseEvent( final DataIOEvent event ) {
+            Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.srcTaskID );
             // check state.
             if( contextAndHandler == null )
                 throw new IllegalStateException( "contextAndHandler for task "
@@ -59,8 +87,7 @@ public final class TaskManager implements WM2TMProtocol {
 
         @Handle( event = DataBufferEvent.class )
         private void handleDataEvent( final DataBufferEvent event ) {
-            final Pair<TaskContext,IEventDispatcher> contextAndHandler =
-                    taskContextMap.get( event.dstTaskID );
+            final Pair<TaskContext,IEventDispatcher> contextAndHandler = taskContextMap.get( event.dstTaskID );
             contextAndHandler.getSecond().dispatchEvent( event );
         }
 

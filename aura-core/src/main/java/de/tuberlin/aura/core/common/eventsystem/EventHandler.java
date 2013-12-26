@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 public abstract class EventHandler implements IEventHandler {
 
     //---------------------------------------------------
@@ -39,7 +41,7 @@ public abstract class EventHandler implements IEventHandler {
     // Fields.
     //---------------------------------------------------
 
-    //private static final Logger LOG = Logger.getLogger( EventHandler.class );
+    private static final Logger LOG = Logger.getLogger( EventHandler.class );
 
     private final Map<Class<?>,Method> eventHandlerMap;
 
@@ -87,7 +89,8 @@ public abstract class EventHandler implements IEventHandler {
     //---------------------------------------------------
 
     protected void handleUnknownEvent( final Event e ) {
-        throw new IllegalStateException();
+        //throw new IllegalStateException( e.toString() );
+        LOG.debug( "unknown event " + e );
     }
 
     //---------------------------------------------------

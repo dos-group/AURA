@@ -88,7 +88,7 @@ public class TopologyController extends EventDispatcher {
                     stateConsensus = new TaskStateConsensus( TaskState.TASK_STATE_READY, topology );
                 switch( stateConsensus.isConsensusAttained( event ) ) {
                     case CONSENSUS_ATTAINED: {
-                        dispatchGlobalEvent( new TaskStateTransitionEvent( topology.topologyID, TaskTransition.TASK_TRANSITION_RUN ) );
+                        dispatchTaskEvent( new TaskStateTransitionEvent( topology.topologyID, TaskTransition.TASK_TRANSITION_RUN ) );
                         dispatchEvent( new TopologyStateTransitionEvent( TopologyTransition.TOPOLOGY_TRANSITION_RUN ) );
                         stateConsensus = null;
                     } break;
@@ -97,7 +97,7 @@ public class TopologyController extends EventDispatcher {
                 }
             }
 
-            if( state== TopologyState.TOPOLOGY_STATE_RUNNING ) {
+            if( state == TopologyState.TOPOLOGY_STATE_RUNNING ) {
                 if( stateConsensus == null )
                     stateConsensus = new TaskStateConsensus( TaskState.TASK_STATE_FINISHED, topology );
                 switch( stateConsensus.isConsensusAttained( event ) ) {
@@ -208,7 +208,7 @@ public class TopologyController extends EventDispatcher {
     // Private.
     //---------------------------------------------------
 
-    private void dispatchGlobalEvent( final ControlIOEvent event ) {
+    private void dispatchTaskEvent( final ControlIOEvent event ) {
         // sanity check.
         if( event == null )
             throw new IllegalArgumentException( "event == null" );

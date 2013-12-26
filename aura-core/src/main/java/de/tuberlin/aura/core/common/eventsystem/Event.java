@@ -30,4 +30,9 @@ public class Event implements Serializable {
     public Object getPayload() {
         return this.payload;
     }
+
+    @Override
+    public String toString() {
+        return type;
+    }
 }

@@ -24,12 +24,14 @@ public final class OutputGate extends AbstractGate {
 
         @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN )
         private void handleOutputGateOpen( final DataIOEvent event ) {
-            openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), true );
+            openChannelList.set( context.getInputChannelIndexFromTaskID( event.dstTaskID ), true );
+            LOG.info( "GATE FOR TASK " + event.srcTaskID + " OPENED" );
         }
 
         @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE )
         private void handleOutputGateClose( final DataIOEvent event ) {
-            openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), false );
+            openChannelList.set( context.getInputChannelIndexFromTaskID( event.dstTaskID ), false );
+            LOG.info( "GATE FOR TASK " + event.srcTaskID + " CLOSED" );
         }
     }
 
@@ -70,8 +72,8 @@ public final class OutputGate extends AbstractGate {
         if( data == null )
             throw new IllegalArgumentException( "data == null" );
 
-        if( isGateOpen( channelIndex ) ) {
-            LOG.error( "channel is closed" );
+        if( !isGateOpen( channelIndex ) ) {
+            //LOG.error( "channel is closed" );
         }
 
         // TODO: change insert in output queue!
