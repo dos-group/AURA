@@ -36,7 +36,7 @@ public class TestRPCServer {
         final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
         LOG.addAppender( consoleAppender );
 
-        final TaskManager taskManager = new TaskManager( LocalDeployment.MACHINE_2_DESCRIPTOR );
+        final TaskManager taskManager = new TaskManager("localhost:2181", LocalDeployment.MACHINE_2_DESCRIPTOR );
         taskManager.getRPCManager().registerRPCProtocolImpl( new FooImpl(), FooProtocol.class );
 
 

@@ -170,7 +170,8 @@ public class EventDispatcher implements IEventDispatcher {
                 el.handleEvent( event );
             }
         } else { // listeners == null
-            throw new IllegalStateException( "listeners == null" );
+        	// TODO: This should not throw an exception just because there is no listener at the moment. 
+            // throw new IllegalStateException( "listeners == null" );
         }
     }
 }

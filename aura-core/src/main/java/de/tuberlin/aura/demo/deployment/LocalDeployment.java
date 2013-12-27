@@ -24,8 +24,8 @@ public final class LocalDeployment
 			.fromString("56765799-fbc5-4dbb-83a6-162d8a24a7ce");
 
 	public static final HardwareDescriptor MACHINE_1_HARDWARE = new HardwareDescriptor(
-			(short) 4, 2 * 1024 * 1024 * 1024, new HDDDescriptor(
-					10 * 1024 * 1024 * 1024));
+			(short) 4, 2L * 1024L * 1024L * 1024L, new HDDDescriptor(
+					10L * 1024L * 1024L * 1024L));
 
 	public static final MachineDescriptor MACHINE_1_DESCRIPTOR = new MachineDescriptor(
 			MACHINE_1_UID, MACHINE_1_ADDRESS, MACHINE_1_DATA_PORT,
@@ -42,8 +42,8 @@ public final class LocalDeployment
 			.fromString("47022799-fbc5-4dbb-83a6-162d8a24a7ce");
 
 	public static final HardwareDescriptor MACHINE_2_HARDWARE = new HardwareDescriptor(
-			(short) 4, 2 * 1024 * 1024 * 1024, new HDDDescriptor(
-					10 * 1024 * 1024 * 1024));
+			(short) 4, 2L * 1024L * 1024L * 1024L, new HDDDescriptor(
+					10L * 1024L * 1024L * 1024L));
 
 	public static final MachineDescriptor MACHINE_2_DESCRIPTOR = new MachineDescriptor(
 			MACHINE_2_UID, MACHINE_2_ADDRESS, MACHINE_2_DATA_PORT,
@@ -60,8 +60,8 @@ public final class LocalDeployment
 			.fromString("78922799-fbc5-4dbb-83a6-162d8a24a7ce");
 
 	public static final HardwareDescriptor MACHINE_3_HARDWARE = new HardwareDescriptor(
-			(short) 4, 2 * 1024 * 1024 * 1024, new HDDDescriptor(
-					10 * 1024 * 1024 * 1024));
+			(short) 4, 2L * 1024L * 1024L * 1024L, new HDDDescriptor(
+					10L * 1024L * 1024L * 1024L));
 
 	public static final MachineDescriptor MACHINE_3_DESCRIPTOR = new MachineDescriptor(
 			MACHINE_3_UID, MACHINE_3_ADDRESS, MACHINE_3_DATA_PORT,
@@ -78,8 +78,8 @@ public final class LocalDeployment
 			.fromString("36822799-fbc5-4dbb-83a6-162d8a24a7ce");
 
 	public static final HardwareDescriptor MACHINE_4_HARDWARE = new HardwareDescriptor(
-			(short) 4, 2 * 1024 * 1024 * 1024, new HDDDescriptor(
-					10 * 1024 * 1024 * 1024));
+			(short) 4, 2L * 1024L * 1024L * 1024L, new HDDDescriptor(
+					10L * 1024L * 1024L * 1024L));
 
 	public static final MachineDescriptor MACHINE_4_DESCRIPTOR = new MachineDescriptor(
 			MACHINE_4_UID, MACHINE_4_ADDRESS, MACHINE_4_DATA_PORT,
@@ -96,8 +96,8 @@ public final class LocalDeployment
 			.fromString("96852799-fbc5-4dbb-83a6-162d8a24a7ce");
 
 	public static final HardwareDescriptor MACHINE_5_HARDWARE = new HardwareDescriptor(
-			(short) 4, 2 * 1024 * 1024 * 1024, new HDDDescriptor(
-					10 * 1024 * 1024 * 1024));
+			(short) 4, 2L * 1024L * 1024L * 1024L, new HDDDescriptor(
+					10L * 1024L * 1024L * 1024L));
 
 	public static final MachineDescriptor MACHINE_5_DESCRIPTOR = new MachineDescriptor(
 			MACHINE_5_UID, MACHINE_5_ADDRESS, MACHINE_5_DATA_PORT,
@@ -114,8 +114,8 @@ public final class LocalDeployment
 			.fromString("96852799-ccc5-4dbb-83a6-982d8a24a7ce");
 
 	public static final HardwareDescriptor MACHINE_6_HARDWARE = new HardwareDescriptor(
-			(short) 4, 2 * 1024 * 1024 * 1024, new HDDDescriptor(
-					10 * 1024 * 1024 * 1024));
+			(short) 4, 2L * 1024L * 1024L * 1024L, new HDDDescriptor(
+					10L * 1024L * 1024L * 1024L));
 
 	public static final MachineDescriptor MACHINE_6_DESCRIPTOR = new MachineDescriptor(
 			MACHINE_6_UID, MACHINE_6_ADDRESS, MACHINE_6_DATA_PORT,

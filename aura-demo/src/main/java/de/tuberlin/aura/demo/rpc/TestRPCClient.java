@@ -25,7 +25,7 @@ public class TestRPCClient {
         final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
         LOG.addAppender( consoleAppender );
 
-        final TaskManager taskManager = new TaskManager( LocalDeployment.MACHINE_1_DESCRIPTOR );
+        final TaskManager taskManager = new TaskManager("localhost:2181", LocalDeployment.MACHINE_1_DESCRIPTOR );
         taskManager.getRPCManager().registerRPCProtocolImpl( new BarImpl(), BarProtocol.class );
         taskManager.getRPCManager().connectToMessageServer( LocalDeployment.MACHINE_2_DESCRIPTOR );
 
