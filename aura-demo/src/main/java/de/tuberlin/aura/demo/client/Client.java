@@ -90,6 +90,9 @@ public final class Client {
         @Override
         public void execute() throws Exception {
 
+            context.inputGates.get( 0 ).openGate();
+            context.inputGates.get( 1 ).openGate();
+
             for( int i = 0; i < 100; ++i ) {
 
                 final BlockingQueue<DataBufferEvent> inputMsgs1 = context.inputGates.get( 0 ).getInputQueue();
@@ -123,6 +126,9 @@ public final class Client {
 
         @Override
         public void execute() throws Exception {
+
+            context.inputGates.get( 0 ).openGate();
+
             for( int i = 0; i < 100; ++i ) {
                 final BlockingQueue<DataBufferEvent> inputMsgs = context.inputGates.get( 0 ).getInputQueue();
                 try {

@@ -73,7 +73,7 @@ public final class OutputGate extends AbstractGate {
             throw new IllegalArgumentException( "data == null" );
 
         if( !isGateOpen( channelIndex ) ) {
-            //LOG.error( "channel is closed" );
+            LOG.error( "channel is closed" );
         }
 
         // TODO: change insert in output queue!
