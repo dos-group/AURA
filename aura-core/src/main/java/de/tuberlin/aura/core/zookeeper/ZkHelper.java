@@ -17,7 +17,6 @@ import static com.google.common.base.Preconditions.*;
 
 /**
  * This class wraps helper methods for interacting with ZooKeeper.
- * 
  * TODO: authors?
  */
 @NotThreadSafe
@@ -27,8 +26,8 @@ public class ZkHelper {
 	 * Logger.
 	 */
 	private static final Logger LOG = LoggerFactory
-			.getLogger(ZkHelper.class);
-	
+		.getLogger(ZkHelper.class);
+
 	/**
 	 * ZooKeeper session timeout in ms.
 	 */
@@ -43,17 +42,19 @@ public class ZkHelper {
 	 * Folder for the task-managers.
 	 */
 	public static final String ZOOKEEPER_TASKMANAGERS = ZOOKEEPER_ROOT
-			+ "/taskmanagers";
-	
+		+ "/taskmanagers";
+
 	public static final String EVENT_TYPE_NODE_ADDED = "node_added";
+
 	public static final String EVENT_TYPE_NODE_REMOVED = "node_removed";
+
 	public static final String EVENT_TYPE_CONNECTION_EXPIRED = "connection_expired";
-	
+
 	private ZkHelper()
 	{
 		// This will never be called.
 	}
-	
+
 	/**
 	 * Initialize the directory structure in ZooKeeper.
 	 * 
@@ -67,7 +68,7 @@ public class ZkHelper {
 		if (stat == null)
 		{
 			zk.create(ZOOKEEPER_ROOT, new byte[0],
-					Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+				Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		}
 
 		// Create a folder that is used to register the task-managers.
@@ -75,21 +76,22 @@ public class ZkHelper {
 		if (stat == null)
 		{
 			zk.create(ZOOKEEPER_TASKMANAGERS, new byte[0],
-					Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+				Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		}
 	}
 
 	/**
 	 * Check whether the format of the ZooKeeper connection string is valid.
 	 * 
-	 * @param zkServers The connection string.
+	 * @param zkServers
+	 *        The connection string.
 	 */
 	public static void checkConnectionString(String zkServers) {
-		
+
 		checkNotNull(zkServers, "zkServers == null");
-		
+
 		String[] tokens = zkServers.split(";");
-		for(String token : tokens)
+		for (String token : tokens)
 		{
 			String[] parts = token.split(":");
 			try {
@@ -98,9 +100,9 @@ public class ZkHelper {
 				checkArgument(port < 1024 || port > 65535, "Port {} is invalid", port);
 			} catch (UnknownHostException e) {
 				LOG.error("Could not find the ZooKeeper host: {}", parts[0]);
-			} catch(NumberFormatException e) {
+			} catch (NumberFormatException e) {
 				LOG.error("Could not parse the port {}", parts[1]);
-			}			
+			}
 		}
 	}
 }

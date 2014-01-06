@@ -4,49 +4,46 @@ import java.io.Serializable;
 
 public class Pair<A, B> implements Serializable {
 
-    private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 1L;
 
-    private final A first;
-    private final B second;
+	private final A first;
 
-    public Pair(A first, B second) {
-        super();
-        this.first = first;
-        this.second = second;
-    }
+	private final B second;
 
-    public int hashCode() {
-        int hashFirst = first != null ? first.hashCode() : 0;
-        int hashSecond = second != null ? second.hashCode() : 0;
+	public Pair(A first, B second) {
+		super();
+		this.first = first;
+		this.second = second;
+	}
 
-        return (hashFirst + hashSecond) * hashSecond + hashFirst;
-    }
+	public int hashCode() {
+		int hashFirst = first != null ? first.hashCode() : 0;
+		int hashSecond = second != null ? second.hashCode() : 0;
 
-    public boolean equals(Object other) {
-        if (other instanceof Pair) {
-                @SuppressWarnings("unchecked")
-                Pair<A,B> otherPair = (Pair<A,B>) other;
-                return
-                ((  this.first == otherPair.first ||
-                        ( this.first != null && otherPair.first != null &&
-                          this.first.equals(otherPair.first))) &&
-                 (      this.second == otherPair.second ||
-                        ( this.second != null && otherPair.second != null &&
-                          this.second.equals(otherPair.second))) );
-        }
+		return (hashFirst + hashSecond) * hashSecond + hashFirst;
+	}
 
-        return false;
-    }
+	public boolean equals(Object other) {
+		if (other instanceof Pair) {
+			@SuppressWarnings("unchecked")
+			Pair<A, B> otherPair = (Pair<A, B>) other;
+			return ((this.first == otherPair.first || (this.first != null && otherPair.first != null && this.first
+				.equals(otherPair.first))) && (this.second == otherPair.second || (this.second != null
+				&& otherPair.second != null && this.second.equals(otherPair.second))));
+		}
 
-    public String toString(){
-           return "(" + first + ", " + second + ")";
-    }
+		return false;
+	}
 
-    public A getFirst() {
-        return first;
-    }
+	public String toString() {
+		return "(" + first + ", " + second + ")";
+	}
 
-    public B getSecond() {
-        return second;
-    }
+	public A getFirst() {
+		return first;
+	}
+
+	public B getSecond() {
+		return second;
+	}
 }

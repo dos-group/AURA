@@ -12,118 +12,118 @@ import org.apache.log4j.Logger;
 
 public abstract class EventHandler implements IEventHandler {
 
-    //---------------------------------------------------
-    // Inner Classes.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Inner Classes.
+	// ---------------------------------------------------
 
-    @Retention( RetentionPolicy.RUNTIME )
-    public static @interface Handle {
+	@Retention(RetentionPolicy.RUNTIME)
+	public static @interface Handle {
 
-        Class<? extends Event> event();
+		Class<? extends Event> event();
 
-        String type() default "";
-    }
+		String type() default "";
+	}
 
-    //---------------------------------------------------
-    // Constructors.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Constructors.
+	// ---------------------------------------------------
 
-    public EventHandler() {
+	public EventHandler() {
 
-        this.eventHandlerMap = new HashMap<Class<?>,Method>();
+		this.eventHandlerMap = new HashMap<Class<?>, Method>();
 
-        this.multiTypeEventHandlerMap = new HashMap<Class<?>,Map<String,Method>>();
+		this.multiTypeEventHandlerMap = new HashMap<Class<?>, Map<String, Method>>();
 
-        register( this.getClass() );
-    }
+		register(this.getClass());
+	}
 
-    //---------------------------------------------------
-    // Fields.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Fields.
+	// ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger( EventHandler.class );
+	private static final Logger LOG = Logger.getLogger(EventHandler.class);
 
-    private final Map<Class<?>,Method> eventHandlerMap;
+	private final Map<Class<?>, Method> eventHandlerMap;
 
-    private final Map<Class<?>,Map<String,Method>> multiTypeEventHandlerMap;
+	private final Map<Class<?>, Map<String, Method>> multiTypeEventHandlerMap;
 
-    //---------------------------------------------------
-    // Public.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Public.
+	// ---------------------------------------------------
 
-    @Override
-    public void handleEvent( final Event event ) {
-        Method m = eventHandlerMap.get( event.getClass() );
-        if( m != null ) {
-            m.setAccessible( true );
-            try {
-                m.invoke( this, event );
-            } catch( IllegalAccessException |
-                     IllegalArgumentException |
-                     InvocationTargetException e ) {
-                throw new IllegalStateException( e );
-            }
-        } else {
-            final Map<String,Method> handlerTable = multiTypeEventHandlerMap.get( event.getClass() );
+	@Override
+	public void handleEvent(final Event event) {
+		Method m = eventHandlerMap.get(event.getClass());
+		if (m != null) {
+			m.setAccessible(true);
+			try {
+				m.invoke(this, event);
+			} catch (IllegalAccessException |
+					IllegalArgumentException |
+					InvocationTargetException e) {
+				throw new IllegalStateException(e);
+			}
+		} else {
+			final Map<String, Method> handlerTable = multiTypeEventHandlerMap.get(event.getClass());
 
-            if( handlerTable == null )
-                handleUnknownEvent( event );
+			if (handlerTable == null)
+				handleUnknownEvent(event);
 
-            m = handlerTable.get( event.type );
-            if( m != null ) {
-                m.setAccessible( true );
-                try {
-                    m.invoke( this, event );
-                } catch( IllegalAccessException |
-                         IllegalArgumentException |
-                         InvocationTargetException e ) {
-                    throw new IllegalStateException( e );
-                }
-            } else
-                handleUnknownEvent( event );
-        }
-    }
+			m = handlerTable.get(event.type);
+			if (m != null) {
+				m.setAccessible(true);
+				try {
+					m.invoke(this, event);
+				} catch (IllegalAccessException |
+						IllegalArgumentException |
+						InvocationTargetException e) {
+					throw new IllegalStateException(e);
+				}
+			} else
+				handleUnknownEvent(event);
+		}
+	}
 
-    //---------------------------------------------------
-    // Protected.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Protected.
+	// ---------------------------------------------------
 
-    protected void handleUnknownEvent( final Event e ) {
-        throw new IllegalStateException();
-    }
+	protected void handleUnknownEvent(final Event e) {
+		throw new IllegalStateException();
+	}
 
-    //---------------------------------------------------
-    // Private.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Private.
+	// ---------------------------------------------------
 
-    private void register( final Class<?> clazz ) {
-        for( final Method m : clazz.getDeclaredMethods() ) {
-            LOG.info( m.getName() );
-            if( m.isAnnotationPresent( Handle.class ) ) {
-                //final Class<?>[] argumentTypes = m.getParameterTypes();
-                //if( argumentTypes.length == 1 && argumentTypes[0].isAssignableFrom( Event.class ) ) {
-                    final Handle handle = m.getAnnotation( Handle.class );
-                    if( "".equals( handle.type() ) ) {
+	private void register(final Class<?> clazz) {
+		for (final Method m : clazz.getDeclaredMethods()) {
+			LOG.info(m.getName());
+			if (m.isAnnotationPresent(Handle.class)) {
+				// final Class<?>[] argumentTypes = m.getParameterTypes();
+				// if( argumentTypes.length == 1 && argumentTypes[0].isAssignableFrom( Event.class ) ) {
+				final Handle handle = m.getAnnotation(Handle.class);
+				if ("".equals(handle.type())) {
 
-                        if( eventHandlerMap.containsKey( handle.type() ) )
-                            throw new IllegalStateException( "event already registered" );
+					if (eventHandlerMap.containsKey(handle.type()))
+						throw new IllegalStateException("event already registered");
 
-                        eventHandlerMap.put( handle.event(), m );
+					eventHandlerMap.put(handle.event(), m);
 
-                    } else {
-                        Map<String,Method> handlerTable = multiTypeEventHandlerMap.get( handle.event() );
-                        if( handlerTable == null ) {
-                            handlerTable = new Hashtable<String,Method>();
-                            multiTypeEventHandlerMap.put( handle.event(), handlerTable );
-                        }
+				} else {
+					Map<String, Method> handlerTable = multiTypeEventHandlerMap.get(handle.event());
+					if (handlerTable == null) {
+						handlerTable = new Hashtable<String, Method>();
+						multiTypeEventHandlerMap.put(handle.event(), handlerTable);
+					}
 
-                        if( handlerTable.containsKey( handle.type() ) )
-                            throw new IllegalStateException( "event already registered" );
+					if (handlerTable.containsKey(handle.type()))
+						throw new IllegalStateException("event already registered");
 
-                        handlerTable.put( handle.type(), m );
-                    }
-                //}
-            }
-        }
-    }
+					handlerTable.put(handle.type(), m);
+				}
+				// }
+			}
+		}
+	}
 }

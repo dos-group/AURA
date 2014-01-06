@@ -4,6 +4,6 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
 
 public interface ITopologyScheduler {
 
-    public abstract void scheduleTopology( final AuraTopology topology );
+	public abstract void scheduleTopology(final AuraTopology topology);
 
 }

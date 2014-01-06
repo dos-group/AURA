@@ -39,14 +39,15 @@ public final class Descriptors
 				int controlPort, HardwareDescriptor hardware)
 		{
 			// sanity check.
-			if (uid == null) throw new IllegalArgumentException("uid == null");
+			if (uid == null)
+				throw new IllegalArgumentException("uid == null");
 			if (address == null)
 				throw new IllegalArgumentException("address == null");
 			if (dataPort < 1024 || dataPort > 65535)
 				throw new IllegalArgumentException("dataPort invalid");
 			if (controlPort < 1024 || controlPort > 65535)
 				throw new IllegalArgumentException(
-						"controlPort invalid port number");
+					"controlPort invalid port number");
 			if (hardware == null)
 				throw new IllegalArgumentException("hardware == null");
 
@@ -83,11 +84,15 @@ public final class Descriptors
 		@Override
 		public boolean equals(Object other)
 		{
-			if (this == other) return true;
-			if (other == null) return false;
-			if (other.getClass() != getClass()) return false;
+			if (this == other)
+				return true;
+			if (other == null)
+				return false;
+			if (other.getClass() != getClass())
+				return false;
 
-			if (!(uid.equals(((MachineDescriptor) other).uid))) return false;
+			if (!(uid.equals(((MachineDescriptor) other).uid)))
+				return false;
 			if (!(dataAddress.equals(((MachineDescriptor) other).dataAddress)))
 				return false;
 			return true;
@@ -97,8 +102,8 @@ public final class Descriptors
 		public String toString()
 		{
 			return (new StringBuilder()).append("MachineDescriptor = {")
-					.append(" uid = " + uid.toString() + ", ")
-					.append(" netAddress = " + dataAddress).append(" }").toString();
+				.append(" uid = " + uid.toString() + ", ")
+				.append(" netAddress = " + dataAddress).append(" }").toString();
 		}
 	}
 
@@ -119,11 +124,14 @@ public final class Descriptors
 				HDDDescriptor hdd)
 		{
 			// sanity check.
-			if (uid == null) throw new IllegalArgumentException("uid == null");
-			if (cpuCores < 1) throw new IllegalArgumentException("cpuCores < 1");
+			if (uid == null)
+				throw new IllegalArgumentException("uid == null");
+			if (cpuCores < 1)
+				throw new IllegalArgumentException("cpuCores < 1");
 			if (sizeOfRAM < 1024 * 1024 * 1024)
 				throw new IllegalArgumentException("Less than one GB of RAM");
-			if (hdd == null) throw new IllegalArgumentException("hdd == null");
+			if (hdd == null)
+				throw new IllegalArgumentException("hdd == null");
 
 			this.uid = uid;
 			this.cpuCores = cpuCores;
@@ -132,18 +140,25 @@ public final class Descriptors
 		}
 
 		public final UUID uid;
+
 		public final short cpuCores;
+
 		public final long sizeOfRAM;
+
 		public final HDDDescriptor hdd;
 
 		@Override
 		public boolean equals(Object other)
 		{
-			if (this == other) return true;
-			if (other == null) return false;
-			if (other.getClass() != getClass()) return false;
+			if (this == other)
+				return true;
+			if (other == null)
+				return false;
+			if (other.getClass() != getClass())
+				return false;
 
-			if (!(uid.equals(((MachineDescriptor) other).uid))) return false;
+			if (!(uid.equals(((MachineDescriptor) other).uid)))
+				return false;
 			return true;
 		}
 
@@ -151,9 +166,9 @@ public final class Descriptors
 		public String toString()
 		{
 			return (new StringBuilder()).append("MachineDescriptor = {")
-					.append(" uid = " + uid.toString() + ", ")
-					.append(" cpuCores = " + cpuCores + ", ")
-					.append(" sizeOfRAM = " + sizeOfRAM).append(" }").toString();
+				.append(" uid = " + uid.toString() + ", ")
+				.append(" cpuCores = " + cpuCores + ", ")
+				.append(" sizeOfRAM = " + sizeOfRAM).append(" }").toString();
 		}
 	}
 
@@ -172,7 +187,8 @@ public final class Descriptors
 		public HDDDescriptor(UUID uid, long sizeOfHDD)
 		{
 			// sanity check.
-			if (uid == null) throw new IllegalArgumentException("uid == null");
+			if (uid == null)
+				throw new IllegalArgumentException("uid == null");
 			if (sizeOfHDD < 1024 * 1024 * 1024)
 				throw new IllegalArgumentException("Less than one GB of HDD space");
 
@@ -181,16 +197,21 @@ public final class Descriptors
 		}
 
 		public final UUID uid;
+
 		public final long sizeOfHDD;
 
 		@Override
 		public boolean equals(Object other)
 		{
-			if (this == other) return true;
-			if (other == null) return false;
-			if (other.getClass() != getClass()) return false;
+			if (this == other)
+				return true;
+			if (other == null)
+				return false;
+			if (other.getClass() != getClass())
+				return false;
 
-			if (!(uid.equals(((MachineDescriptor) other).uid))) return false;
+			if (!(uid.equals(((MachineDescriptor) other).uid)))
+				return false;
 			return true;
 		}
 
@@ -198,8 +219,8 @@ public final class Descriptors
 		public String toString()
 		{
 			return (new StringBuilder()).append("MachineDescriptor = {")
-					.append(" uid = " + uid.toString() + ", ")
-					.append(" sizeOfHDD = " + sizeOfHDD).append(" }").toString();
+				.append(" uid = " + uid.toString() + ", ")
+				.append(" sizeOfHDD = " + sizeOfHDD).append(" }").toString();
 		}
 	}
 
@@ -214,8 +235,10 @@ public final class Descriptors
 		public TaskDescriptor(UUID uid, String name, UserCode userCode)
 		{
 			// sanity check.
-			if (uid == null) throw new IllegalArgumentException("uid == null");
-			if (name == null) throw new IllegalArgumentException("name == null");
+			if (uid == null)
+				throw new IllegalArgumentException("uid == null");
+			if (name == null)
+				throw new IllegalArgumentException("name == null");
 			if (userCode == null)
 				throw new IllegalArgumentException("userCode == null");
 
@@ -253,15 +276,20 @@ public final class Descriptors
 		@Override
 		public boolean equals(Object other)
 		{
-			if (this == other) return true;
-			if (other == null) return false;
-			if (other.getClass() != getClass()) return false;
+			if (this == other)
+				return true;
+			if (other == null)
+				return false;
+			if (other.getClass() != getClass())
+				return false;
 
 			if ((machine == null && ((TaskDescriptor) other).machine == null)
-					|| !(machine.equals(((TaskDescriptor) other).machine)))
+				|| !(machine.equals(((TaskDescriptor) other).machine)))
 				return false;
-			if (!(uid.equals(((TaskDescriptor) other).uid))) return false;
-			if (!(name.equals(((TaskDescriptor) other).name))) return false;
+			if (!(uid.equals(((TaskDescriptor) other).uid)))
+				return false;
+			if (!(name.equals(((TaskDescriptor) other).name)))
+				return false;
 			return true;
 		}
 
@@ -269,9 +297,9 @@ public final class Descriptors
 		public String toString()
 		{
 			return (new StringBuilder()).append("TaskDescriptor = {")
-					.append(" machine = " + machine.toString() + ", ")
-					.append(" uid = " + uid.toString() + ", ")
-					.append(" name = " + name).append(" }").toString();
+				.append(" machine = " + machine.toString() + ", ")
+				.append(" uid = " + uid.toString() + ", ")
+				.append(" name = " + name).append(" }").toString();
 		}
 	}
 
@@ -298,10 +326,10 @@ public final class Descriptors
 			this.task = task;
 
 			this.inputGateBindings = Collections
-					.unmodifiableList(inputGateBindings);
+				.unmodifiableList(inputGateBindings);
 
 			this.outputGateBindings = Collections
-					.unmodifiableList(outputGateBindings);
+				.unmodifiableList(outputGateBindings);
 		}
 
 		public final TaskDescriptor task;
@@ -313,17 +341,20 @@ public final class Descriptors
 		@Override
 		public boolean equals(Object other)
 		{
-			if (this == other) return true;
-			if (other == null) return false;
-			if (other.getClass() != getClass()) return false;
+			if (this == other)
+				return true;
+			if (other == null)
+				return false;
+			if (other.getClass() != getClass())
+				return false;
 
 			if (!(task.equals(((TaskBindingDescriptor) other).task)))
 				return false;
 			if (!(inputGateBindings
-					.equals(((TaskBindingDescriptor) other).inputGateBindings)))
+				.equals(((TaskBindingDescriptor) other).inputGateBindings)))
 				return false;
 			if (!(outputGateBindings
-					.equals(((TaskBindingDescriptor) other).outputGateBindings)))
+				.equals(((TaskBindingDescriptor) other).outputGateBindings)))
 				return false;
 			return true;
 		}
@@ -332,11 +363,11 @@ public final class Descriptors
 		public String toString()
 		{
 			return (new StringBuilder())
-					.append("TaskBindingDescriptor = {")
-					// .append( " task = " + task.toString() + ", " )
-					.append(" inputGates = " + inputGateBindings.toString() + ", ")
-					.append(" outputGates = " + outputGateBindings.toString())
-					.append(" }").toString();
+				.append("TaskBindingDescriptor = {")
+				// .append( " task = " + task.toString() + ", " )
+				.append(" inputGates = " + inputGateBindings.toString() + ", ")
+				.append(" outputGates = " + outputGateBindings.toString())
+				.append(" }").toString();
 		}
 	}
 
@@ -369,15 +400,18 @@ public final class Descriptors
 		@Override
 		public boolean equals(Object other)
 		{
-			if (this == other) return true;
-			if (other == null) return false;
-			if (other.getClass() != getClass()) return false;
+			if (this == other)
+				return true;
+			if (other == null)
+				return false;
+			if (other.getClass() != getClass())
+				return false;
 
 			if (!(taskDescriptor
-					.equals(((TaskDeploymentDescriptor) other).taskDescriptor)))
+				.equals(((TaskDeploymentDescriptor) other).taskDescriptor)))
 				return false;
 			if (!(taskBindingDescriptor
-					.equals(((TaskDeploymentDescriptor) other).taskBindingDescriptor)))
+				.equals(((TaskDeploymentDescriptor) other).taskBindingDescriptor)))
 				return false;
 			return true;
 		}
@@ -386,12 +420,12 @@ public final class Descriptors
 		public String toString()
 		{
 			return (new StringBuilder())
-					.append("TaskDeploymentDescriptor = {")
-					.append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-					.append(
-							" taskBindingDescriptor = "
-									+ taskBindingDescriptor.toString()).append(" }")
-					.toString();
+				.append("TaskDeploymentDescriptor = {")
+				.append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
+				.append(
+					" taskBindingDescriptor = "
+						+ taskBindingDescriptor.toString()).append(" }")
+				.toString();
 		}
 	}
 }

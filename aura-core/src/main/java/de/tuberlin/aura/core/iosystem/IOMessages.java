@@ -5,161 +5,162 @@ import java.util.UUID;
 
 public final class IOMessages {
 
-    // Disallow instantiation.
-    private IOMessages() {}
+	// Disallow instantiation.
+	private IOMessages() {
+	}
 
-    /**
+	/**
      *
      */
-    public static final class DataChannelGateMessage implements Serializable {
+	public static final class DataChannelGateMessage implements Serializable {
 
-        private static final long serialVersionUID = -3242583979326543776L;
+		private static final long serialVersionUID = -3242583979326543776L;
 
-        public static final String DATA_CHANNEL_OUTPUT_GATE_OPEN = "DATA_CHANNEL_OUTPUT_GATE_OPEN";
+		public static final String DATA_CHANNEL_OUTPUT_GATE_OPEN = "DATA_CHANNEL_OUTPUT_GATE_OPEN";
 
-        public static final String DATA_CHANNEL_OUTPUT_GATE_CLOSE = "DATA_CHANNEL_OUTPUT_GATE_CLOSE";
+		public static final String DATA_CHANNEL_OUTPUT_GATE_CLOSE = "DATA_CHANNEL_OUTPUT_GATE_CLOSE";
 
-        public DataChannelGateMessage( final UUID srcTaskID, final UUID dstTaskID, final String msgType ) {
-            // sanity check.
-            if( srcTaskID == null )
-                throw new IllegalArgumentException( "srcTaskID == null" );
-            if( dstTaskID == null )
-                throw new IllegalArgumentException( "dstTaskID == null" );
-            if( msgType == null )
-                throw new IllegalArgumentException( "msgType == null" );
+		public DataChannelGateMessage(final UUID srcTaskID, final UUID dstTaskID, final String msgType) {
+			// sanity check.
+			if (srcTaskID == null)
+				throw new IllegalArgumentException("srcTaskID == null");
+			if (dstTaskID == null)
+				throw new IllegalArgumentException("dstTaskID == null");
+			if (msgType == null)
+				throw new IllegalArgumentException("msgType == null");
 
-            this.srcTaskID = srcTaskID;
+			this.srcTaskID = srcTaskID;
 
-            this.dstTaskID = dstTaskID;
+			this.dstTaskID = dstTaskID;
 
-            this.msgType = msgType;
-        }
+			this.msgType = msgType;
+		}
 
-        public final UUID srcTaskID;
+		public final UUID srcTaskID;
 
-        public final UUID dstTaskID;
+		public final UUID dstTaskID;
 
-        public final String msgType;
-    }
+		public final String msgType;
+	}
 
-    /**
+	/**
      *
      */
-    public static final class ChannelHandshakeMessage implements Serializable {
+	public static final class ChannelHandshakeMessage implements Serializable {
 
-        private static final long serialVersionUID = 4015271410077813454L;
+		private static final long serialVersionUID = 4015271410077813454L;
 
-        public ChannelHandshakeMessage( final UUID srcTaskID, final UUID dstTaskID ) {
-            // sanity check.
-            if( srcTaskID == null )
-                throw new IllegalArgumentException( "srcTaskID == null" );
-            if( dstTaskID == null )
-                throw new IllegalArgumentException( "dstTaskID == null" );
+		public ChannelHandshakeMessage(final UUID srcTaskID, final UUID dstTaskID) {
+			// sanity check.
+			if (srcTaskID == null)
+				throw new IllegalArgumentException("srcTaskID == null");
+			if (dstTaskID == null)
+				throw new IllegalArgumentException("dstTaskID == null");
 
-            this.srcTaskID = srcTaskID;
+			this.srcTaskID = srcTaskID;
 
-            this.dstTaskID = dstTaskID;
-        }
+			this.dstTaskID = dstTaskID;
+		}
 
-        public final UUID srcTaskID;
+		public final UUID srcTaskID;
 
-        public final UUID dstTaskID;
+		public final UUID dstTaskID;
 
-        @Override
-        public String toString() {
-            return (new StringBuilder())
-                    .append( "ChannelHandshakeMessage = {" )
-                    .append( " srcTaskID = " + srcTaskID.toString() + ", " )
-                    .append( " dstTaskID = " + dstTaskID.toString() )
-                    .append( " }" ).toString();
-        }
-    }
+		@Override
+		public String toString() {
+			return (new StringBuilder())
+				.append("ChannelHandshakeMessage = {")
+				.append(" srcTaskID = " + srcTaskID.toString() + ", ")
+				.append(" dstTaskID = " + dstTaskID.toString())
+				.append(" }").toString();
+		}
+	}
 
-    /**
+	/**
      *
      */
-    public static final class DataMessage implements Serializable {
+	public static final class DataMessage implements Serializable {
 
-        private static final long serialVersionUID = 1969518766756038834L;
+		private static final long serialVersionUID = 1969518766756038834L;
 
-        public DataMessage( final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final byte[] data ) {
-            // sanity check.
-            if( messageID == null )
-                throw new IllegalArgumentException( "messageID == null" );
-            if( srcTaskID == null )
-                throw new IllegalArgumentException( "srcTaskID == null" );
-            if( dstTaskID == null )
-                throw new IllegalArgumentException( "dstTaskID == null" );
-            if( data == null )
-                throw new IllegalArgumentException( "data == null" );
+		public DataMessage(final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final byte[] data) {
+			// sanity check.
+			if (messageID == null)
+				throw new IllegalArgumentException("messageID == null");
+			if (srcTaskID == null)
+				throw new IllegalArgumentException("srcTaskID == null");
+			if (dstTaskID == null)
+				throw new IllegalArgumentException("dstTaskID == null");
+			if (data == null)
+				throw new IllegalArgumentException("data == null");
 
-            this.messageID = messageID;
+			this.messageID = messageID;
 
-            this.srcTaskID = srcTaskID;
+			this.srcTaskID = srcTaskID;
 
-            this.dstTaskID = dstTaskID;
+			this.dstTaskID = dstTaskID;
 
-            this.data = data;
-        }
+			this.data = data;
+		}
 
-        public final UUID messageID;
+		public final UUID messageID;
 
-        public final UUID srcTaskID;
+		public final UUID srcTaskID;
 
-        public final UUID dstTaskID;
+		public final UUID dstTaskID;
 
-        public final byte[] data;
+		public final byte[] data;
 
-        @Override
-        public String toString() {
-            return (new StringBuilder())
-                    .append( "ChannelHandshakeMessage = {" )
-                    .append( " messageID = " + srcTaskID.toString() + ", " )
-                    .append( " srcTaskID = " + srcTaskID.toString() + ", " )
-                    .append( " dstTaskID = " + dstTaskID.toString() + ", " )
-                    .append( " data = " + data + ", " )
-                    .append( " length( data ) = " + data.length )
-                    .append( " }" ).toString();
-        }
-    }
+		@Override
+		public String toString() {
+			return (new StringBuilder())
+				.append("ChannelHandshakeMessage = {")
+				.append(" messageID = " + srcTaskID.toString() + ", ")
+				.append(" srcTaskID = " + srcTaskID.toString() + ", ")
+				.append(" dstTaskID = " + dstTaskID.toString() + ", ")
+				.append(" data = " + data + ", ")
+				.append(" length( data ) = " + data.length)
+				.append(" }").toString();
+		}
+	}
 
-    /**
+	/**
      *
      */
-    public static final class ControlMessage implements Serializable {
+	public static final class ControlMessage implements Serializable {
 
-        private static final long serialVersionUID = 6852264669798022124L;
+		private static final long serialVersionUID = 6852264669798022124L;
 
-        public ControlMessage( final UUID messageID, final UUID srcTaskManagerID, Object data ) {
-            // sanity check.
-            if( messageID == null )
-                throw new IllegalArgumentException( "messageID == null" );
-            if( srcTaskManagerID == null )
-                throw new IllegalArgumentException( "srcTaskManagerID == null" );
-            if( data == null )
-                throw new IllegalArgumentException( "data == null" );
+		public ControlMessage(final UUID messageID, final UUID srcTaskManagerID, Object data) {
+			// sanity check.
+			if (messageID == null)
+				throw new IllegalArgumentException("messageID == null");
+			if (srcTaskManagerID == null)
+				throw new IllegalArgumentException("srcTaskManagerID == null");
+			if (data == null)
+				throw new IllegalArgumentException("data == null");
 
-            this.messageID = messageID;
+			this.messageID = messageID;
 
-            this.srcTaskManagerID = srcTaskManagerID;
+			this.srcTaskManagerID = srcTaskManagerID;
 
-            this.data = data;
-        }
+			this.data = data;
+		}
 
-        public final UUID messageID;
+		public final UUID messageID;
 
-        public final UUID srcTaskManagerID;
+		public final UUID srcTaskManagerID;
 
-        public final Object data;
+		public final Object data;
 
-        @Override
-        public String toString() {
-            return (new StringBuilder())
-                    .append( "ControlMessage = {" )
-                    .append( " messageID = " + messageID.toString() + ", " )
-                    .append( " srcTaskID = " + srcTaskManagerID.toString() + ", " )
-                    .append( " data = " + data + ", " )
-                    .append( " }" ).toString();
-        }
-    }
+		@Override
+		public String toString() {
+			return (new StringBuilder())
+				.append("ControlMessage = {")
+				.append(" messageID = " + messageID.toString() + ", ")
+				.append(" srcTaskID = " + srcTaskManagerID.toString() + ", ")
+				.append(" data = " + data + ", ")
+				.append(" }").toString();
+		}
+	}
 }

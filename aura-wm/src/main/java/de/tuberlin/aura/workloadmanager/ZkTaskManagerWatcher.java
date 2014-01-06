@@ -26,7 +26,7 @@ public class ZkTaskManagerWatcher implements Watcher {
 	 * Logger.
 	 */
 	private static final Logger LOG = LoggerFactory
-			.getLogger(ZkTaskManagerWatcher.class);
+		.getLogger(ZkTaskManagerWatcher.class);
 
 	/**
 	 * Events received by this class are passed on to this handler.
@@ -45,8 +45,8 @@ public class ZkTaskManagerWatcher implements Watcher {
 	 * Constructor.
 	 * 
 	 * @param dispatcher
-	 *            Forward all events that are received by this class to this
-	 *            event handler for further processing.
+	 *        Forward all events that are received by this class to this
+	 *        event handler for further processing.
 	 */
 	public ZkTaskManagerWatcher(IEventHandler handler, ZooKeeper zk) {
 		this.handler = handler;
@@ -67,7 +67,7 @@ public class ZkTaskManagerWatcher implements Watcher {
 			case NodeChildrenChanged:
 				// Find out whether a node was created or deleted.
 				List<String> nodeList = this.zk.getChildren(
-						ZkHelper.ZOOKEEPER_TASKMANAGERS, false);
+					ZkHelper.ZOOKEEPER_TASKMANAGERS, false);
 
 				de.tuberlin.aura.core.common.eventsystem.Event zkEvent = null;
 				if (this.nodes.size() < nodeList.size()) {
@@ -76,9 +76,9 @@ public class ZkTaskManagerWatcher implements Watcher {
 					for (String node : nodeList) {
 						if (!this.nodes.contains(node)) {
 							byte[] data = this.zk.getData(event.getPath() + "/"
-									+ node, false, null);
+								+ node, false, null);
 							ByteArrayInputStream bais = new ByteArrayInputStream(
-									data);
+								data);
 							ObjectInputStream ois = new ObjectInputStream(bais);
 							newNode = (MachineDescriptor) ois.readObject();
 
@@ -88,7 +88,7 @@ public class ZkTaskManagerWatcher implements Watcher {
 					}
 
 					zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(
-							ZkHelper.EVENT_TYPE_NODE_ADDED, newNode);
+						ZkHelper.EVENT_TYPE_NODE_ADDED, newNode);
 				} else {
 					// A node has been removed.
 					String nodeName = null;
@@ -100,8 +100,8 @@ public class ZkTaskManagerWatcher implements Watcher {
 					}
 
 					zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(
-							ZkHelper.EVENT_TYPE_NODE_REMOVED,
-							UUID.fromString(nodeName));
+						ZkHelper.EVENT_TYPE_NODE_REMOVED,
+						UUID.fromString(nodeName));
 				}
 
 				// Forward the event.

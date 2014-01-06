@@ -13,165 +13,174 @@ import org.apache.log4j.Logger;
 /**
  * The EventDispatcher is responsible for adding and removing listeners and
  * for dispatching event to this listeners.
- *
+ * 
  * @author Tobias Herb
- *
  */
 public class EventDispatcher implements IEventDispatcher {
 
-    //---------------------------------------------------
-    // Constructors.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Constructors.
+	// ---------------------------------------------------
 
-    public EventDispatcher() {
-        this( false );
-    }
+	public EventDispatcher() {
+		this(false);
+	}
 
-    public EventDispatcher( boolean useDispatchThread ) {
+	public EventDispatcher(boolean useDispatchThread) {
 
-        this.listenerMap = new ConcurrentHashMap<String, List<IEventHandler>>();
+		this.listenerMap = new ConcurrentHashMap<String, List<IEventHandler>>();
 
-        this.useDispatchThread = useDispatchThread;
+		this.useDispatchThread = useDispatchThread;
 
-        this.isRunning = new AtomicBoolean( useDispatchThread );
+		this.isRunning = new AtomicBoolean(useDispatchThread);
 
-        this.eventQueue = useDispatchThread ? new LinkedBlockingQueue<Event>() : null;
+		this.eventQueue = useDispatchThread ? new LinkedBlockingQueue<Event>() : null;
 
-        this.dispatcherThread = useDispatchThread ? new Runnable() {
+		this.dispatcherThread = useDispatchThread ? new Runnable() {
 
-            @Override
-            public void run() {
-                while( isRunning.get() ) {
-                    try {
-                        final Event event = eventQueue.take();
-                        dispatch( event );
-                    } catch (InterruptedException e) {
-                        LOG.error( e );
-                    }
-                }
-            }
-        } : null;
+			@Override
+			public void run() {
+				while (isRunning.get()) {
+					try {
+						final Event event = eventQueue.take();
+						dispatch(event);
+					} catch (InterruptedException e) {
+						LOG.error(e);
+					}
+				}
+			}
+		} : null;
 
-        if( useDispatchThread ) {
-            new Thread( dispatcherThread ).start();
-        }
-    }
+		if (useDispatchThread) {
+			new Thread(dispatcherThread).start();
+		}
+	}
 
-    //---------------------------------------------------
-    // Fields.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Fields.
+	// ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger( EventDispatcher.class );
+	private static final Logger LOG = Logger.getLogger(EventDispatcher.class);
 
-    private final Map<String,List<IEventHandler>> listenerMap;
+	private final Map<String, List<IEventHandler>> listenerMap;
 
-    private final boolean useDispatchThread;
+	private final boolean useDispatchThread;
 
-    private final Runnable dispatcherThread;
+	private final Runnable dispatcherThread;
 
-    private final AtomicBoolean isRunning;
+	private final AtomicBoolean isRunning;
 
-    private final BlockingQueue<Event> eventQueue;
+	private final BlockingQueue<Event> eventQueue;
 
-    //---------------------------------------------------
-    // Public.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Public.
+	// ---------------------------------------------------
 
-    /**
-     * Add a listener for a specific event.
-     * @param type The event type.
-     * @param listener The handler for this event.
-     */
-    @Override
-    public synchronized void addEventListener( final String type, final IEventHandler listener ) {
-        // sanity check.
-        if( type == null )
-            throw new IllegalArgumentException( "type == null" );
-        if( listener == null )
-            throw new IllegalArgumentException( "listener == null" );
+	/**
+	 * Add a listener for a specific event.
+	 * 
+	 * @param type
+	 *        The event type.
+	 * @param listener
+	 *        The handler for this event.
+	 */
+	@Override
+	public synchronized void addEventListener(final String type, final IEventHandler listener) {
+		// sanity check.
+		if (type == null)
+			throw new IllegalArgumentException("type == null");
+		if (listener == null)
+			throw new IllegalArgumentException("listener == null");
 
-        List<IEventHandler> listeners = listenerMap.get( type );
-        if( listeners == null ) {
-            listeners = new ArrayList<IEventHandler>();
-            listenerMap.put( type, listeners );
-        }
-        listeners.add( listener );
-    }
+		List<IEventHandler> listeners = listenerMap.get(type);
+		if (listeners == null) {
+			listeners = new ArrayList<IEventHandler>();
+			listenerMap.put(type, listeners);
+		}
+		listeners.add(listener);
+	}
 
-    /**
-     * Remove a listener for a specific event.
-     * @param type The event type.
-     * @param listener The handler for this event.
-     */
-    @Override
-    public synchronized boolean removeEventListener( final String type, final IEventHandler listener ) {
-        // sanity check.
-        if( type == null )
-            throw new IllegalArgumentException( "type == null" );
-        if( listener == null )
-            throw new IllegalArgumentException( "listener == null" );
+	/**
+	 * Remove a listener for a specific event.
+	 * 
+	 * @param type
+	 *        The event type.
+	 * @param listener
+	 *        The handler for this event.
+	 */
+	@Override
+	public synchronized boolean removeEventListener(final String type, final IEventHandler listener) {
+		// sanity check.
+		if (type == null)
+			throw new IllegalArgumentException("type == null");
+		if (listener == null)
+			throw new IllegalArgumentException("listener == null");
 
-        final List<IEventHandler> listeners = listenerMap.get( type );
-        if( listeners != null ) {
-            boolean isRemoved = listeners.remove( listener );
-            // if no more listeners registered, we remove the complete mapping.
-            if( isRemoved && listeners.size() == 0 ) {
-                listenerMap.remove( type );
-            }
-            return isRemoved;
-        } else {
-            return false;
-        }
-    }
+		final List<IEventHandler> listeners = listenerMap.get(type);
+		if (listeners != null) {
+			boolean isRemoved = listeners.remove(listener);
+			// if no more listeners registered, we remove the complete mapping.
+			if (isRemoved && listeners.size() == 0) {
+				listenerMap.remove(type);
+			}
+			return isRemoved;
+		} else {
+			return false;
+		}
+	}
 
-    /**
-     * Dispatch a event.
-     * @param event The event to dispatch.
-     */
-    @Override
-    public void dispatchEvent( final Event event ) {
-        // sanity check.
-        if( event == null )
-            throw new IllegalArgumentException( "event == null" );
+	/**
+	 * Dispatch a event.
+	 * 
+	 * @param event
+	 *        The event to dispatch.
+	 */
+	@Override
+	public void dispatchEvent(final Event event) {
+		// sanity check.
+		if (event == null)
+			throw new IllegalArgumentException("event == null");
 
-        if( useDispatchThread ) {
-            eventQueue.add( event );
-        } else {
-            dispatch( event );
-        }
-    }
+		if (useDispatchThread) {
+			eventQueue.add(event);
+		} else {
+			dispatch(event);
+		}
+	}
 
-    /**
-     * Checks if listeners are installed for that event type.
-     * @param type The event type.
-     * @return True if a listener is installed, else false.
-     */
-    @Override
-    public boolean hasEventListener( final String type ) {
-        // sanity check.
-        if( type == null )
-            throw new IllegalArgumentException( "type == null" );
+	/**
+	 * Checks if listeners are installed for that event type.
+	 * 
+	 * @param type
+	 *        The event type.
+	 * @return True if a listener is installed, else false.
+	 */
+	@Override
+	public boolean hasEventListener(final String type) {
+		// sanity check.
+		if (type == null)
+			throw new IllegalArgumentException("type == null");
 
-        return listenerMap.get( type ) != null;
-    }
+		return listenerMap.get(type) != null;
+	}
 
-    public void shutdownEventQueue() {
-        isRunning.set( false );
-    }
+	public void shutdownEventQueue() {
+		isRunning.set(false);
+	}
 
-    //---------------------------------------------------
-    // Private.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Private.
+	// ---------------------------------------------------
 
-    private synchronized void dispatch( final Event event ) {
-        final List<IEventHandler> listeners = listenerMap.get( event.type );
-        if( listeners != null ) {
-            for( final IEventHandler el : listeners ) {
-                el.handleEvent( event );
-            }
-        } else { // listeners == null
-        	// TODO: This should not throw an exception just because there is no listener at the moment. 
-            // throw new IllegalStateException( "listeners == null" );
-        }
-    }
+	private synchronized void dispatch(final Event event) {
+		final List<IEventHandler> listeners = listenerMap.get(event.type);
+		if (listeners != null) {
+			for (final IEventHandler el : listeners) {
+				el.handleEvent(event);
+			}
+		} else { // listeners == null
+			// TODO: This should not throw an exception just because there is no listener at the moment.
+			// throw new IllegalStateException( "listeners == null" );
+		}
+	}
 }

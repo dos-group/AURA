@@ -20,7 +20,7 @@ public class ZkConnectionWatcher implements Watcher {
 	 * Logger.
 	 */
 	private static final Logger LOG = LoggerFactory
-			.getLogger(ZkConnectionWatcher.class);
+		.getLogger(ZkConnectionWatcher.class);
 
 	/**
 	 * Events received by this class are passed on to this handler.
@@ -31,8 +31,8 @@ public class ZkConnectionWatcher implements Watcher {
 	 * Constructor.
 	 * 
 	 * @param handler
-	 *            Forward all events that are received by this class to this
-	 *            event handler for further processing.
+	 *        Forward all events that are received by this class to this
+	 *        event handler for further processing.
 	 */
 	public ZkConnectionWatcher(IEventHandler handler) {
 		this.handler = handler;
@@ -49,7 +49,7 @@ public class ZkConnectionWatcher implements Watcher {
 		switch (event.getState()) {
 		case Expired:
 			de.tuberlin.aura.core.common.eventsystem.Event zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(
-					ZkHelper.EVENT_TYPE_CONNECTION_EXPIRED);
+				ZkHelper.EVENT_TYPE_CONNECTION_EXPIRED);
 			this.handler.handleEvent(zkEvent);
 			break;
 		default:

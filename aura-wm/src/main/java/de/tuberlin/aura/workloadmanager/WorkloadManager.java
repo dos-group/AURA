@@ -23,106 +23,106 @@ import de.tuberlin.aura.demo.deployment.LocalDeployment;
 
 public class WorkloadManager implements ClientWMProtocol, IEventHandler {
 
-    //---------------------------------------------------
-    // Constructors.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Constructors.
+	// ---------------------------------------------------
 
-    public WorkloadManager(String zkServers, final MachineDescriptor machine ) {
-        // sanity check.
-        if( machine == null )
-            throw new IllegalArgumentException( "machine == null" );
+	public WorkloadManager(String zkServers, final MachineDescriptor machine) {
+		// sanity check.
+		if (machine == null)
+			throw new IllegalArgumentException("machine == null");
 
-        this.machine = machine;
+		this.machine = machine;
 
-        this.ioManager = new IOManager( this.machine );
+		this.ioManager = new IOManager(this.machine);
 
-        this.rpcManager = new RPCManager( ioManager );
+		this.rpcManager = new RPCManager(ioManager);
 
-        this.workerMachines = new ArrayList<MachineDescriptor>();
-//        workerMachines.add( LocalDeployment.MACHINE_1_DESCRIPTOR );
-//        workerMachines.add( LocalDeployment.MACHINE_2_DESCRIPTOR );
-//        workerMachines.add( LocalDeployment.MACHINE_3_DESCRIPTOR );
-//        workerMachines.add( LocalDeployment.MACHINE_4_DESCRIPTOR );
+		this.workerMachines = new ArrayList<MachineDescriptor>();
+		// workerMachines.add( LocalDeployment.MACHINE_1_DESCRIPTOR );
+		// workerMachines.add( LocalDeployment.MACHINE_2_DESCRIPTOR );
+		// workerMachines.add( LocalDeployment.MACHINE_3_DESCRIPTOR );
+		// workerMachines.add( LocalDeployment.MACHINE_4_DESCRIPTOR );
 
-        rpcManager.registerRPCProtocolImpl( this, ClientWMProtocol.class );
+		rpcManager.registerRPCProtocolImpl(this, ClientWMProtocol.class);
 
-        this.topologyParallelizer = new TopologyParallelizer();
-        
-        this.infrastructureManager = InfrastructureManager.getInstance(zkServers);
-        // TODO: move into separate method or change the way existing nodes are passed to the workload manager
-        this.infrastructureManager.addEventListener(ZkHelper.EVENT_TYPE_NODE_ADDED, this);
-        this.infrastructureManager.addEventListener(ZkHelper.EVENT_TYPE_NODE_REMOVED, this);
-    }
+		this.topologyParallelizer = new TopologyParallelizer();
 
-    //---------------------------------------------------
-    // Fields.
-    //---------------------------------------------------
+		this.infrastructureManager = InfrastructureManager.getInstance(zkServers);
+		// TODO: move into separate method or change the way existing nodes are passed to the workload manager
+		this.infrastructureManager.addEventListener(ZkHelper.EVENT_TYPE_NODE_ADDED, this);
+		this.infrastructureManager.addEventListener(ZkHelper.EVENT_TYPE_NODE_REMOVED, this);
+	}
 
-    private static final Logger LOG = Logger.getLogger( WorkloadManager.class );
+	// ---------------------------------------------------
+	// Fields.
+	// ---------------------------------------------------
 
-    private final MachineDescriptor machine;
+	private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
 
-    private final IOManager ioManager;
+	private final MachineDescriptor machine;
 
-    private final RPCManager rpcManager;
+	private final IOManager ioManager;
 
-    private final List<MachineDescriptor> workerMachines;
+	private final RPCManager rpcManager;
 
-    private final TopologyParallelizer topologyParallelizer;
-    
-    private final InfrastructureManager infrastructureManager;
+	private final List<MachineDescriptor> workerMachines;
 
-    //---------------------------------------------------
-    // Private.
-    //---------------------------------------------------
+	private final TopologyParallelizer topologyParallelizer;
 
-    // TODO: check if connections already exist.
+	private final InfrastructureManager infrastructureManager;
 
-    @Override
-    public void submitTopology( final AuraTopology topology ) {
-        // sanity check.
-        if( topology == null )
-            throw new IllegalArgumentException( "topology == null" );
+	// ---------------------------------------------------
+	// Private.
+	// ---------------------------------------------------
 
-        // Parallelizing.
-        topologyParallelizer.parallelizeTopology( topology );
+	// TODO: check if connections already exist.
 
-        // Scheduling.
-        TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {
+	@Override
+	public void submitTopology(final AuraTopology topology) {
+		// sanity check.
+		if (topology == null)
+			throw new IllegalArgumentException("topology == null");
 
-            private int machineIdx = 0;
+		// Parallelizing.
+		topologyParallelizer.parallelizeTopology(topology);
 
-            @Override
-            public void visit( final Node element ) {
-                for( final ExecutionNode en : element.getExecutionNodes() ) {
-                    en.getTaskDescriptor().setMachineDescriptor( workerMachines.get( machineIdx ) );
-                }
-                ++machineIdx;
-            }
-        } );
+		// Scheduling.
+		TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
 
-        // Deploying.
-        TopologyBreadthFirstTraverser.traverseBackwards( topology, new Visitor<Node>() {
+			private int machineIdx = 0;
 
-            @Override
-            public void visit( final Node element ) {
-                for( final ExecutionNode en : element.getExecutionNodes() ) {
-                    final TaskDeploymentDescriptor tdd =
-                            new TaskDeploymentDescriptor( en.getTaskDescriptor(),
-                                                            en.getTaskBindingDescriptor() );
-                    final WM2TMProtocol tmProtocol =
-                            rpcManager.getRPCProtocolProxy( WM2TMProtocol.class,
-                                                             en.getTaskDescriptor().getMachineDescriptor() );
-                    tmProtocol.installTask( tdd );
-                    LOG.info( "deploy task : " + tdd.toString() );
-                }
-            }
-        } );
-    }
+			@Override
+			public void visit(final Node element) {
+				for (final ExecutionNode en : element.getExecutionNodes()) {
+					en.getTaskDescriptor().setMachineDescriptor(workerMachines.get(machineIdx));
+				}
+				++machineIdx;
+			}
+		});
+
+		// Deploying.
+		TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
+
+			@Override
+			public void visit(final Node element) {
+				for (final ExecutionNode en : element.getExecutionNodes()) {
+					final TaskDeploymentDescriptor tdd =
+						new TaskDeploymentDescriptor(en.getTaskDescriptor(),
+							en.getTaskBindingDescriptor());
+					final WM2TMProtocol tmProtocol =
+						rpcManager.getRPCProtocolProxy(WM2TMProtocol.class,
+							en.getTaskDescriptor().getMachineDescriptor());
+					tmProtocol.installTask(tdd);
+					LOG.info("deploy task : " + tdd.toString());
+				}
+			}
+		});
+	}
 
 	@Override
 	public void handleEvent(Event event) {
-		switch(event.type)
+		switch (event.type)
 		{
 		case ZkHelper.EVENT_TYPE_NODE_ADDED:
 			this.workerMachines.add((MachineDescriptor) event.data);

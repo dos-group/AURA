@@ -24,7 +24,6 @@ import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 
 /**
  * Singleton.
- * 
  * TODO: Where to define event types?
  */
 @NotThreadSafe
@@ -34,7 +33,7 @@ public class InfrastructureManager extends EventDispatcher implements
 	 * Logger.
 	 */
 	private static final Logger LOG = LoggerFactory
-			.getLogger(InfrastructureManager.class);
+		.getLogger(InfrastructureManager.class);
 
 	/**
 	 * The only instance of this class.
@@ -52,8 +51,8 @@ public class InfrastructureManager extends EventDispatcher implements
 	 * Constructor.
 	 * 
 	 * @param zkServers
-	 *            This string must contain the connection to the
-	 *            ZooKeeper-cluster.
+	 *        This string must contain the connection to the
+	 *        ZooKeeper-cluster.
 	 */
 	private InfrastructureManager(String zkServers) {
 
@@ -68,27 +67,27 @@ public class InfrastructureManager extends EventDispatcher implements
 			// Get a connection to ZooKeeper and initialize the directories in
 			// ZooKeeper.
 			this.zk = new ZooKeeper(zkServers, ZkHelper.ZOOKEEPER_TIMEOUT,
-					new ZkConnectionWatcher(this));
+				new ZkConnectionWatcher(this));
 			ZkHelper.initDirectories(this.zk);
 
 			// Get all available nodes.
 			ZkTaskManagerWatcher watcher = new ZkTaskManagerWatcher(this,
-					this.zk);
+				this.zk);
 			synchronized (watcher) {
 				List<String> nodes = this.zk.getChildren(
-						ZkHelper.ZOOKEEPER_TASKMANAGERS, watcher);
+					ZkHelper.ZOOKEEPER_TASKMANAGERS, watcher);
 				for (String node : nodes) {
 					try {
 						byte[] data = this.zk.getData(
-								ZkHelper.ZOOKEEPER_TASKMANAGERS + "/" + node,
-								false, null);
+							ZkHelper.ZOOKEEPER_TASKMANAGERS + "/" + node,
+							false, null);
 						ByteArrayInputStream bais = new ByteArrayInputStream(
-								data);
+							data);
 						ObjectInputStream ois = new ObjectInputStream(bais);
 						MachineDescriptor descriptor = (MachineDescriptor) ois
-								.readObject();
+							.readObject();
 						this.nodeMap.put(descriptor.uid, descriptor);
-						
+
 						watcher.nodes.add(descriptor.uid.toString());
 					} catch (ClassNotFoundException e) {
 						e.printStackTrace();
@@ -109,8 +108,8 @@ public class InfrastructureManager extends EventDispatcher implements
 	 * Get an instance of the infrastructure manager.
 	 * 
 	 * @param zkServers
-	 *            This string must contain the connection to the
-	 *            ZooKeeper-cluster.
+	 *        This string must contain the connection to the
+	 *        ZooKeeper-cluster.
 	 */
 	public static InfrastructureManager getInstance(String zkServers) {
 		if (INSTANCE == null) {
@@ -124,16 +123,16 @@ public class InfrastructureManager extends EventDispatcher implements
 	public void addEventListener(final String type, final IEventHandler listener)
 	{
 		super.addEventListener(type, listener);
-		
+
 		switch (type) {
 		case ZkHelper.EVENT_TYPE_NODE_ADDED:
 			// Return all available nodes immediately.
-			for(MachineDescriptor curDescriptor : this.nodeMap.values())
+			for (MachineDescriptor curDescriptor : this.nodeMap.values())
 			{
 				Event event = new Event(type, curDescriptor);
 				handleEvent(event);
 			}
-			
+
 			break;
 		}
 	}

@@ -10,16 +10,17 @@ import de.tuberlin.aura.taskmanager.TaskManager;
 
 public class TM4 {
 
-    public static final Logger LOG = Logger.getRootLogger();
+	public static final Logger LOG = Logger.getRootLogger();
 
-    public static void main(String[] args) {
+	public static void main(String[] args) {
 
-        final SimpleLayout layout = new SimpleLayout();
-        final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
-        LOG.addAppender( consoleAppender );
+		final SimpleLayout layout = new SimpleLayout();
+		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+		LOG.addAppender(consoleAppender);
 
-        final RPCManager rpcManager = new TaskManager("localhost:2181", LocalDeployment.MACHINE_4_DESCRIPTOR ).getRPCManager();
-        rpcManager.connectToMessageServer( LocalDeployment.MACHINE_5_DESCRIPTOR );
+		final RPCManager rpcManager = new TaskManager("localhost:2181", LocalDeployment.MACHINE_4_DESCRIPTOR)
+			.getRPCManager();
+		rpcManager.connectToMessageServer(LocalDeployment.MACHINE_5_DESCRIPTOR);
 
-    }
+	}
 }

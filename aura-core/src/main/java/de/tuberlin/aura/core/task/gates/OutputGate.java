@@ -14,76 +14,78 @@ import de.tuberlin.aura.core.task.common.TaskContext;
 
 public final class OutputGate extends AbstractGate {
 
-    // TODO: wire it together with the Andi's send mechanism!
+	// TODO: wire it together with the Andi's send mechanism!
 
-    //---------------------------------------------------
-    // Constructors.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Constructors.
+	// ---------------------------------------------------
 
-    public OutputGate( final TaskContext context, int gateIndex ) {
-        super( context, gateIndex, context.taskBinding.outputGateBindings.get( gateIndex ).size() );
+	public OutputGate(final TaskContext context, int gateIndex) {
+		super(context, gateIndex, context.taskBinding.outputGateBindings.get(gateIndex).size());
 
-        // All channels are by default are closed.
-        this.openChannelList = new ArrayList<Boolean>( Collections.nCopies( numChannels, false ) );
+		// All channels are by default are closed.
+		this.openChannelList = new ArrayList<Boolean>(Collections.nCopies(numChannels, false));
 
-        final OutputGate self = this;
+		final OutputGate self = this;
 
-        final IEventHandler gateEventHandler = new IEventHandler() {
+		final IEventHandler gateEventHandler = new IEventHandler() {
 
-            @Override
-            public void handleEvent( Event e ) {
+			@Override
+			public void handleEvent(Event e) {
 
-                if( e instanceof IODataChannelEvent ) {
-                    final IODataChannelEvent event = (IODataChannelEvent)e;
+				if (e instanceof IODataChannelEvent) {
+					final IODataChannelEvent event = (IODataChannelEvent) e;
 
-                    switch( event.type ) {
+					switch (event.type) {
 
-                        case IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN: {
-                            self.openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), true );
-                        } break;
+					case IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN: {
+						self.openChannelList.set(context.getInputChannelIndexFromTaskID(event.srcTaskID), true);
+					}
+						break;
 
-                        case IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE: {
-                            self.openChannelList.set( context.getInputChannelIndexFromTaskID( event.srcTaskID ), false );
-                        } break;
+					case IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE: {
+						self.openChannelList.set(context.getInputChannelIndexFromTaskID(event.srcTaskID), false);
+					}
+						break;
 
-                        default: {
-                            throw new IllegalStateException( "not allowed to handle: " + e.type  );
-                        }
-                    }
-                }
-            }
-        };
+					default: {
+						throw new IllegalStateException("not allowed to handle: " + e.type);
+					}
+					}
+				}
+			}
+		};
 
-        context.dispatcher.addEventListener( IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN, gateEventHandler );
-        context.dispatcher.addEventListener( IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE, gateEventHandler );
-    }
+		context.dispatcher.addEventListener(IODataChannelEvent.IO_EVENT_OUTPUT_GATE_OPEN, gateEventHandler);
+		context.dispatcher.addEventListener(IODataChannelEvent.IO_EVENT_OUTPUT_GATE_CLOSE, gateEventHandler);
+	}
 
-    //---------------------------------------------------
-    // Fields.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Fields.
+	// ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger( OutputGate.class );
+	private static final Logger LOG = Logger.getLogger(OutputGate.class);
 
-    private final List<Boolean> openChannelList;
+	private final List<Boolean> openChannelList;
 
-    //---------------------------------------------------
-    // Public.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Public.
+	// ---------------------------------------------------
 
-    public void writeDataToChannel( int channelIndex, DataMessage dataMessage ) {
-        // sanity check.
-        if( dataMessage == null )
-            throw new IllegalArgumentException( "message == null" );
+	public void writeDataToChannel(int channelIndex, DataMessage dataMessage) {
+		// sanity check.
+		if (dataMessage == null)
+			throw new IllegalArgumentException("message == null");
 
-        if( isGateOpen( channelIndex ) ) {
-            LOG.error( "channel is closed" );
-        }
+		if (isGateOpen(channelIndex)) {
+			LOG.error("channel is closed");
+		}
 
-        // TODO: change insert in output queue!
-        getChannel( channelIndex ).writeAndFlush( dataMessage );
-    }
+		// TODO: change insert in output queue!
+		getChannel(channelIndex).writeAndFlush(dataMessage);
+	}
 
-    public boolean isGateOpen( int channelIndex ) {
-        return openChannelList.get( channelIndex );
-    }
+	public boolean isGateOpen(int channelIndex) {
+		return openChannelList.get(channelIndex);
+	}
 }
