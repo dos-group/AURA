@@ -17,6 +17,7 @@ import java.util.UUID;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology.DeploymentType;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
@@ -35,6 +36,17 @@ public class AuraDirectedGraph {
 		private static final long serialVersionUID = 8527931035756128232L;
 
 		// ---------------------------------------------------
+		// Aura Topology Properties.
+		// ---------------------------------------------------
+
+		public static enum DeploymentType {
+
+			LAZY,
+
+			EAGER
+		}
+
+		// ---------------------------------------------------
 		// Constructor.
 		// ---------------------------------------------------
 
@@ -45,7 +57,8 @@ public class AuraDirectedGraph {
 				final Map<String, Node> sinkMap,
 				final Map<Pair<String, String>, Edge> edges,
 				final Map<String, UserCode> userCodeMap,
-				final Map<UUID, Node> uidNodeMap) {
+				final Map<UUID, Node> uidNodeMap,
+				final DeploymentType deploymentType) {
 
 			// sanity check.
 			if (name == null)
@@ -64,6 +77,8 @@ public class AuraDirectedGraph {
 				throw new IllegalArgumentException("userCodeMap == null");
 			if (uidNodeMap == null)
 				throw new IllegalArgumentException("uidNodeMap == null");
+			if (deploymentType == null)
+				throw new IllegalArgumentException("deploymentType == null");
 
 			this.name = name;
 
@@ -80,6 +95,8 @@ public class AuraDirectedGraph {
 			this.userCodeMap = Collections.unmodifiableMap(userCodeMap);
 
 			this.uidNodeMap = Collections.unmodifiableMap(uidNodeMap);
+
+			this.deploymentType = deploymentType;
 
 			this.executionNodeMap = null;
 		}
@@ -105,6 +122,8 @@ public class AuraDirectedGraph {
 		public final Map<UUID, Node> uidNodeMap;
 
 		public Map<UUID, ExecutionNode> executionNodeMap;
+
+		public final DeploymentType deploymentType;
 
 		// ---------------------------------------------------
 		// Public.
@@ -154,8 +173,8 @@ public class AuraDirectedGraph {
 			public AuraTopologyBuilder connectTo(final String dstNodeName,
 					final Edge.TransferType transferType,
 					final Edge.EdgeType edgeType,
-					final Edge.DataPersistenceType dataLifeTime,
-					final Edge.ExecutionType executionType) {
+					final Node.DataPersistenceType dataLifeTime,
+					final Node.ExecutionType executionType) {
 				// sanity check.
 				if (dstNodeName == null)
 					throw new IllegalArgumentException("dstNode == null");
@@ -176,18 +195,18 @@ public class AuraDirectedGraph {
 
 			public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType) {
 				return connectTo(dstNodeName, transferType, Edge.EdgeType.FORWARD_EDGE,
-					Edge.DataPersistenceType.EPHEMERAL, Edge.ExecutionType.PIPELINED);
+					Node.DataPersistenceType.EPHEMERAL, Node.ExecutionType.PIPELINED);
 			}
 
 			public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType,
 					final Edge.EdgeType edgeType) {
-				return connectTo(dstNodeName, transferType, edgeType, Edge.DataPersistenceType.EPHEMERAL,
-					Edge.ExecutionType.PIPELINED);
+				return connectTo(dstNodeName, transferType, edgeType, Node.DataPersistenceType.EPHEMERAL,
+					Node.ExecutionType.PIPELINED);
 			}
 
 			public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType,
-					final Edge.EdgeType edgeType, final Edge.DataPersistenceType dataLifeTime) {
-				return connectTo(dstNodeName, transferType, edgeType, dataLifeTime, Edge.ExecutionType.PIPELINED);
+					final Edge.EdgeType edgeType, final Node.DataPersistenceType dataLifeTime) {
+				return connectTo(dstNodeName, transferType, edgeType, dataLifeTime, Node.ExecutionType.PIPELINED);
 			}
 
 			public List<Pair<String, String>> getEdges() {
@@ -272,9 +291,15 @@ public class AuraDirectedGraph {
 		}
 
 		public AuraTopology build(final String name) {
+			return build(name, DeploymentType.EAGER);
+		}
+
+		public AuraTopology build(final String name, final DeploymentType deploymentType) {
 			// sanity check.
 			if (name == null)
 				throw new IllegalArgumentException("name == null");
+			if (deploymentType == null)
+				throw new IllegalArgumentException("deploymentType == null");
 
 			if (!isBuilded) {
 
@@ -295,8 +320,8 @@ public class AuraDirectedGraph {
 						dstNode.name));
 					final Edge.TransferType transferType = (Edge.TransferType) properties.get(0);
 					final Edge.EdgeType edgeType = (Edge.EdgeType) properties.get(1);
-					final Edge.DataPersistenceType dataLifeTime = (Edge.DataPersistenceType) properties.get(2);
-					final Edge.ExecutionType executionType = (Edge.ExecutionType) properties.get(3);
+					// final Edge.DataPersistenceType dataLifeTime = (Edge.DataPersistenceType) properties.get(2);
+					// final Edge.ExecutionType executionType = (Edge.ExecutionType) properties.get(3);
 
 					if (edgeType == Edge.EdgeType.BACKWARD_EDGE) {
 						if (!validateBackCouplingEdge(new HashSet<Node>(), srcNode, dstNode))
@@ -305,7 +330,7 @@ public class AuraDirectedGraph {
 					}
 
 					edges.put(new Pair<String, String>(srcNode.name, dstNode.name),
-						new Edge(srcNode, dstNode, transferType, edgeType, dataLifeTime, executionType));
+						new Edge(srcNode, dstNode, transferType, edgeType));
 
 					if (edgeType != Edge.EdgeType.BACKWARD_EDGE) {
 						sourceMap.remove(dstNode.name);
@@ -324,7 +349,8 @@ public class AuraDirectedGraph {
 			// Every call to build gives us the same topology with a new id.
 			final UUID topologyID = UUID.randomUUID();
 
-			return new AuraTopology(name, topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap, uidNodeMap);
+			return new AuraTopology(name, topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap, uidNodeMap,
+				deploymentType);
 		}
 
 		private boolean validateBackCouplingEdge(final Set<Node> visitedNodes, final Node currentNode,
@@ -352,15 +378,42 @@ public class AuraDirectedGraph {
 		private static final long serialVersionUID = -7726710143171176855L;
 
 		// ---------------------------------------------------
+		// Node Properties.
+		// ---------------------------------------------------
+
+		public static enum DataPersistenceType {
+
+			EPHEMERAL,
+
+			PERSISTED_IN_MEMORY,
+
+			PERSISTED_RELIABLE
+		}
+
+		public static enum ExecutionType {
+
+			BLOCKING,
+
+			PIPELINED,
+		}
+
+		// ---------------------------------------------------
 		// Constructors.
 		// ---------------------------------------------------
 
 		public Node(final UUID uid, final String name, final Class<?> userClazz) {
-			this(uid, name, userClazz, 1, 1);
+			this(uid, name, userClazz, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
 		}
 
 		public Node(final UUID uid, final String name, final Class<?> userClazz, int degreeOfParallelism,
 				int perWorkerParallelism) {
+			this(uid, name, userClazz, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL,
+				ExecutionType.PIPELINED);
+		}
+
+		public Node(final UUID uid, final String name, final Class<?> userClazz, int degreeOfParallelism,
+				int perWorkerParallelism, final DataPersistenceType dataPersistenceType,
+				final ExecutionType executionType) {
 			// sanity check.
 			if (uid == null)
 				throw new IllegalArgumentException("uid == null");
@@ -372,6 +425,10 @@ public class AuraDirectedGraph {
 				throw new IllegalArgumentException("degreeOfParallelism < 1");
 			if (perWorkerParallelism < 1)
 				throw new IllegalArgumentException("perWorkerParallelism < 1");
+			if (dataPersistenceType == null)
+				throw new IllegalArgumentException("dataPersistenceType == null");
+			if (executionType == null)
+				throw new IllegalArgumentException("executionType == null");
 
 			this.uid = uid;
 
@@ -388,6 +445,10 @@ public class AuraDirectedGraph {
 			this.outputs = new ArrayList<Node>();
 
 			this.executionNodes = new HashMap<UUID, ExecutionNode>();
+
+			this.dataPersistenceType = dataPersistenceType;
+
+			this.executionType = executionType;
 		}
 
 		// ---------------------------------------------------
@@ -403,6 +464,10 @@ public class AuraDirectedGraph {
 		public final int degreeOfParallelism;
 
 		public final int perWorkerParallelism;
+
+		public final DataPersistenceType dataPersistenceType;
+
+		public final ExecutionType executionType;
 
 		private final List<Node> inputs;
 
@@ -570,7 +635,7 @@ public class AuraDirectedGraph {
 		private static final long serialVersionUID = 707567426961035903L;
 
 		// ---------------------------------------------------
-		// Edge Configurations.
+		// Edge Properties.
 		// ---------------------------------------------------
 
 		public static enum TransferType {
@@ -587,30 +652,9 @@ public class AuraDirectedGraph {
 			BACKWARD_EDGE
 		}
 
-		public static enum DataPersistenceType {
-
-			EPHEMERAL,
-
-			PERSISTED_IN_MEMORY,
-
-			PERSISTED_RELIABLE
-		}
-
-		public static enum ExecutionType {
-
-			BLOCKING,
-
-			PIPELINED,
-		}
-
-		public static enum DeploymentType {
-
-			LAZY,
-
-			EAGER
-		}
-
 		public static enum PartitioningType {
+
+			NOT_PARTITIONED,
 
 			HASH_PARTITIONED,
 
@@ -626,9 +670,7 @@ public class AuraDirectedGraph {
 		public Edge(final Node srcNode,
 				final Node dstNode,
 				final TransferType transferType,
-				final EdgeType edgeType,
-				final DataPersistenceType dataLifeTime,
-				final ExecutionType dstExecutionType) {
+				final EdgeType edgeType) {
 
 			// sanity check.
 			if (srcNode == null)
@@ -639,10 +681,6 @@ public class AuraDirectedGraph {
 				throw new IllegalArgumentException("transferType == null");
 			if (edgeType == null)
 				throw new IllegalArgumentException("edgeType == null");
-			if (dataLifeTime == null)
-				throw new IllegalArgumentException("dataLifeTime == null");
-			if (dstExecutionType == null)
-				throw new IllegalArgumentException("dstExecutionType == null");
 
 			this.srcNode = srcNode;
 
@@ -651,10 +689,6 @@ public class AuraDirectedGraph {
 			this.transferType = transferType;
 
 			this.edgeType = edgeType;
-
-			this.dataLifeTime = dataLifeTime;
-
-			this.dstExecutionType = dstExecutionType;
 		}
 
 		// ---------------------------------------------------
@@ -669,10 +703,6 @@ public class AuraDirectedGraph {
 
 		public final EdgeType edgeType;
 
-		public final DataPersistenceType dataLifeTime;
-
-		public final ExecutionType dstExecutionType;
-
 		// ---------------------------------------------------
 		// Public.
 		// ---------------------------------------------------
@@ -685,8 +715,6 @@ public class AuraDirectedGraph {
 				.append(" dstNode = " + dstNode.toString() + ", ")
 				.append(" transferType = " + transferType.toString() + ", ")
 				.append(" edgeType = " + edgeType.toString() + ", ")
-				.append(" dataLifeTime = " + dataLifeTime.toString() + ", ")
-				.append(" dstExecutionType = " + dstExecutionType.toString())
 				.append(" }").toString();
 		}
 	}

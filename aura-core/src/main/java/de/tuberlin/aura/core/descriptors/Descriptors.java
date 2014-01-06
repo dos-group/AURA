@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 
 public final class Descriptors {
@@ -230,28 +231,36 @@ public final class Descriptors {
 		private static final long serialVersionUID = 6533439159854768522L;
 
 		public TaskDeploymentDescriptor(final TaskDescriptor taskDescriptor,
-				final TaskBindingDescriptor taskBindingDescriptor) {
+				final TaskBindingDescriptor taskBindingDescriptor,
+				final Node.DataPersistenceType dataPersistenceType,
+				final Node.ExecutionType executionType) {
+
 			// sanity check.
 			if (taskDescriptor == null)
 				throw new IllegalArgumentException("taskDescriptor == null");
 			if (taskBindingDescriptor == null)
 				throw new IllegalArgumentException("taskBindingDescriptor == null");
+			if (dataPersistenceType == null)
+				throw new IllegalArgumentException("dataPersistenceType == null");
+			if (executionType == null)
+				throw new IllegalArgumentException("executionType == null");
 
 			this.taskDescriptor = taskDescriptor;
 
 			this.taskBindingDescriptor = taskBindingDescriptor;
+
+			this.dataPersistenceType = dataPersistenceType;
+
+			this.executionType = executionType;
 		}
 
 		public final TaskDescriptor taskDescriptor;
 
 		public final TaskBindingDescriptor taskBindingDescriptor;
 
-		/*
-		 * public final Edge.DeploymentType taskDeploymentType;
-		 * public final Edge.DataPersistenceType taskDataPersistenceType;
-		 * public final Edge.ExecutionType taskExecutionType;
-		 * public final Edge.PartitioningType taskPartitioningType;
-		 */
+		public final Node.DataPersistenceType dataPersistenceType;
+
+		public final Node.ExecutionType executionType;
 
 		@Override
 		public boolean equals(Object other) {

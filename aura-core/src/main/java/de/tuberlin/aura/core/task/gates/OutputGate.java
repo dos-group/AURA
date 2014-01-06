@@ -24,13 +24,13 @@ public final class OutputGate extends AbstractGate {
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN)
 		private void handleOutputGateOpen(final DataIOEvent event) {
-			openChannelList.set(context.getInputChannelIndexFromTaskID(event.dstTaskID), true);
+			openChannelList.set(context.getInputGateIndexFromTaskID(event.dstTaskID), true);
 			LOG.info("GATE FOR TASK " + event.srcTaskID + " OPENED");
 		}
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE)
 		private void handleOutputGateClose(final DataIOEvent event) {
-			openChannelList.set(context.getInputChannelIndexFromTaskID(event.dstTaskID), false);
+			openChannelList.set(context.getInputGateIndexFromTaskID(event.dstTaskID), false);
 			LOG.info("GATE FOR TASK " + event.srcTaskID + " CLOSED");
 		}
 	}

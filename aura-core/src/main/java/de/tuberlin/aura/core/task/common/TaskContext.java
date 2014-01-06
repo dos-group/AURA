@@ -26,6 +26,10 @@ import de.tuberlin.aura.core.task.gates.OutputGate;
  */
 public final class TaskContext {
 
+	// ---------------------------------------------------
+	// Constructors.
+	// ---------------------------------------------------
+
 	public TaskContext(final TaskDescriptor task,
 			final TaskBindingDescriptor taskBinding,
 			final IEventHandler handler,
@@ -70,12 +74,13 @@ public final class TaskContext {
 			this.outputGates = null;
 		}
 
-		this.taskIDToChannelIndex = new HashMap<UUID, Integer>();
+		this.taskIDToGateIndex = new HashMap<UUID, Integer>();
 		this.channelIndexToTaskID = new HashMap<Integer, UUID>();
+
 		int channelIndex = 0;
 		for (final List<TaskDescriptor> inputGate : taskBinding.inputGateBindings) {
 			for (final TaskDescriptor inputTask : inputGate) {
-				taskIDToChannelIndex.put(inputTask.taskID, channelIndex);
+				taskIDToGateIndex.put(inputTask.taskID, channelIndex);
 				channelIndexToTaskID.put(channelIndex, inputTask.taskID);
 			}
 			++channelIndex;
@@ -84,7 +89,7 @@ public final class TaskContext {
 		channelIndex = 0;
 		for (final List<TaskDescriptor> outputGate : taskBinding.outputGateBindings) {
 			for (final TaskDescriptor outputTask : outputGate) {
-				taskIDToChannelIndex.put(outputTask.taskID, channelIndex);
+				taskIDToGateIndex.put(outputTask.taskID, channelIndex);
 				channelIndexToTaskID.put(channelIndex, outputTask.taskID);
 			}
 			++channelIndex;
@@ -101,9 +106,13 @@ public final class TaskContext {
 		dispatcher.addEventListener(taskEvents, handler);
 	}
 
+	// ---------------------------------------------------
+	// Fields.
+	// ---------------------------------------------------
+
 	private static final Logger LOG = Logger.getLogger(TaskContext.class);
 
-	public final Map<UUID, Integer> taskIDToChannelIndex;
+	public final Map<UUID, Integer> taskIDToGateIndex;
 
 	public final Map<Integer, UUID> channelIndexToTaskID;
 
@@ -123,6 +132,10 @@ public final class TaskContext {
 
 	public TaskState state;
 
+	// ---------------------------------------------------
+	// Public.
+	// ---------------------------------------------------
+
 	@Override
 	public String toString() {
 		return (new StringBuilder())
@@ -137,18 +150,18 @@ public final class TaskContext {
 		return channelIndexToTaskID.get(channelIndex);
 	}
 
-	public int getInputChannelIndexFromTaskID(final UUID taskID) {
-		return taskIDToChannelIndex.get(taskID);
+	public int getInputGateIndexFromTaskID(final UUID taskID) {
+		return taskIDToGateIndex.get(taskID);
 	}
 
 	public void close() {
 		if (outputGates != null) {
 			for (final OutputGate og : outputGates) {
-				for (final Channel c : og.getAllChannels()) {
+				for (final Channel ch : og.getAllChannels()) {
 					try {
-						c.disconnect().sync();
-						c.close().sync();
-						LOG.info("CLOSE CHANNEL " + c.toString());
+						ch.disconnect().sync();
+						ch.close().sync();
+						LOG.info("CLOSE CHANNEL " + ch.toString());
 					} catch (InterruptedException e) {
 						LOG.error(e);
 					}
@@ -156,7 +169,7 @@ public final class TaskContext {
 			}
 		}
 
-		taskIDToChannelIndex.clear();
+		taskIDToGateIndex.clear();
 
 		channelIndexToTaskID.clear();
 

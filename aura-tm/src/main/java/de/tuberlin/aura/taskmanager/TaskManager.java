@@ -151,7 +151,7 @@ public final class TaskManager implements WM2TMProtocol {
 
 		@Handle(event = DataBufferEvent.class)
 		private void handleTaskInputData(final DataBufferEvent event) {
-			context.inputGates.get(context.getInputChannelIndexFromTaskID(event.srcTaskID))
+			context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
 				.addToInputQueue(event);
 		}
 
