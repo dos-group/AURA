@@ -14,73 +14,73 @@ import de.tuberlin.aura.core.task.common.TaskContext;
 
 public final class OutputGate extends AbstractGate {
 
-    // TODO: wire it together with the Andi's send mechanism!
+	// TODO: wire it together with the Andi's send mechanism!
 
-    //---------------------------------------------------
-    // Inner Classes.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Inner Classes.
+	// ---------------------------------------------------
 
-    private final class OutputGateEventHandler extends EventHandler {
+	private final class OutputGateEventHandler extends EventHandler {
 
-        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN )
-        private void handleOutputGateOpen( final DataIOEvent event ) {
-            openChannelList.set( context.getInputChannelIndexFromTaskID( event.dstTaskID ), true );
-            LOG.info( "GATE FOR TASK " + event.srcTaskID + " OPENED" );
-        }
+		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN)
+		private void handleOutputGateOpen(final DataIOEvent event) {
+			openChannelList.set(context.getInputChannelIndexFromTaskID(event.dstTaskID), true);
+			LOG.info("GATE FOR TASK " + event.srcTaskID + " OPENED");
+		}
 
-        @Handle( event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE )
-        private void handleOutputGateClose( final DataIOEvent event ) {
-            openChannelList.set( context.getInputChannelIndexFromTaskID( event.dstTaskID ), false );
-            LOG.info( "GATE FOR TASK " + event.srcTaskID + " CLOSED" );
-        }
-    }
+		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE)
+		private void handleOutputGateClose(final DataIOEvent event) {
+			openChannelList.set(context.getInputChannelIndexFromTaskID(event.dstTaskID), false);
+			LOG.info("GATE FOR TASK " + event.srcTaskID + " CLOSED");
+		}
+	}
 
-    //---------------------------------------------------
-    // Constructors.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Constructors.
+	// ---------------------------------------------------
 
-    public OutputGate( final TaskContext context, int gateIndex ) {
-        super( context, gateIndex, context.taskBinding.outputGateBindings.get( gateIndex ).size() );
+	public OutputGate(final TaskContext context, int gateIndex) {
+		super(context, gateIndex, context.taskBinding.outputGateBindings.get(gateIndex).size());
 
-        // All channels are by default are closed.
-        this.openChannelList = new ArrayList<Boolean>( Collections.nCopies( numChannels, false ) );
+		// All channels are by default are closed.
+		this.openChannelList = new ArrayList<Boolean>(Collections.nCopies(numChannels, false));
 
-        final EventHandler outputGateEventHandler = new OutputGateEventHandler();
+		final EventHandler outputGateEventHandler = new OutputGateEventHandler();
 
-        final String[] gateEvents = {
-                DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
-                DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE
-        };
+		final String[] gateEvents = {
+			DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
+			DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE
+		};
 
-        context.dispatcher.addEventListener( gateEvents, outputGateEventHandler );
-    }
+		context.dispatcher.addEventListener(gateEvents, outputGateEventHandler);
+	}
 
-    //---------------------------------------------------
-    // Fields.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Fields.
+	// ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger( OutputGate.class );
+	private static final Logger LOG = Logger.getLogger(OutputGate.class);
 
-    private final List<Boolean> openChannelList;
+	private final List<Boolean> openChannelList;
 
-    //---------------------------------------------------
-    // Public.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Public.
+	// ---------------------------------------------------
 
-    public void writeDataToChannel( final int channelIndex, final DataBufferEvent data ) {
-        // sanity check.
-        if( data == null )
-            throw new IllegalArgumentException( "data == null" );
+	public void writeDataToChannel(final int channelIndex, final DataBufferEvent data) {
+		// sanity check.
+		if (data == null)
+			throw new IllegalArgumentException("data == null");
 
-        if( !isGateOpen( channelIndex ) ) {
-            LOG.error( "channel is closed" );
-        }
+		if (!isGateOpen(channelIndex)) {
+			LOG.error("channel is closed");
+		}
 
-        // TODO: change insert in output queue!
-        getChannel( channelIndex ).writeAndFlush( data );
-    }
+		// TODO: change insert in output queue!
+		getChannel(channelIndex).writeAndFlush(data);
+	}
 
-    public boolean isGateOpen( final int channelIndex ) {
-        return openChannelList.get( channelIndex );
-    }
+	public boolean isGateOpen(final int channelIndex) {
+		return openChannelList.get(channelIndex);
+	}
 }

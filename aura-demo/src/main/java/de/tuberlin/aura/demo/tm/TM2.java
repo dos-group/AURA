@@ -9,14 +9,14 @@ import de.tuberlin.aura.taskmanager.TaskManager;
 
 public class TM2 {
 
-    public static final Logger LOG = Logger.getRootLogger();
+	public static final Logger LOG = Logger.getRootLogger();
 
-    public static void main(String[] args) {
+	public static void main(String[] args) {
 
-        final SimpleLayout layout = new SimpleLayout();
-        final ConsoleAppender consoleAppender = new ConsoleAppender( layout );
-        LOG.addAppender( consoleAppender );
+		final SimpleLayout layout = new SimpleLayout();
+		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+		LOG.addAppender(consoleAppender);
 
-        new TaskManager( LocalDeployment.MACHINE_2_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR );
-    }
+		new TaskManager(LocalDeployment.MACHINE_2_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR);
+	}
 }

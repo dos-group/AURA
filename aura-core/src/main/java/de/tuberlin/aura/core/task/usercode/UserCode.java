@@ -6,27 +6,27 @@ import java.util.List;
 
 public final class UserCode implements Serializable {
 
-    private static final long serialVersionUID = 4279439116924482785L;
+	private static final long serialVersionUID = 4279439116924482785L;
 
-    public UserCode( final String className, final List<String> classDependencies, final byte[] byteCode ) {
-        // sanity check.
-        if( className == null )
-            throw new IllegalArgumentException( "className == null" );
-        if( classDependencies == null )
-            throw new IllegalArgumentException( "classDependencies == null" );
-        if( byteCode == null )
-            throw new IllegalArgumentException( "byteCode == null" );
+	public UserCode(final String className, final List<String> classDependencies, final byte[] byteCode) {
+		// sanity check.
+		if (className == null)
+			throw new IllegalArgumentException("className == null");
+		if (classDependencies == null)
+			throw new IllegalArgumentException("classDependencies == null");
+		if (byteCode == null)
+			throw new IllegalArgumentException("byteCode == null");
 
-        this.className = className;
+		this.className = className;
 
-        this.classDependencies = Collections.unmodifiableList( classDependencies );
+		this.classDependencies = Collections.unmodifiableList(classDependencies);
 
-        this.classByteCode = byteCode;
-    }
+		this.classByteCode = byteCode;
+	}
 
-    public final String className;
+	public final String className;
 
-    public final List<String> classDependencies;
+	public final List<String> classDependencies;
 
-    public final byte[] classByteCode;
+	public final byte[] classByteCode;
 }

@@ -17,109 +17,109 @@ import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 
 public class WorkloadManager implements ClientWMProtocol {
 
-    //---------------------------------------------------
-    // Inner Classes.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Inner Classes.
+	// ---------------------------------------------------
 
-    private final class IORedispatcher extends EventHandler {
+	private final class IORedispatcher extends EventHandler {
 
-       @Handle( event = TaskStateEvent.class )
-       private void handleTaskReadyEvent( final TaskStateEvent event ) {
-           registeredToplogies.get( event.topologyID ).dispatchEvent( event );
-       }
-    }
+		@Handle(event = TaskStateEvent.class)
+		private void handleTaskReadyEvent(final TaskStateEvent event) {
+			registeredToplogies.get(event.topologyID).dispatchEvent(event);
+		}
+	}
 
-    //---------------------------------------------------
-    // Constructors.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Constructors.
+	// ---------------------------------------------------
 
-    public WorkloadManager( final MachineDescriptor machine ) {
-        // sanity check.
-        if( machine == null )
-            throw new IllegalArgumentException( "machine == null" );
+	public WorkloadManager(final MachineDescriptor machine) {
+		// sanity check.
+		if (machine == null)
+			throw new IllegalArgumentException("machine == null");
 
-        this.machine = machine;
+		this.machine = machine;
 
-        this.ioManager = new IOManager( this.machine );
+		this.ioManager = new IOManager(this.machine);
 
-        this.rpcManager = new RPCManager( ioManager );
+		this.rpcManager = new RPCManager(ioManager);
 
-        this.infrastructureManager = new InfrastructureManager();
+		this.infrastructureManager = new InfrastructureManager();
 
-        this.registeredToplogies = new ConcurrentHashMap<UUID,TopologyController>();
+		this.registeredToplogies = new ConcurrentHashMap<UUID, TopologyController>();
 
-        rpcManager.registerRPCProtocolImpl( this, ClientWMProtocol.class );
+		rpcManager.registerRPCProtocolImpl(this, ClientWMProtocol.class);
 
-        this.ioHandler = new IORedispatcher();
+		this.ioHandler = new IORedispatcher();
 
-        final String[] IOEvents = { ControlEventType.CONTROL_EVENT_TASK_STATE };
+		final String[] IOEvents = { ControlEventType.CONTROL_EVENT_TASK_STATE };
 
-        ioManager.addEventListener( IOEvents, ioHandler );
-    }
+		ioManager.addEventListener(IOEvents, ioHandler);
+	}
 
-    //---------------------------------------------------
-    // Fields.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Fields.
+	// ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger( WorkloadManager.class );
+	private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
 
-    private final MachineDescriptor machine;
+	private final MachineDescriptor machine;
 
-    private final IOManager ioManager;
+	private final IOManager ioManager;
 
-    private final RPCManager rpcManager;
+	private final RPCManager rpcManager;
 
-    private final InfrastructureManager infrastructureManager;
+	private final InfrastructureManager infrastructureManager;
 
-    private final Map<UUID,TopologyController> registeredToplogies;
+	private final Map<UUID, TopologyController> registeredToplogies;
 
-    private final IORedispatcher ioHandler;
+	private final IORedispatcher ioHandler;
 
-    //---------------------------------------------------
-    // Public.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Public.
+	// ---------------------------------------------------
 
-    @Override
-    public void submitTopology( final AuraTopology topology ) {
-        // sanity check.
-        if( topology == null )
-            throw new IllegalArgumentException( "topology == null" );
+	@Override
+	public void submitTopology(final AuraTopology topology) {
+		// sanity check.
+		if (topology == null)
+			throw new IllegalArgumentException("topology == null");
 
-        if( registeredToplogies.containsKey( topology.name ) )
-            throw new IllegalStateException( "topology already submitted" );
+		if (registeredToplogies.containsKey(topology.name))
+			throw new IllegalStateException("topology already submitted");
 
-        LOG.info( "TOPOLOGY '" + topology.name + "' SUBMITTED" );
-        registerTopology( topology ).assembleTopology();
-    }
+		LOG.info("TOPOLOGY '" + topology.name + "' SUBMITTED");
+		registerTopology(topology).assembleTopology();
+	}
 
-    public TopologyController registerTopology( final AuraTopology topology ) {
-        // sanity check.
-        if( topology == null )
-            throw new IllegalArgumentException( "topology == null" );
+	public TopologyController registerTopology(final AuraTopology topology) {
+		// sanity check.
+		if (topology == null)
+			throw new IllegalArgumentException("topology == null");
 
-        final TopologyController topologyController = new TopologyController( this, topology );
-        registeredToplogies.put( topology.topologyID, topologyController );
-        return topologyController;
-    }
+		final TopologyController topologyController = new TopologyController(this, topology);
+		registeredToplogies.put(topology.topologyID, topologyController);
+		return topologyController;
+	}
 
-    public void unregisterTopology( final UUID topologyID ) {
-        // sanity check.
-        if( topologyID == null )
-            throw new IllegalArgumentException( "topologyID == null" );
+	public void unregisterTopology(final UUID topologyID) {
+		// sanity check.
+		if (topologyID == null)
+			throw new IllegalArgumentException("topologyID == null");
 
-        if( registeredToplogies.remove( topologyID ) == null )
-            throw new IllegalStateException( "topologyID not found" );
-    }
+		if (registeredToplogies.remove(topologyID) == null)
+			throw new IllegalStateException("topologyID not found");
+	}
 
-    public RPCManager getRPCManager() {
-        return rpcManager;
-    }
+	public RPCManager getRPCManager() {
+		return rpcManager;
+	}
 
-    public IOManager getIOManager() {
-        return ioManager;
-    }
+	public IOManager getIOManager() {
+		return ioManager;
+	}
 
-    public InfrastructureManager getInfrastructureManager() {
-        return infrastructureManager;
-    }
+	public InfrastructureManager getInfrastructureManager() {
+		return infrastructureManager;
+	}
 }

@@ -9,55 +9,55 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.workloadmanager.TopologyEvents.TopologyStateTransitionEvent;
 import de.tuberlin.aura.workloadmanager.TopologyStateMachine.TopologyTransition;
 
-public class TopologyScheduler extends AssemblyPhase<AuraTopology,AuraTopology> {
+public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology> {
 
-    //---------------------------------------------------
-    // Constructors.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Constructors.
+	// ---------------------------------------------------
 
-    public TopologyScheduler( final InfrastructureManager infrastructureManager ) {
-        // sanity check.
-        if( infrastructureManager == null )
-            throw new IllegalArgumentException( "infrastructureManager == null" );
+	public TopologyScheduler(final InfrastructureManager infrastructureManager) {
+		// sanity check.
+		if (infrastructureManager == null)
+			throw new IllegalArgumentException("infrastructureManager == null");
 
-        this.infrastructureManager = infrastructureManager;
-    }
+		this.infrastructureManager = infrastructureManager;
+	}
 
-    //---------------------------------------------------
-    // Fields.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Fields.
+	// ---------------------------------------------------
 
-    private InfrastructureManager infrastructureManager;
+	private InfrastructureManager infrastructureManager;
 
-    //---------------------------------------------------
-    // Public.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Public.
+	// ---------------------------------------------------
 
-    @Override
-    public AuraTopology apply( AuraTopology topology ) {
+	@Override
+	public AuraTopology apply(AuraTopology topology) {
 
-        scheduleTopology( topology );
+		scheduleTopology(topology);
 
-        dispatcher.dispatchEvent( new TopologyStateTransitionEvent( TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE ) );
+		dispatcher.dispatchEvent(new TopologyStateTransitionEvent(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE));
 
-        return topology;
-    }
+		return topology;
+	}
 
-    //---------------------------------------------------
-    // Private.
-    //---------------------------------------------------
+	// ---------------------------------------------------
+	// Private.
+	// ---------------------------------------------------
 
-    private void scheduleTopology( AuraTopology topology ) {
+	private void scheduleTopology(AuraTopology topology) {
 
-        // Scheduling.
-        TopologyBreadthFirstTraverser.traverse( topology, new Visitor<Node>() {
+		// Scheduling.
+		TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
 
-            @Override
-            public void visit( final Node element ) {
-                for( final ExecutionNode en : element.getExecutionNodes() ) {
-                    en.getTaskDescriptor().setMachineDescriptor( infrastructureManager.getMachine() );
-                }
-            }
-        } );
-    }
+			@Override
+			public void visit(final Node element) {
+				for (final ExecutionNode en : element.getExecutionNodes()) {
+					en.getTaskDescriptor().setMachineDescriptor(infrastructureManager.getMachine());
+				}
+			}
+		});
+	}
 }
