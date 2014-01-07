@@ -1,5 +1,6 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -7,9 +8,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
 
+import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
@@ -29,6 +34,8 @@ import de.tuberlin.aura.core.task.common.TaskStateMachine;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
+import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
+import de.tuberlin.aura.core.zookeeper.ZkHelper;
 
 public final class TaskManager implements WM2TMProtocol {
 
@@ -213,12 +220,10 @@ public final class TaskManager implements WM2TMProtocol {
 	// Constructors.
 	// ---------------------------------------------------
 
-	public TaskManager(final MachineDescriptor machine, final MachineDescriptor workloadManagerMachine) {
+	public TaskManager(final String zkServer, final MachineDescriptor machine) {
 		// sanity check.
-		if (machine == null)
-			throw new IllegalArgumentException("machine == null");
+		ZkHelper.checkConnectionString(zkServer);
 
-		this.wmMachine = workloadManagerMachine;
 		this.taskContextMap = new ConcurrentHashMap<UUID, Pair<TaskContext, IEventDispatcher>>();
 		this.topologyTaskContextMap = new ConcurrentHashMap<UUID, List<TaskContext>>();
 		this.ioManager = new IOManager(machine);
@@ -243,9 +248,33 @@ public final class TaskManager implements WM2TMProtocol {
 
 		this.ioManager.addEventListener(IOEvents, ioHandler);
 
+		// TODO: move this into a seperate mehtod.
+		// Get a connection to ZooKeeper and initialize the directories in ZooKeeper.
+		try {
+			this.zk = new ZooKeeper(zkServer, ZkHelper.ZOOKEEPER_TIMEOUT,
+				new ZkConnectionWatcher(new IEventHandler() {
+
+					@Override
+					public void handleEvent(Event event) {
+					}
+				}));
+
+			ZkHelper.initDirectories(this.zk);
+			ZkHelper.storeInZookeeper(zk, ZkHelper.ZOOKEEPER_TASKMANAGERS + "/" + machine.uid.toString(), machine);
+			this.wmMachine = (MachineDescriptor) ZkHelper.readFromZookeeper(zk, ZkHelper.ZOOKEEPER_WORKLOADMANAGER);
+
+			// check postcondition.
+			if (wmMachine == null)
+				throw new IllegalStateException("wmMachine == null");
+
+		} catch (IOException | KeeperException e) {
+			throw new IllegalStateException(e);
+		} catch (InterruptedException e) {
+			LOG.error(e.getLocalizedMessage());
+		}
+
 		rpcManager.registerRPCProtocolImpl(this, WM2TMProtocol.class);
-		if (workloadManagerMachine != null)
-			ioManager.connectMessageChannelBlocking(workloadManagerMachine);
+		ioManager.connectMessageChannelBlocking(wmMachine);
 	}
 
 	// ---------------------------------------------------
@@ -254,7 +283,7 @@ public final class TaskManager implements WM2TMProtocol {
 
 	private static final Logger LOG = Logger.getLogger(TaskManager.class);
 
-	private final MachineDescriptor wmMachine;
+	private MachineDescriptor wmMachine;
 
 	private final Map<UUID, Pair<TaskContext, IEventDispatcher>> taskContextMap;
 
@@ -269,6 +298,8 @@ public final class TaskManager implements WM2TMProtocol {
 	private final TaskExecutionUnit[] executionUnit;
 
 	private final UserCodeImplanter codeImplanter;
+
+	private ZooKeeper zk;
 
 	// ---------------------------------------------------
 	// Public.
@@ -288,38 +319,6 @@ public final class TaskManager implements WM2TMProtocol {
 		installTask(taskDeploymentDescriptor.taskDescriptor,
 			taskDeploymentDescriptor.taskBindingDescriptor,
 			userCodeClass);
-	}
-
-	// TODO: Make that later private!
-	public void installTask(final TaskDescriptor taskDescriptor,
-			final TaskBindingDescriptor taskBindingDescriptor,
-			final Class<? extends TaskInvokeable> executableClass) {
-
-		final TaskEventHandler handler = new TaskEventHandler();
-		final TaskContext context = new TaskContext(taskDescriptor, taskBindingDescriptor, handler, executableClass);
-		handler.context = context;
-		taskContextMap.put(taskDescriptor.taskID, new Pair<TaskContext, IEventDispatcher>(context, context.dispatcher));
-
-		if (taskBindingDescriptor.inputGateBindings.size() == 0) {
-			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
-				TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
-		}
-
-		if (taskBindingDescriptor.outputGateBindings.size() == 0) {
-			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
-				TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
-		}
-
-		// TODO: To allow cycles in the execution graph we have to split up
-		// installation and wiring of tasks in the deployment phase!
-		wireOutputDataChannels(taskDescriptor, taskBindingDescriptor);
-
-		List<TaskContext> contextList = topologyTaskContextMap.get(taskDescriptor.topologyID);
-		if (contextList == null) {
-			contextList = new ArrayList<TaskContext>();
-			topologyTaskContextMap.put(taskDescriptor.topologyID, contextList);
-		}
-		contextList.add(context);
 	}
 
 	public RPCManager getRPCManager() {
@@ -363,5 +362,36 @@ public final class TaskManager implements WM2TMProtocol {
 		executionUnit[selectedEU].enqueueTask(context);
 		LOG.info("EXECUTE TASK " + context.task.name + " [" + context.task.taskID + "]"
 			+ " ON EXECUTIONUNIT (" + executionUnit[selectedEU].getExecutionUnitID() + ")");
+	}
+
+	private void installTask(final TaskDescriptor taskDescriptor,
+			final TaskBindingDescriptor taskBindingDescriptor,
+			final Class<? extends TaskInvokeable> executableClass) {
+
+		final TaskEventHandler handler = new TaskEventHandler();
+		final TaskContext context = new TaskContext(taskDescriptor, taskBindingDescriptor, handler, executableClass);
+		handler.context = context;
+		taskContextMap.put(taskDescriptor.taskID, new Pair<TaskContext, IEventDispatcher>(context, context.dispatcher));
+
+		if (taskBindingDescriptor.inputGateBindings.size() == 0) {
+			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
+				TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
+		}
+
+		if (taskBindingDescriptor.outputGateBindings.size() == 0) {
+			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
+				TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
+		}
+
+		// TODO: To allow cycles in the execution graph we have to split up
+		// installation and wiring of tasks in the deployment phase!
+		wireOutputDataChannels(taskDescriptor, taskBindingDescriptor);
+
+		List<TaskContext> contextList = topologyTaskContextMap.get(taskDescriptor.topologyID);
+		if (contextList == null) {
+			contextList = new ArrayList<TaskContext>();
+			topologyTaskContextMap.put(taskDescriptor.topologyID, contextList);
+		}
+		contextList.add(context);
 	}
 }

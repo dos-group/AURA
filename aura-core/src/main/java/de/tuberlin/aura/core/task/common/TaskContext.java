@@ -60,8 +60,11 @@ public final class TaskContext {
 		if (taskBinding.inputGateBindings.size() > 0) {
 			this.inputGates = new ArrayList<InputGate>(taskBinding.inputGateBindings.size());
 
-			for (int gateIndex = 0; gateIndex < taskBinding.inputGateBindings.size(); ++gateIndex)
+			for (int gateIndex = 0; gateIndex < taskBinding.inputGateBindings.size(); ++gateIndex) {
 				inputGates.add(new InputGate(this, gateIndex));
+				// TODO: dispatch event with reference to input queue!
+			}
+
 		} else {
 			this.inputGates = null;
 		}

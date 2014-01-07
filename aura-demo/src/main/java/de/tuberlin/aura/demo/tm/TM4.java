@@ -17,6 +17,6 @@ public class TM4 {
 		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
 		LOG.addAppender(consoleAppender);
 
-		new TaskManager(LocalDeployment.MACHINE_4_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR);
+		new TaskManager("localhost:2181",LocalDeployment.MACHINE_4_DESCRIPTOR);
 	}
 }

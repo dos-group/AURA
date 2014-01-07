@@ -20,6 +20,6 @@ public class WM {
 		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
 		LOG.addAppender(consoleAppender);
 
-		new WorkloadManager(LocalDeployment.MACHINE_5_DESCRIPTOR);
+		new WorkloadManager("localhost:2181",LocalDeployment.MACHINE_5_DESCRIPTOR);
 	}
 }

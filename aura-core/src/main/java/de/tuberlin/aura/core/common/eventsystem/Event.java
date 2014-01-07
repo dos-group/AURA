@@ -19,6 +19,16 @@ public class Event implements Serializable {
 		this.type = type;
 	}
 
+	public Event(final String type, Object payload) {
+		// sanity check.
+		if (type == null)
+			throw new IllegalArgumentException("type == null");
+
+		this.type = type;
+		setPayload(payload);
+	}
+
+
 	public final String type;
 
 	private Object payload;

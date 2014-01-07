@@ -14,6 +14,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
+import de.tuberlin.aura.core.zookeeper.ZkHelper;
 
 public class WorkloadManager implements ClientWMProtocol {
 
@@ -33,8 +34,9 @@ public class WorkloadManager implements ClientWMProtocol {
 	// Constructors.
 	// ---------------------------------------------------
 
-	public WorkloadManager(final MachineDescriptor machine) {
+	public WorkloadManager(final String zkServer, final MachineDescriptor machine) {
 		// sanity check.
+		ZkHelper.checkConnectionString(zkServer);
 		if (machine == null)
 			throw new IllegalArgumentException("machine == null");
 
@@ -44,7 +46,7 @@ public class WorkloadManager implements ClientWMProtocol {
 
 		this.rpcManager = new RPCManager(ioManager);
 
-		this.infrastructureManager = new InfrastructureManager();
+		this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machine);
 
 		this.registeredToplogies = new ConcurrentHashMap<UUID, TopologyController>();
 

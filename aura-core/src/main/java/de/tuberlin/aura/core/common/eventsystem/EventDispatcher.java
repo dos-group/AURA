@@ -198,7 +198,7 @@ public class EventDispatcher implements IEventDispatcher {
 				el.handleEvent(event);
 			}
 		} else { // listeners == null
-			LOG.error("no listener registered for event " + event.type);
+			LOG.info("no listener registered for event " + event.type);
 		}
 	}
 }

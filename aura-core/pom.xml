@@ -1,66 +1,95 @@
 <?xml version="1.0"?>
-<project
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
-	xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
-	<!-- ================================= -->
-	<!-- MAVEN HEADER.                     -->
-	<!-- ================================= -->
+  <!-- ================================= -->
+  <!-- MAVEN HEADER.                                            -->
+  <!-- ================================= -->
 
-	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>de.tuberlin.aura</groupId>
-		<artifactId>aura</artifactId>
-		<version>1.0-SNAPSHOT</version>
-	</parent>
-	<artifactId>aura-core</artifactId>
-	<packaging>jar</packaging>
-	<name>aura-core</name>
-	<url>http://maven.apache.org</url>
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>de.tuberlin.aura</groupId>
+    <artifactId>aura</artifactId>
+    <version>1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>aura-core</artifactId>
+  <packaging>jar</packaging>
+  <name>aura-core</name>
+  <url>http://maven.apache.org</url>
 
-	<!-- ================================= -->
-	<!-- MAVEN DEPENDENCIES.               -->
-	<!-- ================================= -->
+  <!-- ================================= -->
+  <!-- MAVEN DEPENDENCIES.                       -->
+  <!-- ================================= -->
 
-	<dependencies>
-		<!-- SYSTEM DEPENDENCIES -->
-		<dependency>
-			<groupId>io.netty</groupId>
-			<artifactId>netty-all</artifactId>
-			<version>4.0.12.Final</version>
-		</dependency>
+  <dependencies>
+    <!-- SYSTEM DEPENDENCIES -->
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <version>4.0.12.Final</version>
+    </dependency>
 
-		<dependency>
-			<groupId>com.esotericsoftware.kryo</groupId>
-			<artifactId>kryo</artifactId>
-			<version>2.22</version>
-		</dependency>
+    <dependency>
+      <groupId>com.esotericsoftware.kryo</groupId>
+      <artifactId>kryo</artifactId>
+      <version>2.22</version>
+    </dependency>
 
-		<dependency>
-			<groupId>bcel</groupId>
-			<artifactId>bcel</artifactId>
-			<version>5.1</version>
-		</dependency>
+        <dependency>
+      <groupId>bcel</groupId>
+      <artifactId>bcel</artifactId>
+      <version>5.1</version>
+    </dependency>
 
-		<!-- PROJECT DEPENDENCIES -->
-	</dependencies>
+    <!-- PROJECT DEPENDENCIES -->
+    <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+            <version>3.4.5</version>
+    </dependency>
+    <dependency>
+            <groupId>net.jcip</groupId>
+            <artifactId>jcip-annotations</artifactId>
+            <version>1.0</version>
+    </dependency>
+    <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>15.0</version>
+    </dependency>
+    <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.5</version>
+    </dependency>
+    <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>1.7.5</version>
+    </dependency>
+  </dependencies>
 
-	<!-- ================================= -->
-	<!-- MAVEN BUILD.                      -->
-	<!-- ================================= -->
+  <!-- ================================= -->
+  <!-- MAVEN BUILD.                                          -->
+  <!-- ================================= -->
 
-	<build>
-		<plugins>
+  <build>
+    <plugins>
 
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>${aura-maven-jar-plugin}</version>
-				<!--configuration> <archive> <manifest> <mainClass>com.aura.runtime.server.WorkloadManagerServer</mainClass>
-					</manifest> </archive> </configuration -->
-			</plugin>
+        <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>${aura-maven-jar-plugin}</version>
+        <!--configuration>
+          <archive>
+            <manifest>
+              <mainClass>com.aura.runtime.server.WorkloadManagerServer</mainClass>
+            </manifest>
+          </archive>
+        </configuration-->
+        </plugin>
 
-		</plugins>
-	</build>
+    </plugins>
+  </build>
 
 </project>
