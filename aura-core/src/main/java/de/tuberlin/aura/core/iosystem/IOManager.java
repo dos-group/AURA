@@ -61,6 +61,7 @@ public final class IOManager extends EventDispatcher {
 		@Override
 		protected void channelRead0(final ChannelHandlerContext ctx, final ControlIOEvent event)
 				throws Exception {
+
 			event.setChannel(ctx.channel());
 			dispatchEvent(event);
 		}
@@ -259,7 +260,7 @@ public final class IOManager extends EventDispatcher {
 
 	private final ChannelBuilder channelBuilder;
 
-	private final LocalAddress localAddress = new LocalAddress("1");
+	private final LocalAddress localAddress = new LocalAddress( UUID.randomUUID().toString() );
 
 	private final EventHandler controlEventHandler;
 
@@ -369,12 +370,32 @@ public final class IOManager extends EventDispatcher {
 			throw new IllegalArgumentException("event == null");
 
 		final Channel channel = controlIOConnections.get(new Pair<UUID, UUID>(machine.uid, dstMachineID));
+
 		if (channel == null)
 			throw new IllegalStateException("channel is not registered");
 
 		event.setSrcMachineID(machine.uid);
 		event.setDstMachineID(dstMachineID);
 		channel.writeAndFlush(event);
+
+		/*if( event instanceof RPCCallerRequestEvent ) {
+			final RPCCallerRequestEvent e = (RPCCallerRequestEvent)event;
+			LOG.info("-----------> RPC REQUEST : " + channel.toString());
+			LOG.info("             --> machine.uid : " + machine.uid);
+			LOG.info("             --> method : " + e.methodSignature.methodName);
+			LOG.info("             --> src machine : " + e.getSrcMachineID());
+			LOG.info("             --> dst machine : " + e.getDstMachineID());
+			LOG.info("             --> call uid : " + e.callUID);
+		}
+
+		if( event instanceof RPCCalleeResponseEvent ) {
+			final RPCCalleeResponseEvent e = (RPCCalleeResponseEvent)event;
+			LOG.info("-----------> RPC RESPONSE : " + channel.toString());
+			LOG.info("             --> machine.uid : " + machine.uid);
+			LOG.info("             --> src machine : " + e.getSrcMachineID());
+			LOG.info("             --> dst machine : " + e.getDstMachineID());
+			LOG.info("             --> call uid : " + e.callUID);
+		}*/
 	}
 
 	// ---------------------------------------------------

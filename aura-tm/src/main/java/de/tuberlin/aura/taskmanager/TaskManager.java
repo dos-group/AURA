@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 
@@ -16,6 +18,7 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
@@ -220,6 +223,10 @@ public final class TaskManager implements WM2TMProtocol {
 	// Constructors.
 	// ---------------------------------------------------
 
+	public TaskManager(final String zkServer, int dataPort, int controlPort) {
+		this(zkServer, DescriptorFactory.getDescriptor(dataPort, controlPort));
+	}
+
 	public TaskManager(final String zkServer, final MachineDescriptor machine) {
 		// sanity check.
 		ZkHelper.checkConnectionString(zkServer);
@@ -335,6 +342,7 @@ public final class TaskManager implements WM2TMProtocol {
 
 	private synchronized void wireOutputDataChannels(final TaskDescriptor taskDescriptor,
 			final TaskBindingDescriptor taskBindingDescriptor) {
+
 		// Connect outputs, if we have some...
 		if (taskBindingDescriptor.outputGateBindings.size() > 0) {
 			for (final List<TaskDescriptor> outputGate : taskBindingDescriptor.outputGateBindings)
@@ -372,6 +380,7 @@ public final class TaskManager implements WM2TMProtocol {
 		final TaskContext context = new TaskContext(taskDescriptor, taskBindingDescriptor, handler, executableClass);
 		handler.context = context;
 		taskContextMap.put(taskDescriptor.taskID, new Pair<TaskContext, IEventDispatcher>(context, context.dispatcher));
+		LOG.info("CREATE CONTEXT FOR TASK [" + taskDescriptor.taskID + "] ON MACHINE [" + ioManager.machine.uid + "]");
 
 		if (taskBindingDescriptor.inputGateBindings.size() == 0) {
 			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
@@ -393,5 +402,37 @@ public final class TaskManager implements WM2TMProtocol {
 			topologyTaskContextMap.put(taskDescriptor.topologyID, contextList);
 		}
 		contextList.add(context);
+	}
+
+	// ---------------------------------------------------
+	// Entry Point.
+	// ---------------------------------------------------
+
+	public static void main(final String[] args) {
+
+		final Logger rootLOG = Logger.getRootLogger();
+
+		final SimpleLayout layout = new SimpleLayout();
+		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+		rootLOG.addAppender(consoleAppender);
+
+		int dataPort = -1;
+		int controlPort = -1;
+		String zkServer = null;
+		if (args.length == 3) {
+			try {
+				zkServer = args[0];
+				dataPort = Integer.parseInt(args[1]);
+				controlPort = Integer.parseInt(args[2]);
+			} catch (NumberFormatException e) {
+				System.err.println("Argument" + " must be an integer");
+				System.exit(1);
+			}
+		} else {
+			System.err.println("only two numeric arguments allowed: dataPort, controlPort");
+			System.exit(1);
+		}
+
+		new TaskManager(zkServer, dataPort, controlPort);
 	}
 }

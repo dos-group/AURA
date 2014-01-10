@@ -185,6 +185,22 @@ public final class UserCodeExtractor {
 			}
 		}
 
+		/*
+		int count = 0;
+		boolean isClazzFilename = false;
+		while (tokenizer.hasMoreTokens()) {
+			final String token = tokenizer.nextToken();
+			if (!token.equals(topLevelClazzName) && !isClazzFilename && tokenCount - 1 > count)
+				pathBuilder.append(token).append("/");
+			else {
+				pathBuilder.append(token);
+				if (tokenizer.hasMoreTokens())
+					pathBuilder.append("$");
+				isClazzFilename = true;
+			}
+			++count;
+		}*/
+
 		final String filePath = clazz.getProtectionDomain().getCodeSource().
 			getLocation().getPath() + pathBuilder.toString() + ".class";
 

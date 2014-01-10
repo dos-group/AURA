@@ -20,7 +20,7 @@
   <properties>
     <!-- JAVA -->
     <aura-jdk-version>1.7</aura-jdk-version>
-    <aura-maven-compiler-plugin-version>2.0.2</aura-maven-compiler-plugin-version>
+    <aura-maven-compiler-plugin-version>3.1</aura-maven-compiler-plugin-version>
     <aura-maven-jar-plugin>2.4</aura-maven-jar-plugin>
   </properties>
 
@@ -70,7 +70,8 @@
     <module>aura-core</module>
     <module>aura-tm</module>
     <module>aura-wm</module>
-    <module>aura-demo</module>
+    <module>aura-client</module>
+    <module>aura-examples</module>
   </modules>
 
 </project>

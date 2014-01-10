@@ -40,8 +40,7 @@ public final class Descriptors {
 			if (dataPort < 1024 || dataPort > 65535)
 				throw new IllegalArgumentException("dataPort invalid");
 			if (controlPort < 1024 || controlPort > 65535)
-				throw new IllegalArgumentException(
-					"controlPort invalid port number");
+				throw new IllegalArgumentException("controlPort invalid port number");
 			if (hardware == null)
 				throw new IllegalArgumentException("hardware == null");
 
@@ -96,8 +95,14 @@ public final class Descriptors {
 		public String toString()
 		{
 			return (new StringBuilder()).append("MachineDescriptor = {")
-				.append(" uid = " + uid.toString() + ", ")
-				.append(" netAddress = " + dataAddress).append(" }").toString();
+				.append(" uid = " + uid.toString())
+				.append(", ")
+				.append(" netAddress = " + dataAddress)
+				.append(", ")
+				.append(" controlAddress = " + controlAddress)
+				.append(", ")
+				.append(hardware)
+				.append(" }").toString();
 		}
 	}
 
@@ -108,13 +113,13 @@ public final class Descriptors {
 		 */
 		private static final long serialVersionUID = -1014379658418868396L;
 
-		public HardwareDescriptor(short cpuCores, long sizeOfRAM,
+		public HardwareDescriptor(int cpuCores, long sizeOfRAM,
 				HDDDescriptor hdd)
 		{
 			this(UUID.randomUUID(), cpuCores, sizeOfRAM, hdd);
 		}
 
-		public HardwareDescriptor(UUID uid, short cpuCores, long sizeOfRAM,
+		public HardwareDescriptor(UUID uid, int cpuCores, long sizeOfRAM,
 				HDDDescriptor hdd)
 		{
 			// sanity check.
@@ -135,7 +140,7 @@ public final class Descriptors {
 
 		public final UUID uid;
 
-		public final short cpuCores;
+		public final int cpuCores;
 
 		public final long sizeOfRAM;
 
@@ -159,10 +164,14 @@ public final class Descriptors {
 		@Override
 		public String toString()
 		{
-			return (new StringBuilder()).append("MachineDescriptor = {")
-				.append(" uid = " + uid.toString() + ", ")
-				.append(" cpuCores = " + cpuCores + ", ")
-				.append(" sizeOfRAM = " + sizeOfRAM).append(" }").toString();
+			return (new StringBuilder()).append("HardwareDescriptor = {")
+				.append(" uid = " + uid.toString())
+				.append(", ")
+				.append(" cpuCores = " + cpuCores)
+				.append(", ")
+				.append(" sizeOfRAM = " + sizeOfRAM)
+				.append(", ")
+				.append(hdd).append(" }").toString();
 		}
 	}
 
@@ -212,8 +221,9 @@ public final class Descriptors {
 		@Override
 		public String toString()
 		{
-			return (new StringBuilder()).append("MachineDescriptor = {")
-				.append(" uid = " + uid.toString() + ", ")
+			return (new StringBuilder()).append("HDDDescriptor = {")
+				.append(" uid = " + uid.toString())
+				.append(", ")
 				.append(" sizeOfHDD = " + sizeOfHDD).append(" }").toString();
 		}
 	}

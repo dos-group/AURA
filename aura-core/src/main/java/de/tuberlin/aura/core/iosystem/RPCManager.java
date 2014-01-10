@@ -99,18 +99,18 @@ public final class RPCManager {
 
 		private final IOManager ioManager;
 
-		private static final Map<UUID, CountDownLatch> callerTable = new HashMap<UUID, CountDownLatch>();
+		private final static Map<UUID, CountDownLatch> callerTable = new HashMap<UUID, CountDownLatch>();
 
-		private static final Map<UUID, Object> callerResultTable = new HashMap<UUID, Object>();
+		private final static Map<UUID, Object> callerResultTable = new HashMap<UUID, Object>();
 
 		@SuppressWarnings("unchecked")
-		public static <T> T getProtocolProxy(final UUID dstMachineID,
+		public static <T> T createProtocolProxy(final UUID dstMachineID,
 				final Class<T> protocolInterface,
 				final IOManager ioManager) {
 
 			final ProtocolCallerProxy pc = new ProtocolCallerProxy(dstMachineID, ioManager);
-			return (T) Proxy
-				.newProxyInstance(protocolInterface.getClassLoader(), new Class[] { protocolInterface }, pc);
+			return (T) Proxy.newProxyInstance(protocolInterface.getClassLoader(),
+				new Class[] { protocolInterface }, pc);
 		}
 
 		@Override
@@ -178,7 +178,8 @@ public final class RPCManager {
 				throw new IllegalArgumentException("callUID == null");
 
 			callerResultTable.put(callUID, result);
-			final CountDownLatch cdl = RPCManager.ProtocolCallerProxy.callerTable.get(callUID);
+			//final CountDownLatch cdl = RPCManager.ProtocolCallerProxy.callerTable.get(callUID);
+			final CountDownLatch cdl = callerTable.get(callUID);
 			cdl.countDown();
 		}
 	}
@@ -186,15 +187,15 @@ public final class RPCManager {
 	/**
      *
      */
-	private static final class ProtocolCalleeProxy {
+	private final class ProtocolCalleeProxy {
 
-		private static final Map<String, Object> calleeTable = new HashMap<String, Object>();
+		private final Map<String, Object> calleeTable = new HashMap<String, Object>();
 
-		public static void registerProtocol(final Object protocolImplementation, final Class<?> protocolInterface) {
+		public void registerProtocol(final Object protocolImplementation, final Class<?> protocolInterface) {
 			calleeTable.put(protocolInterface.getSimpleName(), protocolImplementation);
 		}
 
-		public static RPCCalleeResponseEvent callMethod(final UUID callUID,
+		public RPCCalleeResponseEvent callMethod(final UUID callUID,
 				final MethodSignature methodInfo) {
 			// sanity check.
 			if (callUID == null)
@@ -236,7 +237,8 @@ public final class RPCManager {
 				@Override
 				public void run() {
 					final RPCCalleeResponseEvent calleeMsg =
-						RPCManager.ProtocolCalleeProxy.callMethod(event.callUID, event.methodSignature);
+						//RPCManager.ProtocolCalleeProxy.callMethod(event.callUID, event.methodSignature);
+							calleeProxy.callMethod(event.callUID, event.methodSignature);
 
 					ioManager.sendEvent(event.getSrcMachineID(), calleeMsg);
 				}
@@ -270,6 +272,8 @@ public final class RPCManager {
 		};
 
 		this.ioManager.addEventListener(rpcEvents, rpcEventHandler);
+
+		this.calleeProxy = new ProtocolCalleeProxy();
 	}
 
 	// ---------------------------------------------------
@@ -284,6 +288,8 @@ public final class RPCManager {
 
 	private final RPCEventHandler rpcEventHandler;
 
+	private final ProtocolCalleeProxy calleeProxy;
+
 	// ---------------------------------------------------
 	// Public.
 	// ---------------------------------------------------
@@ -295,7 +301,8 @@ public final class RPCManager {
 		if (protocolInterface == null)
 			throw new IllegalArgumentException("protocolInterface == null");
 
-		ProtocolCalleeProxy.registerProtocol(protocolImplementation, protocolInterface);
+		//ProtocolCalleeProxy.registerProtocol(protocolImplementation, protocolInterface);
+		calleeProxy.registerProtocol(protocolImplementation, protocolInterface);
 	}
 
 	public <T> T getRPCProtocolProxy(final Class<T> protocolInterface, final MachineDescriptor dstMachine) {
@@ -309,9 +316,10 @@ public final class RPCManager {
 		@SuppressWarnings("unchecked")
 		T proxy = (T) cachedProxies.get(proxyKey);
 		if (proxy == null) {
-			proxy = ProtocolCallerProxy.getProtocolProxy(dstMachine.uid, protocolInterface, ioManager);
+			proxy = ProtocolCallerProxy.createProtocolProxy(dstMachine.uid, protocolInterface, ioManager);
 			cachedProxies.put(proxyKey, proxy);
 		}
+
 		return proxy;
 	}
 }

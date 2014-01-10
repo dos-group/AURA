@@ -1,5 +1,8 @@
 package de.tuberlin.aura.demo.client;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 
@@ -7,7 +10,9 @@ import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
 
-import de.tuberlin.aura.core.client.AuraClient;
+import de.tuberlin.aura.client.api.AuraClient;
+import de.tuberlin.aura.client.executors.LocalClusterExecutor;
+import de.tuberlin.aura.client.executors.LocalClusterExecutor.LocalExecutionMode;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Edge;
@@ -15,7 +20,6 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
-import de.tuberlin.aura.demo.deployment.LocalDeployment;
 
 public final class Client {
 
@@ -151,12 +155,10 @@ public final class Client {
 		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
 		LOG.addAppender(consoleAppender);
 
-		// Run the demo:
-		// Start WM
-		// Start TM 1-4
-		// Start Client
-
-		final AuraClient ac = new AuraClient(LocalDeployment.MACHINE_6_DESCRIPTOR, LocalDeployment.MACHINE_5_DESCRIPTOR);
+		final String zookeeperAddress = "localhost:2181";
+		final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+			true, zookeeperAddress, 4);
+		final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
 		final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 		atb1.addNode(new Node(UUID.randomUUID(), "Task1", Task1Exe.class, 1, 1))
@@ -178,6 +180,13 @@ public final class Client {
 		final AuraTopology at2 = atb2.build("Job 2");
 		ac.submitTopology(at2);
 
+		try {
+			new BufferedReader(new InputStreamReader(System.in)).readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		lce.shutdown();
 		/*
 		 * With Loops... (not working, loops not yet implemented in the runtime)
 		 * final AuraTopologyBuilder atb = ac.createTopologyBuilder();

@@ -64,7 +64,8 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
 				for (final ExecutionNode en : element.getExecutionNodes()) {
 					final TaskDeploymentDescriptor tdd =
 						new TaskDeploymentDescriptor(en.getTaskDescriptor(),
-							en.getTaskBindingDescriptor(), en.logicalNode.dataPersistenceType, en.logicalNode.executionType);
+							en.getTaskBindingDescriptor(), en.logicalNode.dataPersistenceType,
+							en.logicalNode.executionType);
 					final WM2TMProtocol tmProtocol =
 						rpcManager.getRPCProtocolProxy(WM2TMProtocol.class,
 							en.getTaskDescriptor().getMachineDescriptor());

@@ -397,6 +397,13 @@ public class AuraDirectedGraph {
 			PIPELINED,
 		}
 
+		public static enum ExecutionEnvironment {
+
+			SANDBOXED,
+
+			NORMAL
+		}
+
 		// ---------------------------------------------------
 		// Constructors.
 		// ---------------------------------------------------

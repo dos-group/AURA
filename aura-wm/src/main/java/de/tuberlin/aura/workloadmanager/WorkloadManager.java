@@ -4,9 +4,12 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
+import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
@@ -33,6 +36,10 @@ public class WorkloadManager implements ClientWMProtocol {
 	// ---------------------------------------------------
 	// Constructors.
 	// ---------------------------------------------------
+
+	public WorkloadManager(final String zkServer, int dataPort, int controlPort) {
+		this(zkServer, DescriptorFactory.getDescriptor(dataPort, controlPort));
+	}
 
 	public WorkloadManager(final String zkServer, final MachineDescriptor machine) {
 		// sanity check.
@@ -123,5 +130,37 @@ public class WorkloadManager implements ClientWMProtocol {
 
 	public InfrastructureManager getInfrastructureManager() {
 		return infrastructureManager;
+	}
+
+	// ---------------------------------------------------
+	// Entry Point.
+	// ---------------------------------------------------
+
+	public static void main(final String[] args) {
+
+		final Logger rootLOG = Logger.getRootLogger();
+
+		final SimpleLayout layout = new SimpleLayout();
+		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+		rootLOG.addAppender(consoleAppender);
+
+		int dataPort = -1;
+		int controlPort = -1;
+		String zkServer = null;
+		if (args.length == 3) {
+			try {
+				zkServer = args[0];
+				dataPort = Integer.parseInt(args[1]);
+				controlPort = Integer.parseInt(args[2]);
+			} catch (NumberFormatException e) {
+				System.err.println("Argument" + " must be an integer");
+				System.exit(1);
+			}
+		} else {
+			System.err.println("only two numeric arguments allowed: dataPort, controlPort");
+			System.exit(1);
+		}
+
+		new WorkloadManager(zkServer, dataPort, controlPort);
 	}
 }
