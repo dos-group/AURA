@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
+import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
@@ -123,5 +124,19 @@ public class WorkloadManager implements ClientWMProtocol {
 
 	public InfrastructureManager getInfrastructureManager() {
 		return infrastructureManager;
+	}
+
+	public static void main(String[] args)
+	{
+		if (args.length != 6)
+		{
+			LOG.error("Parameters: -zk {zkServerString} -dp {dataPort} -cp {controlPort}");
+		}
+
+		int dataPort = Integer.parseInt(args[3]);
+		int controlPort = Integer.parseInt(args[5]);
+		MachineDescriptor machine = DescriptorFactory.getDescriptor(dataPort, controlPort);
+
+		new WorkloadManager(args[1], machine);
 	}
 }

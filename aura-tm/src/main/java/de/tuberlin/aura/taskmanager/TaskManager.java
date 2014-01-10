@@ -16,6 +16,7 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
@@ -393,5 +394,19 @@ public final class TaskManager implements WM2TMProtocol {
 			topologyTaskContextMap.put(taskDescriptor.topologyID, contextList);
 		}
 		contextList.add(context);
+	}
+
+	public static void main(String[] args)
+	{
+		if (args.length != 6)
+		{
+			LOG.error("Parameters: -zk {zkServerString} -dp {dataPort} -cp {controlPort}");
+		}
+
+		int dataPort = Integer.parseInt(args[3]);
+		int controlPort = Integer.parseInt(args[5]);
+		MachineDescriptor machine = DescriptorFactory.getDescriptor(dataPort, controlPort);
+
+		new TaskManager(args[1], machine);
 	}
 }
