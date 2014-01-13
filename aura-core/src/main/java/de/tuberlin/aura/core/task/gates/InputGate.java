@@ -6,7 +6,6 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
@@ -21,7 +20,7 @@ public final class InputGate extends AbstractGate {
 		super(context, gateIndex, context.taskBinding.inputGateBindings.get(gateIndex).size());
 
 		if (numChannels > 0) {
-			inputQueue = new LinkedBlockingQueue<DataBufferEvent>();
+			inputQueue = new LinkedBlockingQueue<DataIOEvent>();
 		} else { // numChannels == 0
 			inputQueue = null;
 		}
@@ -31,18 +30,18 @@ public final class InputGate extends AbstractGate {
 	// Fields.
 	// ---------------------------------------------------
 
-	private final BlockingQueue<DataBufferEvent> inputQueue;
+	private final BlockingQueue<DataIOEvent> inputQueue;
 
 	// ---------------------------------------------------
 	// Public.
 	// ---------------------------------------------------
 
-	public void addToInputQueue(final DataBufferEvent message) {
+	public void addToInputQueue(final DataIOEvent dataEvent) {
 		// sanity check.
-		if (message == null)
+		if (dataEvent == null)
 			throw new IllegalArgumentException("message == null");
 
-		inputQueue.add(message);
+		inputQueue.add(dataEvent);
 	}
 
 	public void openGate() {
@@ -61,7 +60,7 @@ public final class InputGate extends AbstractGate {
 		}
 	}
 
-	public BlockingQueue<DataBufferEvent> getInputQueue() {
+	public BlockingQueue<DataIOEvent> getInputQueue() {
 		return inputQueue;
 	}
 }

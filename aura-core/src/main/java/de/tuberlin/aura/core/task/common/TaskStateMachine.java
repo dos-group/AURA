@@ -30,6 +30,8 @@ public final class TaskStateMachine {
 
         TASK_STATE_RUNNING,
 
+        TASK_STATE_PAUSED,
+
         TASK_STATE_FINISHED,
 
         TASK_STATE_FAILURE,
@@ -52,6 +54,8 @@ public final class TaskStateMachine {
 
         TASK_TRANSITION_RUN,
 
+        TASK_TRANSITION_HALT,
+
         TASK_TRANSITION_FINISH,
 
         TASK_TRANSITION_FAILURE;
@@ -70,6 +74,7 @@ public final class TaskStateMachine {
         t1.put( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, 	TaskState.TASK_STATE_INPUTS_CONNECTED );
         t1.put( TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, 	TaskState.TASK_STATE_OUTPUTS_CONNECTED );
         t1.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_UNDEFINED );
+        t1.put( TaskTransition.TASK_TRANSITION_HALT, 				TaskState.TASK_STATE_UNDEFINED );
         t1.put( TaskTransition.TASK_TRANSITION_FINISH, 				TaskState.TASK_STATE_UNDEFINED );
         t1.put( TaskTransition.TASK_TRANSITION_FAILURE, 			TaskState.TASK_STATE_UNDEFINED );
 
@@ -81,6 +86,7 @@ public final class TaskStateMachine {
         t2.put( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, 	TaskState.TASK_STATE_READY );
         t2.put( TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t2.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_UNDEFINED );
+        t2.put( TaskTransition.TASK_TRANSITION_HALT, 				TaskState.TASK_STATE_UNDEFINED );
         t2.put( TaskTransition.TASK_TRANSITION_FINISH, 				TaskState.TASK_STATE_UNDEFINED );
         t2.put( TaskTransition.TASK_TRANSITION_FAILURE, 			TaskState.TASK_STATE_UNDEFINED );
 
@@ -92,6 +98,7 @@ public final class TaskStateMachine {
         t3.put( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t3.put( TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, 	TaskState.TASK_STATE_READY );
         t3.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_UNDEFINED );
+        t3.put( TaskTransition.TASK_TRANSITION_HALT, 				TaskState.TASK_STATE_UNDEFINED );
         t3.put( TaskTransition.TASK_TRANSITION_FINISH, 				TaskState.TASK_STATE_UNDEFINED );
         t3.put( TaskTransition.TASK_TRANSITION_FAILURE, 			TaskState.TASK_STATE_UNDEFINED );
 
@@ -103,6 +110,7 @@ public final class TaskStateMachine {
         t4.put( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t4.put( TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t4.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_RUNNING );
+        t4.put( TaskTransition.TASK_TRANSITION_HALT, 				TaskState.TASK_STATE_UNDEFINED );
         t4.put( TaskTransition.TASK_TRANSITION_FINISH, 				TaskState.TASK_STATE_UNDEFINED );
         t4.put( TaskTransition.TASK_TRANSITION_FAILURE, 			TaskState.TASK_STATE_UNDEFINED );
 
@@ -114,6 +122,7 @@ public final class TaskStateMachine {
         t5.put( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t5.put( TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t5.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_UNDEFINED );
+        t5.put( TaskTransition.TASK_TRANSITION_HALT, 				TaskState.TASK_STATE_PAUSED );
         t5.put( TaskTransition.TASK_TRANSITION_FINISH, 				TaskState.TASK_STATE_FINISHED );
         t5.put( TaskTransition.TASK_TRANSITION_FAILURE, 			TaskState.TASK_STATE_FAILURE );
 
@@ -124,11 +133,12 @@ public final class TaskStateMachine {
         t6.put( TaskTransition.TASK_TRANSITION_INVALID, 			TaskState.TASK_STATE_UNDEFINED );
         t6.put( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t6.put( TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
-        t6.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_UNDEFINED );
+        t6.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_RUNNING );
+        t6.put( TaskTransition.TASK_TRANSITION_HALT, 				TaskState.TASK_STATE_UNDEFINED );
         t6.put( TaskTransition.TASK_TRANSITION_FINISH, 				TaskState.TASK_STATE_UNDEFINED );
         t6.put( TaskTransition.TASK_TRANSITION_FAILURE, 			TaskState.TASK_STATE_UNDEFINED );
 
-        mtx.put( TaskState.TASK_STATE_FINISHED, Collections.unmodifiableMap( t6 ) );
+        mtx.put( TaskState.TASK_STATE_PAUSED, Collections.unmodifiableMap( t6 ) );
 
         final Map<TaskTransition,TaskState> t7 = new HashMap<TaskTransition,TaskState>();
 
@@ -136,10 +146,23 @@ public final class TaskStateMachine {
         t7.put( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t7.put( TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
         t7.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_UNDEFINED );
+        t7.put( TaskTransition.TASK_TRANSITION_HALT, 				TaskState.TASK_STATE_UNDEFINED );
         t7.put( TaskTransition.TASK_TRANSITION_FINISH, 				TaskState.TASK_STATE_UNDEFINED );
         t7.put( TaskTransition.TASK_TRANSITION_FAILURE, 			TaskState.TASK_STATE_UNDEFINED );
 
-        mtx.put( TaskState.TASK_STATE_FAILURE, Collections.unmodifiableMap( t7 ) );
+        mtx.put( TaskState.TASK_STATE_FINISHED, Collections.unmodifiableMap( t7 ) );
+
+        final Map<TaskTransition,TaskState> t8 = new HashMap<TaskTransition,TaskState>();
+
+        t8.put( TaskTransition.TASK_TRANSITION_INVALID, 			TaskState.TASK_STATE_UNDEFINED );
+        t8.put( TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
+        t8.put( TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, 	TaskState.TASK_STATE_UNDEFINED );
+        t8.put( TaskTransition.TASK_TRANSITION_RUN, 				TaskState.TASK_STATE_UNDEFINED );
+        t8.put( TaskTransition.TASK_TRANSITION_HALT, 				TaskState.TASK_STATE_UNDEFINED );
+        t8.put( TaskTransition.TASK_TRANSITION_FINISH, 				TaskState.TASK_STATE_UNDEFINED );
+        t8.put( TaskTransition.TASK_TRANSITION_FAILURE, 			TaskState.TASK_STATE_UNDEFINED );
+
+        mtx.put( TaskState.TASK_STATE_FAILURE, Collections.unmodifiableMap( t8 ) );
 
         return Collections.unmodifiableMap( mtx );
     }

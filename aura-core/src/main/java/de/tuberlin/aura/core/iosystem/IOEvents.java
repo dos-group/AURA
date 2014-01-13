@@ -33,6 +33,7 @@ public final class IOEvents {
 
 		public static final String DATA_EVENT_BUFFER = "DATA_EVENT_BUFFER";
 
+		public static final String DATA_EVENT_SOURCE_EXHAUSTED = "DATA_EVENT_SOURCE_EXHAUSTED";
 	}
 
 	/**
@@ -125,6 +126,12 @@ public final class IOEvents {
 	public static final class DataBufferEvent extends DataIOEvent {
 
 		private static final long serialVersionUID = -1;
+
+		public DataBufferEvent(final UUID srcTaskID,
+				final UUID dstTaskID,
+				final byte[] data) {
+			this(UUID.randomUUID(), srcTaskID, dstTaskID, data);
+		}
 
 		public DataBufferEvent(final UUID messageID,
 				final UUID srcTaskID,

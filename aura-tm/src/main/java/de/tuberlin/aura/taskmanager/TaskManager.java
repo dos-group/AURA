@@ -33,7 +33,6 @@ import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
-import de.tuberlin.aura.core.task.common.TaskStateMachine;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
@@ -77,6 +76,12 @@ public final class TaskManager implements WM2TMProtocol {
 
 		@Handle(event = DataBufferEvent.class)
 		private void handleDataEvent(final DataBufferEvent event) {
+			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
+			contextAndHandler.getSecond().dispatchEvent(event);
+		}
+
+		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)
+		private void handleDataExhaustedEvent(final DataIOEvent event) {
 			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
 			contextAndHandler.getSecond().dispatchEvent(event);
 		}
@@ -165,16 +170,22 @@ public final class TaskManager implements WM2TMProtocol {
 				.addToInputQueue(event);
 		}
 
+		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)
+		private void handleTaskInputDataExhausted(final DataIOEvent event) {
+			context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
+				.addToInputQueue(event);
+		}
+
 		@Handle(event = TaskStateTransitionEvent.class)
 		private void handleTaskStateTransition(final TaskStateTransitionEvent event) {
-			synchronized (context.state) { // serialize task state transitions!
-				final TaskState oldState = context.state;
-				final Map<TaskTransition, TaskState> transitionsSpace =
-					TaskStateMachine.TASK_STATE_TRANSITION_MATRIX.get(context.state);
-				final TaskState nextState = transitionsSpace.get(event.transition);
-				context.state = nextState;
+			synchronized (context.getCurrentTaskState()) { // serialize task state transitions!
+
+				final TaskState oldState = context.getCurrentTaskState();
+				final TaskState nextState = context.doTaskStateTransition(event.transition);
+
 				// Trigger state dependent actions. Realization of a classic Moore automata.
-				switch (context.state) {
+				switch (nextState) {
+
 				case TASK_STATE_NOT_CONNECTED: {
 				}
 					break;
@@ -186,16 +197,33 @@ public final class TaskManager implements WM2TMProtocol {
 					break;
 				case TASK_STATE_READY: {
 					ioManager.sendEvent(wmMachine, new TaskStateEvent(context.task.topologyID, context.task.taskID,
-						context.state));
+						context.getCurrentTaskState()));
 				}
 					break;
 				case TASK_STATE_RUNNING: {
-					scheduleTask(context);
+
+					switch (oldState) {
+
+					case TASK_STATE_READY: {
+						scheduleTask(context);
+					}
+						break;
+
+					case TASK_STATE_PAUSED: {
+						context.getInvokeable().resume();
+					}
+					default:
+						throw new IllegalStateException();
+					}
+				}
+					break;
+				case TASK_STATE_PAUSED: {
+					context.getInvokeable().suspend();
 				}
 					break;
 				case TASK_STATE_FINISHED: {
 					ioManager.sendEvent(wmMachine, new TaskStateEvent(context.task.topologyID, context.task.taskID,
-						context.state));
+						context.getCurrentTaskState()));
 					taskContextMap.remove(context.task.taskID);
 					topologyTaskContextMap.get(context.task.topologyID).remove(context);
 					context.close();
@@ -210,11 +238,13 @@ public final class TaskManager implements WM2TMProtocol {
 				case TASK_STATE_UNDEFINED: {
 					throw new IllegalStateException("task " + context.task.name + " [" + context.task.taskID
 						+ "] from state "
-						+ oldState + " to " + context.state + " is not defined");
+						+ oldState + " to " + context.getCurrentTaskState() + " is not defined");
 				}
+				default:
+					break;
 				}
 				LOG.info("CHANGE STATE OF TASK " + context.task.name + " [" + context.task.taskID + "] FROM "
-					+ oldState + " TO " + context.state);
+					+ oldState + " TO " + context.getCurrentTaskState());
 			}
 		}
 	}
@@ -251,6 +281,7 @@ public final class TaskManager implements WM2TMProtocol {
 			DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
 			DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE,
 			DataEventType.DATA_EVENT_BUFFER,
+			DataEventType.DATA_EVENT_SOURCE_EXHAUSTED,
 			TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT };
 
 		this.ioManager.addEventListener(IOEvents, ioHandler);
@@ -326,14 +357,6 @@ public final class TaskManager implements WM2TMProtocol {
 		installTask(taskDeploymentDescriptor.taskDescriptor,
 			taskDeploymentDescriptor.taskBindingDescriptor,
 			userCodeClass);
-	}
-
-	public RPCManager getRPCManager() {
-		return rpcManager;
-	}
-
-	public IOManager getIOManager() {
-		return ioManager;
 	}
 
 	// ---------------------------------------------------
@@ -434,5 +457,13 @@ public final class TaskManager implements WM2TMProtocol {
 		}
 
 		new TaskManager(zkServer, dataPort, controlPort);
+	}
+
+	public RPCManager getRPCManager() {
+		return rpcManager;
+	}
+
+	public IOManager getIOManager() {
+		return ioManager;
 	}
 }

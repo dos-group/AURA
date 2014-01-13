@@ -18,6 +18,7 @@ import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
+import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.gates.InputGate;
 import de.tuberlin.aura.core.task.gates.OutputGate;
 
@@ -104,6 +105,7 @@ public final class TaskContext {
 			DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
 			DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE,
 			DataEventType.DATA_EVENT_BUFFER,
+			DataEventType.DATA_EVENT_SOURCE_EXHAUSTED,
 			TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT };
 
 		dispatcher.addEventListener(taskEvents, handler);
@@ -133,7 +135,9 @@ public final class TaskContext {
 
 	public final List<OutputGate> outputGates;
 
-	public TaskState state;
+	private TaskState state;
+
+	private TaskInvokeable invokeable;
 
 	// ---------------------------------------------------
 	// Public.
@@ -157,6 +161,45 @@ public final class TaskContext {
 		return taskIDToGateIndex.get(taskID);
 	}
 
+	public TaskState getCurrentTaskState() {
+		return state;
+	}
+
+	public TaskState doTaskStateTransition(final TaskTransition transition) {
+		// sanity check.
+		if (transition == null)
+			throw new IllegalArgumentException("transition == null");
+
+		final Map<TaskTransition, TaskState> transitionsSpace =
+				TaskStateMachine.TASK_STATE_TRANSITION_MATRIX.get(state);
+		final TaskState nextState = transitionsSpace.get(transition);
+		state = nextState;
+		return state;
+	}
+
+	public void setInvokeable(final TaskInvokeable invokeable) {
+		// sanity check.
+		if (invokeable == null)
+			throw new IllegalArgumentException("invokeable == null");
+		// check state condition.
+		if (this.invokeable != null)
+			throw new IllegalStateException("this.invokeable != null");
+		if (state != TaskState.TASK_STATE_RUNNING)
+			throw new IllegalStateException("state != TaskState.TASK_STATE_RUNNING");
+
+		this.invokeable = invokeable;
+	}
+
+	public TaskInvokeable getInvokeable() {
+		// check state condition.
+		if (this.invokeable != null)
+			throw new IllegalStateException("this.invokeable != null");
+		if (state != TaskState.TASK_STATE_RUNNING)
+			throw new IllegalStateException("state != TaskState.TASK_STATE_RUNNING");
+
+		return invokeable;
+	}
+
 	public void close() {
 		if (outputGates != null) {
 			for (final OutputGate og : outputGates) {
@@ -173,9 +216,7 @@ public final class TaskContext {
 		}
 
 		taskIDToGateIndex.clear();
-
 		channelIndexToTaskID.clear();
-
 		dispatcher.removeAllEventListener();
 	}
 }

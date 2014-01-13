@@ -7,7 +7,6 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
@@ -67,7 +66,7 @@ public final class OutputGate extends AbstractGate {
 	// Public.
 	// ---------------------------------------------------
 
-	public void writeDataToChannel(final int channelIndex, final DataBufferEvent data) {
+	public void writeDataToChannel(final int channelIndex, final DataIOEvent data) {
 		// sanity check.
 		if (data == null)
 			throw new IllegalArgumentException("data == null");

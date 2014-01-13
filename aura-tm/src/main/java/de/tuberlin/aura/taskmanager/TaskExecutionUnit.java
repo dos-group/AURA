@@ -34,7 +34,7 @@ public final class TaskExecutionUnit {
 				// check precondition.
 				if (context == null)
 					throw new IllegalStateException("context == null");
-				if (context.state != TaskState.TASK_STATE_RUNNING)
+				if (context.getCurrentTaskState() != TaskState.TASK_STATE_RUNNING)
 					throw new IllegalStateException("task is not in state ready");
 
 				// create instance of that task and execute it.
@@ -49,9 +49,6 @@ public final class TaskExecutionUnit {
 				// check instance.
 				if (invokeable == null)
 					throw new IllegalStateException("invokeable == null");
-
-				// context.dispatcher.dispatchEvent( new TaskStateTransitionEvent( TaskTransition.TASK_TRANSITION_RUN )
-				// );
 
 				try {
 					invokeable.execute();

@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
 
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
@@ -18,6 +17,8 @@ import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopologyBuilder
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 
@@ -40,20 +41,18 @@ public final class Client {
 
 		@Override
 		public void execute() throws Exception {
+
+			final UUID taskID = getTaskID();
+			final UUID outputTaskID = getOutputTaskID(0, 0);
+
 			for (int i = 0; i < 100; ++i) {
-				final byte[] data = new byte[65536];
-
-				final DataBufferEvent dm = new DataBufferEvent(UUID.randomUUID(), context.task.taskID,
-					context.taskBinding.outputGateBindings.get(0).get(0).taskID, data);
-
-				context.outputGates.get(0).writeDataToChannel(0, dm);
-
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+				final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+				emit(0, 0, outputBuffer);
+				SLEEP(100);
 			}
+
+			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
+			emit(0, 0, exhaustedEvent);
 		}
 	}
 
@@ -68,17 +67,18 @@ public final class Client {
 
 		@Override
 		public void execute() throws Exception {
+
+			final UUID taskID = getTaskID();
+			final UUID outputTaskID = getOutputTaskID(0, 0);
+
 			for (int i = 0; i < 100; ++i) {
-				final byte[] data = new byte[65536];
-				final DataBufferEvent dm = new DataBufferEvent(UUID.randomUUID(), context.task.taskID,
-					context.taskBinding.outputGateBindings.get(0).get(0).taskID, data);
-				context.outputGates.get(0).writeDataToChannel(0, dm);
-				try {
-					Thread.sleep(100);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
+				final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+				emit(0, 0, outputBuffer);
+				SLEEP(100);
 			}
+
+			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
+			emit(0, 0, exhaustedEvent);
 		}
 	}
 
@@ -94,28 +94,38 @@ public final class Client {
 		@Override
 		public void execute() throws Exception {
 
-			context.inputGates.get(0).openGate();
-			context.inputGates.get(1).openGate();
+			final UUID taskID = getTaskID();
+			final UUID outputTaskID = getOutputTaskID(0, 0);
 
-			for (int i = 0; i < 100; ++i) {
+			openGate(0);
+			openGate(1);
 
-				final BlockingQueue<DataBufferEvent> inputMsgs1 = context.inputGates.get(0).getInputQueue();
-				final BlockingQueue<DataBufferEvent> inputMsgs2 = context.inputGates.get(1).getInputQueue();
+			boolean inputLeftActive = true, inputRightActive = true;
 
-				try {
-					final DataBufferEvent dm1 = inputMsgs1.take();
-					final DataBufferEvent dm2 = inputMsgs2.take();
-					LOG.info("input1: received data message " + dm1.messageID + " from task " + dm1.srcTaskID);
-					LOG.info("input2: received data message " + dm2.messageID + " from task " + dm2.srcTaskID);
+			while (inputLeftActive || inputRightActive) {
 
-					final byte[] data = new byte[65536];
-					final DataBufferEvent dmOut = new DataBufferEvent(UUID.randomUUID(), context.task.taskID,
-						context.taskBinding.outputGateBindings.get(0).get(0).taskID, data);
-					context.outputGates.get(0).writeDataToChannel(0, dmOut);
-				} catch (InterruptedException e) {
-					LOG.info(e);
+				final DataIOEvent leftInputBuffer = absorb(0);
+				final DataIOEvent rightInputBuffer = absorb(1);
+
+				LOG.info("input1: received data message from task " + leftInputBuffer.srcTaskID);
+				LOG.info("input2: received data message from task " + rightInputBuffer.srcTaskID);
+
+				inputLeftActive  = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer.type);
+				inputRightActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer.type);
+
+				if (inputLeftActive || inputRightActive) {
+					final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+					emit(0, 0, outputBuffer);
 				}
+
+				checkIfSuspended();
 			}
+
+			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
+			emit(0, 0, exhaustedEvent);
+
+			closeGate(0);
+			closeGate(1);
 		}
 	}
 
@@ -131,17 +141,30 @@ public final class Client {
 		@Override
 		public void execute() throws Exception {
 
-			context.inputGates.get(0).openGate();
+			openGate(0);
 
-			for (int i = 0; i < 100; ++i) {
-				final BlockingQueue<DataBufferEvent> inputMsgs = context.inputGates.get(0).getInputQueue();
-				try {
-					final DataBufferEvent dm = inputMsgs.take();
-					LOG.info("received data message " + dm.messageID + " from task " + dm.srcTaskID);
-				} catch (InterruptedException e) {
-					LOG.info(e);
-				}
+			boolean inputActive = true;
+
+			while (inputActive) {
+
+				final DataIOEvent inputBuffer = absorb(0);
+
+				LOG.info("received data message from task " + inputBuffer.srcTaskID);
+
+				inputActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
+
+				checkIfSuspended();
 			}
+
+			closeGate(0);
+		}
+	}
+
+	public static void SLEEP(final long ms) {
+		try {
+			Thread.sleep(ms);
+		} catch (InterruptedException e) {
+			LOG.error(e);
 		}
 	}
 
