@@ -1,13 +1,12 @@
 package de.tuberlin.aura.core.iosystem;
 
-import io.netty.channel.Channel;
-
-import java.util.UUID;
-
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
+import io.netty.channel.Channel;
+
+import java.util.UUID;
 
 public final class IOEvents {
 
@@ -55,7 +54,11 @@ public final class IOEvents {
 		public static final String CONTROL_EVENT_RPC_CALLEE_RESPONSE = "CONTROL_EVENT_RPC_CALLEE_RESPONSE";
 
 		public static final String CONTROL_EVENT_TASK_STATE = "CONTROL_EVENT_TASK_STATE";
-	}
+
+        public static final String CONTROL_EVENT_OUTPUT_QUEUE = "CONTROL_EVENT_OUTPUT_QUEUE";
+
+        public static final String CONTROL_EVENT_INCOMPLETE_EVENT = "CONTROL_EVENT_INCOMPLETE_EVENT";
+    }
 
 	/**
      *
@@ -83,7 +86,27 @@ public final class IOEvents {
 		}
 	}
 
-	/**
+    public static class QueueIOEvent extends BaseIOEvent {
+
+        public final BufferQueue<DataIOEvent> queue;
+
+        public QueueIOEvent(BufferQueue<DataIOEvent> queue) {
+            super(ControlEventType.CONTROL_EVENT_OUTPUT_QUEUE);
+
+            this.queue = queue;
+        }
+
+        @Override
+        public String toString() {
+            return (new StringBuilder())
+                    .append("DataIOEvent = {")
+                    .append(" type = " + type + ", ")
+                    .append(" queue = " + queue.toString() + ", ")
+                    .append(" }").toString();
+        }
+    }
+
+    /**
      *
      */
 	public static class DataIOEvent extends BaseIOEvent {

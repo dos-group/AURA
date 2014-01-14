@@ -1,34 +1,5 @@
 package de.tuberlin.aura.core.iosystem;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.local.LocalAddress;
-import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalServerChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
-
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
@@ -39,6 +10,28 @@ import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.*;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalServerChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
+import org.apache.log4j.Logger;
+
+import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public final class IOManager extends EventDispatcher {
 
@@ -105,40 +98,42 @@ public final class IOManager extends EventDispatcher {
 			if (socketAddress == null)
 				throw new IllegalArgumentException("socketAddress == null");
 
-			final Bootstrap bootstrap = new Bootstrap();
-			bootstrap.group(netOutputEventLoopGroup)
-				.channel(NioSocketChannel.class)
-				// .handler( new ObjectEncoder() );
-				.handler(new ChannelInitializer<SocketChannel>() {
+            ChannelWriter networkChannelWriter = new ChannelWriter(srcTaskID, dstTaskID, IOManager.this, socketAddress, netOutputEventLoopGroup);
 
-					@Override
-					public void initChannel(SocketChannel ch) throws Exception {
-						ch.pipeline().addFirst(new ObjectEncoder());
-						ch.pipeline().addFirst(new DataIOChannelHandler());
-						ch.pipeline().addFirst(
-							new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
-					}
-				});
-
-			final ChannelFuture cf = bootstrap.connect(socketAddress);
-			cf.addListener(new ChannelFutureListener() {
-
-				@Override
-				public void operationComplete(ChannelFuture cf)
-						throws Exception {
-					if (cf.isSuccess()) {
-						cf.channel().writeAndFlush(
-							new DataIOEvent(DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID));
-						final DataIOEvent event = new DataIOEvent(DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-							srcTaskID, dstTaskID);
-						event.setChannel(cf.channel());
-						dispatchEvent(event);
-					} else {
-						LOG.error("connection attempt failed: " + cf.cause().getLocalizedMessage());
-					}
-				}
-			});
-		}
+//			final Bootstrap bootstrap = new Bootstrap();
+//			bootstrap.group(netOutputEventLoopGroup)
+//				.channel(NioSocketChannel.class)
+//				// .handler( new ObjectEncoder() );
+//				.handler(new ChannelInitializer<SocketChannel>() {
+//
+//					@Override
+//					public void initChannel(SocketChannel ch) throws Exception {
+//						ch.pipeline().addFirst(new ObjectEncoder());
+//						ch.pipeline().addFirst(new DataIOChannelHandler());
+//						ch.pipeline().addFirst(
+//							new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
+//					}
+//				});
+//
+//			final ChannelFuture cf = bootstrap.connect(socketAddress);
+//			cf.addListener(new ChannelFutureListener() {
+//
+//				@Override
+//				public void operationComplete(ChannelFuture cf)
+//						throws Exception {
+//					if (cf.isSuccess()) {
+//						cf.channel().writeAndFlush(
+//							new DataIOEvent(DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID));
+//						final DataIOEvent event = new DataIOEvent(DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
+//							srcTaskID, dstTaskID);
+//						event.setChannel(cf.channel());
+//						dispatchEvent(event);
+//					} else {
+//						LOG.error("connection attempt failed: " + cf.cause().getLocalizedMessage());
+//					}
+//				}
+//			});
+        }
 
 		public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID) {
 			// sanity check.

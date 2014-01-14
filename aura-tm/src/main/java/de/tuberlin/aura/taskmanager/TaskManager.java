@@ -1,18 +1,5 @@
 package de.tuberlin.aura.taskmanager;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
-
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
@@ -23,11 +10,9 @@ import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
+import de.tuberlin.aura.core.iosystem.BufferQueue;
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.iosystem.IOEvents.*;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
@@ -38,6 +23,18 @@ import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
 import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class TaskManager implements WM2TMProtocol {
 
@@ -146,7 +143,14 @@ public final class TaskManager implements WM2TMProtocol {
 				for (TaskDescriptor outputTask : outputGate) {
 					// Set the channel on right position.
 					if (outputTask.taskID.equals(event.dstTaskID)) {
-						context.outputGates.get(gateIndex).setChannel(channelIndex, event.getChannel());
+                        // get the right queue manager for task context
+                        BufferQueue<DataIOEvent> queue = context.queueManager.getQueue(gateIndex, channelIndex);
+
+                        context.dispatcher.dispatchEvent(new IOEvents.QueueIOEvent(queue));
+
+                        context.outputGates.get(gateIndex).setQueue(channelIndex, queue);
+
+                        context.outputGates.get(gateIndex).setChannel(channelIndex, event.getChannel());
 						LOG.info("OUTPUT CONNECTION FROM " + context.task.name + " [" + context.task.taskID
 							+ "] TO TASK "
 							+ outputTask.name + " [" + outputTask.taskID + "] IS ESTABLISHED");
