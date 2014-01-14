@@ -241,6 +241,8 @@ public class AuraDirectedGraph {
 
 			this.userCodeMap = new HashMap<String, UserCode>();
 
+            this.userCodeClazzMap = new HashMap<String, Class<?>>();
+
 			this.uidNodeMap = new HashMap<UUID, Node>();
 		}
 
@@ -262,6 +264,8 @@ public class AuraDirectedGraph {
 
 		private final Map<String, UserCode> userCodeMap;
 
+        private final Map<String, Class<?>> userCodeClazzMap;
+
 		private final Map<UUID, Node> uidNodeMap;
 
 		private boolean isBuilded = false;
@@ -270,10 +274,12 @@ public class AuraDirectedGraph {
 		// Public.
 		// ---------------------------------------------------
 
-		public NodeConnector addNode(final Node node) {
+		public NodeConnector addNode(final Node node, Class<?> userCodeClazz) {
 			// sanity check.
 			if (node == null)
 				throw new IllegalArgumentException("node == null");
+            if(userCodeClazz == null)
+                throw new IllegalArgumentException("userCodeClazz == null");
 
 			if (nodeMap.containsKey(node.name))
 				throw new IllegalStateException("node already exists");
@@ -282,6 +288,7 @@ public class AuraDirectedGraph {
 			sourceMap.put(node.name, node);
 			sinkMap.put(node.name, node);
 			uidNodeMap.put(node.uid, node);
+            userCodeClazzMap.put(node.name, userCodeClazz);
 
 			return nodeConnector.currentSource(node);
 		}
@@ -339,7 +346,8 @@ public class AuraDirectedGraph {
 				}
 
 				for (final Node n : nodeMap.values()) {
-					final UserCode uc = codeExtractor.extractUserCodeClass(n.userClazz);
+                    final Class<?> userCodeClazz = userCodeClazzMap.get(n.name);
+                    final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
 					userCodeMap.put(n.name, uc);
 				}
 
@@ -408,17 +416,21 @@ public class AuraDirectedGraph {
 		// Constructors.
 		// ---------------------------------------------------
 
-		public Node(final UUID uid, final String name, final Class<?> userClazz) {
-			this(uid, name, userClazz, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+		public Node(final UUID uid, final String name /*, final Class<?> userClazz*/) {
+			//this(uid, name, userClazz, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+            this(uid, name, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
 		}
 
-		public Node(final UUID uid, final String name, final Class<?> userClazz, int degreeOfParallelism,
+		public Node(final UUID uid, final String name /*, final Class<?> userClazz*/, int degreeOfParallelism,
 				int perWorkerParallelism) {
-			this(uid, name, userClazz, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL,
-				ExecutionType.PIPELINED);
+			//this(uid, name, userClazz, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL,
+			//	ExecutionType.PIPELINED);
+
+            this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL,
+                    ExecutionType.PIPELINED);
 		}
 
-		public Node(final UUID uid, final String name, final Class<?> userClazz, int degreeOfParallelism,
+		public Node(final UUID uid, final String name, /*final Class<?> userClazz,*/ int degreeOfParallelism,
 				int perWorkerParallelism, final DataPersistenceType dataPersistenceType,
 				final ExecutionType executionType) {
 			// sanity check.
@@ -426,8 +438,8 @@ public class AuraDirectedGraph {
 				throw new IllegalArgumentException("uid == null");
 			if (name == null)
 				throw new IllegalArgumentException("name == null");
-			if (userClazz == null)
-				throw new IllegalArgumentException("userClazz == null");
+			//if (userClazz == null)
+			//	throw new IllegalArgumentException("userClazz == null");
 			if (degreeOfParallelism < 1)
 				throw new IllegalArgumentException("degreeOfParallelism < 1");
 			if (perWorkerParallelism < 1)
@@ -441,7 +453,7 @@ public class AuraDirectedGraph {
 
 			this.name = name;
 
-			this.userClazz = userClazz;
+			//this.userClazz = userClazz;
 
 			this.degreeOfParallelism = degreeOfParallelism;
 
@@ -466,7 +478,7 @@ public class AuraDirectedGraph {
 
 		public final String name;
 
-		public final Class<?> userClazz;
+		//public final Class<?> userClazz;
 
 		public final int degreeOfParallelism;
 
@@ -531,7 +543,7 @@ public class AuraDirectedGraph {
 			return (new StringBuilder())
 				.append("Node = {")
 				.append(" name = " + name + ", ")
-				.append(" userClazz = " + userClazz.getCanonicalName())
+				//.append(" userClazz = " + userClazz.getCanonicalName())
 				.append(" }").toString();
 		}
 

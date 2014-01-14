@@ -28,7 +28,6 @@ public class Event implements Serializable {
 		setPayload(payload);
 	}
 
-
 	public final String type;
 
 	private Object payload;

@@ -184,24 +184,24 @@ public final class Client {
 		final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
 		final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-		atb1.addNode(new Node(UUID.randomUUID(), "Task1", Task1Exe.class, 1, 1))
+		atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
 			.connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-			.addNode(new Node(UUID.randomUUID(), "Task2", Task2Exe.class, 1, 1))
+			.addNode(new Node(UUID.randomUUID(), "Task2", 1, 1), Task2Exe.class)
 			.connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-			.addNode(new Node(UUID.randomUUID(), "Task3", Task3Exe.class, 1, 1))
+			.addNode(new Node(UUID.randomUUID(), "Task3", 1, 1), Task3Exe.class)
 			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-			.addNode(new Node(UUID.randomUUID(), "Task4", Task4Exe.class, 1, 1));
+			.addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
 
 		final AuraTopology at1 = atb1.build("Job 1");
 		ac.submitTopology(at1);
 
-		final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
+		/*final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
 		atb2.addNode(new Node(UUID.randomUUID(), "Task1", Task1Exe.class, 1, 1))
 			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
 			.addNode(new Node(UUID.randomUUID(), "Task4", Task4Exe.class, 1, 1));
 
 		final AuraTopology at2 = atb2.build("Job 2");
-		ac.submitTopology(at2);
+		ac.submitTopology(at2);*/
 
 		try {
 			new BufferedReader(new InputStreamReader(System.in)).readLine();
