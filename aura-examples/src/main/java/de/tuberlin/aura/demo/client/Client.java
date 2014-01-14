@@ -48,7 +48,12 @@ public final class Client {
 			for (int i = 0; i < 100; ++i) {
 				final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
 				emit(0, 0, outputBuffer);
-				SLEEP(100);
+
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    LOG.error(e);
+                }
 			}
 
 			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
@@ -74,7 +79,12 @@ public final class Client {
 			for (int i = 0; i < 100; ++i) {
 				final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
 				emit(0, 0, outputBuffer);
-				SLEEP(100);
+
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    LOG.error(e);
+                }
 			}
 
 			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
@@ -97,8 +107,8 @@ public final class Client {
 			final UUID taskID = getTaskID();
 			final UUID outputTaskID = getOutputTaskID(0, 0);
 
-			openGate(0);
-			openGate(1);
+			//openGate(0);
+			//openGate(1);
 
 			boolean inputLeftActive = true, inputRightActive = true;
 
@@ -124,8 +134,8 @@ public final class Client {
 			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
 			emit(0, 0, exhaustedEvent);
 
-			closeGate(0);
-			closeGate(1);
+			//closeGate(0);
+			//closeGate(1);
 		}
 	}
 
@@ -141,7 +151,7 @@ public final class Client {
 		@Override
 		public void execute() throws Exception {
 
-			openGate(0);
+			//openGate(0);
 
 			boolean inputActive = true;
 
@@ -156,7 +166,7 @@ public final class Client {
 				checkIfSuspended();
 			}
 
-			closeGate(0);
+			//closeGate(0);
 		}
 	}
 
@@ -196,9 +206,9 @@ public final class Client {
 		ac.submitTopology(at1);
 
 		/*final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-		atb2.addNode(new Node(UUID.randomUUID(), "Task1", Task1Exe.class, 1, 1))
+		atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
 			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-			.addNode(new Node(UUID.randomUUID(), "Task4", Task4Exe.class, 1, 1));
+			.addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
 
 		final AuraTopology at2 = atb2.build("Job 2");
 		ac.submitTopology(at2);*/

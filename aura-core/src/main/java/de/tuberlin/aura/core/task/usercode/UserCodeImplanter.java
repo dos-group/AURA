@@ -2,6 +2,9 @@ package de.tuberlin.aura.core.task.usercode;
 
 import de.tuberlin.aura.core.common.utils.Compression;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public final class UserCodeImplanter {
 
 	// ---------------------------------------------------
@@ -15,7 +18,11 @@ public final class UserCodeImplanter {
 
 		public DynamicClassLoader(final ClassLoader cl) {
 			super(cl);
+
+            this.loadedClazzMap = new HashMap<String,Class<?>>();
 		}
+
+        final Map<String,Class<?>> loadedClazzMap;
 
 		public Class<?> buildClassFromByteArray(final String clazzName, final byte[] clazzData) {
 			// sanity check.
@@ -24,14 +31,17 @@ public final class UserCodeImplanter {
 			if (clazzData == null)
 				throw new IllegalArgumentException("clazzData == null");
 
-			Class<?> newClazz = null;
-			try {
-				newClazz = this.defineClass(clazzName, clazzData, 0, clazzData.length);
-			} catch (ClassFormatError e) {
-				throw new IllegalStateException(e);
-			}
-
-			return newClazz;
+            if (!loadedClazzMap.containsKey(clazzName)) {
+                Class<?> newClazz = null;
+                try {
+                    newClazz = this.defineClass(clazzName, clazzData, 0, clazzData.length);
+                } catch (ClassFormatError e) {
+                    throw new IllegalStateException(e);
+                }
+                loadedClazzMap.put(clazzName,newClazz);
+                return newClazz;
+            } else
+                return loadedClazzMap.get(clazzName);
 		}
 	}
 

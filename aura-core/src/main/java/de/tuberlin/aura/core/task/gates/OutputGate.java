@@ -71,9 +71,9 @@ public final class OutputGate extends AbstractGate {
 		if (data == null)
 			throw new IllegalArgumentException("data == null");
 
-		if (!isGateOpen(channelIndex)) {
+		/*if (!isGateOpen(channelIndex)) {
 			LOG.error("channel is closed");
-		}
+		}*/
 
 		// TODO: change insert in output queue!
 		getChannel(channelIndex).writeAndFlush(data);
