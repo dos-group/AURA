@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.iosystem;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
+import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.iosystem.buffer.FlipBufferAllocator;
 import de.tuberlin.aura.core.iosystem.buffer.Util;
 import io.netty.bootstrap.ServerBootstrap;
@@ -16,11 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 public class ChannelReader implements IChannelReader {
 
@@ -36,9 +33,26 @@ public class ChannelReader implements IChannelReader {
     private final IEventDispatcher dispatcher;
 
     private ByteBufAllocator contextLevelAllocator;
-    private List<BufferQueue<IOEvents.DataIOEvent>> queues;
 
-    private final Map<UUID, Integer> taskIDToQueue;
+    /**
+     * Queues the single channels write their data into. There are possibly more channels that write into a single queue.
+     * Each {@see de.tuberlin.aura.core.task.gates.InputGate} as exactly one queue.
+     */
+    private final List<BufferQueue<IOEvents.DataIOEvent>> queues;
+
+    /**
+     * In order to write the data to the correct queue, we map
+     * (channel) -> queue index (in {@see queues})
+     */
+    private final Map<Channel, Integer> channelToQueueIndex;
+
+    /**
+     * In order to get the queue that belongs to the {@see InputGate}, we map
+     * (task id, gate index) -> queue index (in {@see queues})
+     */
+    private final Map<Pair<UUID, Integer>, Integer> gateToQueueIndex;
+
+    private final Map<Pair<UUID, Integer>, Channel> connectedChannels;
 
     public ChannelReader(IEventDispatcher dispatcher, NioEventLoopGroup eventLoopGroup, InetSocketAddress socketAddress) {
         this(dispatcher, eventLoopGroup, socketAddress, DEFAULT_BUFFER_SIZE);
@@ -51,8 +65,11 @@ public class ChannelReader implements IChannelReader {
         this.socketAddress = socketAddress;
 
         // TODO: need for concurrent queue?! after start we just read values?
-        taskIDToQueue = new ConcurrentHashMap<>();
         queues = new LinkedList<>();
+        channelToQueueIndex = new HashMap<>();
+        gateToQueueIndex = new HashMap<>();
+
+        connectedChannels = new HashMap<>();
 
         if ((bufferSize & (bufferSize - 1)) != 0) {
             LOG.warn("The given buffer size is not a power of two.");
@@ -86,13 +103,14 @@ public class ChannelReader implements IChannelReader {
                             try {
                                 if (!child.config().setOption(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))) {
                                     LOG.error("Unknown channel option: " + ChannelOption.ALLOCATOR);
+                                    throw new IllegalStateException("Unable to set allocator for channel.");
                                 }
 
                                 ctx.fireChannelRead(msg);
 
                             } catch (Throwable t) {
-                                LOG.warn("Failed to set a channel option: " + child, t);
-                                throw new Exception("Unable to set allocator.");
+                                LOG.error("Failed to set a channel option: " + child, t);
+                                throw t;
                             }
                         }
                     })
@@ -136,22 +154,37 @@ public class ChannelReader implements IChannelReader {
     }
 
     @Override
-    public BufferQueue<IOEvents.DataIOEvent> getInputQueue(final int gate) {
-        return queues.get(gateIndex);
+    public BufferQueue<IOEvents.DataIOEvent> getInputQueue(final UUID taskID, final int gateIndex) {
+
+        return queues.get(gateToQueueIndex.get(new Pair<UUID, Integer>(taskID, gateIndex)));
     }
 
-    public void setInputQueue(UUID srcTaskID, BufferQueue<IOEvents.DataIOEvent> queue) {
+    @Override
+    public void setInputQueue(final UUID srcTaskID, final Channel channel, final int gateIndex, final BufferQueue<IOEvents.DataIOEvent> queue) {
+
         this.queues.add(queue);
-        // insert into mapping
-        taskIDToQueue.put(srcTaskID, queues.size() - 1);
+        final int queueIndex = queues.size() - 1;
+        channelToQueueIndex.put(channel, queueIndex);
+        Pair<UUID, Integer> index = new Pair<UUID, Integer>(srcTaskID, gateIndex);
+        gateToQueueIndex.put(index, queueIndex);
+//        if (!connectedChannels.containsKey(index)) {
+//
+//        }
+//        connectedChannels.get(index).add();
+
+    }
+
+    @Override
+    public void write(final UUID taskID, final int gateIndex, final IOEvents.DataIOEvent event) {
+
     }
 
     private final class DataHandler extends SimpleChannelInboundHandler<IOEvents.DataBufferEvent> {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataBufferEvent event) {
-            event.setChannel(ctx.channel());
-            queue.offer(event);
+            //event.setChannel(ctx.channel());
+            queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
         }
     }
 
@@ -162,9 +195,10 @@ public class ChannelReader implements IChannelReader {
                 throws Exception {
 
             if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)) {
-                dispatcher.dispatchEvent(
-                        new IOEvents.GenericIOEvent<IChannelReader>(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, ChannelReader.this, event.srcTaskID, event.dstTaskID)
-                );
+                IOEvents.GenericIOEvent<IChannelReader> connected =
+                        new IOEvents.GenericIOEvent<IChannelReader>(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, ChannelReader.this, event.srcTaskID, event.dstTaskID);
+                connected.setChannel(ctx.channel());
+                dispatcher.dispatchEvent(connected);
             } else {
                 event.setChannel(ctx.channel());
                 dispatcher.dispatchEvent(event);

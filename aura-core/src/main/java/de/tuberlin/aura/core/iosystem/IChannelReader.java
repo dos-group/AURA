@@ -1,8 +1,14 @@
 package de.tuberlin.aura.core.iosystem;
 
+import io.netty.channel.Channel;
+
+import java.util.UUID;
+
 public interface IChannelReader {
 
-    BufferQueue<IOEvents.DataIOEvent> getInputQueue(int gateIndex);
+    BufferQueue<IOEvents.DataIOEvent> getInputQueue(final UUID taskID, final int gateIndex);
 
-    void setInputQueue(int gateIndex, BufferQueue<IOEvents.DataIOEvent> queue);
+    void setInputQueue(final UUID srcTaskID, final Channel channel, final int gateIndex, final BufferQueue<IOEvents.DataIOEvent> queue);
+
+    void write(final IOEvents.DataIOEvent event);
 }

@@ -68,13 +68,13 @@ public final class TaskManager implements WM2TMProtocol {
 			contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
-		@Handle(event = DataBufferEvent.class)
-		private void handleDataEvent(final DataBufferEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
-			contextAndHandler.getSecond().dispatchEvent(event);
-		}
+//		@Handle(event = DataBufferEvent.class)
+//		private void handleDataEvent(final DataBufferEvent event) {
+//			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
+//			contextAndHandler.getSecond().dispatchEvent(event);
+//		}
 
-		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)
+        @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)
 		private void handleDataExhaustedEvent(final DataIOEvent event) {
 			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
 			contextAndHandler.getSecond().dispatchEvent(event);
@@ -114,10 +114,10 @@ public final class TaskManager implements WM2TMProtocol {
                         final IChannelReader channelReader = event.payload;
                         // create queue, if there is none yet
                         // as we can have multiple channels insert in one queue (aka multiple channels per gate)
-                        if (channelReader.getInputQueue(event.srcTaskID) == null) {
+                        if (channelReader.getInputQueue(inputTask.taskID, gateIndex) == null) {
                             // TODO: we do not need channelIndex here FIX!
                             BufferQueue<DataIOEvent> queue = context.queueManager.getQueue(gateIndex, channelIndex);
-                            channelReader.setInputQueue(queue);
+                            channelReader.setInputQueue(inputTask.taskID, event.getChannel(), gateIndex, queue);
                         }
 
                         context.inputGates.get(gateIndex).setChannelReader(channelReader);
@@ -178,19 +178,19 @@ public final class TaskManager implements WM2TMProtocol {
 			}
 		}
 
-		@Handle(event = DataBufferEvent.class)
-		private void handleTaskInputData(final DataBufferEvent event) {
-			context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
-				.addToInputQueue(event);
-		}
+//		@Handle(event = DataBufferEvent.class)
+//		private void handleTaskInputData(final DataBufferEvent event) {
+//			context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
+//				.addToInputQueue(event);
+//		}
+//
+//		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)
+//		private void handleTaskInputDataExhausted(final DataIOEvent event) {
+//			context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
+//				.addToInputQueue(event);
+//		}
 
-		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)
-		private void handleTaskInputDataExhausted(final DataIOEvent event) {
-			context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
-				.addToInputQueue(event);
-		}
-
-		@Handle(event = TaskStateTransitionEvent.class)
+        @Handle(event = TaskStateTransitionEvent.class)
 		private void handleTaskStateTransition(final TaskStateTransitionEvent event) {
 			synchronized (context.getCurrentTaskState()) { // serialize task state transitions!
 

@@ -34,11 +34,11 @@ public final class InputGate extends AbstractGate {
     }
 
     public void openGate() {
-//		for (int i = 0; i < numChannels; ++i) {
-//			final Channel ch = channels.get(i);
-//			final UUID srcID = context.taskBinding.inputGateBindings.get(gateIndex).get(i).taskID;
-//			ch.writeAndFlush(new DataIOEvent(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, context.task.taskID));
-//		}
+        for (int i = 0; i < numChannels; ++i) {
+            final Channel ch = channels.get(i);
+            final UUID srcID = context.taskBinding.inputGateBindings.get(gateIndex).get(i).taskID;
+            ch.writeAndFlush(new DataIOEvent(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, context.task.taskID));
+        }
     }
 
 	public void closeGate() {
@@ -50,6 +50,6 @@ public final class InputGate extends AbstractGate {
     }
 
     public BufferQueue<DataIOEvent> getInputQueue() {
-        return channelReader.getInputQueue();
+        return channelReader.getInputQueue(context.task.taskID, gateIndex);
     }
 }
