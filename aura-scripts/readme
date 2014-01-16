@@ -1,0 +1,17 @@
+Bevor das Skript benutzt werden kann muessen die Pfade im Skript, sowie der Nutzer-Name (auf dem wally-Cluster) angepasst werden. Dafuer muessen lediglich die ersten ~10 Zeilen kontrolliert werden. Danach kann das Skript folgendermassen benutzt werden:
+
+sh aura.sh {befehl} {wally_start} {wally_ende}
+
+wally_start: Die Nummer des ersten wally-Knotens der verwendet werden soll.
+wally_ende: Die Nummer des letzten wally-Knotens der verwendet werden soll.
+
+-> Alle wally-Knoten in dem Bereich [wally-start, wally-ende] werden als Cluster genutzt.
+
+Befehle
+
+install: Kopiert das Aura-Projekt auf den Cluster und laedt die maven-dependencies runter. (Muss nur ausgefuehrt werden, wenn sich der source code geaendert hat)
+setup: Bereitet ZooKeeper vor. (muss vor jedem Start ausgefuehrt werden)
+start: Startet den Aura-Cluster.
+stop: Stopt den Aura-Cluster.
+cleanup: Raeumt alle temporaeren Datein auf (sollte auch nach jeder Ausfuehrung genutzt werden)
+kill: Killt alle eure Prozesse auf den wally-Knoten.
