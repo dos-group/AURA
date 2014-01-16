@@ -1,14 +1,5 @@
 package de.tuberlin.aura.demo.client;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.UUID;
-
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterExecutor;
 import de.tuberlin.aura.client.executors.LocalClusterExecutor.LocalExecutionMode;
@@ -21,206 +12,215 @@ import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.UUID;
 
 public final class Client {
 
-	private static final Logger LOG = Logger.getRootLogger();
+    private static final Logger LOG = Logger.getRootLogger();
 
-	// Disallow Instantiation.
-	private Client() {
-	}
+    // Disallow Instantiation.
+    private Client() {
+    }
 
-	/**
+    /**
      *
      */
-	public static class Task1Exe extends TaskInvokeable {
+    public static class Task1Exe extends TaskInvokeable {
 
-		public Task1Exe(final TaskContext context, final Logger LOG) {
-			super(context, LOG);
-		}
+        public Task1Exe(final TaskContext context, final Logger LOG) {
+            super(context, LOG);
+        }
 
-		@Override
-		public void execute() throws Exception {
+        @Override
+        public void execute() throws Exception {
 
-			final UUID taskID = getTaskID();
-			final UUID outputTaskID = getOutputTaskID(0, 0);
+            final UUID taskID = getTaskID();
+            final UUID outputTaskID = getOutputTaskID(0, 0);
 
-			for (int i = 0; i < 100; ++i) {
-				final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
-				emit(0, 0, outputBuffer);
+            for (int i = 0; i < 100; ++i) {
+                //final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+                final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
+                emit(0, 0, outputBuffer);
 
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
                     LOG.error(e);
                 }
-			}
+            }
 
-			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
-			emit(0, 0, exhaustedEvent);
-		}
-	}
+            final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
+            emit(0, 0, exhaustedEvent);
+        }
+    }
 
-	/**
+    /**
      *
      */
-	public static class Task2Exe extends TaskInvokeable {
+    public static class Task2Exe extends TaskInvokeable {
 
-		public Task2Exe(final TaskContext context, final Logger LOG) {
-			super(context, LOG);
-		}
+        public Task2Exe(final TaskContext context, final Logger LOG) {
+            super(context, LOG);
+        }
 
-		@Override
-		public void execute() throws Exception {
+        @Override
+        public void execute() throws Exception {
 
-			final UUID taskID = getTaskID();
-			final UUID outputTaskID = getOutputTaskID(0, 0);
+            final UUID taskID = getTaskID();
+            final UUID outputTaskID = getOutputTaskID(0, 0);
 
-			for (int i = 0; i < 100; ++i) {
-				final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
-				emit(0, 0, outputBuffer);
+            for (int i = 0; i < 100; ++i) {
+                final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+                emit(0, 0, outputBuffer);
 
                 try {
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
                     LOG.error(e);
                 }
-			}
+            }
 
-			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
-			emit(0, 0, exhaustedEvent);
-		}
-	}
+            final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
+            emit(0, 0, exhaustedEvent);
+        }
+    }
 
-	/**
+    /**
      *
      */
-	public static class Task3Exe extends TaskInvokeable {
+    public static class Task3Exe extends TaskInvokeable {
 
-		public Task3Exe(final TaskContext context, final Logger LOG) {
-			super(context, LOG);
-		}
+        public Task3Exe(final TaskContext context, final Logger LOG) {
+            super(context, LOG);
+        }
 
-		@Override
-		public void execute() throws Exception {
+        @Override
+        public void execute() throws Exception {
 
-			final UUID taskID = getTaskID();
-			final UUID outputTaskID = getOutputTaskID(0, 0);
+            final UUID taskID = getTaskID();
+            final UUID outputTaskID = getOutputTaskID(0, 0);
 
-			//openGate(0);
-			//openGate(1);
+            //openGate(0);
+            //openGate(1);
 
-			boolean inputLeftActive = true, inputRightActive = true;
+            boolean inputLeftActive = true, inputRightActive = true;
 
-			while (inputLeftActive || inputRightActive) {
+            while (inputLeftActive || inputRightActive) {
 
-				final DataIOEvent leftInputBuffer = absorb(0);
-				final DataIOEvent rightInputBuffer = absorb(1);
+                final DataIOEvent leftInputBuffer = absorb(0);
+                final DataIOEvent rightInputBuffer = absorb(1);
 
-				LOG.info("input1: received data message from task " + leftInputBuffer.srcTaskID);
-				LOG.info("input2: received data message from task " + rightInputBuffer.srcTaskID);
+                LOG.info("input1: received data message from task " + leftInputBuffer.srcTaskID);
+                LOG.info("input2: received data message from task " + rightInputBuffer.srcTaskID);
 
-				inputLeftActive  = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer.type);
-				inputRightActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer.type);
+                inputLeftActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer.type);
+                inputRightActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer.type);
 
-				if (inputLeftActive || inputRightActive) {
-					final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
-					emit(0, 0, outputBuffer);
-				}
+                if (inputLeftActive || inputRightActive) {
+                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+                    emit(0, 0, outputBuffer);
+                }
 
-				checkIfSuspended();
-			}
+                checkIfSuspended();
+            }
 
-			final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
-			emit(0, 0, exhaustedEvent);
+            final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
+            emit(0, 0, exhaustedEvent);
 
-			//closeGate(0);
-			//closeGate(1);
-		}
-	}
+            //closeGate(0);
+            //closeGate(1);
+        }
+    }
 
-	/**
+    /**
      *
      */
-	public static class Task4Exe extends TaskInvokeable {
+    public static class Task4Exe extends TaskInvokeable {
 
-		public Task4Exe(final TaskContext context, final Logger LOG) {
-			super(context, LOG);
-		}
+        public Task4Exe(final TaskContext context, final Logger LOG) {
+            super(context, LOG);
+        }
 
-		@Override
-		public void execute() throws Exception {
+        @Override
+        public void execute() throws Exception {
 
-			//openGate(0);
+            //openGate(0);
 
-			boolean inputActive = true;
+            boolean inputActive = true;
 
-			while (inputActive) {
+            while (inputActive) {
 
-				final DataIOEvent inputBuffer = absorb(0);
+                final DataIOEvent inputBuffer = absorb(0);
 
-				LOG.info("received data message from task " + inputBuffer.srcTaskID);
+                LOG.info("received data message from task " + inputBuffer.srcTaskID);
 
-				inputActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
+                inputActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
 
-				checkIfSuspended();
-			}
+                checkIfSuspended();
+            }
 
-			//closeGate(0);
-		}
-	}
+            //closeGate(0);
+        }
+    }
 
-	public static void SLEEP(final long ms) {
-		try {
-			Thread.sleep(ms);
-		} catch (InterruptedException e) {
-			LOG.error(e);
-		}
-	}
+    public static void SLEEP(final long ms) {
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            LOG.error(e);
+        }
+    }
 
-	// ---------------------------------------------------
-	// Main.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Main.
+    // ---------------------------------------------------
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 
-		final SimpleLayout layout = new SimpleLayout();
-		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-		LOG.addAppender(consoleAppender);
+        final SimpleLayout layout = new SimpleLayout();
+        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        LOG.addAppender(consoleAppender);
 
-		final String zookeeperAddress = "localhost:2181";
-		final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
-			true, zookeeperAddress, 4);
-		final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
+        final String zookeeperAddress = "localhost:2181";
+        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+                true, zookeeperAddress, 4);
+        final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
-		final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-		atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
-			.connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-			.addNode(new Node(UUID.randomUUID(), "Task2", 1, 1), Task2Exe.class)
-			.connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-			.addNode(new Node(UUID.randomUUID(), "Task3", 1, 1), Task3Exe.class)
-			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-			.addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
+//		final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+//		atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+//			.connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+//			.addNode(new Node(UUID.randomUUID(), "Task2", 1, 1), Task2Exe.class)
+//			.connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+//			.addNode(new Node(UUID.randomUUID(), "Task3", 1, 1), Task3Exe.class)
+//			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
+//			.addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
+//
+//		final AuraTopology at1 = atb1.build("Job 1");
+//		ac.submitTopology(at1);
 
-		final AuraTopology at1 = atb1.build("Job 1");
-		ac.submitTopology(at1);
+        final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
+        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+                .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
 
-		/*final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-		atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
-			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-			.addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
+        final AuraTopology at2 = atb2.build("Job 2");
+        ac.submitTopology(at2);
 
-		final AuraTopology at2 = atb2.build("Job 2");
-		ac.submitTopology(at2);*/
+        try {
+            new BufferedReader(new InputStreamReader(System.in)).readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-		try {
-			new BufferedReader(new InputStreamReader(System.in)).readLine();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		lce.shutdown();
-		/*
+        lce.shutdown();
+        /*
 		 * With Loops... (not working, loops not yet implemented in the runtime)
 		 * final AuraTopologyBuilder atb = ac.createTopologyBuilder();
 		 * atb.addNode( new Node( "Task1", Task1Exe.class, 1 ) )
@@ -233,5 +233,5 @@ public final class Client {
 		 * .addNode( new Node( "Task4", Task4Exe.class, 1 ) )
 		 * .connectTo( "Task2", Edge.TransferType.POINT_TO_POINT, Edge.EdgeType.BACKWARD_EDGE ); // form a loop!!
 		 */
-	}
+    }
 }

@@ -86,12 +86,12 @@ public final class IOEvents {
 		}
 	}
 
-    public static class QueueIOEvent extends BaseIOEvent {
+    public static class QueueIOEvent extends DataIOEvent {
 
         public final BufferQueue<DataIOEvent> queue;
 
-        public QueueIOEvent(BufferQueue<DataIOEvent> queue) {
-            super(ControlEventType.CONTROL_EVENT_OUTPUT_QUEUE);
+        public QueueIOEvent(BufferQueue<DataIOEvent> queue, final UUID srcTaskID, final UUID dstTaskID) {
+            super(ControlEventType.CONTROL_EVENT_OUTPUT_QUEUE, srcTaskID, dstTaskID);
 
             this.queue = queue;
         }
@@ -102,6 +102,25 @@ public final class IOEvents {
                     .append("DataIOEvent = {")
                     .append(" type = " + type + ", ")
                     .append(" queue = " + queue.toString() + ", ")
+                    .append(" }").toString();
+        }
+    }
+
+    public static class GenericIOEvent<T> extends DataIOEvent {
+        public final T payload;
+
+        public GenericIOEvent(final String type, final T payload, final UUID srcTaskID, final UUID dstTaskID) {
+            super(type, srcTaskID, dstTaskID);
+
+            this.payload = payload;
+        }
+
+        @Override
+        public String toString() {
+            return (new StringBuilder())
+                    .append("GenericIOEvent = {")
+                    .append(" type = " + type + ", ")
+                    .append(" payload = " + payload.toString() + ", ")
                     .append(" }").toString();
         }
     }

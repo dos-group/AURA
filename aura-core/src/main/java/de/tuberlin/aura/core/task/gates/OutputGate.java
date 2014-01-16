@@ -1,7 +1,7 @@
 package de.tuberlin.aura.core.task.gates;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import de.tuberlin.aura.core.iosystem.ChannelWriter;
+import de.tuberlin.aura.core.iosystem.IChannelWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskContext;
@@ -45,7 +45,7 @@ public final class OutputGate extends AbstractGate {
         this.openChannelList = new ArrayList<Boolean>(Collections.nCopies(numChannels, false));
 
         if (numChannels > 0) {
-            channelWriter = new ArrayList<ChannelWriter>(Collections.nCopies(numChannels, (ChannelWriter) null));
+            channelWriter = new ArrayList<IChannelWriter>(Collections.nCopies(numChannels, (IChannelWriter) null));
         } else { // numChannels == 0
             channelWriter = null;
         }
@@ -68,7 +68,7 @@ public final class OutputGate extends AbstractGate {
 
     private final List<Boolean> openChannelList;
 
-    private final List<ChannelWriter> channelWriter;
+    private final List<IChannelWriter> channelWriter;
 
     // ---------------------------------------------------
     // Public.
@@ -84,11 +84,35 @@ public final class OutputGate extends AbstractGate {
 		}*/
 
         // TODO: change insert in output queue!
-        getQueue(channelIndex).offer(data);
+        channelWriter.get(channelIndex).write(data);
     }
 
-    public List<ChannelWriter> getAllChannelWriter() {
+    public List<IChannelWriter> getAllChannelWriter() {
         return Collections.unmodifiableList(channelWriter);
+    }
+
+    public void setChannelWriter(int channelIndex, final IChannelWriter channel) {
+        // sanity check.
+        if (channelIndex < 0)
+            throw new IllegalArgumentException("channelIndex < 0");
+        if (channelIndex >= numChannels)
+            throw new IllegalArgumentException("channelIndex >= numChannels");
+        if (channelWriter == null)
+            throw new IllegalStateException("channels == null");
+
+        channelWriter.set(channelIndex, channel);
+    }
+
+    public IChannelWriter getChannelWriter(int channelIndex) {
+        // sanity check.
+        if (channelIndex < 0)
+            throw new IllegalArgumentException("channelIndex < 0");
+        if (channelIndex >= numChannels)
+            throw new IllegalArgumentException("channelIndex >= numChannels");
+        if (channelWriter == null)
+            throw new IllegalStateException("channels == null");
+
+        return channelWriter.get(channelIndex);
     }
 
     public boolean isGateOpen(final int channelIndex) {

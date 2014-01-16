@@ -6,7 +6,7 @@ import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
-import de.tuberlin.aura.core.iosystem.ChannelWriter;
+import de.tuberlin.aura.core.iosystem.IChannelWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
@@ -205,7 +205,7 @@ public final class TaskContext {
         if (outputGates != null) {
             for (final OutputGate og : outputGates) {
                 // TODO: maybe replace with event?!
-                for (final ChannelWriter channelWriter : og.getAllChannelWriter()) {
+                for (final IChannelWriter channelWriter : og.getAllChannelWriter()) {
                     channelWriter.shutdown();
                 }
             }

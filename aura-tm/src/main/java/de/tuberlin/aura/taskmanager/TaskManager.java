@@ -10,11 +10,8 @@ import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.iosystem.BufferQueue;
-import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.iosystem.*;
 import de.tuberlin.aura.core.iosystem.IOEvents.*;
-import de.tuberlin.aura.core.iosystem.IOManager;
-import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
@@ -100,9 +97,9 @@ public final class TaskManager implements WM2TMProtocol {
 
 		public TaskContext context;
 
-		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
-		private void handleTaskInputDataChannelConnect(final DataIOEvent event) {
-			int gateIndex = 0;
+        @Handle(event = GenericIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
+        private void handleTaskInputDataChannelConnect(final GenericIOEvent<IChannelReader> event) {
+            int gateIndex = 0;
 			boolean allInputGatesConnected = true, connectingToCorrectTask = false;
 			for (final List<TaskDescriptor> inputGate : context.taskBinding.inputGateBindings) {
 				int channelIndex = 0;
@@ -110,14 +107,29 @@ public final class TaskManager implements WM2TMProtocol {
 				for (TaskDescriptor inputTask : inputGate) {
 					// Set the channel on right position.
 					if (inputTask.taskID.equals(event.srcTaskID)) {
-						context.inputGates.get(gateIndex).setChannel(channelIndex, event.getChannel());
-						LOG.info("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
-							+ context.task.name + " [" + context.task.taskID + "] IS ESTABLISHED");
+
+                        // wire queue to input gate
+
+
+                        final IChannelReader channelReader = event.payload;
+                        // create queue, if there is none yet
+                        // as we can have multiple channels insert in one queue (aka multiple channels per gate)
+                        if (channelReader.getInputQueue(event.srcTaskID) == null) {
+                            // TODO: we do not need channelIndex here FIX!
+                            BufferQueue<DataIOEvent> queue = context.queueManager.getQueue(gateIndex, channelIndex);
+                            channelReader.setInputQueue(queue);
+                        }
+
+                        context.inputGates.get(gateIndex).setChannelReader(channelReader);
+
+
+                        LOG.info("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
+                                + context.task.name + " [" + context.task.taskID + "] IS ESTABLISHED");
 						connectingToCorrectTask |= true;
 					}
 					// all data inputs are connected...
-					allInputChannelsPerGateConnected &= (context.inputGates.get(gateIndex).getChannel(channelIndex++) != null);
-				}
+                    allInputChannelsPerGateConnected &= (context.inputGates.get(gateIndex).getChannelReader() != null);
+                }
 
 				allInputGatesConnected &= allInputChannelsPerGateConnected;
 				++gateIndex;
@@ -133,9 +145,9 @@ public final class TaskManager implements WM2TMProtocol {
 			}
 		}
 
-		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
-		private void handleTaskOutputDataChannelConnect(final DataIOEvent event) {
-			int gateIndex = 0;
+        @Handle(event = GenericIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
+        private void handleTaskOutputDataChannelConnect(final GenericIOEvent<IChannelWriter> event) {
+            int gateIndex = 0;
 			boolean allOutputGatesConnected = true;
 			for (final List<TaskDescriptor> outputGate : context.taskBinding.outputGateBindings) {
 				int channelIndex = 0;
@@ -145,19 +157,17 @@ public final class TaskManager implements WM2TMProtocol {
 					if (outputTask.taskID.equals(event.dstTaskID)) {
                         // get the right queue manager for task context
                         BufferQueue<DataIOEvent> queue = context.queueManager.getQueue(gateIndex, channelIndex);
+                        TaskManager.this.ioManager.dispatchEvent(
+                                new GenericIOEvent<>(ControlEventType.CONTROL_EVENT_OUTPUT_QUEUE, queue, event.srcTaskID, event.dstTaskID));
+                        context.outputGates.get(gateIndex).setChannelWriter(channelIndex, event.payload);
 
-                        context.dispatcher.dispatchEvent(new IOEvents.QueueIOEvent(queue));
-
-                        context.outputGates.get(gateIndex).setQueue(channelIndex, queue);
-
-                        context.outputGates.get(gateIndex).setChannel(channelIndex, event.getChannel());
-						LOG.info("OUTPUT CONNECTION FROM " + context.task.name + " [" + context.task.taskID
-							+ "] TO TASK "
+                        LOG.info("OUTPUT CONNECTION FROM " + context.task.name + " [" + context.task.taskID
+                                + "] TO TASK "
 							+ outputTask.name + " [" + outputTask.taskID + "] IS ESTABLISHED");
 					}
 					// all data outputs are connected...
-					allOutputChannelsPerGateConnected &= (context.outputGates.get(gateIndex).getChannel(channelIndex++) != null);
-				}
+                    allOutputChannelsPerGateConnected &= (context.outputGates.get(gateIndex).getChannelWriter(channelIndex++) != null);
+                }
 				allOutputGatesConnected &= allOutputChannelsPerGateConnected;
 				++gateIndex;
 			}
@@ -290,7 +300,8 @@ public final class TaskManager implements WM2TMProtocol {
 
 		this.ioManager.addEventListener(IOEvents, ioHandler);
 
-		// TODO: move this into a seperate mehtod.
+
+        // TODO: move this into a seperate mehtod.
 		// Get a connection to ZooKeeper and initialize the directories in ZooKeeper.
 		try {
 			this.zk = new ZooKeeper(zkServer, ZkHelper.ZOOKEEPER_TIMEOUT,

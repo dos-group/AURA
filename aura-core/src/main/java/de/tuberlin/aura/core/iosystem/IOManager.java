@@ -398,43 +398,47 @@ public final class IOManager extends EventDispatcher {
 	// ---------------------------------------------------
 
 	private void startNetworkDataMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
-		final ServerBootstrap bootstrap = new ServerBootstrap();
-		bootstrap.group(nelg)
-			.channel(NioServerSocketChannel.class)
-			.childHandler(new ChannelInitializer<SocketChannel>() {
 
-				@Override
-				protected void initChannel(SocketChannel ch)
-						throws Exception {
-					ch.pipeline().addFirst(new ObjectEncoder());
-					ch.pipeline().addFirst(new DataIOChannelHandler());
-					ch.pipeline()
-						.addFirst(new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
-				}
-			});
+        // TODO: Test if one event loop is enough or if we should use one loop to as acceptor and one for the read/write
+        final ChannelReader channelReader = new ChannelReader(IOManager.this, nelg, machine.dataAddress);
 
-		final ChannelFuture cf = bootstrap.bind(machine.dataAddress);
-		cf.addListener(new ChannelFutureListener() {
-
-			@Override
-			public void operationComplete(ChannelFuture future)
-					throws Exception {
-				if (cf.isSuccess()) {
-					LOG.info("network server bound to adress " + machine.dataAddress);
-				} else {
-					LOG.error("bound attempt failed: " + cf.cause().getLocalizedMessage());
-					throw new IllegalStateException("could not start netty network server");
-				}
-			}
-		});
-
-		// Wait until the netty-server is bound.
-		try {
-			cf.sync();
-		} catch (InterruptedException e) {
-			LOG.error(e);
-		}
-	}
+//        final ServerBootstrap bootstrap = new ServerBootstrap();
+//		bootstrap.group(nelg)
+//			.channel(NioServerSocketChannel.class)
+//			.childHandler(new ChannelInitializer<SocketChannel>() {
+//
+//				@Override
+//				protected void initChannel(SocketChannel ch)
+//						throws Exception {
+//					ch.pipeline().addFirst(new ObjectEncoder());
+//					ch.pipeline().addFirst(new DataIOChannelHandler());
+//					ch.pipeline()
+//						.addFirst(new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
+//				}
+//			});
+//
+//		final ChannelFuture cf = bootstrap.bind(machine.dataAddress);
+//		cf.addListener(new ChannelFutureListener() {
+//
+//			@Override
+//			public void operationComplete(ChannelFuture future)
+//					throws Exception {
+//				if (cf.isSuccess()) {
+//					LOG.info("network server bound to adress " + machine.dataAddress);
+//				} else {
+//					LOG.error("bound attempt failed: " + cf.cause().getLocalizedMessage());
+//					throw new IllegalStateException("could not start netty network server");
+//				}
+//			}
+//		});
+//
+//		// Wait until the netty-server is bound.
+//		try {
+//			cf.sync();
+//		} catch (InterruptedException e) {
+//			LOG.error(e);
+//		}
+    }
 
 	private void startLocalDataMessageServer(final NioEventLoopGroup nelg) {
 

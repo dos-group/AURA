@@ -1,5 +1,6 @@
 package de.tuberlin.aura.core.iosystem;
 
+import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.iosystem.buffer.FlipBufferAllocator;
 import de.tuberlin.aura.core.iosystem.buffer.Util;
 import io.netty.bootstrap.ServerBootstrap;
@@ -9,41 +10,64 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.BlockingQueue;
+import java.net.InetSocketAddress;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class Server {
+public class ChannelReader implements IChannelReader {
 
-    private final static InternalLogger LOG = InternalLoggerFactory.getInstance(Server.class);
+    private final static Logger LOG = LoggerFactory.getLogger(ChannelReader.class);
 
-    private static final int DEFAULT_BUFFER_SIZE = Util.nextPowerOf2(64 << 10); //64 << 10;
+    private static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
 
-    private final int port;
+    private final InetSocketAddress socketAddress;
 
     private final int bufferSize;
 
-    private BlockingQueue<ByteBuf> queue;
+    private final NioEventLoopGroup eventLoopGroup;
+    private final IEventDispatcher dispatcher;
 
     private ByteBufAllocator contextLevelAllocator;
+    private List<BufferQueue<IOEvents.DataIOEvent>> queues;
 
-    public Server(int port) {
-        this(port, DEFAULT_BUFFER_SIZE);
+    private final Map<UUID, Integer> taskIDToQueue;
+
+    public ChannelReader(IEventDispatcher dispatcher, NioEventLoopGroup eventLoopGroup, InetSocketAddress socketAddress) {
+        this(dispatcher, eventLoopGroup, socketAddress, DEFAULT_BUFFER_SIZE);
     }
 
-    public Server(int port, int bufferSize) {
-        this.port = port;
-        this.bufferSize = bufferSize;
+    public ChannelReader(IEventDispatcher dispatcher, NioEventLoopGroup eventLoopGroup, InetSocketAddress socketAddress, int bufferSize) {
+        this.dispatcher = dispatcher;
+
+        this.eventLoopGroup = eventLoopGroup;
+        this.socketAddress = socketAddress;
+
+        // TODO: need for concurrent queue?! after start we just read values?
+        taskIDToQueue = new ConcurrentHashMap<>();
+        queues = new LinkedList<>();
+
+        if ((bufferSize & (bufferSize - 1)) != 0) {
+            LOG.warn("The given buffer size is not a power of two.");
+            this.bufferSize = Util.nextPowerOf2(bufferSize);
+        } else {
+            this.bufferSize = bufferSize;
+        }
     }
 
     public void run() {
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            // TODO: check if its better to use a dedicated boss and worker group instead of one for both
+            b.group(eventLoopGroup)
                     .channel(NioServerSocketChannel.class)
                             // sets the max. number of pending, not yet fully connected (handshake) bufferQueues
                     .option(ChannelOption.SO_BACKLOG, 128)
@@ -76,9 +100,12 @@ public class Server {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             ch.pipeline()
-                                    .addLast(new MergeBufferInHandler())
-                                            //.addLast(new FixedLengthFrameDecoder(bufferSize))
-                                    .addLast(new InHandler());
+                                    //.addLast(new MergeBufferInHandler())
+                                    //.addLast(new FixedLengthFrameDecoder(bufferSize))
+                                    //.addLast(new InHandler());
+                                    .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
+                                    .addLast(new DataHandler())
+                                    .addLast(new EventHandler());
                         }
                     });
             //.childOption(ChannelOption.AUTO_READ, false);
@@ -86,55 +113,65 @@ public class Server {
             //.childOption(ChannelOption.ALLOCATOR, GlobalBufferManager.INSTANCE.getPooledAllocator());
 
             // Bind and start to accept incoming connections.
-            ChannelFuture f = b.bind(port).sync();
+            ChannelFuture f = b.bind(socketAddress).addListener(new ChannelFutureListener() {
+
+                @Override
+                public void operationComplete(ChannelFuture future)
+                        throws Exception {
+                    if (future.isSuccess()) {
+                        LOG.info("network server bound to address " + socketAddress);
+                    } else {
+                        LOG.error("bound attempt failed.", future.cause());
+                        throw new IllegalStateException("could not start netty network server");
+                    }
+                }
+            }).sync();
 
             f.channel().closeFuture().sync();
         } catch (InterruptedException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
+            // TODO: shutdown eventloop group eventLoopGroup.shutdownGracefully();
         }
     }
 
-    private class InHandler extends ChannelInboundHandlerAdapter {
+    @Override
+    public BufferQueue<IOEvents.DataIOEvent> getInputQueue(final int gate) {
+        return queues.get(gateIndex);
+    }
 
-        boolean called = false;
+    public void setInputQueue(UUID srcTaskID, BufferQueue<IOEvents.DataIOEvent> queue) {
+        this.queues.add(queue);
+        // insert into mapping
+        taskIDToQueue.put(srcTaskID, queues.size() - 1);
+    }
 
-        long start, end;
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            //System.out.println("channelRead");
-
-            //To change body of overridden methods use File | Settings | File Templates.
-            if (!called) {
-                called = true;
-                start = System.currentTimeMillis();
-            }
-
-            ByteBuf buffer = (ByteBuf) msg;
-            long sequenceNumber = buffer.getLong(0);
-            //LOG.debug("id: " + sequenceNumber);
-
-            if (sequenceNumber % 1000 == 0) {
-                called = false;
-                end = System.currentTimeMillis() - start;
-                LOG.error("ms: " + end);
-            }
-
-            //System.out.println(sequenceNumber);
-
-            //super.channelRead(ctx, msg);
-
-            //queue.offer((ByteBuf) msg);
-        }
+    private final class DataHandler extends SimpleChannelInboundHandler<IOEvents.DataBufferEvent> {
 
         @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            LOG.error("ex caught", cause);
+        protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataBufferEvent event) {
+            event.setChannel(ctx.channel());
+            queue.offer(event);
         }
     }
+
+    private final class EventHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
+
+        @Override
+        protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event)
+                throws Exception {
+
+            if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)) {
+                dispatcher.dispatchEvent(
+                        new IOEvents.GenericIOEvent<IChannelReader>(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, ChannelReader.this, event.srcTaskID, event.dstTaskID)
+                );
+            } else {
+                event.setChannel(ctx.channel());
+                dispatcher.dispatchEvent(event);
+            }
+        }
+    }
+
 
     // TODO: Make use of flip buffer
     // TODO see FixedLengthFrameDecoder for more error resistant solution
@@ -149,8 +186,8 @@ public class Server {
 
         @Override
         public void handlerRemoved(ChannelHandlerContext ctx) {
-//            buf.release();
-//            buf = null;
+            buf.release();
+            buf = null;
         }
 
         @Override
