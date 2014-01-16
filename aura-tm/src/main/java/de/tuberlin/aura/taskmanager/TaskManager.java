@@ -355,8 +355,8 @@ public final class TaskManager implements WM2TMProtocol {
 				.implantUserCodeClass(taskDeploymentDescriptor.taskDescriptor.userCode);
 
 		installTask(taskDeploymentDescriptor.taskDescriptor,
-			taskDeploymentDescriptor.taskBindingDescriptor,
-			userCodeClass);
+                taskDeploymentDescriptor.taskBindingDescriptor,
+                userCodeClass);
 	}
 
 	// ---------------------------------------------------

@@ -107,7 +107,7 @@ public final class UserCodeExtractor {
 		else
 			dependencies = new ArrayList<String>();
 
-		return new UserCode(clazz.getName(), dependencies, Compression.compress(loadByteCode(clazz)));
+		return new UserCode(clazz.getName(), clazz.getSimpleName(), dependencies, Compression.compress(loadByteCode(clazz)));
 	}
 
 	// ---------------------------------------------------
