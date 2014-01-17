@@ -213,6 +213,6 @@ public final class TaskContext {
 
         taskIDToGateIndex.clear();
         channelIndexToTaskID.clear();
-        dispatcher.removeAllEventListener();
+        //dispatcher.removeAllEventListener();
     }
 }

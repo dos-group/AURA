@@ -44,15 +44,15 @@ public final class TaskManager implements WM2TMProtocol {
      */
 	private final class IORedispatcher extends EventHandler {
 
-		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
-		private void handleDataOutputChannelEvent(final DataIOEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
+        @Handle(event = GenericIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
+        private void handleDataOutputChannelEvent(final GenericIOEvent event) {
+            final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
 			contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
-		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
-		private void handleDataInputChannelEvent(final DataIOEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
+        @Handle(event = GenericIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
+        private void handleDataInputChannelEvent(final GenericIOEvent event) {
+            final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
 			contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
@@ -98,7 +98,7 @@ public final class TaskManager implements WM2TMProtocol {
 		public TaskContext context;
 
         @Handle(event = GenericIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
-        private void handleTaskInputDataChannelConnect(final GenericIOEvent<IChannelReader> event) {
+        private void handleTaskInputDataChannelConnect(final GenericIOEvent event) {
             int gateIndex = 0;
 			boolean allInputGatesConnected = true, connectingToCorrectTask = false;
 			for (final List<TaskDescriptor> inputGate : context.taskBinding.inputGateBindings) {
@@ -111,13 +111,13 @@ public final class TaskManager implements WM2TMProtocol {
                         // wire queue to input gate
 
 
-                        final IChannelReader channelReader = event.payload;
+                        final IChannelReader channelReader = (IChannelReader) event.payload;
                         // create queue, if there is none yet
                         // as we can have multiple channels insert in one queue (aka multiple channels per gate)
-                        if (channelReader.getInputQueue(inputTask.taskID, gateIndex) == null) {
+                        if (channelReader.getInputQueue(context.task.taskID, gateIndex) == null) {
                             // TODO: we do not need channelIndex here FIX!
                             BufferQueue<DataIOEvent> queue = context.queueManager.getQueue(gateIndex, channelIndex);
-                            channelReader.setInputQueue(inputTask.taskID, event.getChannel(), gateIndex, queue);
+                            channelReader.setInputQueue(context.task.taskID, event.getChannel(), gateIndex, queue);
                         }
 
                         context.inputGates.get(gateIndex).setChannelReader(channelReader);
@@ -129,6 +129,7 @@ public final class TaskManager implements WM2TMProtocol {
 					}
 					// all data inputs are connected...
                     allInputChannelsPerGateConnected &= (context.inputGates.get(gateIndex).getChannelReader() != null);
+                    channelIndex++;
                 }
 
 				allInputGatesConnected &= allInputChannelsPerGateConnected;
@@ -146,7 +147,7 @@ public final class TaskManager implements WM2TMProtocol {
 		}
 
         @Handle(event = GenericIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
-        private void handleTaskOutputDataChannelConnect(final GenericIOEvent<IChannelWriter> event) {
+        private void handleTaskOutputDataChannelConnect(final GenericIOEvent event) {
             int gateIndex = 0;
 			boolean allOutputGatesConnected = true;
 			for (final List<TaskDescriptor> outputGate : context.taskBinding.outputGateBindings) {
@@ -157,9 +158,10 @@ public final class TaskManager implements WM2TMProtocol {
 					if (outputTask.taskID.equals(event.dstTaskID)) {
                         // get the right queue manager for task context
                         BufferQueue<DataIOEvent> queue = context.queueManager.getQueue(gateIndex, channelIndex);
+
                         TaskManager.this.ioManager.dispatchEvent(
-                                new GenericIOEvent<>(ControlEventType.CONTROL_EVENT_OUTPUT_QUEUE, queue, event.srcTaskID, event.dstTaskID));
-                        context.outputGates.get(gateIndex).setChannelWriter(channelIndex, event.payload);
+                                new GenericIOEvent(ControlEventType.CONTROL_EVENT_OUTPUT_QUEUE, queue, event.srcTaskID, event.dstTaskID));
+                        context.outputGates.get(gateIndex).setChannelWriter(channelIndex, (IChannelWriter) event.payload);
 
                         LOG.info("OUTPUT CONNECTION FROM " + context.task.name + " [" + context.task.taskID
                                 + "] TO TASK "

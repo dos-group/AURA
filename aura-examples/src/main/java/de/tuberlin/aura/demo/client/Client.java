@@ -14,6 +14,7 @@ import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 import org.apache.log4j.SimpleLayout;
 
 import java.io.BufferedReader;
@@ -77,7 +78,7 @@ public final class Client {
             final UUID outputTaskID = getOutputTaskID(0, 0);
 
             for (int i = 0; i < 100; ++i) {
-                final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+                final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
                 emit(0, 0, outputBuffer);
 
                 try {
@@ -124,7 +125,7 @@ public final class Client {
                 inputRightActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer.type);
 
                 if (inputLeftActive || inputRightActive) {
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
                     emit(0, 0, outputBuffer);
                 }
 
@@ -185,7 +186,9 @@ public final class Client {
     public static void main(String[] args) {
 
         final SimpleLayout layout = new SimpleLayout();
-        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+
+        final PatternLayout pL = new PatternLayout("%-4r [%t] %-5p %c %x - %m%n");
+        final ConsoleAppender consoleAppender = new ConsoleAppender(pL);
         LOG.addAppender(consoleAppender);
 
         final String zookeeperAddress = "localhost:2181";
@@ -193,25 +196,25 @@ public final class Client {
                 true, zookeeperAddress, 4);
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
-//		final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-//		atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
-//			.connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-//			.addNode(new Node(UUID.randomUUID(), "Task2", 1, 1), Task2Exe.class)
-//			.connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-//			.addNode(new Node(UUID.randomUUID(), "Task3", 1, 1), Task3Exe.class)
-//			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-//			.addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
-//
-//		final AuraTopology at1 = atb1.build("Job 1");
-//		ac.submitTopology(at1);
-
-        final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+        final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+                .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Node(UUID.randomUUID(), "Task2", 1, 1), Task2Exe.class)
+                .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Node(UUID.randomUUID(), "Task3", 1, 1), Task3Exe.class)
                 .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
                 .addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
 
-        final AuraTopology at2 = atb2.build("Job 2");
-        ac.submitTopology(at2);
+        final AuraTopology at1 = atb1.build("Job 1");
+        ac.submitTopology(at1);
+
+//        final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
+//        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+//                .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
+//                .addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
+//
+//        final AuraTopology at2 = atb2.build("Job 2");
+//        ac.submitTopology(at2);
 
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();

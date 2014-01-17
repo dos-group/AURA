@@ -2,7 +2,6 @@ package de.tuberlin.aura.core.iosystem;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.iosystem.buffer.FlipBufferAllocator;
 import de.tuberlin.aura.core.iosystem.buffer.Util;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -52,7 +51,7 @@ public class ChannelReader implements IChannelReader {
      */
     private final Map<Pair<UUID, Integer>, Integer> gateToQueueIndex;
 
-    private final Map<Pair<UUID, Integer>, Channel> connectedChannels;
+    private final Map<Pair<UUID, Integer>, List<Channel>> connectedChannels;
 
     public ChannelReader(IEventDispatcher dispatcher, NioEventLoopGroup eventLoopGroup, InetSocketAddress socketAddress) {
         this(dispatcher, eventLoopGroup, socketAddress, DEFAULT_BUFFER_SIZE);
@@ -95,25 +94,25 @@ public class ChannelReader implements IChannelReader {
                             // TODO: so the best case is #bufferQueues * bufferSize???
                             //.childOption(ChannelOption.SO_RCVBUF, bufferSize)
                             // set a PER CHANNEL buffer in which the data is read
-                    .handler(new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                            Channel child = (Channel) msg;
-
-                            try {
-                                if (!child.config().setOption(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))) {
-                                    LOG.error("Unknown channel option: " + ChannelOption.ALLOCATOR);
-                                    throw new IllegalStateException("Unable to set allocator for channel.");
-                                }
-
-                                ctx.fireChannelRead(msg);
-
-                            } catch (Throwable t) {
-                                LOG.error("Failed to set a channel option: " + child, t);
-                                throw t;
-                            }
-                        }
-                    })
+//                    .handler(new ChannelInboundHandlerAdapter() {
+//                        @Override
+//                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+//                            Channel child = (Channel) msg;
+//
+//                            try {
+//                                if (!child.config().setOption(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))) {
+//                                    LOG.error("Unknown channel option: " + ChannelOption.ALLOCATOR);
+//                                    throw new IllegalStateException("Unable to set allocator for channel.");
+//                                }
+//
+//                                ctx.fireChannelRead(msg);
+//
+//                            } catch (Throwable t) {
+//                                LOG.error("Failed to set a channel option: " + child, t);
+//                                throw t;
+//                            }
+//                        }
+//                    })
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
@@ -140,22 +139,27 @@ public class ChannelReader implements IChannelReader {
                         LOG.info("network server bound to address " + socketAddress);
                     } else {
                         LOG.error("bound attempt failed.", future.cause());
-                        throw new IllegalStateException("could not start netty network server");
+                        throw new IllegalStateException("could not start netty network server", future.cause());
                     }
                 }
             }).sync();
 
-            f.channel().closeFuture().sync();
+            //f.channel().closeFuture().//
+            // TODO: add logic for closing
+
         } catch (InterruptedException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            LOG.error("failed to initialize network server", e);
+            throw new IllegalStateException("failed to initialize network server", e);
         } finally {
-            // TODO: shutdown eventloop group eventLoopGroup.shutdownGracefully();
+            // TODO: shutdown event loop group eventLoopGroup.shutdownGracefully();
         }
     }
 
     @Override
     public BufferQueue<IOEvents.DataIOEvent> getInputQueue(final UUID taskID, final int gateIndex) {
-
+        if (!gateToQueueIndex.containsKey(new Pair<UUID, Integer>(taskID, gateIndex))) {
+            return null;
+        }
         return queues.get(gateToQueueIndex.get(new Pair<UUID, Integer>(taskID, gateIndex)));
     }
 
@@ -167,16 +171,20 @@ public class ChannelReader implements IChannelReader {
         channelToQueueIndex.put(channel, queueIndex);
         Pair<UUID, Integer> index = new Pair<UUID, Integer>(srcTaskID, gateIndex);
         gateToQueueIndex.put(index, queueIndex);
-//        if (!connectedChannels.containsKey(index)) {
-//
-//        }
-//        connectedChannels.get(index).add();
 
+        final List<Channel> channels;
+        if (!connectedChannels.containsKey(index)) {
+            channels = new ArrayList<>();
+        } else {
+            channels = connectedChannels.get(index);
+        }
+        channels.add(channel);
+        connectedChannels.put(index, channels);
     }
 
     @Override
-    public void write(final UUID taskID, final int gateIndex, final IOEvents.DataIOEvent event) {
-
+    public void write(final UUID taskID, final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event) {
+        connectedChannels.get(new Pair<UUID, Integer>(taskID, gateIndex)).get(channelIndex).writeAndFlush(event);
     }
 
     private final class DataHandler extends SimpleChannelInboundHandler<IOEvents.DataBufferEvent> {
@@ -194,11 +202,14 @@ public class ChannelReader implements IChannelReader {
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event)
                 throws Exception {
 
+            LOG.info("got event: " + event.type);
             if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)) {
-                IOEvents.GenericIOEvent<IChannelReader> connected =
-                        new IOEvents.GenericIOEvent<IChannelReader>(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, ChannelReader.this, event.srcTaskID, event.dstTaskID);
+                IOEvents.GenericIOEvent connected =
+                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, ChannelReader.this, event.srcTaskID, event.dstTaskID);
                 connected.setChannel(ctx.channel());
                 dispatcher.dispatchEvent(connected);
+            } else if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
+                queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
             } else {
                 event.setChannel(ctx.channel());
                 dispatcher.dispatchEvent(event);
