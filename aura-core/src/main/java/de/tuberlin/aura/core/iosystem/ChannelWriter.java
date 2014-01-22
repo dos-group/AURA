@@ -120,18 +120,9 @@ public class ChannelWriter implements IChannelWriter {
      */
     @Override
     public void shutdown() {
-        //shutdown = true;
         // this should work as we exit the loop on interrupt
         // in case it does not work we have to use a future and wait explicitly
-        pollThreadExecutor.shutdown();
-        LOG.info("CLOSE CHANNEL " + channel);
-        channel.disconnect();
 
-        try {
-            channel.close().sync();
-        } catch (InterruptedException e) {
-            LOG.error("Close of channel writer was interrupted", e);
-        } finally {
             try {
                 IOEvents.DataIOEvent result = pollResult.get();
                 if (result != null) {
@@ -141,8 +132,16 @@ public class ChannelWriter implements IChannelWriter {
                 LOG.error("Receiving future from poll thread failed. Interrupt.", e);
             } catch (ExecutionException e) {
                 LOG.error("Receiving future from poll thread failed. Exception in poll thread", e);
+            } finally {
+                LOG.info("CLOSE CHANNEL " + channel);
+                channel.disconnect();
+
+                try {
+                    channel.close().sync();
+                } catch (InterruptedException e) {
+                    LOG.error("Close of channel writer was interrupted", e);
+                }
             }
-        }
     }
 
     /**
@@ -235,6 +234,7 @@ public class ChannelWriter implements IChannelWriter {
 
                     Poll pollThread = new Poll();
                     pollResult = pollThreadExecutor.submit(pollThread);
+                    pollThreadExecutor.shutdown();
 
                     future.channel().writeAndFlush(
                             new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID));

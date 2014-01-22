@@ -45,7 +45,7 @@ public final class Client {
             final UUID taskID = getTaskID();
             final UUID outputTaskID = getOutputTaskID(0, 0);
 
-            for (int i = 0; i < 100; ++i) {
+            for (int i = 0; i < 10; ++i) {
                 //final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
                 final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
                 emit(0, 0, outputBuffer);
@@ -77,7 +77,7 @@ public final class Client {
             final UUID taskID = getTaskID();
             final UUID outputTaskID = getOutputTaskID(0, 0);
 
-            for (int i = 0; i < 100; ++i) {
+            for (int i = 0; i < 10; ++i) {
                 final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
                 emit(0, 0, outputBuffer);
 
@@ -113,13 +113,15 @@ public final class Client {
 
             boolean inputLeftActive = true, inputRightActive = true;
 
+            DataIOEvent leftInputBuffer = null;
+            DataIOEvent rightInputBuffer = null;
+
             while (inputLeftActive || inputRightActive) {
+                leftInputBuffer = absorb(0);
+                rightInputBuffer = absorb(1);
 
-                final DataIOEvent leftInputBuffer = absorb(0);
-                final DataIOEvent rightInputBuffer = absorb(1);
-
-                LOG.info("input1: received data message from task " + leftInputBuffer.srcTaskID);
-                LOG.info("input2: received data message from task " + rightInputBuffer.srcTaskID);
+                LOG.info("input1: received data message from task " + leftInputBuffer.srcTaskID + "    > " + leftInputBuffer.type);
+                LOG.info("input2: received data message from task " + rightInputBuffer.srcTaskID + "    > " + rightInputBuffer.type);
 
                 inputLeftActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer.type);
                 inputRightActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer.type);
@@ -188,7 +190,7 @@ public final class Client {
         final SimpleLayout layout = new SimpleLayout();
 
         final PatternLayout pL = new PatternLayout("%-4r [%t] %-5p %c %x - %m%n");
-        final ConsoleAppender consoleAppender = new ConsoleAppender(pL);
+        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
         LOG.addAppender(consoleAppender);
 
         final String zookeeperAddress = "localhost:2181";

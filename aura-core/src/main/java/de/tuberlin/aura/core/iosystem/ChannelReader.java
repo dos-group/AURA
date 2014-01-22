@@ -192,6 +192,8 @@ public class ChannelReader implements IChannelReader {
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataBufferEvent event) {
             //event.setChannel(ctx.channel());
+
+            LOG.info(ctx.channel() + " ----> " + event.toString());
             queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
         }
     }
@@ -201,6 +203,8 @@ public class ChannelReader implements IChannelReader {
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event)
                 throws Exception {
+
+            LOG.info(ctx.channel() + " ----> " + event.toString());
 
             LOG.info("got event: " + event.type);
             if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)) {
