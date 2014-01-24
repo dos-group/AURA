@@ -1,26 +1,23 @@
 package de.tuberlin.aura.core.task.common;
 
-import io.netty.channel.Channel;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
+import de.tuberlin.aura.core.iosystem.IChannelWriter;
+import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
+import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.gates.InputGate;
 import de.tuberlin.aura.core.task.gates.OutputGate;
+import org.apache.log4j.Logger;
+
+import java.util.*;
 
 /**
  *
@@ -58,8 +55,10 @@ public final class TaskRuntimeContext {
 
 		this.invokeableClass = invokeableClass;
 
-		if (taskBinding.inputGateBindings.size() > 0) {
-			this.inputGates = new ArrayList<InputGate>(taskBinding.inputGateBindings.size());
+        this.queueManager = QueueManager.newInstance(this, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>());
+
+        if (taskBinding.inputGateBindings.size() > 0) {
+            this.inputGates = new ArrayList<InputGate>(taskBinding.inputGateBindings.size());
 
 			for (int gateIndex = 0; gateIndex < taskBinding.inputGateBindings.size(); ++gateIndex) {
 				inputGates.add(new InputGate(this, gateIndex));
@@ -135,9 +134,11 @@ public final class TaskRuntimeContext {
 
 	public final List<OutputGate> outputGates;
 
-	private TaskState state;
+    public final QueueManager<IOEvents.DataIOEvent> queueManager;
 
-	private TaskInvokeable invokeable;
+    private TaskState state;
+
+    private TaskInvokeable invokeable;
 
 	// ---------------------------------------------------
 	// Public.
@@ -191,22 +192,17 @@ public final class TaskRuntimeContext {
 	}
 
 	public void close() {
-		if (outputGates != null) {
-			for (final OutputGate og : outputGates) {
-				for (final Channel ch : og.getAllChannels()) {
-					try {
-						ch.disconnect().sync();
-						ch.close().sync();
-						LOG.info("CLOSE CHANNEL " + ch.toString());
-					} catch (InterruptedException e) {
-						LOG.error(e);
-					}
-				}
-			}
-		}
+        if (outputGates != null) {
+            for (final OutputGate og : outputGates) {
+                // TODO: maybe replace with event?!
+                for (final IChannelWriter channelWriter : og.getAllChannelWriter()) {
+                    channelWriter.shutdown();
+                }
+            }
+        }
 
-		taskIDToGateIndex.clear();
-		channelIndexToTaskID.clear();
+        taskIDToGateIndex.clear();
+        channelIndexToTaskID.clear();
 		dispatcher.removeAllEventListener();
 	}
 
