@@ -1,23 +1,12 @@
-package de.tuberlin.aura.core.directedgraph;
+package de.tuberlin.aura.core.topology;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology.DeploymentType;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology.DeploymentType;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
@@ -39,6 +28,15 @@ public class AuraDirectedGraph {
 		// Aura Topology Properties.
 		// ---------------------------------------------------
 
+        public static enum MonitoringType {
+
+            NO_MONITORING,
+
+            TASK_MONITORING,
+
+            TOPOLOGY_MONITORING
+        }
+
 		public static enum DeploymentType {
 
 			LAZY,
@@ -50,17 +48,20 @@ public class AuraDirectedGraph {
 		// Constructor.
 		// ---------------------------------------------------
 
-		public AuraTopology(final String name,
-				final UUID topologyID,
-				final Map<String, Node> nodeMap,
-				final Map<String, Node> sourceMap,
-				final Map<String, Node> sinkMap,
-				final Map<Pair<String, String>, Edge> edges,
-				final Map<String, UserCode> userCodeMap,
-				final Map<UUID, Node> uidNodeMap,
-				final DeploymentType deploymentType) {
-
+		public AuraTopology(final UUID machineID,
+                            final String name,
+				            final UUID topologyID,
+				            final Map<String, Node> nodeMap,
+				            final Map<String, Node> sourceMap,
+				            final Map<String, Node> sinkMap,
+				            final Map<Pair<String, String>, Edge> edges,
+				            final Map<String, UserCode> userCodeMap,
+				            final Map<UUID, Node> uidNodeMap,
+				            final DeploymentType deploymentType,
+                            final EnumSet<MonitoringType> monitoringProperties) {
 			// sanity check.
+            if (machineID == null)
+                throw new IllegalArgumentException("machineID == null");
 			if (name == null)
 				throw new IllegalArgumentException("name == null");
 			if (topologyID == null)
@@ -79,6 +80,10 @@ public class AuraDirectedGraph {
 				throw new IllegalArgumentException("uidNodeMap == null");
 			if (deploymentType == null)
 				throw new IllegalArgumentException("deploymentType == null");
+            if (monitoringProperties == null)
+                throw new IllegalArgumentException("monitoringType == null");
+
+            this.machineID = machineID;
 
 			this.name = name;
 
@@ -98,12 +103,16 @@ public class AuraDirectedGraph {
 
 			this.deploymentType = deploymentType;
 
+            this.monitoringProperties = EnumSet.copyOf(monitoringProperties);
+
 			this.executionNodeMap = null;
 		}
 
 		// ---------------------------------------------------
 		// Fields.
 		// ---------------------------------------------------
+
+        public final UUID machineID;
 
 		public final String name;
 
@@ -121,11 +130,13 @@ public class AuraDirectedGraph {
 
 		public final Map<UUID, Node> uidNodeMap;
 
-		public Map<UUID, ExecutionNode> executionNodeMap;
-
 		public final DeploymentType deploymentType;
 
-		// ---------------------------------------------------
+        public final EnumSet<MonitoringType> monitoringProperties;
+
+        public Map<UUID, ExecutionNode> executionNodeMap;
+
+        // ---------------------------------------------------
 		// Public.
 		// ---------------------------------------------------
 
@@ -222,10 +233,14 @@ public class AuraDirectedGraph {
 		// Constructor.
 		// ---------------------------------------------------
 
-		public AuraTopologyBuilder(final UserCodeExtractor codeExtractor) {
+		public AuraTopologyBuilder(final UUID machineID, final UserCodeExtractor codeExtractor) {
 			// sanity check.
+            if (machineID == null)
+                throw new IllegalArgumentException("machineID == null");
 			if (codeExtractor == null)
 				throw new IllegalArgumentException("codeExtractor == null");
+
+            this.machineID = machineID;
 
 			this.nodeMap = new HashMap<String, Node>();
 
@@ -249,6 +264,8 @@ public class AuraDirectedGraph {
 		// ---------------------------------------------------
 		// Fields.
 		// ---------------------------------------------------
+
+        private final UUID machineID;
 
 		private final Map<String, Node> nodeMap;
 
@@ -298,17 +315,30 @@ public class AuraDirectedGraph {
 		}
 
 		public AuraTopology build(final String name) {
-			return build(name, DeploymentType.EAGER);
+			return build(name, EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING), DeploymentType.EAGER);
 		}
 
-		public AuraTopology build(final String name, final DeploymentType deploymentType) {
+        public AuraTopology build(final String name,
+                                  final EnumSet<AuraTopology.MonitoringType> monitoringProperties) {
+            return build(name, monitoringProperties, DeploymentType.EAGER);
+        }
+
+        public AuraTopology build(final String name,
+                                  final EnumSet<AuraTopology.MonitoringType> monitoringProperties,
+                                  final DeploymentType deploymentType) {
 			// sanity check.
 			if (name == null)
 				throw new IllegalArgumentException("name == null");
+            if (monitoringProperties == null)
+                throw new IllegalArgumentException("monitoringProperties == null");
 			if (deploymentType == null)
 				throw new IllegalArgumentException("deploymentType == null");
+            // sanity check of monitoring properties.
+            if( monitoringProperties.contains(AuraTopology.MonitoringType.NO_MONITORING)
+                    && monitoringProperties.size() > 1 )
+                throw new IllegalStateException();
 
-			if (!isBuilded) {
+            if (!isBuilded) {
 
 				final Map<Pair<String, String>, List<Object>> edgeProperties = nodeConnector.getEdgeProperties();
 
@@ -327,8 +357,6 @@ public class AuraDirectedGraph {
 						dstNode.name));
 					final Edge.TransferType transferType = (Edge.TransferType) properties.get(0);
 					final Edge.EdgeType edgeType = (Edge.EdgeType) properties.get(1);
-					// final Edge.DataPersistenceType dataLifeTime = (Edge.DataPersistenceType) properties.get(2);
-					// final Edge.ExecutionType executionType = (Edge.ExecutionType) properties.get(3);
 
 					if (edgeType == Edge.EdgeType.BACKWARD_EDGE) {
 						if (!validateBackCouplingEdge(new HashSet<Node>(), srcNode, dstNode))
@@ -357,8 +385,8 @@ public class AuraDirectedGraph {
 			// Every call to build gives us the same topology with a new id.
 			final UUID topologyID = UUID.randomUUID();
 
-			return new AuraTopology(name, topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap, uidNodeMap,
-				deploymentType);
+			return new AuraTopology(machineID, name, topologyID, nodeMap, sourceMap, sinkMap, edges, userCodeMap, uidNodeMap,
+				deploymentType, monitoringProperties);
 		}
 
 		private boolean validateBackCouplingEdge(final Set<Node> visitedNodes, final Node currentNode,
@@ -549,14 +577,18 @@ public class AuraDirectedGraph {
 		// Constructors.
 		// ---------------------------------------------------
 
-		public ExecutionNode(final UUID uid, final Node logicalNode) {
+		public ExecutionNode(final UUID uid, final int taskIndex, final Node logicalNode) {
 			// sanity check.
 			if (uid == null)
 				throw new IllegalArgumentException("uid == null");
+            if (taskIndex < 0)
+                throw new IllegalArgumentException("taskIndex < 0");
 			if (logicalNode == null)
 				throw new IllegalArgumentException("logicalNode == null");
 
 			this.uid = uid;
+
+            this.taskIndex = taskIndex;
 
 			this.logicalNode = logicalNode;
 		}
@@ -568,6 +600,8 @@ public class AuraDirectedGraph {
 		public final UUID uid;
 
 		public final Node logicalNode;
+
+        public final int taskIndex;
 
 		private TaskDescriptor taskDescriptor;
 

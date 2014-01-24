@@ -4,15 +4,15 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.ExecutionNode;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.TopologyBreadthFirstTraverser;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.workloadmanager.TopologyEvents.TopologyStateTransitionEvent;
-import de.tuberlin.aura.workloadmanager.TopologyStateMachine.TopologyTransition;
+import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
+import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
 
 public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> {
 

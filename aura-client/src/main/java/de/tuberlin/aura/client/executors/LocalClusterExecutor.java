@@ -79,6 +79,7 @@ public final class LocalClusterExecutor {
 
 			try {
 				this.zookeeperServer = new ZooKeeperServer(dir, dir, tickTime);
+                this.zookeeperServer.setMaxSessionTimeout(10000000);
 				this.zookeeperCNXNFactory = new NIOServerCnxnFactory();
 				this.zookeeperCNXNFactory.configure(new InetSocketAddress(zkClientPort), numConnections);
 				this.zookeeperCNXNFactory.startup(zookeeperServer);

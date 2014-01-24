@@ -1,12 +1,12 @@
 package de.tuberlin.aura.taskmanager;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+import de.tuberlin.aura.core.task.gates.InputGate;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
@@ -26,12 +26,10 @@ import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.task.common.TaskContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
@@ -40,6 +38,8 @@ import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
 
 public final class TaskManager implements WM2TMProtocol {
+
+    private final static Object mutex = new Object();
 
 	// ---------------------------------------------------
 	// Inner Classes.
@@ -52,47 +52,49 @@ public final class TaskManager implements WM2TMProtocol {
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
 		private void handleDataOutputChannelEvent(final DataIOEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
+			final Pair<TaskRuntimeContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
 			contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
 		private void handleDataInputChannelEvent(final DataIOEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
+			final Pair<TaskRuntimeContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
 			contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN)
 		private void handleDataChannelGateOpenEvent(final DataIOEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
+			final Pair<TaskRuntimeContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
 			contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE)
 		private void handleDataChannelGateCloseEvent(final DataIOEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
+			final Pair<TaskRuntimeContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
 			contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
 		@Handle(event = DataBufferEvent.class)
 		private void handleDataEvent(final DataBufferEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
-			contextAndHandler.getSecond().dispatchEvent(event);
+			final Pair<TaskRuntimeContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
+            contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)
 		private void handleDataExhaustedEvent(final DataIOEvent event) {
-			final Pair<TaskContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
-			contextAndHandler.getSecond().dispatchEvent(event);
+            final Pair<TaskRuntimeContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
+            contextAndHandler.getSecond().dispatchEvent(event);
 		}
 
 		@Handle(event = TaskStateTransitionEvent.class)
 		private void handleTaskStateTransitionEvent(final TaskStateTransitionEvent event) {
-			final List<TaskContext> contextList = topologyTaskContextMap.get(event.topologyID);
+			final List<TaskRuntimeContext> contextList = topologyTaskContextMap.get(event.topologyID);
 			if (contextList == null)
 				throw new IllegalArgumentException("contextList == null");
-			for (final TaskContext tc : contextList)
-				tc.dispatcher.dispatchEvent(event);
+			for (final TaskRuntimeContext tc : contextList) {
+			    if (tc.task.taskID.equals(event.taskID))
+				    tc.dispatcher.dispatchEvent(event);
+            }
 		}
 	}
 
@@ -101,7 +103,7 @@ public final class TaskManager implements WM2TMProtocol {
      */
 	private final class TaskEventHandler extends EventHandler {
 
-		public TaskContext context;
+		public TaskRuntimeContext context;
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
 		private void handleTaskInputDataChannelConnect(final DataIOEvent event) {
@@ -131,8 +133,8 @@ public final class TaskManager implements WM2TMProtocol {
 				throw new IllegalStateException("wrong data channel tries to connect");
 
 			if (allInputGatesConnected) {
-				context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
-					TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
+				context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(context.task.topologyID,
+                        context.task.taskID, TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
 			}
 		}
 
@@ -159,22 +161,24 @@ public final class TaskManager implements WM2TMProtocol {
 			}
 
 			if (allOutputGatesConnected) {
-				context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
-					TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
+				context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(context.task.topologyID,
+                        context.task.taskID, TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
 			}
 		}
 
 		@Handle(event = DataBufferEvent.class)
 		private void handleTaskInputData(final DataBufferEvent event) {
-			context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
+            context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
 				.addToInputQueue(event);
 		}
 
 		@Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)
 		private void handleTaskInputDataExhausted(final DataIOEvent event) {
-			context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID))
-				.addToInputQueue(event);
+            final InputGate ig = context.inputGates.get(context.getInputGateIndexFromTaskID(event.srcTaskID));
+            ig.addToInputQueue(event);
 		}
+
+        private long timeOfLastStateChange = System.currentTimeMillis();
 
 		@Handle(event = TaskStateTransitionEvent.class)
 		private void handleTaskStateTransition(final TaskStateTransitionEvent event) {
@@ -183,68 +187,78 @@ public final class TaskManager implements WM2TMProtocol {
 				final TaskState oldState = context.getCurrentTaskState();
 				final TaskState nextState = context.doTaskStateTransition(event.transition);
 
+                final long currentTime = System.currentTimeMillis();
+
+                final IOEvents.MonitoringEvent.TaskStateUpdate taskStateUpdate =
+                        new IOEvents.MonitoringEvent.TaskStateUpdate(context.task.taskID, context.task.name,
+                                oldState, nextState, event.transition, currentTime - timeOfLastStateChange);
+
+                timeOfLastStateChange = currentTime;
+
+                final IOEvents.MonitoringEvent monitoringEvent =
+                        new IOEvents.MonitoringEvent(context.task.topologyID, taskStateUpdate);
+                ioManager.sendEvent(wmMachine.uid, monitoringEvent);
+
 				// Trigger state dependent actions. Realization of a classic Moore automata.
 				switch (nextState) {
 
-				case TASK_STATE_NOT_CONNECTED: {
-				}
-					break;
-				case TASK_STATE_INPUTS_CONNECTED: {
-				}
-					break;
-				case TASK_STATE_OUTPUTS_CONNECTED: {
-				}
-					break;
-				case TASK_STATE_READY: {
-					ioManager.sendEvent(wmMachine, new TaskStateEvent(context.task.topologyID, context.task.taskID,
-						context.getCurrentTaskState()));
-				}
-					break;
-				case TASK_STATE_RUNNING: {
+                    case TASK_STATE_NOT_CONNECTED: {} break;
+                    case TASK_STATE_INPUTS_CONNECTED: {} break;
+                    case TASK_STATE_OUTPUTS_CONNECTED: {} break;
+                    case TASK_STATE_READY: {} break;
 
-					switch (oldState) {
+                    case TASK_STATE_RUNNING: {
 
-					case TASK_STATE_READY: {
-						scheduleTask(context);
-					}
-						break;
+                        switch (oldState) {
 
-					case TASK_STATE_PAUSED: {
-						context.getInvokeable().resume();
-					}
-					default:
-						throw new IllegalStateException();
-					}
-				}
-					break;
-				case TASK_STATE_PAUSED: {
-					context.getInvokeable().suspend();
-				}
-					break;
-				case TASK_STATE_FINISHED: {
-					ioManager.sendEvent(wmMachine, new TaskStateEvent(context.task.topologyID, context.task.taskID,
-						context.getCurrentTaskState()));
-					taskContextMap.remove(context.task.taskID);
-					topologyTaskContextMap.get(context.task.topologyID).remove(context);
-					context.close();
-				}
-					break;
-				case TASK_STATE_FAILURE: {
-				}
-					break;
-				case TASK_STATE_RECOVER: {
-				}
-					break;
-				case TASK_STATE_UNDEFINED: {
-					throw new IllegalStateException("task " + context.task.name + " [" + context.task.taskID
-						+ "] from state "
-						+ oldState + " to " + context.getCurrentTaskState() + " is not defined");
-				}
-				default:
-					break;
+                            case TASK_STATE_READY: {
+                                scheduleTask(context);
+                            }
+                                break;
+
+                            case TASK_STATE_PAUSED: {
+                                context.getInvokeable().resume();
+                            }
+                            default:
+                                throw new IllegalStateException();
+                        }
+                    }
+                        break;
+                    case TASK_STATE_PAUSED: {
+                        context.getInvokeable().suspend();
+                    }
+                        break;
+                    case TASK_STATE_FINISHED: {
+                        taskContextMap.remove(context.task.taskID);
+                        topologyTaskContextMap.get(context.task.topologyID).remove(context);
+                        context.close();
+                    }
+                        break;
+                    case TASK_STATE_FAILURE: {
+                        taskContextMap.remove(context.task.taskID);
+                        topologyTaskContextMap.get(context.task.topologyID).remove(context);
+                        context.close();
+                    }
+                        break;
+                    case TASK_STATE_CANCELED: {
+                        context.getInvokeable().cancel();
+                        taskContextMap.remove(context.task.taskID);
+                        topologyTaskContextMap.get(context.task.topologyID).remove(context);
+                        context.close();
+                    }
+                        break;
+
+                    case TASK_STATE_RECOVER: {} break;
+
+                    case TASK_STATE_UNDEFINED: {
+                        throw new IllegalStateException("task " + context.task.name + " [" + context.task.taskID + "] from state "
+                            + oldState + " to " + context.getCurrentTaskState() + " is not defined  [" + event.transition.toString() + "]");
+                    }
+                    default:
+                        break;
 				}
 				LOG.info("CHANGE STATE OF TASK " + context.task.name + " [" + context.task.taskID + "] FROM "
-					+ oldState + " TO " + context.getCurrentTaskState());
+					+ oldState + " TO " + context.getCurrentTaskState() + "  [" + event.transition.toString() + "]");
 			}
 		}
 	}
@@ -254,15 +268,15 @@ public final class TaskManager implements WM2TMProtocol {
 	// ---------------------------------------------------
 
 	public TaskManager(final String zkServer, int dataPort, int controlPort) {
-		this(zkServer, DescriptorFactory.getDescriptor(dataPort, controlPort));
+		this(zkServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
 	}
 
 	public TaskManager(final String zkServer, final MachineDescriptor machine) {
 		// sanity check.
 		ZkHelper.checkConnectionString(zkServer);
 
-		this.taskContextMap = new ConcurrentHashMap<UUID, Pair<TaskContext, IEventDispatcher>>();
-		this.topologyTaskContextMap = new ConcurrentHashMap<UUID, List<TaskContext>>();
+		this.taskContextMap = new ConcurrentHashMap<UUID, Pair<TaskRuntimeContext, IEventDispatcher>>();
+		this.topologyTaskContextMap = new ConcurrentHashMap<UUID, List<TaskRuntimeContext>>();
 		this.ioManager = new IOManager(machine);
 		this.rpcManager = new RPCManager(ioManager);
 		this.ioHandler = new IORedispatcher();
@@ -289,7 +303,7 @@ public final class TaskManager implements WM2TMProtocol {
 		// TODO: move this into a seperate mehtod.
 		// Get a connection to ZooKeeper and initialize the directories in ZooKeeper.
 		try {
-			this.zk = new ZooKeeper(zkServer, ZkHelper.ZOOKEEPER_TIMEOUT,
+			this.zookeeper = new ZooKeeper(zkServer, ZkHelper.ZOOKEEPER_TIMEOUT,
 				new ZkConnectionWatcher(new IEventHandler() {
 
 					@Override
@@ -297,9 +311,9 @@ public final class TaskManager implements WM2TMProtocol {
 					}
 				}));
 
-			ZkHelper.initDirectories(this.zk);
-			ZkHelper.storeInZookeeper(zk, ZkHelper.ZOOKEEPER_TASKMANAGERS + "/" + machine.uid.toString(), machine);
-			this.wmMachine = (MachineDescriptor) ZkHelper.readFromZookeeper(zk, ZkHelper.ZOOKEEPER_WORKLOADMANAGER);
+			ZkHelper.initDirectories(this.zookeeper);
+			ZkHelper.storeInZookeeper(zookeeper, ZkHelper.ZOOKEEPER_TASKMANAGERS + "/" + machine.uid.toString(), machine);
+			this.wmMachine = (MachineDescriptor) ZkHelper.readFromZookeeper(zookeeper, ZkHelper.ZOOKEEPER_WORKLOADMANAGER);
 
 			// check postcondition.
 			if (wmMachine == null)
@@ -323,9 +337,9 @@ public final class TaskManager implements WM2TMProtocol {
 
 	private MachineDescriptor wmMachine;
 
-	private final Map<UUID, Pair<TaskContext, IEventDispatcher>> taskContextMap;
+	private final Map<UUID, Pair<TaskRuntimeContext, IEventDispatcher>> taskContextMap;
 
-	private final Map<UUID, List<TaskContext>> topologyTaskContextMap;
+	private final Map<UUID, List<TaskRuntimeContext>> topologyTaskContextMap;
 
 	private final IOManager ioManager;
 
@@ -337,7 +351,7 @@ public final class TaskManager implements WM2TMProtocol {
 
 	private final UserCodeImplanter codeImplanter;
 
-	private ZooKeeper zk;
+	private ZooKeeper zookeeper;
 
 	// ---------------------------------------------------
 	// Public.
@@ -375,7 +389,7 @@ public final class TaskManager implements WM2TMProtocol {
 		}
 	}
 
-	private void scheduleTask(final TaskContext context) {
+	private void scheduleTask(final TaskRuntimeContext context) {
 		// sanity check.
 		if (context == null)
 			throw new IllegalArgumentException("context must not be null");
@@ -400,28 +414,28 @@ public final class TaskManager implements WM2TMProtocol {
 			final Class<? extends TaskInvokeable> executableClass) {
 
 		final TaskEventHandler handler = new TaskEventHandler();
-		final TaskContext context = new TaskContext(taskDescriptor, taskBindingDescriptor, handler, executableClass);
+		final TaskRuntimeContext context = new TaskRuntimeContext(taskDescriptor, taskBindingDescriptor, handler, executableClass);
 		handler.context = context;
-		taskContextMap.put(taskDescriptor.taskID, new Pair<TaskContext, IEventDispatcher>(context, context.dispatcher));
+		taskContextMap.put(taskDescriptor.taskID, new Pair<TaskRuntimeContext, IEventDispatcher>(context, context.dispatcher));
 		LOG.info("CREATE CONTEXT FOR TASK [" + taskDescriptor.taskID + "] ON MACHINE [" + ioManager.machine.uid + "]");
 
 		if (taskBindingDescriptor.inputGateBindings.size() == 0) {
-			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
-				TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
+			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(context.task.topologyID,
+                    context.task.taskID, TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
 		}
 
 		if (taskBindingDescriptor.outputGateBindings.size() == 0) {
-			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
-				TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
+			context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(context.task.topologyID,
+                    context.task.taskID, TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
 		}
 
 		// TODO: To allow cycles in the execution graph we have to split up
 		// installation and wiring of tasks in the deployment phase!
 		wireOutputDataChannels(taskDescriptor, taskBindingDescriptor);
 
-		List<TaskContext> contextList = topologyTaskContextMap.get(taskDescriptor.topologyID);
+		List<TaskRuntimeContext> contextList = topologyTaskContextMap.get(taskDescriptor.topologyID);
 		if (contextList == null) {
-			contextList = new ArrayList<TaskContext>();
+			contextList = new ArrayList<TaskRuntimeContext>();
 			topologyTaskContextMap.put(taskDescriptor.topologyID, contextList);
 		}
 		contextList.add(context);

@@ -25,16 +25,16 @@ import de.tuberlin.aura.core.task.gates.OutputGate;
 /**
  *
  */
-public final class TaskContext {
+public final class TaskRuntimeContext {
 
 	// ---------------------------------------------------
 	// Constructors.
 	// ---------------------------------------------------
 
-	public TaskContext(final TaskDescriptor task,
-			final TaskBindingDescriptor taskBinding,
-			final IEventHandler handler,
-			final Class<? extends TaskInvokeable> invokeableClass) {
+	public TaskRuntimeContext(final TaskDescriptor task,
+                              final TaskBindingDescriptor taskBinding,
+                              final IEventHandler handler,
+                              final Class<? extends TaskInvokeable> invokeableClass) {
 
 		// sanity check.
 		if (task == null)
@@ -115,7 +115,7 @@ public final class TaskContext {
 	// Fields.
 	// ---------------------------------------------------
 
-	private static final Logger LOG = Logger.getLogger(TaskContext.class);
+	private static final Logger LOG = Logger.getLogger(TaskRuntimeContext.class);
 
 	public final Map<UUID, Integer> taskIDToGateIndex;
 
@@ -143,16 +143,6 @@ public final class TaskContext {
 	// Public.
 	// ---------------------------------------------------
 
-	@Override
-	public String toString() {
-		return (new StringBuilder())
-			.append("TaskContext = {")
-			.append(" task = " + task + ", ")
-			.append(" taskBinding = " + taskBinding + ", ")
-			.append(" state = " + state.toString() + ", ")
-			.append(" }").toString();
-	}
-
 	public UUID getInputTaskIDFromChannelIndex(int channelIndex) {
 		return channelIndexToTaskID.get(channelIndex);
 	}
@@ -168,7 +158,7 @@ public final class TaskContext {
 	public TaskState doTaskStateTransition(final TaskTransition transition) {
 		// sanity check.
 		if (transition == null)
-			throw new IllegalArgumentException("transition == null");
+			throw new IllegalArgumentException("taskTransition == null");
 
 		final Map<TaskTransition, TaskState> transitionsSpace =
 				TaskStateMachine.TASK_STATE_TRANSITION_MATRIX.get(state);
@@ -192,10 +182,10 @@ public final class TaskContext {
 
 	public TaskInvokeable getInvokeable() {
 		// check state condition.
-		if (this.invokeable != null)
-			throw new IllegalStateException("this.invokeable != null");
-		if (state != TaskState.TASK_STATE_RUNNING)
-			throw new IllegalStateException("state != TaskState.TASK_STATE_RUNNING");
+		//if (this.invokeable == null)
+		//	throw new IllegalStateException("this.invokeable == null");
+		//if (state != TaskState.TASK_STATE_RUNNING)
+		//	throw new IllegalStateException("state != TaskState.TASK_STATE_RUNNING");
 
 		return invokeable;
 	}
@@ -219,4 +209,14 @@ public final class TaskContext {
 		channelIndexToTaskID.clear();
 		dispatcher.removeAllEventListener();
 	}
+
+    @Override
+    public String toString() {
+        return (new StringBuilder())
+                .append("TaskRuntimeContext = {")
+                .append(" task = " + task + ", ")
+                .append(" taskBinding = " + taskBinding + ", ")
+                .append(" state = " + state.toString() + ", ")
+                .append(" }").toString();
+    }
 }

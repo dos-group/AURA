@@ -26,8 +26,7 @@ public final class DescriptorFactory {
          *
          * @return A {@link MachineDescriptor}.
          */
-        public static MachineDescriptor getDescriptor(int dataPort, int controlPort)
-        {
+        public static MachineDescriptor createMachineDescriptor(int dataPort, int controlPort) {
                 // Get the IP address of this node.
                 InetAddress address = InetHelper.getIPAddress();
 

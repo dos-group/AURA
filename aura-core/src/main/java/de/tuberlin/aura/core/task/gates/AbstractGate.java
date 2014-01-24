@@ -1,12 +1,11 @@
 package de.tuberlin.aura.core.task.gates;
 
+import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
 import io.netty.channel.Channel;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import de.tuberlin.aura.core.task.common.TaskContext;
 
 public abstract class AbstractGate {
 
@@ -14,7 +13,7 @@ public abstract class AbstractGate {
 	// Constructors.
 	// ---------------------------------------------------
 
-	public AbstractGate(final TaskContext context, int gateIndex, int numChannels) {
+	public AbstractGate(final TaskRuntimeContext context, int gateIndex, int numChannels) {
 		// sanity check.
 		if (context == null)
 			throw new IllegalArgumentException("context == null");
@@ -36,7 +35,7 @@ public abstract class AbstractGate {
 	// Fields.
 	// ---------------------------------------------------
 
-	protected final TaskContext context;
+	protected final TaskRuntimeContext context;
 
 	protected final int numChannels;
 

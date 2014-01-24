@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
-import de.tuberlin.aura.core.task.common.TaskContext;
+import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
@@ -40,7 +40,7 @@ public final class TaskExecutionUnit {
 				// create instance of that task and execute it.
 				TaskInvokeable invokeable = null;
 				try {
-					invokeable = context.invokeableClass.getConstructor(TaskContext.class, Logger.class)
+					invokeable = context.invokeableClass.getConstructor(TaskRuntimeContext.class, Logger.class)
 						.newInstance(context, LOG);
 				} catch (Exception e) {
 					throw new IllegalStateException(e);
@@ -50,14 +50,16 @@ public final class TaskExecutionUnit {
 				if (invokeable == null)
 					throw new IllegalStateException("invokeable == null");
 
+                context.setInvokeable(invokeable);
+
 				try {
 					invokeable.execute();
 				} catch (Exception e) {
 
-					LOG.error(e);
+					LOG.error(e.getLocalizedMessage());
 
-					context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(
-						TaskTransition.TASK_TRANSITION_FAILURE));
+					context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(context.task.topologyID,
+                            context.task.taskID, TaskTransition.TASK_TRANSITION_FAIL));
 
 					return;
 
@@ -65,7 +67,8 @@ public final class TaskExecutionUnit {
 					invokeable = null; // let the instance be collected from gc.
 				}
 
-				context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(TaskTransition.TASK_TRANSITION_FINISH));
+				context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(context.task.topologyID,
+                        context.task.taskID, TaskTransition.TASK_TRANSITION_FINISH));
 
 				context = null;
 			}
@@ -85,7 +88,7 @@ public final class TaskExecutionUnit {
 
 		this.executor = new Thread(new ExecutionUnitRunner());
 
-		this.taskQueue = new LinkedBlockingQueue<TaskContext>();
+		this.taskQueue = new LinkedBlockingQueue<TaskRuntimeContext>();
 
 		this.isExecutionUnitRunning = new AtomicBoolean(false);
 
@@ -102,11 +105,11 @@ public final class TaskExecutionUnit {
 
 	private final Thread executor;
 
-	private final BlockingQueue<TaskContext> taskQueue;
+	private final BlockingQueue<TaskRuntimeContext> taskQueue;
 
 	private final AtomicBoolean isExecutionUnitRunning;
 
-	private TaskContext context;
+	private TaskRuntimeContext context;
 
 	// ---------------------------------------------------
 	// Public.
@@ -122,7 +125,7 @@ public final class TaskExecutionUnit {
 		executor.start();
 	}
 
-	public void enqueueTask(final TaskContext context) {
+	public void enqueueTask(final TaskRuntimeContext context) {
 		// sanity check.
 		if (context == null)
 			throw new IllegalArgumentException("context == null");

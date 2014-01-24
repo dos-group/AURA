@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 
 public final class Descriptors {
@@ -235,13 +235,15 @@ public final class Descriptors {
 
 		private static final long serialVersionUID = 7425151926496852885L;
 
-		public TaskDescriptor(final UUID topologyID, final UUID taskID, final String name, final UserCode userCode) {
+		public TaskDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final UserCode userCode) {
 			// sanity check.
 			if (topologyID == null)
 				throw new IllegalArgumentException("topologyID == null");
 			if (taskID == null)
 				throw new IllegalArgumentException("taskID == null");
-			if (name == null)
+			if (taskIndex < 0)
+                throw new IllegalArgumentException("taskIndex < 0");
+            if (name == null)
 				throw new IllegalArgumentException("name == null");
 			if (userCode == null)
 				throw new IllegalArgumentException("userCode == null");
@@ -249,6 +251,8 @@ public final class Descriptors {
 			this.topologyID = topologyID;
 
 			this.taskID = taskID;
+
+            this.taskIndex = taskIndex;
 
 			this.name = name;
 
@@ -258,6 +262,8 @@ public final class Descriptors {
 		public final UUID topologyID;
 
 		public final UUID taskID;
+
+        public final int taskIndex;
 
 		public final String name;
 

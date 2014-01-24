@@ -1,24 +1,42 @@
 package de.tuberlin.aura.client.api;
 
-import java.io.IOException;
-
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.ZooKeeper;
-
 import de.tuberlin.aura.core.common.eventsystem.Event;
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.iosystem.IOEvents.MonitoringEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.ZooKeeper;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public final class AuraClient {
+
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
+
+    private final class IORedispatcher extends EventHandler {
+
+        @Handle(event = MonitoringEvent.class)
+        private void handleMonitoringEvent(final MonitoringEvent event) {
+            final EventHandler handler = registeredTopologyMonitors.get(event.topologyID);
+            if (handler != null)
+                handler.handleEvent(event);
+        }
+    }
 
 	// ---------------------------------------------------
 	// Constructors.
@@ -33,7 +51,7 @@ public final class AuraClient {
 		if (controlPort < 1024 || controlPort > 65535)
 			throw new IllegalArgumentException("controlPort invalid port number");
 
-		final MachineDescriptor md = DescriptorFactory.getDescriptor(dataPort, controlPort);
+		final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(dataPort, controlPort);
 		this.ioManager = new IOManager(md);
 		this.rpcManager = new RPCManager(ioManager);
 
@@ -60,8 +78,18 @@ public final class AuraClient {
 			throw new IllegalStateException(e);
 		}
 
+        ioHandler = new IORedispatcher();
+
+        final String[] IOEvents = {MonitoringEvent.MONITORING_TOPOLOGY_STATE_EVENT,
+                                   MonitoringEvent.MONITORING_TASK_STATE_EVENT};
+
+        ioManager.addEventListener(IOEvents, ioHandler);
+
 		ioManager.connectMessageChannelBlocking(wmMachineDescriptor);
 		clientProtocol = rpcManager.getRPCProtocolProxy(ClientWMProtocol.class, wmMachineDescriptor);
+
+        this.registeredTopologyMonitors = new HashMap<UUID,EventHandler>();
+
 		LOG.info("CLIENT IS READY");
 	}
 
@@ -79,19 +107,26 @@ public final class AuraClient {
 
 	public final UserCodeExtractor codeExtractor;
 
+    public final Map<UUID,EventHandler> registeredTopologyMonitors;
+
+    public final IORedispatcher ioHandler;
+
 	// ---------------------------------------------------
 	// Public.
 	// ---------------------------------------------------
 
 	public AuraTopologyBuilder createTopologyBuilder() {
-		return new AuraTopologyBuilder(codeExtractor);
+		return new AuraTopologyBuilder(ioManager.machine.uid, codeExtractor);
 	}
 
-	public void submitTopology(final AuraTopology topology) {
+	public void submitTopology(final AuraTopology topology, final EventHandler handler) {
 		// sanity check.
 		if (topology == null)
 			throw new IllegalArgumentException("topology == null");
 
+        if(handler != null) {
+            registeredTopologyMonitors.put(topology.topologyID, handler);
+        }
 		clientProtocol.submitTopology(topology);
 	}
 }

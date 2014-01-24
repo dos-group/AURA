@@ -1,4 +1,4 @@
-package de.tuberlin.aura.workloadmanager;
+package de.tuberlin.aura.core.topology;
 
 import java.util.Collections;
 import java.util.HashMap;

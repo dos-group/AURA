@@ -11,9 +11,9 @@ import org.apache.log4j.SimpleLayout;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.iosystem.IOEvents.MonitoringEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
-import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
@@ -27,8 +27,8 @@ public class WorkloadManager implements ClientWMProtocol {
 
 	private final class IORedispatcher extends EventHandler {
 
-		@Handle(event = TaskStateEvent.class)
-		private void handleTaskReadyEvent(final TaskStateEvent event) {
+		@Handle(event = MonitoringEvent.class, type = MonitoringEvent.MONITORING_TASK_STATE_EVENT)
+		private void handleMonitoredTaskStateEvent(final MonitoringEvent event) {
 			registeredToplogies.get(event.topologyID).dispatchEvent(event);
 		}
 	}
@@ -38,7 +38,7 @@ public class WorkloadManager implements ClientWMProtocol {
 	// ---------------------------------------------------
 
 	public WorkloadManager(final String zkServer, int dataPort, int controlPort) {
-		this(zkServer, DescriptorFactory.getDescriptor(dataPort, controlPort));
+		this(zkServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
 	}
 
 	public WorkloadManager(final String zkServer, final MachineDescriptor machine) {
@@ -61,7 +61,8 @@ public class WorkloadManager implements ClientWMProtocol {
 
 		this.ioHandler = new IORedispatcher();
 
-		final String[] IOEvents = { ControlEventType.CONTROL_EVENT_TASK_STATE };
+		final String[] IOEvents = { ControlEventType.CONTROL_EVENT_TASK_STATE,
+                                    MonitoringEvent.MONITORING_TASK_STATE_EVENT };
 
 		ioManager.addEventListener(IOEvents, ioHandler);
 	}

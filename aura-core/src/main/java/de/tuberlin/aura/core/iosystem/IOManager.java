@@ -376,7 +376,11 @@ public final class IOManager extends EventDispatcher {
 
 		event.setSrcMachineID(machine.uid);
 		event.setDstMachineID(dstMachineID);
-		channel.writeAndFlush(event);
+        try {
+            channel.writeAndFlush(event).sync();
+        } catch (InterruptedException e) {
+            LOG.error(e);
+        }
 
 		/*if( event instanceof RPCCallerRequestEvent ) {
 			final RPCCallerRequestEvent e = (RPCCallerRequestEvent)event;

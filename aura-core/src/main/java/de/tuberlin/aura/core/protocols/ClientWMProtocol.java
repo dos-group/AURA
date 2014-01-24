@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.protocols;
 
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 
 public interface ClientWMProtocol {
 

@@ -12,15 +12,15 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.ExecutionNode;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.TopologyBreadthFirstTraverser;
-import de.tuberlin.aura.core.directedgraph.AuraDirectedGraph.Visitor;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.workloadmanager.TopologyEvents.TopologyStateTransitionEvent;
-import de.tuberlin.aura.workloadmanager.TopologyStateMachine.TopologyTransition;
+import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
+import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
 
 public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopology> {
 
@@ -57,10 +57,10 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 				final UserCode userCode = topology.userCodeMap.get(element.name);
 				for (int index = 0; index < element.degreeOfParallelism; ++index) {
 					final UUID taskID = UUID.randomUUID();
-					final TaskDescriptor taskDescriptor = new TaskDescriptor(topology.topologyID, taskID, element.name,
-						userCode);
+					final TaskDescriptor taskDescriptor = new TaskDescriptor(topology.topologyID, taskID,
+                            index, element.name, userCode);
 					final UUID executionNodeID = UUID.randomUUID();
-					final ExecutionNode executionNode = new ExecutionNode(executionNodeID, element);
+					final ExecutionNode executionNode = new ExecutionNode(executionNodeID, index, element);
 					executionNode.setTaskDescriptor(taskDescriptor);
 					element.addExecutionNode(executionNode);
 					executionNodeMap.put(taskID, executionNode);

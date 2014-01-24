@@ -8,7 +8,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-import de.tuberlin.aura.core.task.common.TaskContext;
+import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
 
 public final class InputGate extends AbstractGate {
 
@@ -16,7 +16,7 @@ public final class InputGate extends AbstractGate {
 	// Constructors.
 	// ---------------------------------------------------
 
-	public InputGate(final TaskContext context, int gateIndex) {
+	public InputGate(final TaskRuntimeContext context, int gateIndex) {
 		super(context, gateIndex, context.taskBinding.inputGateBindings.get(gateIndex).size());
 
 		if (numChannels > 0) {
