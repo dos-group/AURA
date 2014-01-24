@@ -46,8 +46,10 @@ public final class Client {
             final UUID outputTaskID = getOutputTaskID(0, 0);
 
             for (int i = 0; i < 10; ++i) {
+                byte[] x = new byte[100];
+                x[0] = (byte) (i + 20);
                 //final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
-                final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
+                final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, x);
                 emit(0, 0, outputBuffer);
 
                 try {
@@ -78,7 +80,9 @@ public final class Client {
             final UUID outputTaskID = getOutputTaskID(0, 0);
 
             for (int i = 0; i < 10; ++i) {
-                final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
+                byte[] x = new byte[100];
+                x[0] = (byte) (i);
+                final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, x);
                 emit(0, 0, outputBuffer);
 
                 try {
@@ -120,11 +124,16 @@ public final class Client {
                 leftInputBuffer = absorb(0);
                 rightInputBuffer = absorb(1);
 
-                LOG.info("input1: received data message from task " + leftInputBuffer.srcTaskID + "    > " + leftInputBuffer.type);
-                LOG.info("input2: received data message from task " + rightInputBuffer.srcTaskID + "    > " + rightInputBuffer.type);
+                //LOG.info("input1: received data message from task " + leftInputBuffer.srcTaskID + "    > " + leftInputBuffer.type);
+                //LOG.info("input2: received data message from task " + rightInputBuffer.srcTaskID + "    > " + rightInputBuffer.type);
 
                 inputLeftActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer.type);
                 inputRightActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer.type);
+
+                if (inputLeftActive)
+                    LOG.info("input1: " + (int) ((DataBufferEvent) leftInputBuffer).data[0]);
+                if (inputRightActive)
+                    LOG.info("input2: " + (int) ((DataBufferEvent) rightInputBuffer).data[0]);
 
                 if (inputLeftActive || inputRightActive) {
                     final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
@@ -190,7 +199,7 @@ public final class Client {
         final SimpleLayout layout = new SimpleLayout();
 
         final PatternLayout pL = new PatternLayout("%-4r [%t] %-5p %c %x - %m%n");
-        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        final ConsoleAppender consoleAppender = new ConsoleAppender(pL);
         LOG.addAppender(consoleAppender);
 
         final String zookeeperAddress = "localhost:2181";
@@ -226,7 +235,7 @@ public final class Client {
 
         lce.shutdown();
         /*
-		 * With Loops... (not working, loops not yet implemented in the runtime)
+         * With Loops... (not working, loops not yet implemented in the runtime)
 		 * final AuraTopologyBuilder atb = ac.createTopologyBuilder();
 		 * atb.addNode( new Node( "Task1", Task1Exe.class, 1 ) )
 		 * .connectTo( "Task3", Edge.TransferType.POINT_TO_POINT )

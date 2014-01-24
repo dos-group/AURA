@@ -8,14 +8,11 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.local.LocalAddress;
-import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -98,41 +95,8 @@ public final class IOManager extends EventDispatcher {
             if (socketAddress == null)
                 throw new IllegalArgumentException("socketAddress == null");
 
-            ChannelWriter networkChannelWriter = new ChannelWriter(srcTaskID, dstTaskID, IOManager.this, socketAddress, netOutputEventLoopGroup);
-
-//			final Bootstrap bootstrap = new Bootstrap();
-//			bootstrap.group(netOutputEventLoopGroup)
-//				.channel(NioSocketChannel.class)
-//				// .handler( new ObjectEncoder() );
-//				.handler(new ChannelInitializer<SocketChannel>() {
-//
-//					@Override
-//					public void initChannel(SocketChannel ch) throws Exception {
-//						ch.pipeline().addFirst(new ObjectEncoder());
-//						ch.pipeline().addFirst(new DataIOChannelHandler());
-//						ch.pipeline().addFirst(
-//							new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
-//					}
-//				});
-//
-//			final ChannelFuture cf = bootstrap.connect(socketAddress);
-//			cf.addListener(new ChannelFutureListener() {
-//
-//				@Override
-//				public void operationComplete(ChannelFuture cf)
-//						throws Exception {
-//					if (cf.isSuccess()) {
-//						cf.channel().writeAndFlush(
-//							new DataIOEvent(DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID));
-//						final DataIOEvent event = new DataIOEvent(DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-//							srcTaskID, dstTaskID);
-//						event.setChannel(cf.channel());
-//						dispatchEvent(event);
-//					} else {
-//						LOG.error("connection attempt failed: " + cf.cause().getLocalizedMessage());
-//					}
-//				}
-//			});
+            IChannelWriter networkChannelWriter = new NetworkChannelWriter(srcTaskID, dstTaskID, IOManager.this, socketAddress, netOutputEventLoopGroup);
+            networkChannelWriter.connect();
         }
 
         public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID) {
@@ -142,35 +106,8 @@ public final class IOManager extends EventDispatcher {
             if (dstTaskID == null)
                 throw new IllegalArgumentException("dstTaskID == null");
 
-            final Bootstrap bootstrap = new Bootstrap();
-            bootstrap.group(netOutputEventLoopGroup)
-                    .channel(LocalChannel.class)
-                    .handler(new ChannelInitializer<LocalChannel>() {
-
-                        @Override
-                        public void initChannel(LocalChannel ch) throws Exception {
-                            ch.pipeline().addFirst(new DataIOChannelHandler());
-                        }
-                    });
-
-            final ChannelFuture cf = bootstrap.connect(localAddress);
-            cf.addListener(new ChannelFutureListener() {
-
-                @Override
-                public void operationComplete(ChannelFuture cf)
-                        throws Exception {
-                    if (cf.isSuccess()) {
-                        cf.channel().writeAndFlush(
-                                new DataIOEvent(DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID));
-                        final DataIOEvent event = new DataIOEvent(DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                srcTaskID, dstTaskID);
-                        event.setChannel(cf.channel());
-                        dispatchEvent(event);
-                    } else {
-                        LOG.error("connection attempt failed: " + cf.cause().getLocalizedMessage());
-                    }
-                }
-            });
+            IChannelWriter localChannelWriter = new LocalChannelWriter(srcTaskID, dstTaskID, IOManager.this, localAddress, netOutputEventLoopGroup);
+            localChannelWriter.connect();
         }
 
         public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID,
@@ -401,81 +338,13 @@ public final class IOManager extends EventDispatcher {
 
         // TODO: Test if one event loop is enough or if we should use one loop to as acceptor and one for the read/write
         final ChannelReader channelReader = new ChannelReader(IOManager.this, nelg, machine.dataAddress);
-        channelReader.run();
-
-//        final ServerBootstrap bootstrap = new ServerBootstrap();
-//		bootstrap.group(nelg)
-//			.channel(NioServerSocketChannel.class)
-//			.childHandler(new ChannelInitializer<SocketChannel>() {
-//
-//				@Override
-//				protected void initChannel(SocketChannel ch)
-//						throws Exception {
-//					ch.pipeline().addFirst(new ObjectEncoder());
-//					ch.pipeline().addFirst(new DataIOChannelHandler());
-//					ch.pipeline()
-//						.addFirst(new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
-//				}
-//			});
-//
-//		final ChannelFuture cf = bootstrap.bind(machine.dataAddress);
-//		cf.addListener(new ChannelFutureListener() {
-//
-//			@Override
-//			public void operationComplete(ChannelFuture future)
-//					throws Exception {
-//				if (cf.isSuccess()) {
-//					LOG.info("network server bound to adress " + machine.dataAddress);
-//				} else {
-//					LOG.error("bound attempt failed: " + cf.cause().getLocalizedMessage());
-//					throw new IllegalStateException("could not start netty network server");
-//				}
-//			}
-//		});
-//
-//		// Wait until the netty-server is bound.
-//		try {
-//			cf.sync();
-//		} catch (InterruptedException e) {
-//			LOG.error(e);
-//		}
+        channelReader.bind();
     }
 
     private void startLocalDataMessageServer(final NioEventLoopGroup nelg) {
 
-        final ServerBootstrap bootstrap = new ServerBootstrap();
-        bootstrap.group(nelg)
-                .channel(LocalServerChannel.class)
-                .childHandler(new ChannelInitializer<LocalChannel>() {
-
-                    @Override
-                    protected void initChannel(LocalChannel ch)
-                            throws Exception {
-                        ch.pipeline().addFirst(new DataIOChannelHandler());
-                    }
-                });
-
-        final ChannelFuture cf = bootstrap.bind(localAddress);
-        cf.addListener(new ChannelFutureListener() {
-
-            @Override
-            public void operationComplete(ChannelFuture future)
-                    throws Exception {
-                if (cf.isSuccess()) {
-                    LOG.info("local server bound to adress " + machine.dataAddress);
-                } else {
-                    LOG.error("bound attempt failed: " + cf.cause().getLocalizedMessage());
-                    throw new IllegalStateException("could not start netty local server");
-                }
-            }
-        });
-
-        // Wait until the netty-server is bound.
-        try {
-            cf.sync();
-        } catch (InterruptedException e) {
-            LOG.error(e);
-        }
+        final IChannelReader localChannelReader = new LocalChannelReader(IOManager.this, nelg, localAddress);
+        localChannelReader.bind();
     }
 
     private void startNetworkControlMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {

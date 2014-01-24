@@ -5,22 +5,19 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 
-import java.net.InetSocketAddress;
-
-public class ChannelReader extends AbstractReader {
-
-    public ChannelReader(IEventDispatcher dispatcher, NioEventLoopGroup eventLoopGroup, InetSocketAddress socketAddress) {
+public class LocalChannelReader extends AbstractReader {
+    public LocalChannelReader(IEventDispatcher dispatcher, NioEventLoopGroup eventLoopGroup, LocalAddress socketAddress) {
         this(dispatcher, eventLoopGroup, socketAddress, DEFAULT_BUFFER_SIZE);
     }
 
-    public ChannelReader(IEventDispatcher dispatcher, NioEventLoopGroup eventLoopGroup, InetSocketAddress socketAddress, int bufferSize) {
+    public LocalChannelReader(IEventDispatcher dispatcher, NioEventLoopGroup eventLoopGroup, LocalAddress socketAddress, int bufferSize) {
         super(dispatcher, eventLoopGroup, socketAddress, bufferSize);
     }
 
@@ -31,11 +28,7 @@ public class ChannelReader extends AbstractReader {
             ServerBootstrap b = new ServerBootstrap();
             // TODO: check if its better to use a dedicated boss and worker group instead of one for both
             b.group(eventLoopGroup)
-                    .channel(NioServerSocketChannel.class)
-                            // sets the max. number of pending, not yet fully connected (handshake) bufferQueues
-                    .option(ChannelOption.SO_BACKLOG, 128)
-                            // set keep alive, so idle connections are persistent
-                    .childOption(ChannelOption.SO_KEEPALIVE, true)
+                    .channel(LocalServerChannel.class)
                             // sets the per socket buffer size in which incoming msg are buffered until they are read
                             // TODO: get a good value here, as the size should depend on the amount of bufferQueues open
                             // TODO: so the best case is #bufferQueues * bufferSize???

@@ -1,20 +1,30 @@
 package de.tuberlin.aura.core.iosystem;
 
 import de.tuberlin.aura.core.task.common.TaskContext;
+import org.slf4j.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class QueueManager<T> {
 
+    public enum GATE {
+        IN, OUT
+    }
+
+    private final static Logger LOG = org.slf4j.LoggerFactory.getLogger(QueueManager.class);
+
     public static Map<TaskContext, QueueManager> BINDINGS = new HashMap<TaskContext, QueueManager>();
 
-    private final Map<LongKey, BufferQueue<T>> queues;
+    private final Map<Integer, BufferQueue<T>> inputQueues;
+
+    private final Map<LongKey, BufferQueue<T>> outputQueues;
 
     private final BufferQueueFactory<T> queueFactory;
 
     private QueueManager(BufferQueueFactory<T> factory) {
-        this.queues = new HashMap<LongKey, BufferQueue<T>>();
+        this.inputQueues = new HashMap<>();
+        this.outputQueues = new HashMap<>();
         this.queueFactory = factory;
     }
 
@@ -25,13 +35,26 @@ public class QueueManager<T> {
         return instance;
     }
 
-    public BufferQueue<T> getQueue(int gateIndex, int channelIndex) {
-        // check of already created
-        LongKey key = new LongKey(gateIndex, channelIndex);
-        if (queues.containsKey(key)) return queues.get(key);
+    public BufferQueue<T> getInputQueue(int gateIndex) {
 
-        BufferQueue<T> queue = queueFactory.newInstance();
-        queues.put(key, queue);
+        if (inputQueues.containsKey(gateIndex)) {
+            return inputQueues.get(gateIndex);
+        }
+
+        final BufferQueue<T> queue = queueFactory.newInstance();
+        inputQueues.put(gateIndex, queue);
+        return queue;
+    }
+
+    public BufferQueue<T> getOutputQueue(int gateIndex, int channelIndex) {
+
+        final LongKey key = new LongKey(gateIndex, channelIndex);
+        if (outputQueues.containsKey(key)) {
+            return outputQueues.get(key);
+        }
+
+        final BufferQueue<T> queue = queueFactory.newInstance();
+        outputQueues.put(key, queue);
         return queue;
     }
 

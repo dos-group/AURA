@@ -55,8 +55,6 @@ public final class IOEvents {
 
         public static final String CONTROL_EVENT_TASK_STATE = "CONTROL_EVENT_TASK_STATE";
 
-        public static final String CONTROL_EVENT_OUTPUT_QUEUE = "CONTROL_EVENT_OUTPUT_QUEUE";
-
         public static final String CONTROL_EVENT_INCOMPLETE_EVENT = "CONTROL_EVENT_INCOMPLETE_EVENT";
     }
 

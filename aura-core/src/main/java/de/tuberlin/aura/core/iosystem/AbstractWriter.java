@@ -1,64 +1,52 @@
 package de.tuberlin.aura.core.iosystem;
 
-import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.iosystem.buffer.Util;
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ObjectEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 
 // TODO: let the buffer size be configurable
-public class ChannelWriter implements IChannelWriter {
+public abstract class AbstractWriter implements IChannelWriter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ChannelWriter.class);
+    public static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
 
-    private static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractWriter.class);
 
-    private final InetSocketAddress host;
-
-    private final EventLoopGroup eventLoopGroup;
-
-    private final int bufferSize;
-
-    private volatile boolean shutdown = false;
-
-    private Channel channel;
-
+    protected final int bufferSize;
     private final AtomicBoolean channelWritable = new AtomicBoolean(false);
-
-    private ExecutorService pollThreadExecutor;
-
-    private BufferQueue<IOEvents.DataIOEvent> queue;
-
     private final CountDownLatch queueReady = new CountDownLatch(1);
 
-    // dispatch
+    // dispatch informations
     private final IEventDispatcher dispatcher;
     private final UUID srcTaskID;
     private final UUID dstTaskID;
+    protected final SocketAddress remoteAddress;
+    protected final EventLoopGroup eventLoopGroup;
+
+    private Channel channel;
+
+    private volatile boolean shutdown = false;
+
+    private ExecutorService pollThreadExecutor;
+    private BufferQueue<IOEvents.DataIOEvent> queue;
     private Future<IOEvents.DataIOEvent> pollResult;
 
-    public ChannelWriter(final UUID srcTaskID, final UUID dstTaskID, IEventDispatcher dispatcher, InetSocketAddress remoteAddress, EventLoopGroup eventLoopGroup) {
+    public AbstractWriter(final UUID srcTaskID, final UUID dstTaskID, SocketAddress remoteAddress, EventLoopGroup eventLoopGroup, IEventDispatcher dispatcher) {
         this(srcTaskID, dstTaskID, dispatcher, remoteAddress, eventLoopGroup, DEFAULT_BUFFER_SIZE);
     }
 
-    public ChannelWriter(final UUID srcTaskID, final UUID dstTaskID, IEventDispatcher dispatcher, InetSocketAddress remoteAddress, EventLoopGroup eventLoopGroup, int bufferSize) {
-        this.dispatcher = dispatcher;
+    public AbstractWriter(final UUID srcTaskID, final UUID dstTaskID, IEventDispatcher dispatcher, SocketAddress remoteAddress, EventLoopGroup eventLoopGroup, int bufferSize) {
         this.srcTaskID = srcTaskID;
         this.dstTaskID = dstTaskID;
-
-        this.host = remoteAddress;
-        // Default is 2 times the number of processors available as threads
+        this.dispatcher = dispatcher;
+        this.remoteAddress = remoteAddress;
         this.eventLoopGroup = eventLoopGroup;
 
         if ((bufferSize & (bufferSize - 1)) != 0) {
@@ -71,43 +59,10 @@ public class ChannelWriter implements IChannelWriter {
         }
 
         this.pollThreadExecutor = Executors.newSingleThreadExecutor();
-
-        // connect event handler here, in order to have it ready before connection happens
-        dispatcher.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_OUTPUT_QUEUE, new IOClientEventHandler());
-
-        Bootstrap bs = new Bootstrap();
-        bs.group(this.eventLoopGroup)
-                .channel(NioSocketChannel.class)
-                        // true, periodically heartbeats from tcp
-                .option(ChannelOption.SO_KEEPALIVE, true)
-                        // false, means that messages get only sent if the size of the data reached a relevant amount.
-                .option(ChannelOption.TCP_NODELAY, false)
-                        // size of the system lvl send buffer PER SOCKET
-                        // -> buffer size, as we always have only 1 channel per socket in the client case
-                .option(ChannelOption.SO_SNDBUF, bufferSize)
-                        // the mark the outbound buffer has to reach in order to change the writable state of a channel true
-                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-                        // the mark the outbound buffer has to reach in order to change the writable state of a channel false
-                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize)
-                        // dummy allocator here, as we do not invoke the allocator in the event loop
-                        //.option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
-                        // set the channelWritable spin lock
-                .handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
-                        ch.pipeline()
-                                .addLast(new WritableHandler())
-                                .addLast(new ObjectEncoder());
-                    }
-                });
-
-        LOG.debug("Connect to host " + host);
-
-        // on success:
-        // the close future is registered
-        // the polling thread is started
-        bs.connect(host.getAddress(), host.getPort()).addListener(new ConnectListener());
     }
+
+    @Override
+    public abstract void connect();
 
     @Override
     public void write(IOEvents.DataIOEvent event) {
@@ -123,25 +78,32 @@ public class ChannelWriter implements IChannelWriter {
         // this should work as we exit the loop on interrupt
         // in case it does not work we have to use a future and wait explicitly
 
-            try {
-                IOEvents.DataIOEvent result = pollResult.get();
-                if (result != null) {
-                    //ChannelWriter.this.dispatchEvent(result);
-                }
-            } catch (InterruptedException e) {
-                LOG.error("Receiving future from poll thread failed. Interrupt.", e);
-            } catch (ExecutionException e) {
-                LOG.error("Receiving future from poll thread failed. Exception in poll thread", e);
-            } finally {
-                LOG.info("CLOSE CHANNEL " + channel);
-                channel.disconnect();
-
-                try {
-                    channel.close().sync();
-                } catch (InterruptedException e) {
-                    LOG.error("Close of channel writer was interrupted", e);
-                }
+        try {
+            IOEvents.DataIOEvent result = pollResult.get();
+            if (result != null) {
+                //NetworkChannelWriter.this.dispatchEvent(result);
             }
+        } catch (InterruptedException e) {
+            LOG.error("Receiving future from poll thread failed. Interrupt.", e);
+        } catch (ExecutionException e) {
+            LOG.error("Receiving future from poll thread failed. Exception in poll thread", e);
+        } finally {
+            LOG.info("CLOSE CHANNEL " + channel);
+            channel.disconnect();
+
+            try {
+                channel.close().sync();
+            } catch (InterruptedException e) {
+                LOG.error("Close of channel writer was interrupted", e);
+            }
+        }
+    }
+
+    @Override
+    public void setOutputQueue(BufferQueue<IOEvents.DataIOEvent> queue) {
+        this.queue = queue;
+        LOG.debug("buffer queue attached.");
+        queueReady.countDown();
     }
 
     /**
@@ -171,11 +133,11 @@ public class ChannelWriter implements IChannelWriter {
 
             while (!shutdown) {
                 try {
-                    if (ChannelWriter.this.channelWritable.get()) {
+                    if (channelWritable.get()) {
 
                         // TODO: maybe move allocation and transforming in handler...
 
-                        IOEvents.DataIOEvent dataIOEvent = ChannelWriter.this.queue.take();
+                        IOEvents.DataIOEvent dataIOEvent = queue.take();
 
                         if (dataIOEvent.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
                             // shutdown!
@@ -222,14 +184,14 @@ public class ChannelWriter implements IChannelWriter {
     /**
      * Sets the channel if the connection to the server was successful.
      */
-    private class ConnectListener implements ChannelFutureListener {
+    protected class ConnectListener implements ChannelFutureListener {
 
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
             if (future.isDone()) {
                 if (future.isSuccess()) {
 
-                    ChannelWriter.this.channel = future.channel();
+                    channel = future.channel();
                     LOG.debug("channel successfully connected.");
 
                     Poll pollThread = new Poll();
@@ -239,7 +201,7 @@ public class ChannelWriter implements IChannelWriter {
                     future.channel().writeAndFlush(
                             new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcTaskID, dstTaskID));
                     final IOEvents.GenericIOEvent event =
-                            new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, ChannelWriter.this, srcTaskID, dstTaskID);
+                            new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, AbstractWriter.this, srcTaskID, dstTaskID);
                     event.setChannel(future.channel());
                     dispatcher.dispatchEvent(event);
 
@@ -254,7 +216,7 @@ public class ChannelWriter implements IChannelWriter {
     /**
      * Sets the writable flag for this channel.
      */
-    private class WritableHandler extends ChannelInboundHandlerAdapter {
+    protected class WritableHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             LOG.trace("channelActive");
@@ -277,22 +239,6 @@ public class ChannelWriter implements IChannelWriter {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             super.channelReadComplete(ctx);
-        }
-    }
-
-    /**
-     * Attach the queue to the client.
-     */
-    private final class IOClientEventHandler extends EventHandler {
-
-        @Handle(event = IOEvents.GenericIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_OUTPUT_QUEUE)
-        private void handleQueueReady(final IOEvents.GenericIOEvent event) {
-            if (event.srcTaskID.equals(srcTaskID) && event.dstTaskID.equals(dstTaskID)) {
-                queue = (BufferQueue) event.payload;
-                LOG.debug("buffer queue attached.");
-
-                queueReady.countDown();
-            }
         }
     }
 }
