@@ -6,9 +6,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 
@@ -53,9 +53,9 @@ public class LocalChannelReader extends AbstractReader {
 //                            }
 //                        }
 //                    })
-                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                    .childHandler(new ChannelInitializer<LocalChannel>() {
                         @Override
-                        public void initChannel(SocketChannel ch) throws Exception {
+                        public void initChannel(LocalChannel ch) throws Exception {
                             ch.pipeline()
                                     //.addLast(new MergeBufferInHandler())
                                     //.addLast(new FixedLengthFrameDecoder(bufferSize))

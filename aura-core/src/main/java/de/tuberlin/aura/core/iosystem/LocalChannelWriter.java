@@ -7,7 +7,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
 import java.util.UUID;
@@ -35,9 +34,9 @@ public class LocalChannelWriter extends AbstractWriter {
                         // dummy allocator here, as we do not invoke the allocator in the event loop
                         //.option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
                         // set the channelWritable spin lock
-                .handler(new ChannelInitializer<SocketChannel>() {
+                .handler(new ChannelInitializer<LocalChannel>() {
                     @Override
-                    protected void initChannel(SocketChannel ch) throws Exception {
+                    protected void initChannel(LocalChannel ch) throws Exception {
                         ch.pipeline()
                                 .addLast(new WritableHandler())
                                 .addLast(new ObjectEncoder());

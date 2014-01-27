@@ -49,13 +49,13 @@ public final class TaskManager implements WM2TMProtocol {
      */
     private final class IORedispatcher extends EventHandler {
 
-        @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
+        @Handle(event = IOEvents.GenericIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
         private void handleDataOutputChannelEvent(final DataIOEvent event) {
             final Pair<TaskRuntimeContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.srcTaskID);
             contextAndHandler.getSecond().dispatchEvent(event);
         }
 
-        @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
+        @Handle(event = IOEvents.GenericIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
         private void handleDataInputChannelEvent(final DataIOEvent event) {
             final Pair<TaskRuntimeContext, IEventDispatcher> contextAndHandler = taskContextMap.get(event.dstTaskID);
             contextAndHandler.getSecond().dispatchEvent(event);

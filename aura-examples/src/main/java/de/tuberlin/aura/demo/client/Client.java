@@ -1,32 +1,31 @@
 package de.tuberlin.aura.demo.client;
 
+import de.tuberlin.aura.client.api.AuraClient;
+import de.tuberlin.aura.client.executors.LocalClusterExecutor;
+import de.tuberlin.aura.client.executors.LocalClusterExecutor.LocalExecutionMode;
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
+import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import de.tuberlin.aura.core.task.common.TaskInvokeable;
+import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
-
-import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-
-import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.client.executors.LocalClusterExecutor;
-import de.tuberlin.aura.client.executors.LocalClusterExecutor.LocalExecutionMode;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-import de.tuberlin.aura.core.task.common.TaskInvokeable;
 
 public final class Client {
 
@@ -55,8 +54,8 @@ public final class Client {
                 final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                 for(int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getOutputTaskID(0, index);
-				    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
-				    emit(0, index, outputBuffer);
+                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
+                    emit(0, index, outputBuffer);
                 }
 
                 try {
@@ -94,7 +93,7 @@ public final class Client {
                 final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                 for(int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getOutputTaskID(0, index);
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
                     emit(0, index, outputBuffer);
                 }
 

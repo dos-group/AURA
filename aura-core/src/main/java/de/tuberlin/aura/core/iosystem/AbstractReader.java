@@ -117,7 +117,11 @@ public abstract class AbstractReader implements IChannelReader {
 
             LOG.info(ctx.channel() + " ----> " + event.toString());
 
-            queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
+            try {
+                queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
+            } catch (Exception e) {
+                throw e;
+            }
         }
     }
 
