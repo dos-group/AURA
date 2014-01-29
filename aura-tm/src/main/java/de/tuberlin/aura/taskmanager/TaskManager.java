@@ -10,11 +10,16 @@ import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.iosystem.*;
+import de.tuberlin.aura.core.iosystem.BufferQueue;
+import de.tuberlin.aura.core.iosystem.IChannelReader;
+import de.tuberlin.aura.core.iosystem.IChannelWriter;
+import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
+import de.tuberlin.aura.core.iosystem.IOManager;
+import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
@@ -23,6 +28,7 @@ import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
 import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
+
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
@@ -112,7 +118,7 @@ public final class TaskManager implements WM2TMProtocol {
                 int channelIndex = 0;
                 boolean allInputChannelsPerGateConnected = true;
                 for (TaskDescriptor inputTask : inputGate) {
-                    // Set the channel on right position.
+                    // get the right input gate for src the event comes from.
                     if (inputTask.taskID.equals(event.srcTaskID)) {
                         // wire queue to input gate
                         final IChannelReader channelReader = (IChannelReader) event.payload;
@@ -121,6 +127,8 @@ public final class TaskManager implements WM2TMProtocol {
                         BufferQueue<DataIOEvent> queue = context.queueManager.getInputQueue(gateIndex);
                         channelReader.setInputQueue(context.task.taskID, event.getChannel(), gateIndex, queue);
 
+                        channelReader.connectedChannels(context.task.taskID, gateIndex, channelIndex);
+
                         context.inputGates.get(gateIndex).setChannelReader(channelReader);
 
 
@@ -128,8 +136,12 @@ public final class TaskManager implements WM2TMProtocol {
                                 + context.task.name + " [" + context.task.taskID + "] IS ESTABLISHED");
                         connectingToCorrectTask |= true;
                     }
+                    boolean connected = false;
+                    if (context.inputGates.get(gateIndex).getChannelReader() != null) {
+                        connected = context.inputGates.get(gateIndex).getChannelReader().isConnected(context.task.taskID, gateIndex, channelIndex);
+                    }
                     // all data inputs are connected...
-                    allInputChannelsPerGateConnected &= (context.inputGates.get(gateIndex).getChannelReader() != null);
+                    allInputChannelsPerGateConnected &= connected;
                     channelIndex++;
                 }
 

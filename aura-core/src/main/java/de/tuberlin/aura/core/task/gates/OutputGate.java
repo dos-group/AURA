@@ -5,6 +5,7 @@ import de.tuberlin.aura.core.iosystem.IChannelWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,10 +44,10 @@ public final class OutputGate extends AbstractGate {
         super(context, gateIndex, context.taskBinding.outputGateBindings.get(gateIndex).size());
 
         // All channels are by default are closed.
-        this.openChannelList = new ArrayList<Boolean>(Collections.nCopies(numChannels, false));
+        this.openChannelList = new ArrayList<>(Collections.nCopies(numChannels, false));
 
         if (numChannels > 0) {
-            channelWriter = new ArrayList<IChannelWriter>(Collections.nCopies(numChannels, (IChannelWriter) null));
+            channelWriter = new ArrayList<>(Collections.nCopies(numChannels, (IChannelWriter) null));
         } else { // numChannels == 0
             channelWriter = null;
         }
@@ -54,8 +55,8 @@ public final class OutputGate extends AbstractGate {
         final EventHandler outputGateEventHandler = new OutputGateEventHandler();
 
         final String[] gateEvents = {
-                DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
-                DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE
+            DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
+            DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE
         };
 
         context.dispatcher.addEventListener(gateEvents, outputGateEventHandler);
@@ -73,8 +74,9 @@ public final class OutputGate extends AbstractGate {
 
     public void writeDataToChannel(final int channelIndex, final DataIOEvent data) {
         // sanity check.
-        if (data == null)
+        if (data == null) {
             throw new IllegalArgumentException("data == null");
+        }
 
 		/*if (!isGateOpen(channelIndex)) {
             LOG.error("channel is closed");
@@ -90,24 +92,30 @@ public final class OutputGate extends AbstractGate {
 
     public void setChannelWriter(int channelIndex, final IChannelWriter channel) {
         // sanity check.
-        if (channelIndex < 0)
+        if (channelIndex < 0) {
             throw new IllegalArgumentException("channelIndex < 0");
-        if (channelIndex >= numChannels)
+        }
+        if (channelIndex >= numChannels) {
             throw new IllegalArgumentException("channelIndex >= numChannels");
-        if (channelWriter == null)
+        }
+        if (channelWriter == null) {
             throw new IllegalStateException("channels == null");
+        }
 
         channelWriter.set(channelIndex, channel);
     }
 
     public IChannelWriter getChannelWriter(int channelIndex) {
         // sanity check.
-        if (channelIndex < 0)
+        if (channelIndex < 0) {
             throw new IllegalArgumentException("channelIndex < 0");
-        if (channelIndex >= numChannels)
+        }
+        if (channelIndex >= numChannels) {
             throw new IllegalArgumentException("channelIndex >= numChannels");
-        if (channelWriter == null)
+        }
+        if (channelWriter == null) {
             throw new IllegalStateException("channels == null");
+        }
 
         return channelWriter.get(channelIndex);
     }

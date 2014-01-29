@@ -2,14 +2,26 @@ package de.tuberlin.aura.core.iosystem;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.iosystem.buffer.Util;
-import io.netty.channel.*;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.EventLoopGroup;
 
 
 // TODO: let the buffer size be configurable
@@ -23,7 +35,7 @@ public abstract class AbstractWriter implements IChannelWriter {
     private final AtomicBoolean channelWritable = new AtomicBoolean(false);
     private final CountDownLatch queueReady = new CountDownLatch(1);
 
-    // dispatch informations
+    // dispatch information
     private final IEventDispatcher dispatcher;
     private final UUID srcTaskID;
     private final UUID dstTaskID;
@@ -77,6 +89,10 @@ public abstract class AbstractWriter implements IChannelWriter {
     public void shutdown() {
         // this should work as we exit the loop on interrupt
         // in case it does not work we have to use a future and wait explicitly
+
+        // force interrupt
+        shutdown = true;
+        pollThreadExecutor.shutdownNow();
 
         try {
             IOEvents.DataIOEvent result = pollResult.get();
@@ -135,8 +151,6 @@ public abstract class AbstractWriter implements IChannelWriter {
                 try {
                     if (channelWritable.get()) {
 
-                        // TODO: maybe move allocation and transforming in handler...
-
                         IOEvents.DataIOEvent dataIOEvent = queue.take();
 
                         if (dataIOEvent.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
@@ -169,8 +183,12 @@ public abstract class AbstractWriter implements IChannelWriter {
                 } catch (InterruptedException e) {
                     // take interrupted - no DataIOEvent, so no return value
                     // shutdown already set by close method
-                    assert shutdown;
-                    LOG.info("interrupt while buffer queue was empty.", e);
+
+                    // if shutdown is NOT set, no normal termination, soo log exception?
+                    if (!shutdown) {
+                        LOG.error("interrupt while buffer queue was empty.", e);
+                        shutdown = true;
+                    }
                 }
             }
 
@@ -219,14 +237,14 @@ public abstract class AbstractWriter implements IChannelWriter {
     protected class WritableHandler extends ChannelInboundHandlerAdapter {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            LOG.trace("channelActive");
+            //LOG.trace("channelActive");
             channelWritable.set(ctx.channel().isWritable());
             ctx.fireChannelActive();
         }
 
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-            LOG.debug("channelWritabilityChanged: " + (ctx.channel().isWritable() ? "writable" : "blocked"));
+            //LOG.debug("channelWritabilityChanged: " + (ctx.channel().isWritable() ? "writable" : "blocked"));
             channelWritable.set(ctx.channel().isWritable());
             ctx.fireChannelWritabilityChanged();
         }
