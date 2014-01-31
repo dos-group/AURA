@@ -1,7 +1,7 @@
 package de.tuberlin.aura.core.task.gates;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import de.tuberlin.aura.core.iosystem.IChannelWriter;
+import de.tuberlin.aura.core.iosystem.DataWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
@@ -47,7 +47,7 @@ public final class OutputGate extends AbstractGate {
         this.openChannelList = new ArrayList<>(Collections.nCopies(numChannels, false));
 
         if (numChannels > 0) {
-            channelWriter = new ArrayList<>(Collections.nCopies(numChannels, (IChannelWriter) null));
+            channelWriter = new ArrayList<>(Collections.nCopies(numChannels, (DataWriter.ChannelWriter) null));
         } else { // numChannels == 0
             channelWriter = null;
         }
@@ -66,7 +66,7 @@ public final class OutputGate extends AbstractGate {
 
     private final List<Boolean> openChannelList;
 
-    private final List<IChannelWriter> channelWriter;
+    private final List<DataWriter.ChannelWriter> channelWriter;
 
     // ---------------------------------------------------
     // Public.
@@ -86,11 +86,11 @@ public final class OutputGate extends AbstractGate {
         channelWriter.get(channelIndex).write(data);
     }
 
-    public List<IChannelWriter> getAllChannelWriter() {
+    public List<DataWriter.ChannelWriter> getAllChannelWriter() {
         return Collections.unmodifiableList(channelWriter);
     }
 
-    public void setChannelWriter(int channelIndex, final IChannelWriter channel) {
+    public void setChannelWriter(int channelIndex, final DataWriter.ChannelWriter channel) {
         // sanity check.
         if (channelIndex < 0) {
             throw new IllegalArgumentException("channelIndex < 0");
@@ -105,7 +105,7 @@ public final class OutputGate extends AbstractGate {
         channelWriter.set(channelIndex, channel);
     }
 
-    public IChannelWriter getChannelWriter(int channelIndex) {
+    public DataWriter.ChannelWriter getChannelWriter(int channelIndex) {
         // sanity check.
         if (channelIndex < 0) {
             throw new IllegalArgumentException("channelIndex < 0");

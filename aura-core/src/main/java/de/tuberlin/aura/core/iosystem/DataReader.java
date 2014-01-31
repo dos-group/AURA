@@ -8,13 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import io.netty.bootstrap.ServerBootstrap;
@@ -29,16 +26,18 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 
-public class InputReader implements IChannelReader {
+public class DataReader {
 
     public static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
 
-    protected final static Logger LOG = LoggerFactory.getLogger(AbstractReader.class);
+    protected final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
 
     private final int bufferSize;
     private final IEventDispatcher dispatcher;
@@ -47,6 +46,7 @@ public class InputReader implements IChannelReader {
      * de.tuberlin.aura.core.task.gates.InputGate} as exactly one queue.
      */
     private final List<BufferQueue<IOEvents.DataIOEvent>> queues;
+
     /**
      * In order to write the data to the correct queue, we map (channel) -> queue index (in {@see queues})
      */
@@ -55,15 +55,17 @@ public class InputReader implements IChannelReader {
      * In order to get the queue that belongs to the {@see InputGate}, we map (task id, gate index) -> queue index (in {@see queues})
      */
     private final Map<Pair<UUID, Integer>, Integer> gateToQueueIndex;
-    private final Map<Pair<UUID, Integer>, List<Channel>> connectedChannels;
+
+    private final Map<Pair<UUID, Integer>, Map<Integer, Channel>> connectedChannels;
+
 
     private ByteBufAllocator contextLevelAllocator;
 
-    public InputReader(IEventDispatcher dispatcher) {
+    public DataReader(IEventDispatcher dispatcher) {
         this(dispatcher, DEFAULT_BUFFER_SIZE);
     }
 
-    public InputReader(IEventDispatcher dispatcher, int bufferSize) {
+    public DataReader(IEventDispatcher dispatcher, int bufferSize) {
         this.dispatcher = dispatcher;
 
         // TODO: need for concurrent queue?! after start we just read values?
@@ -81,8 +83,11 @@ public class InputReader implements IChannelReader {
         }
     }
 
-    @Override
-    public <T extends Channel> void bind(final ConnectionType type, final SocketAddress address, final EventLoopGroup workerGroup) {
+    // ---------------------------------------------------
+    // Public.
+    // ---------------------------------------------------
+
+    public <T extends Channel> void bind(final ConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
 
         ServerBootstrap bootstrap = type.bootStrap(workerGroup);
         bootstrap.childHandler(new ChannelInitializer<T>() {
@@ -121,7 +126,6 @@ public class InputReader implements IChannelReader {
         }
     }
 
-    @Override
     public BufferQueue<IOEvents.DataIOEvent> getInputQueue(final UUID taskID, final int gateIndex) {
         if (!gateToQueueIndex.containsKey(new Pair<UUID, Integer>(taskID, gateIndex))) {
             return null;
@@ -129,8 +133,8 @@ public class InputReader implements IChannelReader {
         return queues.get(gateToQueueIndex.get(new Pair<UUID, Integer>(taskID, gateIndex)));
     }
 
-    @Override
-    public void setInputQueue(final UUID srcTaskID, final Channel channel, final int gateIndex, final BufferQueue<IOEvents.DataIOEvent> queue) {
+    public void bindQueue(final UUID srcTaskID, final Channel channel, final int gateIndex, final int channelIndex,
+                          final BufferQueue<IOEvents.DataIOEvent> queue) {
 
         Pair<UUID, Integer> index = new Pair<>(srcTaskID, gateIndex);
         final int queueIndex;
@@ -143,32 +147,36 @@ public class InputReader implements IChannelReader {
         }
         channelToQueueIndex.put(channel, queueIndex);
 
-        final List<Channel> channels;
+        final Map<Integer, Channel> channels;
         if (!connectedChannels.containsKey(index)) {
-            channels = new ArrayList<>();
+            channels = new HashMap<>();
         } else {
             channels = connectedChannels.get(index);
         }
-        channels.add(channel);
+        channels.put(channelIndex, channel);
         connectedChannels.put(index, channels);
     }
 
-    @Override
+    public boolean isConnected(UUID contextID, int gateIndex, int channelIndex) {
+        Pair<UUID, Integer> index = new Pair<>(contextID, gateIndex);
+        return connectedChannels.containsKey(index) && connectedChannels.get(index).containsKey(channelIndex);
+
+    }
+
     public void write(final UUID taskID, final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event) {
         connectedChannels.get(new Pair<UUID, Integer>(taskID, gateIndex)).get(channelIndex).writeAndFlush(event);
     }
 
-    protected final class DataHandler extends SimpleChannelInboundHandler<IOEvents.DataBufferEvent> {
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
+
+    private final class DataHandler extends SimpleChannelInboundHandler<IOEvents.DataBufferEvent> {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataBufferEvent event) {
             //event.setChannel(ctx.channel());
-
-            try {
-                queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
-            } catch (Exception e) {
-                throw e;
-            }
+            queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
         }
     }
 
@@ -184,7 +192,7 @@ public class InputReader implements IChannelReader {
                 // TODO: ensure that queue is bound before first data buffer event arrives
 
                 IOEvents.GenericIOEvent connected =
-                    new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, InputReader.this, event.srcTaskID,
+                    new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, DataReader.this, event.srcTaskID,
                                                 event.dstTaskID);
                 connected.setChannel(ctx.channel());
                 dispatcher.dispatchEvent(connected);
@@ -241,82 +249,27 @@ public class InputReader implements IChannelReader {
         }
     }
 
-    @Override
-    public void connectedChannels(UUID taskID, int gateIndex, int channelIndex) {
-        Dummy d = new Dummy();
-        d.taskID = taskID;
-        d.gateIndex = gateIndex;
-        d.channelIndex = channelIndex;
-        connected.add(d);
-    }
+    // ---------------------------------------------------
+    // Inner Classes (Strategies).
+    // ---------------------------------------------------
 
-    @Override
-    public boolean isConnected(UUID taskID, int gateIndex, int channelIndex) {
-        Dummy d = new Dummy();
-        d.taskID = taskID;
-        d.gateIndex = gateIndex;
-        d.channelIndex = channelIndex;
-        return connected.contains(d);
-    }
-
-    private final Set<Dummy> connected = new HashSet<>();
-
-    public static class Dummy {
-
-        UUID taskID;
-        int gateIndex;
-        int channelIndex;
-
-        @Override
-        public int hashCode() {
-            return taskID.hashCode() ^ gateIndex ^ channelIndex;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (hashCode() != obj.hashCode()) {
-                return false;
-            }
-            if (!(obj instanceof Dummy)) {
-                return false;
-            }
-
-            Dummy other = (Dummy) obj;
-            return (taskID == null) ? other.taskID == null : taskID.equals(other.taskID) &&
-                                                             gateIndex == other.gateIndex && channelIndex == other.channelIndex;
-        }
-    }
-
-    public interface ConnectionType {
+    public interface ConnectionType<T> {
 
         ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup);
     }
 
-    public static class LocalConnection implements ConnectionType {
+    public static class LocalConnection implements ConnectionType<LocalChannel> {
 
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(eventLoopGroup)
-                .channel(LocalServerChannel.class);
-//                .childHandler(new ChannelInitializer<LocalChannel>() {
-//                    @Override
-//                    public void initChannel(LocalChannel ch) throws Exception {
-//                        ch.pipeline()
-//                            .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
-//                            .addLast(new DataHandler())
-//                            .addLast(new EventHandler());
-//                    }
-//                });
+            b.group(eventLoopGroup).channel(LocalServerChannel.class);
 
             return b;
         }
     }
 
-    public static class NetworkConnection implements ConnectionType {
+    public static class NetworkConnection implements ConnectionType<SocketChannel> {
 
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
@@ -328,15 +281,6 @@ public class InputReader implements IChannelReader {
                 .option(ChannelOption.SO_BACKLOG, 128)
                     // set keep alive, so idle connections are persistent
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
-//                .childHandler(new ChannelInitializer<SocketChannel>() {
-//                    @Override
-//                    public void initChannel(SocketChannel ch) throws Exception {
-//                        ch.pipeline()
-//                            .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
-//                            .addLast(new DataHandler())
-//                            .addLast(new EventHandler());
-//                    }
-//                });
 
             return b;
         }

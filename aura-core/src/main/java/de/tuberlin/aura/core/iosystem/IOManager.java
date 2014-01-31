@@ -8,7 +8,6 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 
 import org.apache.log4j.Logger;
 
@@ -29,7 +28,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
-import io.netty.channel.local.LocalChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -43,16 +41,6 @@ public final class IOManager extends EventDispatcher {
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
-
-    private final class DataIOChannelHandler extends SimpleChannelInboundHandler<DataIOEvent> {
-
-        @Override
-        protected void channelRead0(final ChannelHandlerContext ctx, final DataIOEvent event)
-            throws Exception {
-            event.setChannel(ctx.channel());
-            dispatchEvent(event);
-        }
-    }
 
     private final class ControlIOChannelHandler extends SimpleChannelInboundHandler<ControlIOEvent> {
 
@@ -106,10 +94,7 @@ public final class IOManager extends EventDispatcher {
                 throw new IllegalArgumentException("socketAddress == null");
             }
 
-            IChannelWriter
-                networkChannelWriter =
-                new NetworkChannelWriter(srcTaskID, dstTaskID, IOManager.this, socketAddress, netOutputEventLoopGroup);
-            networkChannelWriter.connect();
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress);
         }
 
         public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID) {
@@ -121,8 +106,7 @@ public final class IOManager extends EventDispatcher {
                 throw new IllegalArgumentException("dstTaskID == null");
             }
 
-            IChannelWriter localChannelWriter = new LocalChannelWriter(srcTaskID, dstTaskID, IOManager.this, localAddress, netOutputEventLoopGroup);
-            localChannelWriter.connect();
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress);
         }
 
         public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID,
@@ -189,7 +173,9 @@ public final class IOManager extends EventDispatcher {
 
         final NioEventLoopGroup nioInputEventLoopGroup = new NioEventLoopGroup();
 
-        this.channelReader = new InputReader(IOManager.this);
+        this.dataReader = new DataReader(IOManager.this);
+
+        this.dataWriter = new DataWriter(IOManager.this, channelBuilder.netOutputEventLoopGroup);
 
         startNetworkDataMessageServer(this.machine, nioInputEventLoopGroup);
         startNetworkControlMessageServer(this.machine, nioInputEventLoopGroup);
@@ -216,7 +202,9 @@ public final class IOManager extends EventDispatcher {
 
     private final EventHandler controlEventHandler;
 
-    private final IChannelReader channelReader;
+    private final DataReader dataReader;
+
+    private final DataWriter dataWriter;
 
     // ---------------------------------------------------
     // Public.
@@ -376,12 +364,12 @@ public final class IOManager extends EventDispatcher {
     private void startNetworkDataMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
 
         // TODO: Test if one event loop is enough or if we should use one loop to as acceptor and one for the read/write
-        channelReader.<LocalChannel>bind(new InputReader.NetworkConnection(), machine.dataAddress, nelg);
+        dataReader.bind(new DataReader.NetworkConnection(), machine.dataAddress, nelg);
     }
 
     private void startLocalDataMessageServer(final NioEventLoopGroup nelg) {
 
-        channelReader.<SocketChannel>bind(new InputReader.LocalConnection(), localAddress, nelg);
+        dataReader.bind(new DataReader.LocalConnection(), localAddress, nelg);
     }
 
 

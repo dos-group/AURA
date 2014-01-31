@@ -136,10 +136,10 @@ public final class Client {
                 final DataIOEvent leftInputBuffer = absorb(0);
                 final DataIOEvent rightInputBuffer = absorb(1);
 
-                //if (leftInputBuffer != null)
-                LOG.info("[" + getTaskIndex() + "] input left: received data message from task " + leftInputBuffer.srcTaskID);
+                if (leftInputBuffer != null)
+                    LOG.info("[" + getTaskIndex() + "] input left: received data message from task " + leftInputBuffer.srcTaskID);
 
-                //if (rightInputBuffer != null)
+                if (rightInputBuffer != null)
                     LOG.info("[" + getTaskIndex() + "] input right: received data message from task " + rightInputBuffer.srcTaskID);
 
                 if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null ? null : leftInputBuffer.type) ||
@@ -224,13 +224,13 @@ public final class Client {
 //			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
 //			.addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
-        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
             .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
+            .addNode(new Node(UUID.randomUUID(), "Task2", 3, 1), Task2Exe.class)
             .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Task3", 1, 1), Task3Exe.class)
+            .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
             .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
+            .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
         final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
         atb2.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
@@ -262,7 +262,7 @@ public final class Client {
         };
 
         ac.submitTopology(at1, monitoringHandler);
-        //ac.submitTopology(at2, null);
+        ac.submitTopology(at2, null);
 
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();

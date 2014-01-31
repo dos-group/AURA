@@ -1,10 +1,11 @@
 package de.tuberlin.aura.core.task.gates;
 
 import de.tuberlin.aura.core.iosystem.BufferQueue;
-import de.tuberlin.aura.core.iosystem.IChannelReader;
+import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +25,7 @@ public final class InputGate extends AbstractGate {
     // Fields.
     // ---------------------------------------------------
 
-    private IChannelReader channelReader;
+    private DataReader channelReader;
 
     private static final Logger LOG = LoggerFactory.getLogger(InputGate.class);
 
@@ -32,11 +33,11 @@ public final class InputGate extends AbstractGate {
     // Public.
     // ---------------------------------------------------    
 
-    public void setChannelReader(final IChannelReader channelReader) {
+    public void setChannelReader(final DataReader channelReader) {
         this.channelReader = channelReader;
     }
 
-    public IChannelReader getChannelReader() {
+    public DataReader getChannelReader() {
         return channelReader;
     }
 
@@ -45,7 +46,8 @@ public final class InputGate extends AbstractGate {
             //final Channel ch = channels.get(i);
             final UUID srcID = context.taskBinding.inputGateBindings.get(gateIndex).get(i).taskID;
             //ch.writeAndFlush(new DataIOEvent(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, context.task.taskID));
-            channelReader.write(context.task.taskID, gateIndex, i, new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, context.task.taskID));
+            channelReader.write(context.task.taskID, gateIndex, i,
+                                new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, context.task.taskID));
         }
     }
 
@@ -54,7 +56,8 @@ public final class InputGate extends AbstractGate {
             //final Channel ch = channels.get(i);
             final UUID srcID = context.taskBinding.inputGateBindings.get(gateIndex).get(i).taskID;
             //ch.writeAndFlush(new DataIOEvent(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, context.task.taskID));
-            channelReader.write(context.task.taskID, gateIndex, i, new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, context.task.taskID));
+            channelReader.write(context.task.taskID, gateIndex, i,
+                                new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, context.task.taskID));
         }
     }
 
