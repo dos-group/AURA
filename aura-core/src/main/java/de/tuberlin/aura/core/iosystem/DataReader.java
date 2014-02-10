@@ -1,12 +1,5 @@
 package de.tuberlin.aura.core.iosystem;
 
-import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
-import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.iosystem.buffer.Util;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.SocketAddress;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -14,6 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
+import de.tuberlin.aura.core.common.utils.Pair;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
