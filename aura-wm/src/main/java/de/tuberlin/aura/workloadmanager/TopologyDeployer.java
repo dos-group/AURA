@@ -16,63 +16,63 @@ import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
 
 public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> {
 
-	// ---------------------------------------------------
-	// Constructors.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
-	public TopologyDeployer(final RPCManager rpcManager) {
-		// sanity check.
-		if (rpcManager == null)
-			throw new IllegalArgumentException("rpcManager == null");
+    public TopologyDeployer(final RPCManager rpcManager) {
+        // sanity check.
+        if (rpcManager == null)
+            throw new IllegalArgumentException("rpcManager == null");
 
-		this.rpcManager = rpcManager;
-	}
+        this.rpcManager = rpcManager;
+    }
 
-	// ---------------------------------------------------
-	// Fields.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
-	private static final Logger LOG = Logger.getLogger(TopologyDeployer.class);
+    private static final Logger LOG = Logger.getLogger(TopologyDeployer.class);
 
-	private final RPCManager rpcManager;
+    private final RPCManager rpcManager;
 
-	// ---------------------------------------------------
-	// Public.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Public.
+    // ---------------------------------------------------
 
-	@Override
-	public AuraTopology apply(AuraTopology topology) {
+    @Override
+    public AuraTopology apply(AuraTopology topology) {
 
-		deployTopology(topology);
+        deployTopology(topology);
 
-		dispatcher.dispatchEvent(new TopologyStateTransitionEvent(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY));
+        dispatcher.dispatchEvent(new TopologyStateTransitionEvent(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY));
 
-		return topology;
-	}
+        return topology;
+    }
 
-	// ---------------------------------------------------
-	// Private.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Private.
+    // ---------------------------------------------------
 
-	private synchronized void deployTopology(final AuraTopology topology) {
+    private synchronized void deployTopology(final AuraTopology topology) {
 
-		// Deploying.
-		TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
+        // Deploying.
+        TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
 
-			@Override
-			public void visit(final Node element) {
-				for (final ExecutionNode en : element.getExecutionNodes()) {
-					final TaskDeploymentDescriptor tdd =
-						new TaskDeploymentDescriptor(en.getTaskDescriptor(),
-							en.getTaskBindingDescriptor(), en.logicalNode.dataPersistenceType,
-							en.logicalNode.executionType);
-					final WM2TMProtocol tmProtocol =
-						rpcManager.getRPCProtocolProxy(WM2TMProtocol.class,
-							en.getTaskDescriptor().getMachineDescriptor());
-					tmProtocol.installTask(tdd);
-					LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString());
-				}
-			}
-		});
-	}
+            @Override
+            public void visit(final Node element) {
+                for (final ExecutionNode en : element.getExecutionNodes()) {
+                    final TaskDeploymentDescriptor tdd =
+                            new TaskDeploymentDescriptor(en.getTaskDescriptor(),
+                                                         en.getTaskBindingDescriptor(),
+                                                         en.logicalNode.dataPersistenceType,
+                                                         en.logicalNode.executionType);
+                    final WM2TMProtocol tmProtocol =
+                            rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
+                    tmProtocol.installTask(tdd);
+                    LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString());
+                }
+            }
+        });
+    }
 }

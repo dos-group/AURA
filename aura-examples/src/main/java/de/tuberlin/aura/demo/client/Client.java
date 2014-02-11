@@ -33,8 +33,7 @@ public final class Client {
     private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
-    private Client() {
-    }
+    private Client() {}
 
     /**
      *
@@ -128,8 +127,8 @@ public final class Client {
 
             final UUID taskID = getTaskID();
 
-            //openGate(0);
-            //openGate(1);
+            // openGate(0);
+            // openGate(1);
 
             while (isTaskRunning()) {
 
@@ -142,8 +141,8 @@ public final class Client {
                 if (rightInputBuffer != null)
                     LOG.info("[" + getTaskIndex() + "] input right: received data message from task " + rightInputBuffer.srcTaskID);
 
-                if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null ? null : leftInputBuffer.type) ||
-                    !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer == null ? null : rightInputBuffer.type)) {
+                if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null ? null : leftInputBuffer.type)
+                        || !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer == null ? null : rightInputBuffer.type)) {
                     final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                     for (int index = 0; index < outputs.size(); ++index) {
 
@@ -163,8 +162,8 @@ public final class Client {
                 emit(0, index, exhaustedEvent);
             }
 
-            //closeGate(0);
-            //closeGate(1);
+            // closeGate(0);
+            // closeGate(1);
         }
     }
 
@@ -180,9 +179,9 @@ public final class Client {
         @Override
         public void execute() throws Exception {
 
-            //openGate(0);
+            // openGate(0);
 
-            //boolean inputActive = true;
+            // boolean inputActive = true;
 
             while (isTaskRunning()) {
 
@@ -190,12 +189,13 @@ public final class Client {
 
                 LOG.info("received data message from task " + inputBuffer.srcTaskID);
 
-                //inputActive = !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
+                // inputActive =
+                // !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
 
                 checkIfSuspended();
             }
 
-            //closeGate(0);
+            // closeGate(0);
         }
     }
 
@@ -211,18 +211,17 @@ public final class Client {
         LOG.setLevel(Level.DEBUG);
 
         final String zookeeperAddress = "localhost:2181";
-        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
-                                                                  true, zookeeperAddress, 4);
+        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-//		atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-//			.connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-//			.addNode(new Node(UUID.randomUUID(), "Task2", 3, 1), Task2Exe.class)
-//			.connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-//			.addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
-//			.connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-//			.addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
+        // atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
+        // .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
+        // .addNode(new Node(UUID.randomUUID(), "Task2", 3, 1), Task2Exe.class)
+        // .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
+        // .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
+        // .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
+        // .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
         atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
             .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
@@ -246,18 +245,16 @@ public final class Client {
             @Handle(event = IOEvents.MonitoringEvent.class, type = IOEvents.MonitoringEvent.MONITORING_TOPOLOGY_STATE_EVENT)
             private void handleMonitoredTopologyEvent(final IOEvents.MonitoringEvent event) {
                 LOG.info(event.type + ": " + event.topologyStateUpdate.currentTopologyState.toString() + " ---- "
-                         + event.topologyStateUpdate.topologyTransition.toString() + " ----> "
-                         + event.topologyStateUpdate.nextTopologyState.toString() + " - "
-                         + event.topologyStateUpdate.currentTopologyState.toString() + " duration (" + event.topologyStateUpdate.stateDuration
-                         + "ms)");
+                        + event.topologyStateUpdate.topologyTransition.toString() + " ----> "
+                        + event.topologyStateUpdate.nextTopologyState.toString() + " - " + event.topologyStateUpdate.currentTopologyState.toString()
+                        + " duration (" + event.topologyStateUpdate.stateDuration + "ms)");
             }
 
             @Handle(event = IOEvents.MonitoringEvent.class, type = IOEvents.MonitoringEvent.MONITORING_TASK_STATE_EVENT)
             private void handleMonitoredTaskEvent(final IOEvents.MonitoringEvent event) {
                 LOG.info(event.type + ": " + event.taskStateUpdate.currentTaskState.toString() + " ---- "
-                         + event.taskStateUpdate.taskTransition.toString() + " ----> "
-                         + event.taskStateUpdate.nextTaskState.toString() + " - "
-                         + event.taskStateUpdate.currentTaskState.toString() + " duration (" + event.taskStateUpdate.stateDuration + "ms)");
+                        + event.taskStateUpdate.taskTransition.toString() + " ----> " + event.taskStateUpdate.nextTaskState.toString() + " - "
+                        + event.taskStateUpdate.currentTaskState.toString() + " duration (" + event.taskStateUpdate.stateDuration + "ms)");
             }
         };
 

@@ -37,6 +37,7 @@ public class DataWriter {
 
     // dispatch information
     private final IEventDispatcher dispatcher;
+
     private final EventLoopGroup workerGroup;
 
     private ExecutorService pollThreadExecutor;
@@ -52,7 +53,9 @@ public class DataWriter {
         this.pollThreadExecutor = Executors.newCachedThreadPool();
     }
 
-    public <T extends Channel> ChannelWriter<T> bind(final UUID srcTaskID, final UUID dstTaskID, final OutgoingConnectionType<T> type,
+    public <T extends Channel> ChannelWriter<T> bind(final UUID srcTaskID,
+                                                     final UUID dstTaskID,
+                                                     final OutgoingConnectionType<T> type,
                                                      final SocketAddress address) {
         return new ChannelWriter<>(type, srcTaskID, dstTaskID, address);
     }
@@ -66,6 +69,7 @@ public class DataWriter {
         private final CountDownLatch pollFinished = new CountDownLatch(1);
 
         private final UUID srcID;
+
         private final UUID dstID;
 
         private Channel channel;
@@ -84,11 +88,10 @@ public class DataWriter {
 
             Bootstrap bootstrap = type.bootStrap(workerGroup);
             bootstrap.handler(new ChannelInitializer<T>() {
+
                 @Override
                 protected void initChannel(T ch) throws Exception {
-                    ch.pipeline()
-                        .addLast(new WritableHandler())
-                        .addLast(new ObjectEncoder());
+                    ch.pipeline().addLast(new WritableHandler()).addLast(new ObjectEncoder());
                 }
             });
 
@@ -114,10 +117,14 @@ public class DataWriter {
                         Poll pollThread = new Poll();
                         pollResult = pollThreadExecutor.submit(pollThread);
 
-                        future.channel().writeAndFlush(
-                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcID, dstID));
+                        future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+                                                                                srcID,
+                                                                                dstID));
                         final IOEvents.GenericIOEvent event =
-                            new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, ChannelWriter.this, srcID, dstID);
+                                new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
+                                                            ChannelWriter.this,
+                                                            srcID,
+                                                            dstID);
                         event.setChannel(future.channel());
                         dispatcher.dispatchEvent(event);
 
@@ -134,7 +141,8 @@ public class DataWriter {
         }
 
         /**
-         * Shut down the channel writer. If there was an ongoing write which could not be finished, the {@see DataIOEvent} is dispatched.
+         * Shut down the channel writer. If there was an ongoing write which could not be finished,
+         * the {@see DataIOEvent} is dispatched.
          */
         public void shutdown(boolean awaitExhaustion) {
             // this should work as we exit the loop on interrupt
@@ -156,7 +164,7 @@ public class DataWriter {
                 // therefore we need the latch and the field
                 pollFinished.await();
                 if (interruptedEvent != null) {
-                    //dispatcher.dispatchEvent(interruptedEvent);
+                    // dispatcher.dispatchEvent(interruptedEvent);
                 }
             } catch (InterruptedException e) {
                 LOG.error("Receiving future from poll thread failed. Interrupt.", e);
@@ -179,8 +187,8 @@ public class DataWriter {
         }
 
         /**
-         * Takes buffers from the context queue and writes them to the channel. If the channel is currently not writable, no calls to the channel are
-         * made.
+         * Takes buffers from the context queue and writes them to the channel. If the channel is
+         * currently not writable, no calls to the channel are made.
          */
         private class Poll implements Callable<Void> {
 
@@ -208,32 +216,34 @@ public class DataWriter {
                                 shutdown = true;
                             }
 
-//                            try {
+                            // try {
                             channel.writeAndFlush(dataIOEvent).syncUninterruptibly();
-//                            } catch (InterruptedException e) {
-//                                // 1. interrupt while writing
-//                                // 2. interrupt while the queue already acquired the lock in the take method
-//                                //    -> take is not canceled, handle here
-//                                if (!shutdown) {
-//                                    LOG.error("unexpected interrupt while sending event.", e);
-//                                    shutdown = true;
-//                                }
-//
-//                                interruptedEvent = dataIOEvent;
-//                            }
+                            // } catch (InterruptedException e) {
+                            // // 1. interrupt while writing
+                            // // 2. interrupt while the queue already acquired the lock in the take
+                            // method
+                            // // -> take is not canceled, handle here
+                            // if (!shutdown) {
+                            // LOG.error("unexpected interrupt while sending event.", e);
+                            // shutdown = true;
+                            // }
+                            //
+                            // interruptedEvent = dataIOEvent;
+                            // }
                         } else {
                             LOG.trace("spinning");
                         }
                     } catch (InterruptedException e) {
                         // interrupted during take command, 2. scenarios
                         // 1. interrupt while queue was empty -> event == null, queue == empty
-                        // 2. interrupt before the queue acquired the lock -> event == null, queue == not empty
+                        // 2. interrupt before the queue acquired the lock -> event == null, queue
+                        // == not empty
 
                         // if shutdown is NOT set, no normal termination, soo log exception?
-//                        if (!shutdown) {
-//                            LOG.error("unexpected interrupt while buffer queue was empty.", e);
-//                            shutdown = true;
-//                        }
+                        // if (!shutdown) {
+                        // LOG.error("unexpected interrupt while buffer queue was empty.", e);
+                        // shutdown = true;
+                        // }
                     }
                 }
 
@@ -251,14 +261,15 @@ public class DataWriter {
 
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                //LOG.trace("channelActive");
+                // LOG.trace("channelActive");
                 channelWritable.set(ctx.channel().isWritable());
                 ctx.fireChannelActive();
             }
 
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-                //LOG.debug("channelWritabilityChanged: " + (ctx.channel().isWritable() ? "writable" : "blocked"));
+                // LOG.debug("channelWritabilityChanged: " + (ctx.channel().isWritable() ?
+                // "writable" : "blocked"));
                 channelWritable.set(ctx.channel().isWritable());
                 ctx.fireChannelWritabilityChanged();
             }
@@ -292,14 +303,15 @@ public class DataWriter {
         @Override
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             Bootstrap bs = new Bootstrap();
-            bs.group(eventLoopGroup)
-                .channel(LocalChannel.class)
-                    // the mark the outbound buffer has to reach in order to change the writable state of a channel true
-                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-                    // the mark the outbound buffer has to reach in order to change the writable state of a channel false
-                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
+            bs.group(eventLoopGroup).channel(LocalChannel.class)
+            // the mark the outbound buffer has to reach in order to change the writable state of a
+            // channel true
+              .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
+              // the mark the outbound buffer has to reach in order to change the writable state of
+              // a channel false
+              .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
             // dummy allocator here, as we do not invoke the allocator in the event loop
-            //.option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
+            // .option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
             // set the channelWritable spin lock
 
             return bs;
@@ -328,21 +340,23 @@ public class DataWriter {
         @Override
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             Bootstrap bs = new Bootstrap();
-            bs.group(eventLoopGroup)
-                .channel(NioSocketChannel.class)
-                    // true, periodically heartbeats from tcp
-                .option(ChannelOption.SO_KEEPALIVE, true)
-                    // false, means that messages get only sent if the size of the data reached a relevant amount.
-                .option(ChannelOption.TCP_NODELAY, false)
-                    // size of the system lvl send buffer PER SOCKET
-                    // -> buffer size, as we always have only 1 channel per socket in the client case
-                .option(ChannelOption.SO_SNDBUF, bufferSize)
-                    // the mark the outbound buffer has to reach in order to change the writable state of a channel true
-                .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-                    // the mark the outbound buffer has to reach in order to change the writable state of a channel false
-                .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
+            bs.group(eventLoopGroup).channel(NioSocketChannel.class)
+            // true, periodically heartbeats from tcp
+              .option(ChannelOption.SO_KEEPALIVE, true)
+              // false, means that messages get only sent if the size of the data reached a relevant
+              // amount.
+              .option(ChannelOption.TCP_NODELAY, false)
+              // size of the system lvl send buffer PER SOCKET
+              // -> buffer size, as we always have only 1 channel per socket in the client case
+              .option(ChannelOption.SO_SNDBUF, bufferSize)
+              // the mark the outbound buffer has to reach in order to change the writable state of
+              // a channel true
+              .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
+              // the mark the outbound buffer has to reach in order to change the writable state of
+              // a channel false
+              .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
             // dummy allocator here, as we do not invoke the allocator in the event loop
-            //.option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
+            // .option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
             // set the channelWritable spin lock
 
             return bs;

@@ -9,7 +9,8 @@ import java.util.Map;
 public class QueueManager<T> {
 
     public enum GATE {
-        IN, OUT
+        IN,
+        OUT
     }
 
     private final static Logger LOG = org.slf4j.LoggerFactory.getLogger(QueueManager.class);
@@ -60,11 +61,13 @@ public class QueueManager<T> {
 
 
     /**
-     * We assume here that values for gate and channel do not exceed
-     * 16 bit (which is reasonable as then u can have up to 65535 bufferQueues per gate and 65535 gates).
+     * We assume here that values for gate and channel do not exceed 16 bit (which is reasonable as
+     * then u can have up to 65535 bufferQueues per gate and 65535 gates).
      */
     private static class LongKey {
+
         int gateIndex;
+
         int channelIndex;
 
         LongKey(int gateIndex, int channelIndex) {
@@ -79,9 +82,12 @@ public class QueueManager<T> {
 
         @Override
         public boolean equals(Object obj) {
-            if (obj == null) return false;
-            if (!(obj instanceof LongKey)) return false;
-            if (hashCode() != obj.hashCode()) return false;
+            if (obj == null)
+                return false;
+            if (!(obj instanceof LongKey))
+                return false;
+            if (hashCode() != obj.hashCode())
+                return false;
 
             LongKey other = (LongKey) obj;
             return gateIndex == other.gateIndex && channelIndex == other.channelIndex;

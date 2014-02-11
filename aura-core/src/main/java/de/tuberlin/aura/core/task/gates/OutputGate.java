@@ -54,10 +54,7 @@ public final class OutputGate extends AbstractGate {
 
         final EventHandler outputGateEventHandler = new OutputGateEventHandler();
 
-        final String[] gateEvents = {
-            DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
-            DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE
-        };
+        final String[] gateEvents = {DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE};
 
         context.dispatcher.addEventListener(gateEvents, outputGateEventHandler);
     }
@@ -78,9 +75,9 @@ public final class OutputGate extends AbstractGate {
             throw new IllegalArgumentException("data == null");
         }
 
-		/*if (!isGateOpen(channelIndex)) {
-            LOG.error("channel is closed");
-		}*/
+        /*
+         * if (!isGateOpen(channelIndex)) { LOG.error("channel is closed"); }
+         */
 
         // TODO: change insert in output queue!
         channelWriter.get(channelIndex).write(data);

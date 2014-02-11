@@ -38,95 +38,91 @@ public final class AuraClient {
         }
     }
 
-	// ---------------------------------------------------
-	// Constructors.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
-	public AuraClient(final String zkServer, int controlPort, int dataPort) {
-		// sanity check.
-		if (zkServer == null)
-			throw new IllegalArgumentException("zkServer == null");
-		if (dataPort < 1024 || dataPort > 65535)
-			throw new IllegalArgumentException("dataPort invalid");
-		if (controlPort < 1024 || controlPort > 65535)
-			throw new IllegalArgumentException("controlPort invalid port number");
+    public AuraClient(final String zkServer, int controlPort, int dataPort) {
+        // sanity check.
+        if (zkServer == null)
+            throw new IllegalArgumentException("zkServer == null");
+        if (dataPort < 1024 || dataPort > 65535)
+            throw new IllegalArgumentException("dataPort invalid");
+        if (controlPort < 1024 || controlPort > 65535)
+            throw new IllegalArgumentException("controlPort invalid port number");
 
-		final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(dataPort, controlPort);
-		this.ioManager = new IOManager(md);
-		this.rpcManager = new RPCManager(ioManager);
+        final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(dataPort, controlPort);
+        this.ioManager = new IOManager(md);
+        this.rpcManager = new RPCManager(ioManager);
 
-		this.codeExtractor = new UserCodeExtractor(false);
-		this.codeExtractor.addStandardDependency("java").
-			addStandardDependency("org/apache/log4j").
-			addStandardDependency("io/netty").
-			addStandardDependency("de/tuberlin/aura/core");
+        this.codeExtractor = new UserCodeExtractor(false);
+        this.codeExtractor.addStandardDependency("java")
+                          .addStandardDependency("org/apache/log4j")
+                          .addStandardDependency("io/netty")
+                          .addStandardDependency("de/tuberlin/aura/core");
 
-		final ZooKeeper zookeeper;
-		final MachineDescriptor wmMachineDescriptor;
-		try {
-			zookeeper = new ZooKeeper(zkServer, ZkHelper.ZOOKEEPER_TIMEOUT,
-				new ZkConnectionWatcher(new IEventHandler() {
+        final ZooKeeper zookeeper;
+        final MachineDescriptor wmMachineDescriptor;
+        try {
+            zookeeper = new ZooKeeper(zkServer, ZkHelper.ZOOKEEPER_TIMEOUT, new ZkConnectionWatcher(new IEventHandler() {
 
-					@Override
-					public void handleEvent(Event event) {
-					}
-				}));
+                @Override
+                public void handleEvent(Event event) {}
+            }));
 
-			wmMachineDescriptor = (MachineDescriptor) ZkHelper.readFromZookeeper(zookeeper,
-				ZkHelper.ZOOKEEPER_WORKLOADMANAGER);
-		} catch (IOException e) {
-			throw new IllegalStateException(e);
-		}
+            wmMachineDescriptor = (MachineDescriptor) ZkHelper.readFromZookeeper(zookeeper, ZkHelper.ZOOKEEPER_WORKLOADMANAGER);
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
 
         ioHandler = new IORedispatcher();
 
-        final String[] IOEvents = {MonitoringEvent.MONITORING_TOPOLOGY_STATE_EVENT,
-                                   MonitoringEvent.MONITORING_TASK_STATE_EVENT};
+        final String[] IOEvents = {MonitoringEvent.MONITORING_TOPOLOGY_STATE_EVENT, MonitoringEvent.MONITORING_TASK_STATE_EVENT};
 
         ioManager.addEventListener(IOEvents, ioHandler);
 
-		ioManager.connectMessageChannelBlocking(wmMachineDescriptor);
-		clientProtocol = rpcManager.getRPCProtocolProxy(ClientWMProtocol.class, wmMachineDescriptor);
+        ioManager.connectMessageChannelBlocking(wmMachineDescriptor);
+        clientProtocol = rpcManager.getRPCProtocolProxy(ClientWMProtocol.class, wmMachineDescriptor);
 
-        this.registeredTopologyMonitors = new HashMap<UUID,EventHandler>();
+        this.registeredTopologyMonitors = new HashMap<UUID, EventHandler>();
 
-		LOG.info("CLIENT IS READY");
-	}
+        LOG.info("CLIENT IS READY");
+    }
 
-	// ---------------------------------------------------
-	// Fields.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
-	private static final Logger LOG = Logger.getLogger(AuraClient.class);
+    private static final Logger LOG = Logger.getLogger(AuraClient.class);
 
-	public final IOManager ioManager;
+    public final IOManager ioManager;
 
-	public final RPCManager rpcManager;
+    public final RPCManager rpcManager;
 
-	public final ClientWMProtocol clientProtocol;
+    public final ClientWMProtocol clientProtocol;
 
-	public final UserCodeExtractor codeExtractor;
+    public final UserCodeExtractor codeExtractor;
 
-    public final Map<UUID,EventHandler> registeredTopologyMonitors;
+    public final Map<UUID, EventHandler> registeredTopologyMonitors;
 
     public final IORedispatcher ioHandler;
 
-	// ---------------------------------------------------
-	// Public.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Public.
+    // ---------------------------------------------------
 
-	public AuraTopologyBuilder createTopologyBuilder() {
-		return new AuraTopologyBuilder(ioManager.machine.uid, codeExtractor);
-	}
+    public AuraTopologyBuilder createTopologyBuilder() {
+        return new AuraTopologyBuilder(ioManager.machine.uid, codeExtractor);
+    }
 
-	public void submitTopology(final AuraTopology topology, final EventHandler handler) {
-		// sanity check.
-		if (topology == null)
-			throw new IllegalArgumentException("topology == null");
+    public void submitTopology(final AuraTopology topology, final EventHandler handler) {
+        // sanity check.
+        if (topology == null)
+            throw new IllegalArgumentException("topology == null");
 
-        if(handler != null) {
+        if (handler != null) {
             registeredTopologyMonitors.put(topology.topologyID, handler);
         }
-		clientProtocol.submitTopology(topology);
-	}
+        clientProtocol.submitTopology(topology);
+    }
 }

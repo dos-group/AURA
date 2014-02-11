@@ -14,16 +14,14 @@ import java.util.UUID;
 public final class IOEvents {
 
     // Disallow instantiation.
-    private IOEvents() {
-    }
+    private IOEvents() {}
 
     /**
      *
      */
     public static final class DataEventType {
 
-        private DataEventType() {
-        }
+        private DataEventType() {}
 
         public static final String DATA_EVENT_INPUT_CHANNEL_CONNECTED = "DATA_EVENT_INPUT_CHANNEL_CONNECTED";
 
@@ -43,8 +41,7 @@ public final class IOEvents {
      */
     public static final class ControlEventType {
 
-        private ControlEventType() {
-        }
+        private ControlEventType() {}
 
         public static final String CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED = "CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED";
 
@@ -88,6 +85,7 @@ public final class IOEvents {
     }
 
     public static class GenericIOEvent extends DataIOEvent {
+
         public final Object payload;
 
         public GenericIOEvent(final String type, final Object payload, final UUID srcTaskID, final UUID dstTaskID) {
@@ -98,11 +96,11 @@ public final class IOEvents {
 
         @Override
         public String toString() {
-            return (new StringBuilder())
-                    .append("GenericIOEvent = {")
-                    .append(" type = " + type + ", ")
-                    .append(" payload = " + payload.toString() + ", ")
-                    .append(" }").toString();
+            return (new StringBuilder()).append("GenericIOEvent = {")
+                                        .append(" type = " + type + ", ")
+                                        .append(" payload = " + payload.toString() + ", ")
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -113,9 +111,7 @@ public final class IOEvents {
 
         private static final long serialVersionUID = 1L;
 
-        public DataIOEvent(final String type,
-                           final UUID srcTaskID,
-                           final UUID dstTaskID) {
+        public DataIOEvent(final String type, final UUID srcTaskID, final UUID dstTaskID) {
             super(type);
             // sanity check.
             if (srcTaskID == null)
@@ -134,12 +130,12 @@ public final class IOEvents {
 
         @Override
         public String toString() {
-            return (new StringBuilder())
-                    .append("DataIOEvent = {")
-                    .append(" type = " + type + ", ")
-                    .append(" srcTaskID = " + srcTaskID.toString() + ", ")
-                    .append(" dstTaskID = " + dstTaskID.toString())
-                    .append(" }").toString();
+            return (new StringBuilder()).append("DataIOEvent = {")
+                                        .append(" type = " + type + ", ")
+                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
+                                        .append(" dstTaskID = " + dstTaskID.toString())
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -150,16 +146,11 @@ public final class IOEvents {
 
         private static final long serialVersionUID = -1;
 
-        public DataBufferEvent(final UUID srcTaskID,
-                               final UUID dstTaskID,
-                               final byte[] data) {
+        public DataBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final byte[] data) {
             this(UUID.randomUUID(), srcTaskID, dstTaskID, data);
         }
 
-        public DataBufferEvent(final UUID messageID,
-                               final UUID srcTaskID,
-                               final UUID dstTaskID,
-                               final byte[] data) {
+        public DataBufferEvent(final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final byte[] data) {
 
             super(DataEventType.DATA_EVENT_BUFFER, srcTaskID, dstTaskID);
 
@@ -180,14 +171,14 @@ public final class IOEvents {
 
         @Override
         public String toString() {
-            return (new StringBuilder())
-                    .append("DataBufferMessage = {")
-                    .append(" messageID = " + messageID.toString() + ", ")
-                    .append(" srcTaskID = " + srcTaskID.toString() + ", ")
-                    .append(" dstTaskID = " + dstTaskID.toString() + ", ")
-                    .append(" data = " + data + ", ")
-                    .append(" length( data ) = " + data.length)
-                    .append(" }").toString();
+            return (new StringBuilder()).append("DataBufferMessage = {")
+                                        .append(" messageID = " + messageID.toString() + ", ")
+                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
+                                        .append(" dstTaskID = " + dstTaskID.toString() + ", ")
+                                        .append(" data = " + data + ", ")
+                                        .append(" length( data ) = " + data.length)
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -202,9 +193,7 @@ public final class IOEvents {
             super(type);
         }
 
-        public ControlIOEvent(final String type,
-                              final UUID srcMachineID,
-                              final UUID dstMachineID) {
+        public ControlIOEvent(final String type, final UUID srcMachineID, final UUID dstMachineID) {
             super(type);
             // sanity check.
             if (srcMachineID == null)
@@ -247,12 +236,12 @@ public final class IOEvents {
 
         @Override
         public String toString() {
-            return (new StringBuilder())
-                    .append("ControlIOEvent = {")
-                    .append(" type = " + type + ", ")
-                    .append(" srcMachineID = " + srcMachineID.toString() + ", ")
-                    .append(" dstMachineID = " + dstMachineID.toString())
-                    .append(" }").toString();
+            return (new StringBuilder()).append("ControlIOEvent = {")
+                                        .append(" type = " + type + ", ")
+                                        .append(" srcMachineID = " + srcMachineID.toString() + ", ")
+                                        .append(" dstMachineID = " + dstMachineID.toString())
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -263,8 +252,7 @@ public final class IOEvents {
 
         private static final long serialVersionUID = 1L;
 
-        public RPCCallerRequestEvent(final UUID callUID,
-                                     final MethodSignature methodSignature) {
+        public RPCCallerRequestEvent(final UUID callUID, final MethodSignature methodSignature) {
 
             super(ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST);
             // sanity check.
@@ -290,8 +278,7 @@ public final class IOEvents {
 
         private static final long serialVersionUID = 1L;
 
-        public RPCCalleeResponseEvent(final UUID callUID,
-                                      final Object result) {
+        public RPCCalleeResponseEvent(final UUID callUID, final Object result) {
 
             super(ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE);
             // sanity check.
@@ -342,12 +329,12 @@ public final class IOEvents {
 
         @Override
         public String toString() {
-            return (new StringBuilder())
-                    .append("TaskChangeStateEvent = {")
-                    .append(" type = " + super.type + ", ")
-                    .append(" taskID = " + topologyID + ", ")
-                    .append(" taskTransition = " + transition.toString())
-                    .append(" }").toString();
+            return (new StringBuilder()).append("TaskChangeStateEvent = {")
+                                        .append(" type = " + super.type + ", ")
+                                        .append(" taskID = " + topologyID + ", ")
+                                        .append(" taskTransition = " + transition.toString())
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -368,11 +355,11 @@ public final class IOEvents {
 
             public TaskStateUpdate(final TaskStateUpdate taskStateUpdate) {
                 this(taskStateUpdate.taskID,
-                        taskStateUpdate.name,
-                        taskStateUpdate.currentTaskState,
-                        taskStateUpdate.nextTaskState,
-                        taskStateUpdate.taskTransition,
-                        taskStateUpdate.stateDuration);
+                     taskStateUpdate.name,
+                     taskStateUpdate.currentTaskState,
+                     taskStateUpdate.nextTaskState,
+                     taskStateUpdate.taskTransition,
+                     taskStateUpdate.stateDuration);
             }
 
             public TaskStateUpdate(final UUID taskID,
@@ -426,10 +413,10 @@ public final class IOEvents {
 
             public TopologyStateUpdate(final TopologyStateUpdate topologyStateUpdate) {
                 this(topologyStateUpdate.name,
-                        topologyStateUpdate.currentTopologyState,
-                        topologyStateUpdate.nextTopologyState,
-                        topologyStateUpdate.topologyTransition,
-                        topologyStateUpdate.stateDuration);
+                     topologyStateUpdate.currentTopologyState,
+                     topologyStateUpdate.nextTopologyState,
+                     topologyStateUpdate.topologyTransition,
+                     topologyStateUpdate.stateDuration);
             }
 
             public TopologyStateUpdate(final String name,
@@ -470,20 +457,17 @@ public final class IOEvents {
         }
 
         public MonitoringEvent(final MonitoringEvent monitoringEvent) {
-            this(monitoringEvent.type,
-                    UUID.fromString(monitoringEvent.topologyID.toString()),
-                    monitoringEvent.taskStateUpdate != null ? new TaskStateUpdate(monitoringEvent.taskStateUpdate) : null,
-                    monitoringEvent.topologyStateUpdate != null ? new TopologyStateUpdate(monitoringEvent.topologyStateUpdate) : null);
+            this(monitoringEvent.type, UUID.fromString(monitoringEvent.topologyID.toString()), monitoringEvent.taskStateUpdate != null
+                    ? new TaskStateUpdate(monitoringEvent.taskStateUpdate)
+                    : null, monitoringEvent.topologyStateUpdate != null ? new TopologyStateUpdate(monitoringEvent.topologyStateUpdate) : null);
         }
 
-        public MonitoringEvent(final UUID topologyID,
-                               final TaskStateUpdate taskStateUpdate) {
+        public MonitoringEvent(final UUID topologyID, final TaskStateUpdate taskStateUpdate) {
             this(MONITORING_TASK_STATE_EVENT, topologyID, taskStateUpdate, null);
         }
 
 
-        public MonitoringEvent(final UUID topologyID,
-                               final TopologyStateUpdate topologyStateUpdate) {
+        public MonitoringEvent(final UUID topologyID, final TopologyStateUpdate topologyStateUpdate) {
             this(MONITORING_TOPOLOGY_STATE_EVENT, topologyID, null, topologyStateUpdate);
         }
 

@@ -42,8 +42,7 @@ public final class TaskExecutionUnit {
                 // create instance of that task and execute it.
                 TaskInvokeable invokeable = null;
                 try {
-                    invokeable = context.invokeableClass.getConstructor(TaskRuntimeContext.class, Logger.class)
-                        .newInstance(context, LOG);
+                    invokeable = context.invokeableClass.getConstructor(TaskRuntimeContext.class, Logger.class).newInstance(context, LOG);
                 } catch (Exception e) {
                     throw new IllegalStateException(e);
                 }
@@ -62,7 +61,8 @@ public final class TaskExecutionUnit {
                     LOG.error(e.getLocalizedMessage());
 
                     context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(context.task.topologyID,
-                                                                                  context.task.taskID, TaskTransition.TASK_TRANSITION_FAIL));
+                                                                                  context.task.taskID,
+                                                                                  TaskTransition.TASK_TRANSITION_FAIL));
 
                     return;
 
@@ -71,7 +71,8 @@ public final class TaskExecutionUnit {
                 }
 
                 context.dispatcher.dispatchEvent(new TaskStateTransitionEvent(context.task.topologyID,
-                                                                              context.task.taskID, TaskTransition.TASK_TRANSITION_FINISH));
+                                                                              context.task.taskID,
+                                                                              TaskTransition.TASK_TRANSITION_FINISH));
 
                 context = null;
             }

@@ -9,48 +9,39 @@ import java.util.Enumeration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class InetHelper
-{
-	/**
-	 * Logger.
-	 */
-	private static final Logger LOG = LoggerFactory.getLogger(InetHelper.class);
+public class InetHelper {
 
-	public static InetAddress getIPAddress()
-	{
-		try
-		{
-			Enumeration<NetworkInterface> interfaces = NetworkInterface
-				.getNetworkInterfaces();
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(InetHelper.class);
 
-			while (interfaces.hasMoreElements())
-			{
-				NetworkInterface curInterface = interfaces.nextElement();
+    public static InetAddress getIPAddress() {
+        try {
+            Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
 
-				// Don't use the loopback interface.
-				if (curInterface.isLoopback())
-				{
-					continue;
-				}
+            while (interfaces.hasMoreElements()) {
+                NetworkInterface curInterface = interfaces.nextElement();
 
-				Enumeration<InetAddress> addresses = curInterface
-					.getInetAddresses();
-				while (addresses.hasMoreElements())
-				{
-					InetAddress curAddress = addresses.nextElement();
+                // Don't use the loopback interface.
+                if (curInterface.isLoopback()) {
+                    continue;
+                }
 
-					// Check only for IPv4 addresses.
-					if (curAddress instanceof Inet4Address)
-					{
-						return curAddress;
-					}
-				}
-			}
-		} catch (SocketException e)
-		{
-			LOG.error("I/O error", e);
-		}
+                Enumeration<InetAddress> addresses = curInterface.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress curAddress = addresses.nextElement();
 
-		return null;
-	}
+                    // Check only for IPv4 addresses.
+                    if (curAddress instanceof Inet4Address) {
+                        return curAddress;
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            LOG.error("I/O error", e);
+        }
+
+        return null;
+    }
 }

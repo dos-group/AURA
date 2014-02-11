@@ -38,19 +38,25 @@ public class DataReader {
     protected final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
 
     private final int bufferSize;
+
     private final IEventDispatcher dispatcher;
+
     /**
-     * Queues the single channels write their data into. There are possibly more channels that write into a single queue. Each {@see
-     * de.tuberlin.aura.core.task.gates.InputGate} as exactly one queue.
+     * Queues the single channels write their data into. There are possibly more channels that write
+     * into a single queue. Each {@see de.tuberlin.aura.core.task.gates.InputGate} as exactly one
+     * queue.
      */
     private final List<BufferQueue<IOEvents.DataIOEvent>> queues;
 
     /**
-     * In order to write the data to the correct queue, we map (channel) -> queue index (in {@see queues})
+     * In order to write the data to the correct queue, we map (channel) -> queue index (in {@see
+     * queues})
      */
     private final Map<Channel, Integer> channelToQueueIndex;
+
     /**
-     * In order to get the queue that belongs to the {@see InputGate}, we map (task id, gate index) -> queue index (in {@see queues})
+     * In order to get the queue that belongs to the {@see InputGate}, we map (task id, gate index)
+     * -> queue index (in {@see queues})
      */
     private final Map<Pair<UUID, Integer>, Integer> gateToQueueIndex;
 
@@ -89,12 +95,13 @@ public class DataReader {
 
         ServerBootstrap bootstrap = type.bootStrap(workerGroup);
         bootstrap.childHandler(new ChannelInitializer<T>() {
+
             @Override
             public void initChannel(T ch) throws Exception {
                 ch.pipeline()
-                    .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
-                    .addLast(new DataHandler())
-                    .addLast(new EventHandler());
+                  .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
+                  .addLast(new DataHandler())
+                  .addLast(new EventHandler());
             }
         });
 
@@ -103,8 +110,7 @@ public class DataReader {
             ChannelFuture f = bootstrap.bind(address).addListener(new ChannelFutureListener() {
 
                 @Override
-                public void operationComplete(ChannelFuture future)
-                    throws Exception {
+                public void operationComplete(ChannelFuture future) throws Exception {
                     if (future.isSuccess()) {
                         LOG.info("network server bound to address " + address);
                     } else {
@@ -131,7 +137,10 @@ public class DataReader {
         return queues.get(gateToQueueIndex.get(new Pair<UUID, Integer>(taskID, gateIndex)));
     }
 
-    public void bindQueue(final UUID srcTaskID, final Channel channel, final int gateIndex, final int channelIndex,
+    public void bindQueue(final UUID srcTaskID,
+                          final Channel channel,
+                          final int gateIndex,
+                          final int channelIndex,
                           final BufferQueue<IOEvents.DataIOEvent> queue) {
 
         Pair<UUID, Integer> index = new Pair<>(srcTaskID, gateIndex);
@@ -173,7 +182,7 @@ public class DataReader {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataBufferEvent event) {
-            //event.setChannel(ctx.channel());
+            // event.setChannel(ctx.channel());
             queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
         }
     }
@@ -181,17 +190,18 @@ public class DataReader {
     private final class EventHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
 
         @Override
-        protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event)
-            throws Exception {
+        protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event) throws Exception {
 
-            //LOG.info("got event: " + event.type);
+            // LOG.info("got event: " + event.type);
             if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)) {
 
                 // TODO: ensure that queue is bound before first data buffer event arrives
 
                 IOEvents.GenericIOEvent connected =
-                    new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, DataReader.this, event.srcTaskID,
-                                                event.dstTaskID);
+                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+                                                    DataReader.this,
+                                                    event.srcTaskID,
+                                                    event.dstTaskID);
                 connected.setChannel(ctx.channel());
                 dispatcher.dispatchEvent(connected);
             } else if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
@@ -232,8 +242,9 @@ public class DataReader {
                 buf.clear();
 
                 // add rest of buffer to dest
-                // sadly this is not true // guaranteed to not overflow, if we set the rcv_buffer size to buffer size
-                //assert m.writableBytes() <= bufferSize;
+                // sadly this is not true // guaranteed to not overflow, if we set the rcv_buffer
+                // size to buffer size
+                // assert m.writableBytes() <= bufferSize;
                 buf.writeBytes(m, Math.min(m.readableBytes(), bufferSize - buf.readableBytes()));
             }
             m.release();
@@ -272,13 +283,13 @@ public class DataReader {
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             ServerBootstrap b = new ServerBootstrap();
-            // TODO: check if its better to use a dedicated boss and worker group instead of one for both
-            b.group(eventLoopGroup)
-                .channel(NioServerSocketChannel.class)
-                    // sets the max. number of pending, not yet fully connected (handshake) channels
-                .option(ChannelOption.SO_BACKLOG, 128)
-                    // set keep alive, so idle connections are persistent
-                .childOption(ChannelOption.SO_KEEPALIVE, true);
+            // TODO: check if its better to use a dedicated boss and worker group instead of one for
+            // both
+            b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
+            // sets the max. number of pending, not yet fully connected (handshake) channels
+             .option(ChannelOption.SO_BACKLOG, 128)
+             // set keep alive, so idle connections are persistent
+             .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             return b;
         }

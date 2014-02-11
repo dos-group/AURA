@@ -109,13 +109,9 @@ public final class TaskRuntimeContext {
         }
 
         final String[] taskEvents =
-            {DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-             DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-             DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
-             DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE,
-             DataEventType.DATA_EVENT_BUFFER,
-             DataEventType.DATA_EVENT_SOURCE_EXHAUSTED,
-             TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT};
+                {DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
+                        DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, DataEventType.DATA_EVENT_BUFFER,
+                        DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT};
 
         dispatcher.addEventListener(taskEvents, handler);
     }
@@ -172,8 +168,7 @@ public final class TaskRuntimeContext {
             throw new IllegalArgumentException("taskTransition == null");
         }
 
-        final Map<TaskTransition, TaskState> transitionsSpace =
-            TaskStateMachine.TASK_STATE_TRANSITION_MATRIX.get(state);
+        final Map<TaskTransition, TaskState> transitionsSpace = TaskStateMachine.TASK_STATE_TRANSITION_MATRIX.get(state);
         final TaskState nextState = transitionsSpace.get(transition);
         state = nextState;
         return state;
@@ -197,10 +192,10 @@ public final class TaskRuntimeContext {
 
     public TaskInvokeable getInvokeable() {
         // check state condition.
-        //if (this.invokeable == null)
-        //	throw new IllegalStateException("this.invokeable == null");
-        //if (state != TaskState.TASK_STATE_RUNNING)
-        //	throw new IllegalStateException("state != TaskState.TASK_STATE_RUNNING");
+        // if (this.invokeable == null)
+        // throw new IllegalStateException("this.invokeable == null");
+        // if (state != TaskState.TASK_STATE_RUNNING)
+        // throw new IllegalStateException("state != TaskState.TASK_STATE_RUNNING");
 
         return invokeable;
     }
@@ -222,11 +217,11 @@ public final class TaskRuntimeContext {
 
     @Override
     public String toString() {
-        return (new StringBuilder())
-            .append("TaskRuntimeContext = {")
-            .append(" task = " + task + ", ")
-            .append(" taskBinding = " + taskBinding + ", ")
-            .append(" state = " + state.toString() + ", ")
-            .append(" }").toString();
+        return (new StringBuilder()).append("TaskRuntimeContext = {")
+                                    .append(" task = " + task + ", ")
+                                    .append(" taskBinding = " + taskBinding + ", ")
+                                    .append(" state = " + state.toString() + ", ")
+                                    .append(" }")
+                                    .toString();
     }
 }

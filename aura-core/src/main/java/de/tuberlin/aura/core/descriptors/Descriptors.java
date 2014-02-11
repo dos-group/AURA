@@ -12,431 +12,418 @@ import de.tuberlin.aura.core.task.usercode.UserCode;
 
 public final class Descriptors {
 
-	// Disallow instantiation.
-	private Descriptors() {
-	}
+    // Disallow instantiation.
+    private Descriptors() {}
 
-	/**
+    /**
     *
     */
-	public static final class MachineDescriptor implements Serializable
-	{
-		private static final long serialVersionUID = -826435800717651651L;
+    public static final class MachineDescriptor implements Serializable {
 
-		public MachineDescriptor(InetAddress address, int dataPort,
-				int controlPort, HardwareDescriptor hardware)
-		{
-			this(UUID.randomUUID(), address, dataPort, controlPort, hardware);
-		}
+        private static final long serialVersionUID = -826435800717651651L;
 
-		public MachineDescriptor(UUID uid, InetAddress address, int dataPort,
-				int controlPort, HardwareDescriptor hardware)
-		{
-			// sanity check.
-			if (uid == null)
-				throw new IllegalArgumentException("uid == null");
-			if (address == null)
-				throw new IllegalArgumentException("address == null");
-			if (dataPort < 1024 || dataPort > 65535)
-				throw new IllegalArgumentException("dataPort invalid");
-			if (controlPort < 1024 || controlPort > 65535)
-				throw new IllegalArgumentException("controlPort invalid port number");
-			if (hardware == null)
-				throw new IllegalArgumentException("hardware == null");
+        public MachineDescriptor(InetAddress address, int dataPort, int controlPort, HardwareDescriptor hardware) {
+            this(UUID.randomUUID(), address, dataPort, controlPort, hardware);
+        }
 
-			this.uid = uid;
+        public MachineDescriptor(UUID uid, InetAddress address, int dataPort, int controlPort, HardwareDescriptor hardware) {
+            // sanity check.
+            if (uid == null)
+                throw new IllegalArgumentException("uid == null");
+            if (address == null)
+                throw new IllegalArgumentException("address == null");
+            if (dataPort < 1024 || dataPort > 65535)
+                throw new IllegalArgumentException("dataPort invalid");
+            if (controlPort < 1024 || controlPort > 65535)
+                throw new IllegalArgumentException("controlPort invalid port number");
+            if (hardware == null)
+                throw new IllegalArgumentException("hardware == null");
 
-			this.address = address;
+            this.uid = uid;
 
-			this.dataPort = dataPort;
+            this.address = address;
 
-			this.controlPort = controlPort;
+            this.dataPort = dataPort;
 
-			this.dataAddress = new InetSocketAddress(address, dataPort);
+            this.controlPort = controlPort;
 
-			this.controlAddress = new InetSocketAddress(address, controlPort);
+            this.dataAddress = new InetSocketAddress(address, dataPort);
 
-			this.hardware = hardware;
-		}
+            this.controlAddress = new InetSocketAddress(address, controlPort);
 
-		public final UUID uid;
+            this.hardware = hardware;
+        }
 
-		public final int dataPort;
+        public final UUID uid;
 
-		public final int controlPort;
+        public final int dataPort;
 
-		public final InetAddress address;
+        public final int controlPort;
 
-		// TODO: redundant...
-		public final InetSocketAddress dataAddress;
+        public final InetAddress address;
 
-		public final InetSocketAddress controlAddress;
+        // TODO: redundant...
+        public final InetSocketAddress dataAddress;
 
-		public final HardwareDescriptor hardware;
+        public final InetSocketAddress controlAddress;
 
-		@Override
-		public boolean equals(Object other)
-		{
-			if (this == other)
-				return true;
-			if (other == null)
-				return false;
-			if (other.getClass() != getClass())
-				return false;
+        public final HardwareDescriptor hardware;
 
-			if (!(uid.equals(((MachineDescriptor) other).uid)))
-				return false;
-			if (!(dataAddress.equals(((MachineDescriptor) other).dataAddress)))
-				return false;
-			return true;
-		}
+        @Override
+        public boolean equals(Object other) {
+            if (this == other)
+                return true;
+            if (other == null)
+                return false;
+            if (other.getClass() != getClass())
+                return false;
 
-		@Override
-		public String toString()
-		{
-			return (new StringBuilder()).append("MachineDescriptor = {")
-				.append(" uid = " + uid.toString())
-				.append(", ")
-				.append(" netAddress = " + dataAddress)
-				.append(", ")
-				.append(" controlAddress = " + controlAddress)
-				.append(", ")
-				.append(hardware)
-				.append(" }").toString();
-		}
-	}
+            if (!(uid.equals(((MachineDescriptor) other).uid)))
+                return false;
+            if (!(dataAddress.equals(((MachineDescriptor) other).dataAddress)))
+                return false;
+            return true;
+        }
 
-	public static final class HardwareDescriptor implements Serializable
-	{
-		/**
+        @Override
+        public String toString() {
+            return (new StringBuilder()).append("MachineDescriptor = {")
+                                        .append(" uid = " + uid.toString())
+                                        .append(", ")
+                                        .append(" netAddress = " + dataAddress)
+                                        .append(", ")
+                                        .append(" controlAddress = " + controlAddress)
+                                        .append(", ")
+                                        .append(hardware)
+                                        .append(" }")
+                                        .toString();
+        }
+    }
+
+    public static final class HardwareDescriptor implements Serializable {
+
+        /**
 		 *
 		 */
-		private static final long serialVersionUID = -1014379658418868396L;
+        private static final long serialVersionUID = -1014379658418868396L;
 
-		public HardwareDescriptor(int cpuCores, long sizeOfRAM,
-				HDDDescriptor hdd)
-		{
-			this(UUID.randomUUID(), cpuCores, sizeOfRAM, hdd);
-		}
+        public HardwareDescriptor(int cpuCores, long sizeOfRAM, HDDDescriptor hdd) {
+            this(UUID.randomUUID(), cpuCores, sizeOfRAM, hdd);
+        }
 
-		public HardwareDescriptor(UUID uid, int cpuCores, long sizeOfRAM,
-				HDDDescriptor hdd)
-		{
-			// sanity check.
-			if (uid == null)
-				throw new IllegalArgumentException("uid == null");
-			if (cpuCores < 1)
-				throw new IllegalArgumentException("cpuCores < 1");
-			if (sizeOfRAM < 1024 * 1024 * 1024)
-				throw new IllegalArgumentException("Less than one GB of RAM");
-			if (hdd == null)
-				throw new IllegalArgumentException("hdd == null");
+        public HardwareDescriptor(UUID uid, int cpuCores, long sizeOfRAM, HDDDescriptor hdd) {
+            // sanity check.
+            if (uid == null)
+                throw new IllegalArgumentException("uid == null");
+            if (cpuCores < 1)
+                throw new IllegalArgumentException("cpuCores < 1");
+            if (sizeOfRAM < 1024 * 1024 * 1024)
+                throw new IllegalArgumentException("Less than one GB of RAM");
+            if (hdd == null)
+                throw new IllegalArgumentException("hdd == null");
 
-			this.uid = uid;
-			this.cpuCores = cpuCores;
-			this.sizeOfRAM = sizeOfRAM;
-			this.hdd = hdd;
-		}
+            this.uid = uid;
+            this.cpuCores = cpuCores;
+            this.sizeOfRAM = sizeOfRAM;
+            this.hdd = hdd;
+        }
 
-		public final UUID uid;
+        public final UUID uid;
 
-		public final int cpuCores;
+        public final int cpuCores;
 
-		public final long sizeOfRAM;
+        public final long sizeOfRAM;
 
-		public final HDDDescriptor hdd;
+        public final HDDDescriptor hdd;
 
-		@Override
-		public boolean equals(Object other)
-		{
-			if (this == other)
-				return true;
-			if (other == null)
-				return false;
-			if (other.getClass() != getClass())
-				return false;
+        @Override
+        public boolean equals(Object other) {
+            if (this == other)
+                return true;
+            if (other == null)
+                return false;
+            if (other.getClass() != getClass())
+                return false;
 
-			if (!(uid.equals(((MachineDescriptor) other).uid)))
-				return false;
-			return true;
-		}
+            if (!(uid.equals(((MachineDescriptor) other).uid)))
+                return false;
+            return true;
+        }
 
-		@Override
-		public String toString()
-		{
-			return (new StringBuilder()).append("HardwareDescriptor = {")
-				.append(" uid = " + uid.toString())
-				.append(", ")
-				.append(" cpuCores = " + cpuCores)
-				.append(", ")
-				.append(" sizeOfRAM = " + sizeOfRAM)
-				.append(", ")
-				.append(hdd).append(" }").toString();
-		}
-	}
+        @Override
+        public String toString() {
+            return (new StringBuilder()).append("HardwareDescriptor = {")
+                                        .append(" uid = " + uid.toString())
+                                        .append(", ")
+                                        .append(" cpuCores = " + cpuCores)
+                                        .append(", ")
+                                        .append(" sizeOfRAM = " + sizeOfRAM)
+                                        .append(", ")
+                                        .append(hdd)
+                                        .append(" }")
+                                        .toString();
+        }
+    }
 
-	public static final class HDDDescriptor implements Serializable
-	{
-		/**
+    public static final class HDDDescriptor implements Serializable {
+
+        /**
 		 *
 		 */
-		private static final long serialVersionUID = -259046081534037297L;
+        private static final long serialVersionUID = -259046081534037297L;
 
-		public HDDDescriptor(long sizeOfHDD)
-		{
-			this(UUID.randomUUID(), sizeOfHDD);
-		}
+        public HDDDescriptor(long sizeOfHDD) {
+            this(UUID.randomUUID(), sizeOfHDD);
+        }
 
-		public HDDDescriptor(UUID uid, long sizeOfHDD)
-		{
-			// sanity check.
-			if (uid == null)
-				throw new IllegalArgumentException("uid == null");
-			if (sizeOfHDD < 1024 * 1024 * 1024)
-				throw new IllegalArgumentException("Less than one GB of HDD space");
+        public HDDDescriptor(UUID uid, long sizeOfHDD) {
+            // sanity check.
+            if (uid == null)
+                throw new IllegalArgumentException("uid == null");
+            if (sizeOfHDD < 1024 * 1024 * 1024)
+                throw new IllegalArgumentException("Less than one GB of HDD space");
 
-			this.uid = uid;
-			this.sizeOfHDD = sizeOfHDD;
-		}
+            this.uid = uid;
+            this.sizeOfHDD = sizeOfHDD;
+        }
 
-		public final UUID uid;
+        public final UUID uid;
 
-		public final long sizeOfHDD;
+        public final long sizeOfHDD;
 
-		@Override
-		public boolean equals(Object other)
-		{
-			if (this == other)
-				return true;
-			if (other == null)
-				return false;
-			if (other.getClass() != getClass())
-				return false;
+        @Override
+        public boolean equals(Object other) {
+            if (this == other)
+                return true;
+            if (other == null)
+                return false;
+            if (other.getClass() != getClass())
+                return false;
 
-			if (!(uid.equals(((MachineDescriptor) other).uid)))
-				return false;
-			return true;
-		}
+            if (!(uid.equals(((MachineDescriptor) other).uid)))
+                return false;
+            return true;
+        }
 
-		@Override
-		public String toString()
-		{
-			return (new StringBuilder()).append("HDDDescriptor = {")
-				.append(" uid = " + uid.toString())
-				.append(", ")
-				.append(" sizeOfHDD = " + sizeOfHDD).append(" }").toString();
-		}
-	}
+        @Override
+        public String toString() {
+            return (new StringBuilder()).append("HDDDescriptor = {")
+                                        .append(" uid = " + uid.toString())
+                                        .append(", ")
+                                        .append(" sizeOfHDD = " + sizeOfHDD)
+                                        .append(" }")
+                                        .toString();
+        }
+    }
 
-	/**
+    /**
      *
      */
-	public static final class TaskDescriptor implements Serializable {
+    public static final class TaskDescriptor implements Serializable {
 
-		private static final long serialVersionUID = 7425151926496852885L;
+        private static final long serialVersionUID = 7425151926496852885L;
 
-		public TaskDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final UserCode userCode) {
-			// sanity check.
-			if (topologyID == null)
-				throw new IllegalArgumentException("topologyID == null");
-			if (taskID == null)
-				throw new IllegalArgumentException("taskID == null");
-			if (taskIndex < 0)
+        public TaskDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final UserCode userCode) {
+            // sanity check.
+            if (topologyID == null)
+                throw new IllegalArgumentException("topologyID == null");
+            if (taskID == null)
+                throw new IllegalArgumentException("taskID == null");
+            if (taskIndex < 0)
                 throw new IllegalArgumentException("taskIndex < 0");
             if (name == null)
-				throw new IllegalArgumentException("name == null");
-			if (userCode == null)
-				throw new IllegalArgumentException("userCode == null");
+                throw new IllegalArgumentException("name == null");
+            if (userCode == null)
+                throw new IllegalArgumentException("userCode == null");
 
-			this.topologyID = topologyID;
+            this.topologyID = topologyID;
 
-			this.taskID = taskID;
+            this.taskID = taskID;
 
             this.taskIndex = taskIndex;
 
-			this.name = name;
+            this.name = name;
 
-			this.userCode = userCode;
-		}
+            this.userCode = userCode;
+        }
 
-		public final UUID topologyID;
+        public final UUID topologyID;
 
-		public final UUID taskID;
+        public final UUID taskID;
 
         public final int taskIndex;
 
-		public final String name;
+        public final String name;
 
-		public final UserCode userCode;
+        public final UserCode userCode;
 
-		private MachineDescriptor machine;
+        private MachineDescriptor machine;
 
-		public void setMachineDescriptor(final MachineDescriptor machine) {
-			// sanity check.
-			if (machine == null)
-				throw new IllegalArgumentException("machine == null");
-			if (this.machine != null)
-				throw new IllegalStateException("machine is already set");
+        public void setMachineDescriptor(final MachineDescriptor machine) {
+            // sanity check.
+            if (machine == null)
+                throw new IllegalArgumentException("machine == null");
+            if (this.machine != null)
+                throw new IllegalStateException("machine is already set");
 
-			this.machine = machine;
-		}
+            this.machine = machine;
+        }
 
-		public MachineDescriptor getMachineDescriptor() {
-			return machine;
-		}
+        public MachineDescriptor getMachineDescriptor() {
+            return machine;
+        }
 
-		@Override
-		public boolean equals(Object other) {
-			if (this == other)
-				return true;
-			if (other == null)
-				return false;
-			if (other.getClass() != getClass())
-				return false;
+        @Override
+        public boolean equals(Object other) {
+            if (this == other)
+                return true;
+            if (other == null)
+                return false;
+            if (other.getClass() != getClass())
+                return false;
 
-			if ((machine == null && ((TaskDescriptor) other).machine == null) ||
-				!(machine.equals(((TaskDescriptor) other).machine)))
-				return false;
-			if (!(taskID.equals(((TaskDescriptor) other).taskID)))
-				return false;
-			if (!(name.equals(((TaskDescriptor) other).name)))
-				return false;
-			return true;
-		}
+            if ((machine == null && ((TaskDescriptor) other).machine == null) || !(machine.equals(((TaskDescriptor) other).machine)))
+                return false;
+            if (!(taskID.equals(((TaskDescriptor) other).taskID)))
+                return false;
+            if (!(name.equals(((TaskDescriptor) other).name)))
+                return false;
+            return true;
+        }
 
-		@Override
-		public String toString() {
-			return (new StringBuilder())
-				.append("TaskDescriptor = {")
-				.append(" machine = " + machine.toString() + ", ")
-				.append(" uid = " + taskID.toString() + ", ")
-				.append(" name = " + name)
-				.append(" }").toString();
-		}
-	}
+        @Override
+        public String toString() {
+            return (new StringBuilder()).append("TaskDescriptor = {")
+                                        .append(" machine = " + machine.toString() + ", ")
+                                        .append(" uid = " + taskID.toString() + ", ")
+                                        .append(" name = " + name)
+                                        .append(" }")
+                                        .toString();
+        }
+    }
 
-	/**
+    /**
      *
      */
-	public static final class TaskBindingDescriptor implements Serializable {
+    public static final class TaskBindingDescriptor implements Serializable {
 
-		private static final long serialVersionUID = -2803770527065206844L;
+        private static final long serialVersionUID = -2803770527065206844L;
 
-		public TaskBindingDescriptor(final TaskDescriptor task,
-				final List<List<TaskDescriptor>> inputGateBindings,
-				final List<List<TaskDescriptor>> outputGateBindings) {
-			// sanity check.
-			if (task == null)
-				throw new IllegalArgumentException("taskID == null");
-			if (inputGateBindings == null)
-				throw new IllegalArgumentException("inputGateBindings == null");
-			if (outputGateBindings == null)
-				throw new IllegalArgumentException("outputGateBindings == null");
+        public TaskBindingDescriptor(final TaskDescriptor task,
+                                     final List<List<TaskDescriptor>> inputGateBindings,
+                                     final List<List<TaskDescriptor>> outputGateBindings) {
+            // sanity check.
+            if (task == null)
+                throw new IllegalArgumentException("taskID == null");
+            if (inputGateBindings == null)
+                throw new IllegalArgumentException("inputGateBindings == null");
+            if (outputGateBindings == null)
+                throw new IllegalArgumentException("outputGateBindings == null");
 
-			this.task = task;
+            this.task = task;
 
-			this.inputGateBindings = Collections.unmodifiableList(inputGateBindings);
+            this.inputGateBindings = Collections.unmodifiableList(inputGateBindings);
 
-			this.outputGateBindings = Collections.unmodifiableList(outputGateBindings);
-		}
+            this.outputGateBindings = Collections.unmodifiableList(outputGateBindings);
+        }
 
-		public final TaskDescriptor task;
+        public final TaskDescriptor task;
 
-		public final List<List<TaskDescriptor>> inputGateBindings;
+        public final List<List<TaskDescriptor>> inputGateBindings;
 
-		public final List<List<TaskDescriptor>> outputGateBindings;
+        public final List<List<TaskDescriptor>> outputGateBindings;
 
-		@Override
-		public boolean equals(Object other) {
-			if (this == other)
-				return true;
-			if (other == null)
-				return false;
-			if (other.getClass() != getClass())
-				return false;
+        @Override
+        public boolean equals(Object other) {
+            if (this == other)
+                return true;
+            if (other == null)
+                return false;
+            if (other.getClass() != getClass())
+                return false;
 
-			if (!(task.equals(((TaskBindingDescriptor) other).task)))
-				return false;
-			if (!(inputGateBindings.equals(((TaskBindingDescriptor) other).inputGateBindings)))
-				return false;
-			if (!(outputGateBindings.equals(((TaskBindingDescriptor) other).outputGateBindings)))
-				return false;
-			return true;
-		}
+            if (!(task.equals(((TaskBindingDescriptor) other).task)))
+                return false;
+            if (!(inputGateBindings.equals(((TaskBindingDescriptor) other).inputGateBindings)))
+                return false;
+            if (!(outputGateBindings.equals(((TaskBindingDescriptor) other).outputGateBindings)))
+                return false;
+            return true;
+        }
 
-		@Override
-		public String toString() {
-			return (new StringBuilder())
-				.append("TaskBindingDescriptor = {")
-				// .append( " task = " + task.toString() + ", " )
-				.append(" inputGates = " + inputGateBindings.toString() + ", ")
-				.append(" outputGates = " + outputGateBindings.toString())
-				.append(" }").toString();
-		}
-	}
+        @Override
+        public String toString() {
+            return (new StringBuilder()).append("TaskBindingDescriptor = {")
+            // .append( " task = " + task.toString() + ", " )
+                                        .append(" inputGates = " + inputGateBindings.toString() + ", ")
+                                        .append(" outputGates = " + outputGateBindings.toString())
+                                        .append(" }")
+                                        .toString();
+        }
+    }
 
-	/**
+    /**
      *
      */
-	public static final class TaskDeploymentDescriptor implements Serializable {
+    public static final class TaskDeploymentDescriptor implements Serializable {
 
-		private static final long serialVersionUID = 6533439159854768522L;
+        private static final long serialVersionUID = 6533439159854768522L;
 
-		public TaskDeploymentDescriptor(final TaskDescriptor taskDescriptor,
-				final TaskBindingDescriptor taskBindingDescriptor,
-				final Node.DataPersistenceType dataPersistenceType,
-				final Node.ExecutionType executionType) {
+        public TaskDeploymentDescriptor(final TaskDescriptor taskDescriptor,
+                                        final TaskBindingDescriptor taskBindingDescriptor,
+                                        final Node.DataPersistenceType dataPersistenceType,
+                                        final Node.ExecutionType executionType) {
 
-			// sanity check.
-			if (taskDescriptor == null)
-				throw new IllegalArgumentException("taskDescriptor == null");
-			if (taskBindingDescriptor == null)
-				throw new IllegalArgumentException("taskBindingDescriptor == null");
-			if (dataPersistenceType == null)
-				throw new IllegalArgumentException("dataPersistenceType == null");
-			if (executionType == null)
-				throw new IllegalArgumentException("executionType == null");
+            // sanity check.
+            if (taskDescriptor == null)
+                throw new IllegalArgumentException("taskDescriptor == null");
+            if (taskBindingDescriptor == null)
+                throw new IllegalArgumentException("taskBindingDescriptor == null");
+            if (dataPersistenceType == null)
+                throw new IllegalArgumentException("dataPersistenceType == null");
+            if (executionType == null)
+                throw new IllegalArgumentException("executionType == null");
 
-			this.taskDescriptor = taskDescriptor;
+            this.taskDescriptor = taskDescriptor;
 
-			this.taskBindingDescriptor = taskBindingDescriptor;
+            this.taskBindingDescriptor = taskBindingDescriptor;
 
-			this.dataPersistenceType = dataPersistenceType;
+            this.dataPersistenceType = dataPersistenceType;
 
-			this.executionType = executionType;
-		}
+            this.executionType = executionType;
+        }
 
-		public final TaskDescriptor taskDescriptor;
+        public final TaskDescriptor taskDescriptor;
 
-		public final TaskBindingDescriptor taskBindingDescriptor;
+        public final TaskBindingDescriptor taskBindingDescriptor;
 
-		public final Node.DataPersistenceType dataPersistenceType;
+        public final Node.DataPersistenceType dataPersistenceType;
 
-		public final Node.ExecutionType executionType;
+        public final Node.ExecutionType executionType;
 
-		@Override
-		public boolean equals(Object other) {
-			if (this == other)
-				return true;
-			if (other == null)
-				return false;
-			if (other.getClass() != getClass())
-				return false;
+        @Override
+        public boolean equals(Object other) {
+            if (this == other)
+                return true;
+            if (other == null)
+                return false;
+            if (other.getClass() != getClass())
+                return false;
 
-			if (!(taskDescriptor.equals(((TaskDeploymentDescriptor) other).taskDescriptor)))
-				return false;
-			if (!(taskBindingDescriptor.equals(((TaskDeploymentDescriptor) other).taskBindingDescriptor)))
-				return false;
-			return true;
-		}
+            if (!(taskDescriptor.equals(((TaskDeploymentDescriptor) other).taskDescriptor)))
+                return false;
+            if (!(taskBindingDescriptor.equals(((TaskDeploymentDescriptor) other).taskBindingDescriptor)))
+                return false;
+            return true;
+        }
 
-		@Override
-		public String toString() {
-			return (new StringBuilder())
-				.append("TaskDeploymentDescriptor = {")
-				.append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-				.append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
-				.append(" }").toString();
-		}
-	}
+        @Override
+        public String toString() {
+            return (new StringBuilder()).append("TaskDeploymentDescriptor = {")
+                                        .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
+                                        .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
+                                        .append(" }")
+                                        .toString();
+        }
+    }
 }
