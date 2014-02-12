@@ -22,9 +22,12 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
 
@@ -43,10 +46,6 @@ public class DataWriter {
     private ExecutorService pollThreadExecutor;
 
     public DataWriter(IEventDispatcher dispatcher, final EventLoopGroup workerGroup) {
-        this(dispatcher, workerGroup, DEFAULT_BUFFER_SIZE);
-    }
-
-    public DataWriter(IEventDispatcher dispatcher, final EventLoopGroup workerGroup, int bufferSize) {
         this.dispatcher = dispatcher;
         this.workerGroup = workerGroup;
 
@@ -78,9 +77,13 @@ public class DataWriter {
 
         private BufferQueue<IOEvents.DataIOEvent> queue;
 
+        private BufferQueue<IOEvents.DataIOEvent> buffer;
+
         private Future<Void> pollResult;
 
         private IOEvents.DataIOEvent interruptedEvent;
+
+        private AtomicBoolean gateOpen = new AtomicBoolean(false);
 
         public ChannelWriter(final OutgoingConnectionType<T> type, final UUID srcID, final UUID dstID, final SocketAddress address) {
             this.srcID = srcID;
@@ -91,7 +94,11 @@ public class DataWriter {
 
                 @Override
                 protected void initChannel(T ch) throws Exception {
-                    ch.pipeline().addLast(new WritableHandler()).addLast(new ObjectEncoder());
+                    ch.pipeline()
+                      .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
+                      .addLast(new OpenCloseGateHandler())
+                      .addLast(new WritableHandler())
+                      .addLast(new ObjectEncoder());
                 }
             });
 
@@ -99,6 +106,10 @@ public class DataWriter {
             // the close future is registered
             // the polling thread is started
             bootstrap.connect(address).addListener(new ConnectListener());
+        }
+
+        public void setBuffer(BufferQueue<IOEvents.DataIOEvent> buffer) {
+            this.buffer = buffer;
         }
 
         /**
@@ -136,8 +147,23 @@ public class DataWriter {
             }
         }
 
+        /**
+         * Writes the event to the channel.
+         * 
+         * If the the gate the channel is connected to is not open yet, the events are buffered in a
+         * queue. If this intermediate queue is full, this method blocks until the gate is opened.
+         * 
+         * @param event
+         */
         public void write(IOEvents.DataIOEvent event) {
-            this.queue.offer(event);
+
+            if (gateOpen.get()) {
+                this.queue.offer(event);
+            } else {
+                // add into buffer
+                this.buffer.offer(event);
+            }
+
         }
 
         /**
@@ -254,6 +280,54 @@ public class DataWriter {
             }
         }
 
+        private class OpenCloseGateHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
+
+            @Override
+            protected void channelRead0(ChannelHandlerContext ctx, IOEvents.DataIOEvent gateEvent) throws Exception {
+
+                switch (gateEvent.type) {
+                    case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN:
+                        LOG.info("RECEIVED GATE OPEN EVENT");
+
+                        gateOpen.set(true);
+
+                        // TODO: check wether we have to block the write method here
+
+                        // buffer may have more capacity than queue
+                        // so we have to wait until elements are sent over net to drain the rest
+
+                        // TODO: blocking, so move away from I/O loop!!!
+                        while (!buffer.isEmpty()) {
+                            buffer.drainTo(queue);
+                        }
+
+                        gateEvent.setChannel(ctx.channel());
+                        dispatcher.dispatchEvent(gateEvent);
+                        // dispatch event to output gate
+
+                        break;
+                    case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE:
+                        LOG.info("RECEIVED GATE CLOSE EVENT");
+
+                        // disable write to output queue
+                        gateOpen.set(false);
+
+                        gateEvent.setChannel(ctx.channel());
+                        dispatcher.dispatchEvent(gateEvent);
+
+                        // as the gate is closed, now events could be enqueued at this point
+                        IOEvents.DataIOEvent closedGate =
+                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED, srcID, dstID);
+                        queue.offer(closedGate);
+
+                        break;
+                    default:
+                        LOG.error("RECEIVED UNKNOWN EVENT TYPE: " + gateEvent.type);
+                        break;
+                }
+            }
+        }
+
         /**
          * Sets the writable flag for this channel.
          */
@@ -281,15 +355,11 @@ public class DataWriter {
         Bootstrap bootStrap(EventLoopGroup eventLoopGroup);
     }
 
-    public static class LocalConnection implements OutgoingConnectionType<LocalChannel> {
+    public static abstract class AbstractConnection<T> implements OutgoingConnectionType<T> {
 
-        private final int bufferSize;
+        protected final int bufferSize;
 
-        public LocalConnection() {
-            this(DEFAULT_BUFFER_SIZE);
-        }
-
-        public LocalConnection(int bufferSize) {
+        public AbstractConnection(int bufferSize) {
             if ((bufferSize & (bufferSize - 1)) != 0) {
                 // not a power of two
                 LOG.warn("The given buffer size is not a power of two.");
@@ -298,6 +368,21 @@ public class DataWriter {
             } else {
                 this.bufferSize = bufferSize;
             }
+        }
+
+        public AbstractConnection() {
+            this(DEFAULT_BUFFER_SIZE);
+        }
+    }
+
+    public static class LocalConnection extends AbstractConnection<LocalChannel> {
+
+        public LocalConnection() {
+            super(DEFAULT_BUFFER_SIZE);
+        }
+
+        public LocalConnection(int bufferSize) {
+            super(bufferSize);
         }
 
         @Override
@@ -305,36 +390,24 @@ public class DataWriter {
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup).channel(LocalChannel.class)
             // the mark the outbound buffer has to reach in order to change the writable state of a
-            // channel true
+         // channel true
               .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
               // the mark the outbound buffer has to reach in order to change the writable state of
               // a channel false
               .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
-            // dummy allocator here, as we do not invoke the allocator in the event loop
-            // .option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
-            // set the channelWritable spin lock
 
             return bs;
         }
     }
 
-    public static class NetworkConnection implements OutgoingConnectionType<SocketChannel> {
-
-        private final int bufferSize;
+    public static class NetworkConnection extends AbstractConnection<SocketChannel> {
 
         public NetworkConnection() {
-            this(DEFAULT_BUFFER_SIZE);
+            super(DEFAULT_BUFFER_SIZE);
         }
 
         public NetworkConnection(int bufferSize) {
-            if ((bufferSize & (bufferSize - 1)) != 0) {
-                // not a power of two
-                LOG.warn("The given buffer size is not a power of two.");
-
-                this.bufferSize = Util.nextPowerOf2(bufferSize);
-            } else {
-                this.bufferSize = bufferSize;
-            }
+            super(bufferSize);
         }
 
         @Override
@@ -355,9 +428,6 @@ public class DataWriter {
               // the mark the outbound buffer has to reach in order to change the writable state of
               // a channel false
               .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
-            // dummy allocator here, as we do not invoke the allocator in the event loop
-            // .option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
-            // set the channelWritable spin lock
 
             return bs;
         }

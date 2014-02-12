@@ -1,15 +1,15 @@
 package de.tuberlin.aura.core.iosystem;
 
-import java.util.Collection;
+import java.util.Iterator;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class BlockingBufferQueue<T> implements BufferQueue<T> {
 
     private final BlockingQueue<T> backingQueue;
 
     BlockingBufferQueue() {
-        this.backingQueue = new LinkedBlockingQueue<T>();
+        this.backingQueue = new ArrayBlockingQueue<>(10);
     }
 
     @Override
@@ -23,8 +23,24 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     }
 
     @Override
-    public int drainTo(Collection<? super T> dump) {
-        return backingQueue.drainTo(dump);
+    public int drainTo(BufferQueue<? super T> dump) {
+
+        // TODO: hack to check if the mechanism is working. FIX!!!
+        if (dump instanceof BlockingBufferQueue) {
+            return this.backingQueue.drainTo(((BlockingBufferQueue) dump).backingQueue);
+        }
+
+        throw new IllegalArgumentException("not proper implemented yet.");
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return backingQueue.isEmpty();
+    }
+
+    @Override
+    public Iterator<T> iterator() {
+        return backingQueue.iterator();
     }
 
     public static class Factory<F> implements BufferQueueFactory<F> {

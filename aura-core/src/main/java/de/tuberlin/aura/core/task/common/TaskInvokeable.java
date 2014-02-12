@@ -1,12 +1,16 @@
 package de.tuberlin.aura.core.task.common;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 
 public abstract class TaskInvokeable {
@@ -111,6 +115,7 @@ public abstract class TaskInvokeable {
     }
 
     public void closeGate(int channelIndex) {
+
         context.inputGates.get(channelIndex).closeGate();
     }
 

@@ -64,10 +64,7 @@ public abstract class EventHandler implements IEventHandler {
         } else {
             final Map<String, Method> handlerTable = multiTypeEventHandlerMap.get(event.getClass());
 
-            if (handlerTable == null)
-                handleUnknownEvent(event);
-
-            m = handlerTable.get(event.type);
+            m = (handlerTable != null) ? handlerTable.get(event.type) : null;
             if (m != null) {
                 m.setAccessible(true);
                 try {
@@ -75,8 +72,9 @@ public abstract class EventHandler implements IEventHandler {
                 } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
                     throw new IllegalStateException(e);
                 }
-            } else
+            } else {
                 handleUnknownEvent(event);
+            }
         }
     }
 

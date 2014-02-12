@@ -30,6 +30,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 
 public class DataReader {
 
@@ -101,7 +102,8 @@ public class DataReader {
                 ch.pipeline()
                   .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
                   .addLast(new DataHandler())
-                  .addLast(new EventHandler());
+                  .addLast(new EventHandler())
+                  .addLast(new ObjectEncoder());
             }
         });
 
@@ -171,7 +173,8 @@ public class DataReader {
     }
 
     public void write(final UUID taskID, final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event) {
-        connectedChannels.get(new Pair<UUID, Integer>(taskID, gateIndex)).get(channelIndex).writeAndFlush(event);
+        Pair<UUID, Integer> index = new Pair<>(taskID, gateIndex);
+        connectedChannels.get(index).get(channelIndex).writeAndFlush(event);
     }
 
     // ---------------------------------------------------
@@ -192,23 +195,31 @@ public class DataReader {
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event) throws Exception {
 
-            // LOG.info("got event: " + event.type);
-            if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)) {
+            switch (event.type) {
+                case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
+                    // TODO: ensure that queue is bound before first data buffer event arrives
 
-                // TODO: ensure that queue is bound before first data buffer event arrives
-
-                IOEvents.GenericIOEvent connected =
+                    IOEvents.GenericIOEvent connected =
                         new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
                                                     DataReader.this,
                                                     event.srcTaskID,
                                                     event.dstTaskID);
-                connected.setChannel(ctx.channel());
-                dispatcher.dispatchEvent(connected);
-            } else if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
-                queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
-            } else {
-                event.setChannel(ctx.channel());
-                dispatcher.dispatchEvent(event);
+                    connected.setChannel(ctx.channel());
+                    dispatcher.dispatchEvent(connected);
+                    break;
+
+                case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
+                    queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
+                    break;
+
+                case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED:
+
+                    break;
+
+                default:
+                    event.setChannel(ctx.channel());
+                    dispatcher.dispatchEvent(event);
+                    break;
             }
         }
     }
