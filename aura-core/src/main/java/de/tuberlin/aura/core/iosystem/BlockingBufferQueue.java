@@ -30,7 +30,7 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     public static class Factory<F> implements BufferQueueFactory<F> {
 
         @Override
-        public BufferQueue newInstance() {
+        public BufferQueue<F> newInstance() {
             return new BlockingBufferQueue<F>();
         }
     }

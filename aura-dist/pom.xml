@@ -21,11 +21,15 @@
 		<!-- PROJECT DEPENDENCIES -->
 		<dependency>
 			<groupId>${project.groupId}</groupId>
+			<artifactId>aura-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>aura-core</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>aura-wm</artifactId>
+			<artifactId>aura-examples</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -33,7 +37,7 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>aura-client</artifactId>
+			<artifactId>aura-wm</artifactId>
 		</dependency>
 	</dependencies>
 
@@ -73,7 +77,7 @@
 				<plugins>
 					<plugin>
 						<artifactId>maven-assembly-plugin</artifactId>
-						<version>2.4</version>
+						<version>2.5</version>
 						<executions>
 							<execution>
 								<id>single-jar</id>

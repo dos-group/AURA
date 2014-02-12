@@ -30,7 +30,7 @@ public class QueueManager<T> {
     }
 
 
-    public static <F> QueueManager newInstance(TaskRuntimeContext taskContext, BufferQueueFactory<F> queueFactory) {
+    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext, BufferQueueFactory<F> queueFactory) {
         QueueManager<F> instance = new QueueManager<>(queueFactory);
         BINDINGS.put(taskContext, instance);
         return instance;

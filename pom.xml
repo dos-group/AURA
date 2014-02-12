@@ -19,6 +19,9 @@
 	<!-- ================================= -->
 
 	<properties>
+        <!-- build -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
 		<!-- Java -->
 		<jdk.version>1.7</jdk.version>
 
@@ -77,12 +80,12 @@
 			</dependency>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>aura-core</artifactId>
+				<artifactId>aura-client</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>aura-client</artifactId>
+				<artifactId>aura-core</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
@@ -124,7 +127,7 @@
 				<version>${bcel.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.apache.commons</groupId>
+				<groupId>commons-io</groupId>
 				<artifactId>commons-io</artifactId>
 				<version>${commons-io.version}</version>
 			</dependency>

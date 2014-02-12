@@ -5,10 +5,6 @@
 	<id>bin</id>
 	<formats>
 		<format>dir</format>
-		<!--
-		<format>tar.gz</format>
-		<format>zip</format>
-		-->
 	</formats>
 
 	<includeBaseDirectory>true</includeBaseDirectory>
@@ -25,7 +21,7 @@
 			<useTransitiveFiltering>true</useTransitiveFiltering>
 
 			<excludes>
-				<exclude>eu.aura:aura-examples</exclude>
+				<exclude>de.tuberlin.aura:aura-examples</exclude>
 			</excludes>
 		</dependencySet>
 
@@ -38,7 +34,7 @@
 			<useTransitiveFiltering>true</useTransitiveFiltering>
 
 			<includes>
-				<include>eu.aura:aura-clients:**</include>
+				<include>de.tuberlin.aura:aura-clients:**</include>
 			</includes>
 
 			<!--

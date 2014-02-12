@@ -1,5 +1,9 @@
 package de.tuberlin.aura.core.task.common;
 
+import java.util.*;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -15,14 +19,6 @@ import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.gates.InputGate;
 import de.tuberlin.aura.core.task.gates.OutputGate;
-
-import org.apache.log4j.Logger;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  *
