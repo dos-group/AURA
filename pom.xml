@@ -72,7 +72,7 @@
 			<!-- PROJECT DEPENDENCIES -->
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>aura-core</artifactId>
+				<artifactId>aura-build-tools</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
@@ -82,7 +82,17 @@
 			</dependency>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>aura-wm</artifactId>
+				<artifactId>aura-client</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>aura-dist</artifactId>
+				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>aura-examples</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
@@ -92,7 +102,7 @@
 			</dependency>
 			<dependency>
 				<groupId>${project.groupId}</groupId>
-				<artifactId>aura-client</artifactId>
+				<artifactId>aura-wm</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 
@@ -184,7 +194,6 @@
 						<dependency>
 							<groupId>${project.groupId}</groupId>
 							<artifactId>aura-build-tools</artifactId>
-							<version>${project.version}</version>
 						</dependency>
 					</dependencies>
 				</plugin>
@@ -200,10 +209,11 @@
 	<modules>
 		<module>aura-build-tools</module>
 		<module>aura-core</module>
+		<module>aura-client</module>
+		<module>aura-dist</module>
+		<module>aura-examples</module>
 		<module>aura-tm</module>
 		<module>aura-wm</module>
-		<module>aura-client</module>
-		<module>aura-examples</module>
 	</modules>
 
 </project>
