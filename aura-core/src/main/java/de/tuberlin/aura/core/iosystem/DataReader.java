@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.iosystem;
 
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,7 +37,7 @@ public class DataReader {
 
     public static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
 
-    protected final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
+    public final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
 
     private final int bufferSize;
 
@@ -183,10 +184,36 @@ public class DataReader {
 
     private final class DataHandler extends SimpleChannelInboundHandler<IOEvents.DataBufferEvent> {
 
+        // public DataHandler() {
+        // Runnable enqueueThread = new Runnable() {
+        //
+        // @Override
+        // public void run() {
+        // //
+        // }
+        //
+        // public Future<Void> enqueue(Channel channel, IOEvents.DataBufferEvent event) {
+        // FutureTask<Void> fTask = new FutureTask<>(this, null);
+        // }
+        // };
+        // }
+
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataBufferEvent event) {
             // event.setChannel(ctx.channel());
-            queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
+            try {
+
+                int received = ByteBuffer.wrap(((IOEvents.DataBufferEvent) event).data).getInt();
+
+                // LOG.error("--> pre");
+                // if (!queues.get(channelToQueueIndex.get(ctx.channel())).offer(event)) {
+                queues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                // }
+
+                // LOG.error("--> read");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -200,20 +227,20 @@ public class DataReader {
                     // TODO: ensure that queue is bound before first data buffer event arrives
 
                     IOEvents.GenericIOEvent connected =
-                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                    DataReader.this,
-                                                    event.srcTaskID,
-                                                    event.dstTaskID);
+                            new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+                                                        DataReader.this,
+                                                        event.srcTaskID,
+                                                        event.dstTaskID);
                     connected.setChannel(ctx.channel());
                     dispatcher.dispatchEvent(connected);
                     break;
 
                 case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
-                    queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
+                    queues.get(channelToQueueIndex.get(ctx.channel())).put(event);
                     break;
 
                 case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED:
-
+                    queues.get(channelToQueueIndex.get(ctx.channel())).put(event);
                     break;
 
                 default:
@@ -299,6 +326,8 @@ public class DataReader {
             b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
             // sets the max. number of pending, not yet fully connected (handshake) channels
              .option(ChannelOption.SO_BACKLOG, 128)
+
+             .option(ChannelOption.SO_RCVBUF, 64 << 10)
              // set keep alive, so idle connections are persistent
              .childOption(ChannelOption.SO_KEEPALIVE, true);
 

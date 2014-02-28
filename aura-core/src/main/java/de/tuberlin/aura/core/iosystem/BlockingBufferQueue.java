@@ -4,12 +4,17 @@ import java.util.Iterator;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class BlockingBufferQueue<T> implements BufferQueue<T> {
+
+    public final static Logger LOG = LoggerFactory.getLogger(BlockingBufferQueue.class);
 
     private final BlockingQueue<T> backingQueue;
 
     BlockingBufferQueue() {
-        this.backingQueue = new ArrayBlockingQueue<>(10);
+        this.backingQueue = new ArrayBlockingQueue<>(3);
     }
 
     @Override
@@ -18,8 +23,13 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     }
 
     @Override
-    public void offer(T value) {
-        backingQueue.offer(value);
+    public boolean offer(T value) {
+        return backingQueue.offer(value);
+    }
+
+    @Override
+    public void put(T value) throws InterruptedException {
+        backingQueue.put(value);
     }
 
     @Override
@@ -49,5 +59,10 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         public BufferQueue<F> newInstance() {
             return new BlockingBufferQueue<F>();
         }
+    }
+
+    @Override
+    public String toString() {
+        return backingQueue.toString();
     }
 }

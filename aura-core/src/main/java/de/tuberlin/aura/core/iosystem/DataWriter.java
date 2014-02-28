@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.iosystem;
 
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -8,6 +9,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +41,10 @@ public class DataWriter {
     public static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
 
     private static final Logger LOG = LoggerFactory.getLogger(DataWriter.class);
+
+    private final ReentrantLock drainLock = new ReentrantLock();
+
+    private final Condition drainCond = drainLock.newCondition();
 
     // dispatch information
     private final IEventDispatcher dispatcher;
@@ -158,10 +166,33 @@ public class DataWriter {
         public void write(IOEvents.DataIOEvent event) {
 
             if (gateOpen.get()) {
-                this.queue.offer(event);
+                try {
+                    this.queue.put(event);
+
+                    // if it was blocked, and we have elements in the buffer, we first have to drain
+                    // the buffer to the queue before we allow further
+                    // writes to the queue to achieve in order.
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             } else {
                 // add into buffer
-                this.buffer.offer(event);
+                final Lock lock = DataWriter.this.drainLock;
+                lock.lock();
+                try {
+                    while (!this.queue.offer(event)) {
+                        drainCond.await();
+                    }
+
+                    // if it was blocked, drain to queue
+                    // done by handler for the open gate event
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    lock.unlock();
+                }
             }
 
         }
@@ -237,10 +268,17 @@ public class DataWriter {
 
                             IOEvents.DataIOEvent dataIOEvent = queue.take();
 
+                            if (dataIOEvent instanceof IOEvents.DataBufferEvent) {
+                                int received = ByteBuffer.wrap(((IOEvents.DataBufferEvent) dataIOEvent).data).getInt();
+                                LOG.error("sending :" + received);
+                     }
+
                             if (dataIOEvent.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
                                 LOG.debug("data source exhausted. shutting down poll thread.");
                                 shutdown = true;
                             }
+
+                            // Thread.sleep(3000);
 
                             // try {
                             channel.writeAndFlush(dataIOEvent).syncUninterruptibly();
@@ -289,7 +327,7 @@ public class DataWriter {
                     case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN:
                         LOG.info("RECEIVED GATE OPEN EVENT");
 
-                        gateOpen.set(true);
+
 
                         // TODO: check wether we have to block the write method here
 
@@ -297,9 +335,19 @@ public class DataWriter {
                         // so we have to wait until elements are sent over net to drain the rest
 
                         // TODO: blocking, so move away from I/O loop!!!
+
+                        final Lock lock = DataWriter.this.drainLock;
+                        lock.lock();
+            try {
                         while (!buffer.isEmpty()) {
                             buffer.drainTo(queue);
+                            }
+                            drainCond.signalAll();
+                        } finally {
+                            lock.unlock();
                         }
+
+                        gateOpen.set(true);
 
                         gateEvent.setChannel(ctx.channel());
                         dispatcher.dispatchEvent(gateEvent);

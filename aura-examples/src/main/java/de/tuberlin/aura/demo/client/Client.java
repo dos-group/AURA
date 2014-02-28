@@ -1,5 +1,15 @@
 package de.tuberlin.aura.demo.client;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterExecutor;
 import de.tuberlin.aura.client.executors.LocalClusterExecutor.LocalExecutionMode;
@@ -15,18 +25,6 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.UUID;
 
 public final class Client {
 
@@ -47,6 +45,8 @@ public final class Client {
         @Override
         public void execute() throws Exception {
 
+            // openGate(0);
+
             final UUID taskID = getTaskID();
 
             for (int i = 0; i < 100; ++i) {
@@ -54,8 +54,14 @@ public final class Client {
                 final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getOutputTaskID(0, index);
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
+
+                    ByteBuffer buffer = ByteBuffer.allocate(64 << 10);
+                    buffer.putInt(i);
+                    buffer.flip();
+
+                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, buffer.array());
                     emit(0, index, outputBuffer);
+                    LOG.error("---> 1 emit");
                 }
 
                 try {
@@ -93,7 +99,7 @@ public final class Client {
                 final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getOutputTaskID(0, index);
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
+                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[64 << 10]);
                     emit(0, index, outputBuffer);
                 }
 
@@ -116,6 +122,60 @@ public final class Client {
     /**
      *
      */
+    public static class Task33Exe extends TaskInvokeable {
+
+        public Task33Exe(final TaskRuntimeContext context, final Logger LOG) {
+            super(context, LOG);
+        }
+
+        @Override
+        public void execute() throws Exception {
+
+            final UUID taskID = getTaskID();
+
+            openGate(0);
+
+            while (isTaskRunning()) {
+
+                final DataIOEvent leftInputBuffer = absorb(0);
+
+                if (leftInputBuffer != null)
+                    LOG.info("[" + getTaskIndex() + "] inner " + leftInputBuffer.srcTaskID);
+
+                if (leftInputBuffer instanceof DataBufferEvent) {
+
+                    int received = ByteBuffer.wrap(((DataBufferEvent) leftInputBuffer).data).getInt();
+                    LOG.error("- inner:" + received);
+                }
+
+                if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null ? null : leftInputBuffer.type)) {
+                    final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
+                    for (int index = 0; index < outputs.size(); ++index) {
+
+                        final UUID outputTaskID = getOutputTaskID(0, index);
+                        final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, ((DataBufferEvent) leftInputBuffer).data);
+                        emit(0, index, outputBuffer);
+                    }
+                }
+
+                checkIfSuspended();
+            }
+
+            final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
+            for (int index = 0; index < outputs.size(); ++index) {
+                final UUID outputTaskID = getOutputTaskID(0, index);
+                final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
+                emit(0, index, exhaustedEvent);
+            }
+
+            // closeGate(0);
+            // closeGate(1);
+        }
+    }
+
+    /**
+     *
+     */
     public static class Task3Exe extends TaskInvokeable {
 
         public Task3Exe(final TaskRuntimeContext context, final Logger LOG) {
@@ -127,7 +187,7 @@ public final class Client {
 
             final UUID taskID = getTaskID();
 
-            // openGate(0);
+            openGate(0);
             // openGate(1);
 
             while (isTaskRunning()) {
@@ -147,7 +207,7 @@ public final class Client {
                     for (int index = 0; index < outputs.size(); ++index) {
 
                         final UUID outputTaskID = getOutputTaskID(0, index);
-                        final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+                        final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[64 << 10]);
                         emit(0, index, outputBuffer);
                     }
                 }
@@ -172,6 +232,12 @@ public final class Client {
      */
     public static class Task4Exe extends TaskInvokeable {
 
+        int count = 0;
+
+        int sum_received = 0;
+
+        int sum_count = 0;
+
         public Task4Exe(final TaskRuntimeContext context, final Logger LOG) {
             super(context, LOG);
         }
@@ -179,7 +245,7 @@ public final class Client {
         @Override
         public void execute() throws Exception {
 
-            // openGate(0);
+            openGate(0);
 
             // boolean inputActive = true;
 
@@ -187,7 +253,28 @@ public final class Client {
 
                 final DataIOEvent inputBuffer = absorb(0);
 
-                LOG.info("received data message from task " + inputBuffer.srcTaskID);
+                if (inputBuffer instanceof DataBufferEvent) {
+
+                    int received = ByteBuffer.wrap(((DataBufferEvent) inputBuffer).data).getInt();
+                    LOG.error("- received: " + received + " - count: " + count);
+
+
+                    sum_received += received;
+                    sum_count += count;
+
+                    count++;
+                }
+
+
+
+                // LOG.info("received data message from task " + inputBuffer.srcTaskID + " // " +
+                // inputBuffer.toString());
+
+                if (count == 10) {
+                    closeGate(0);
+                    Thread.sleep(10000);
+                    openGate(0);
+                }
 
                 // inputActive =
                 // !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
@@ -195,7 +282,11 @@ public final class Client {
                 checkIfSuspended();
             }
 
-            // closeGate(0);
+            LOG.error("received sum: " + sum_received + " -- count sum: " + sum_count);
+
+            LOG.info("RECEIVED ELEMENTS: " + count);
+
+      //closeGate(0);
         }
     }
 
@@ -205,10 +296,10 @@ public final class Client {
 
     public static void main(String[] args) {
 
-        final SimpleLayout layout = new SimpleLayout();
-        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-        LOG.addAppender(consoleAppender);
-        LOG.setLevel(Level.DEBUG);
+        // final SimpleLayout layout = new SimpleLayout();
+        // final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        // LOG.addAppender(consoleAppender);
+        // LOG.setLevel(Level.DEBUG);
 
         final String zookeeperAddress = "localhost:2181";
         final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
@@ -232,9 +323,11 @@ public final class Client {
             .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
         final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
+        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+            .connectTo("Task33", Edge.TransferType.POINT_TO_POINT)
+            .addNode(new Node(UUID.randomUUID(), "Task33", 1, 1), Task33Exe.class)
             .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
+            .addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
 
         final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
 
@@ -258,7 +351,7 @@ public final class Client {
             }
         };
 
-        ac.submitTopology(at1, monitoringHandler);
+        // ac.submitTopology(at1, monitoringHandler);
         ac.submitTopology(at2, null);
 
         try {
