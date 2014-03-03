@@ -81,7 +81,7 @@ public abstract class TaskInvokeable<T> {
         context.outputGates.get(gateIndex).writeDataToChannel(channelIndex, buffer);
     }
 
-    public void emit(int gateIndex, int channelIndex, Record<T> record, DataBufferEvent buffer) {
+    public void emit(int gateIndex, int channelIndex, Record record, DataBufferEvent buffer) {
         this.writer.writeRecord(record, buffer);
         context.outputGates.get(gateIndex).writeDataToChannel(channelIndex, buffer);
     }

@@ -23,7 +23,7 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     @Override
     public T take() throws InterruptedException {
         T val = backingQueue.take();
-        LOG.debug("TIME_IN_QUEUE:" + Long.toString(System.currentTimeMillis() - this.queuingTimes.get(val)) + ":" +
+        LOG.debug("TIME_IN_QUEUE|" + Long.toString(System.currentTimeMillis() - this.queuingTimes.get(val)) + "|" +
                 Integer.toString(this.backingQueue.size()));
 
         return val;

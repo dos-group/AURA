@@ -1,16 +1,13 @@
 package de.tuberlin.aura.demo.client;
 
 import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.client.executors.LocalClusterExecutor;
-import de.tuberlin.aura.client.executors.LocalClusterExecutor.LocalExecutionMode;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-import de.tuberlin.aura.core.task.common.TaskInvokeable;
-import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+import de.tuberlin.aura.core.task.common.*;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
@@ -24,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.EnumSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,12 +30,17 @@ public final class BenchmarkClient {
     private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
-    private BenchmarkClient() {}
+    private BenchmarkClient() {
+    }
 
     /**
      *
      */
     public static class Task1Exe extends TaskInvokeable {
+
+        private static final int BUFFER_SIZE = 64000;
+
+        private static final int RECORDS = 1000;
 
         public Task1Exe(final TaskRuntimeContext context, final Logger LOG) {
             super(context, LOG);
@@ -48,20 +51,24 @@ public final class BenchmarkClient {
 
             final UUID taskID = getTaskID();
 
-            for (int i = 0; i < 100; ++i) {
+            for (int i = 0; i < RECORDS; ++i) {
 
                 final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getOutputTaskID(0, index);
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
-                    emit(0, index, outputBuffer);
+                    final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
+                    final Record<BenchmarkRecord> record = new Record<>(new BenchmarkRecord());
+
+                    emit(0, index, record, outputBuffer);
+
+                    LOG.info("Emit at: " + record.getData().time);
                 }
 
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    LOG.error(e);
-                }
+//                try {
+//                    Thread.sleep(100);
+//                } catch (InterruptedException e) {
+//                    LOG.error(e);
+//                }
             }
 
             final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
@@ -78,6 +85,8 @@ public final class BenchmarkClient {
      */
     public static class Task2Exe extends TaskInvokeable {
 
+        private static final int BUFFER_SIZE = 64000;
+
         public Task2Exe(final TaskRuntimeContext context, final Logger LOG) {
             super(context, LOG);
         }
@@ -87,28 +96,31 @@ public final class BenchmarkClient {
 
             final UUID taskID = getTaskID();
 
-            for (int i = 0; i < 100; ++i) {
+            openGate(0);
 
+            while (isTaskRunning()) {
                 final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
-                for (int index = 0; index < outputs.size(); ++index) {
-                    final UUID outputTaskID = getOutputTaskID(0, index);
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[100]);
-                    emit(0, index, outputBuffer);
+                final Record<BenchmarkRecord> record = absorb(0);
+                if (record != null) {
+                    for (int index = 0; index < outputs.size(); ++index) {
+                        final UUID outputTaskID = getOutputTaskID(0, index);
+                        final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
+                        emit(0, index, record, outputBuffer);
+
+                        LOG.info("Emit at: " + record.getData().time);
+                    }
+                } else {
+                    for (int index = 0; index < outputs.size(); ++index) {
+                        final UUID outputTaskID = getOutputTaskID(0, index);
+                        final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
+                        emit(0, index, exhaustedEvent);
+                    }
                 }
 
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    LOG.error(e);
-                }
+                checkIfSuspended();
             }
 
-            final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
-            for (int index = 0; index < outputs.size(); ++index) {
-                final UUID outputTaskID = getOutputTaskID(0, index);
-                final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
-                emit(0, index, exhaustedEvent);
-            }
+            closeGate(0);
         }
     }
 
@@ -116,6 +128,8 @@ public final class BenchmarkClient {
      *
      */
     public static class Task3Exe extends TaskInvokeable {
+
+        private static final int BUFFER_SIZE = 64000;
 
         public Task3Exe(final TaskRuntimeContext context, final Logger LOG) {
             super(context, LOG);
@@ -126,43 +140,33 @@ public final class BenchmarkClient {
 
             final UUID taskID = getTaskID();
 
-            // openGate(0);
-            // openGate(1);
+            openGate(0);
+            openGate(1);
 
-//            while (isTaskRunning()) {
-//
-//                final DataIOEvent leftInputBuffer = absorb(0);
-//                final DataIOEvent rightInputBuffer = absorb(1);
-//
-//                if (leftInputBuffer != null)
-//                    LOG.info("[" + getTaskIndex() + "] input left: received data message from task " + leftInputBuffer.srcTaskID);
-//
-//                if (rightInputBuffer != null)
-//                    LOG.info("[" + getTaskIndex() + "] input right: received data message from task " + rightInputBuffer.srcTaskID);
-//
-//                if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null ? null : leftInputBuffer.type)
-//                        || !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer == null ? null : rightInputBuffer.type)) {
-//                    final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
-//                    for (int index = 0; index < outputs.size(); ++index) {
-//
-//                        final UUID outputTaskID = getOutputTaskID(0, index);
-//                        final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
-//                        emit(0, index, outputBuffer);
-//                    }
-//                }
-//
-//                checkIfSuspended();
-//            }
+            while (isTaskRunning()) {
 
-            final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
-            for (int index = 0; index < outputs.size(); ++index) {
-                final UUID outputTaskID = getOutputTaskID(0, index);
-                final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskID, outputTaskID);
-                emit(0, index, exhaustedEvent);
+                final Record<BenchmarkRecord> leftRecord = absorb(0);
+                final Record<BenchmarkRecord> rightRecord = absorb(1);
+
+                if (leftRecord != null && rightRecord != null) {
+                    final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
+                    for (int index = 0; index < outputs.size(); ++index) {
+
+                        final UUID outputTaskID = getOutputTaskID(0, index);
+
+                        final DataBufferEvent leftOutputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
+                        emit(0, index, leftRecord, leftOutputBuffer);
+
+                        final DataBufferEvent rightOutputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
+                        emit(0, index, rightRecord, rightOutputBuffer);
+                    }
+                }
+
+                checkIfSuspended();
             }
 
-            // closeGate(0);
-            // closeGate(1);
+            closeGate(0);
+            closeGate(1);
         }
     }
 
@@ -171,6 +175,8 @@ public final class BenchmarkClient {
      */
     public static class Task4Exe extends TaskInvokeable {
 
+        private static final int BUFFER_SIZE = 64000;
+
         public Task4Exe(final TaskRuntimeContext context, final Logger LOG) {
             super(context, LOG);
         }
@@ -178,25 +184,49 @@ public final class BenchmarkClient {
         @Override
         public void execute() throws Exception {
 
-            // openGate(0);
+            final UUID taskID = getTaskID();
 
-            // boolean inputActive = true;
+            openGate(0);
 
-//            while (isTaskRunning()) {
-//
-//                final DataIOEvent inputBuffer = absorb(0);
-//
-//                LOG.info("received data message from task " + inputBuffer.srcTaskID);
-//
-//                // inputActive =
-//                // !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
-//
-//                checkIfSuspended();
-//            }
+            LinkedList<Long> latencies = new LinkedList<>();
 
-            // closeGate(0);
+            while (isTaskRunning()) {
+
+                final Record<BenchmarkRecord> record = absorb(0);
+                if (record != null) {
+                    long latency = System.currentTimeMillis() - record.getData().time;
+                    latencies.add(latency);
+                }
+
+                checkIfSuspended();
+            }
+
+            long latencySum = 0l;
+            long minLatency = Long.MAX_VALUE;
+            long maxLatency = Long.MIN_VALUE;
+
+            for (long latency : latencies) {
+                latencySum += latency;
+
+                if (latency < minLatency) {
+                    minLatency = latency;
+                }
+
+                if (latency > maxLatency) {
+                    maxLatency = latency;
+                }
+            }
+
+            double avgLatency = (double) latencySum / (double) latencies.size();
+            long medianLatency = MedianHelper.findMedian(latencies);
+
+            LOG.debug("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) + "|"
+                    + Long.toString(maxLatency) + "|" + Long.toString(medianLatency));
+
+            closeGate(0);
         }
     }
+
 
     // ---------------------------------------------------
     // Main.
@@ -209,34 +239,27 @@ public final class BenchmarkClient {
         LOG.addAppender(consoleAppender);
         LOG.setLevel(Level.DEBUG);
 
-        final String zookeeperAddress = "localhost:2181";
-        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
-        final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
+        final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
+        //final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+        final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-        // atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-        // .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Task2", 3, 1), Task2Exe.class)
-        // .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
-        // .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
-
-        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-            .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Task2", 3, 1), Task2Exe.class)
-            .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
-            .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
+        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+                .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
+                .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task4Exe.class);
 
         final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
         atb2.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-            .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
+                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Node(UUID.randomUUID(), "Task5", 2, 1), Task1Exe.class)
+                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
+                .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
 
         final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
-
         final AuraTopology at2 = atb2.build("Job 2", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
 
         final EventHandler monitoringHandler = new EventHandler() {
@@ -257,8 +280,18 @@ public final class BenchmarkClient {
             }
         };
 
-        ac.submitTopology(at1, monitoringHandler);
-        ac.submitTopology(at2, null);
+
+        for (int i = 0; i < 10; ++i) {
+            ac.submitTopology(at1, monitoringHandler);
+
+            try {
+                Thread.sleep(30000);
+            } catch (InterruptedException e) {
+                LOG.error(e);
+            }
+        }
+
+        //ac.submitTopology(at2, null);
 
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();
@@ -266,6 +299,6 @@ public final class BenchmarkClient {
             e.printStackTrace();
         }
 
-        lce.shutdown();
+        // lce.shutdown();
     }
 }

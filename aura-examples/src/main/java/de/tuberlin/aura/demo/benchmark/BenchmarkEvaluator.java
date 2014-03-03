@@ -20,8 +20,8 @@ public class BenchmarkEvaluator {
         DecimalFormat format = new DecimalFormat("000");
 
         double avgSum = 0.0d;
-        double minSum = 0.0d;
-        double maxSum = 0.0d;
+        long minSum = 0l;
+        long maxSum = 0l;
         long medSum = 0l;
         int results = 0;
 
@@ -39,11 +39,11 @@ public class BenchmarkEvaluator {
                     String line = null;
                     while ((line = br.readLine()) != null) {
                         if (line.contains("RESULTS")) {
-                            String[] tokens = line.split(",");
+                            String[] tokens = line.split("\\|");
 
                             avgSum += Double.parseDouble(tokens[1]);
-                            minSum += Double.parseDouble(tokens[2]);
-                            maxSum += Double.parseDouble(tokens[3]);
+                            minSum += Long.parseLong(tokens[2]);
+                            maxSum += Long.parseLong(tokens[3]);
                             medSum += Long.parseLong(tokens[4]);
 
                             ++results;
@@ -53,7 +53,7 @@ public class BenchmarkEvaluator {
                         } else if (line.toLowerCase().contains("exception")) {
                             System.out.println(line);
                         } else if (line.contains("TIME_IN_QUEUE")) {
-                            String[] tokens = line.split(":");
+                            String[] tokens = line.split("\\|");
                             queuingTimes.add(Long.parseLong(tokens[1]));
                             queueSize.add(Integer.parseInt(tokens[2]));
                         }
@@ -99,7 +99,7 @@ public class BenchmarkEvaluator {
         System.out.println("Min Queue Latency: " + Long.toString(minQueueLatency) + " ms");
         System.out.println("Max Queue Latency: " + Long.toString(maxQueueLatency) + " ms");
         System.out.println("Median Queue Latency: " + MedianHelper.findMedian(queuingTimes) + " ms");
-        System.out.println("Avg Queue Size: " + Double.toString((double) queueSizeSum / (double) queueSize.size()) + " ms");
+        System.out.println("Avg Queue Size: " + Double.toString((double) queueSizeSum / (double) queueSize.size()));
     }
 
     public static void main(String[] args) {

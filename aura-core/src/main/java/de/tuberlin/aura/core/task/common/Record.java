@@ -4,30 +4,30 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
-public class Record {
-    private Object data;
+public class Record<T> {
 
-    private Kryo kryo;
+    private T data;
 
-    public Record(Object data) {
-        kryo = new Kryo();
+    private Kryo kryo = new Kryo();
+
+    public Record(T data) {
         this.data = data;
     }
 
     public Record(byte[] buffer) {
-        kryo = new Kryo();
         Input input = new Input(buffer);
-        Class clazz = kryo.readClass(input).getType();
-        data = kryo.readObject(input, clazz);
+        Class<T> clazz = (Class<T>) this.kryo.readClass(input).getType();
+        this.data = this.kryo.readObject(input, clazz);
     }
 
-    public Object getData() {
-        return data;
+    public T getData() {
+        return this.data;
     }
 
     public void serialize(byte[] buffer) {
+
         Output output = new Output(buffer);
-        kryo.writeClassAndObject(output, data);
+        this.kryo.writeClassAndObject(output, this.data);
         output.close();
     }
 }
