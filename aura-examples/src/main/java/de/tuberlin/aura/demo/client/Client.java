@@ -15,7 +15,6 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -130,30 +129,30 @@ public final class Client {
             // openGate(0);
             // openGate(1);
 
-            while (isTaskRunning()) {
-
-                final DataIOEvent leftInputBuffer = absorb(0);
-                final DataIOEvent rightInputBuffer = absorb(1);
-
-                if (leftInputBuffer != null)
-                    LOG.info("[" + getTaskIndex() + "] input left: received data message from task " + leftInputBuffer.srcTaskID);
-
-                if (rightInputBuffer != null)
-                    LOG.info("[" + getTaskIndex() + "] input right: received data message from task " + rightInputBuffer.srcTaskID);
-
-                if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null ? null : leftInputBuffer.type)
-                        || !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer == null ? null : rightInputBuffer.type)) {
-                    final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
-                    for (int index = 0; index < outputs.size(); ++index) {
-
-                        final UUID outputTaskID = getOutputTaskID(0, index);
-                        final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
-                        emit(0, index, outputBuffer);
-                    }
-                }
-
-                checkIfSuspended();
-            }
+//            while (isTaskRunning()) {
+//
+//                final DataIOEvent leftInputBuffer = absorb(0);
+//                final DataIOEvent rightInputBuffer = absorb(1);
+//
+//                if (leftInputBuffer != null)
+//                    LOG.info("[" + getTaskIndex() + "] input left: received data message from task " + leftInputBuffer.srcTaskID);
+//
+//                if (rightInputBuffer != null)
+//                    LOG.info("[" + getTaskIndex() + "] input right: received data message from task " + rightInputBuffer.srcTaskID);
+//
+//                if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null ? null : leftInputBuffer.type)
+//                        || !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(rightInputBuffer == null ? null : rightInputBuffer.type)) {
+//                    final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
+//                    for (int index = 0; index < outputs.size(); ++index) {
+//
+//                        final UUID outputTaskID = getOutputTaskID(0, index);
+//                        final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[65536]);
+//                        emit(0, index, outputBuffer);
+//                    }
+//                }
+//
+//                checkIfSuspended();
+//            }
 
             final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
             for (int index = 0; index < outputs.size(); ++index) {
@@ -183,17 +182,17 @@ public final class Client {
 
             // boolean inputActive = true;
 
-            while (isTaskRunning()) {
-
-                final DataIOEvent inputBuffer = absorb(0);
-
-                LOG.info("received data message from task " + inputBuffer.srcTaskID);
-
-                // inputActive =
-                // !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
-
-                checkIfSuspended();
-            }
+//            while (isTaskRunning()) {
+//
+//                final DataIOEvent inputBuffer = absorb(0);
+//
+//                LOG.info("received data message from task " + inputBuffer.srcTaskID);
+//
+//                // inputActive =
+//                // !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
+//
+//                checkIfSuspended();
+//            }
 
             // closeGate(0);
         }

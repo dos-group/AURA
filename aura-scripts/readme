@@ -1,9 +1,11 @@
+Vorbereitung auf wally-master: $JAVA_HOME in .bashrc auf eine 1.7 Version setzen
+
 Bevor das Skript benutzt werden kann muessen die Pfade im Skript, sowie der Nutzer-Name (auf dem wally-Cluster) angepasst werden. Dafuer muessen lediglich die ersten ~10 Zeilen kontrolliert werden. Danach kann das Skript folgendermassen benutzt werden:
 
 sh aura.sh {befehl} {wally_start} {wally_ende}
 
-wally_start: Die Nummer des ersten wally-Knotens der verwendet werden soll.
-wally_ende: Die Nummer des letzten wally-Knotens der verwendet werden soll.
+wally_start: Die Nummer des ersten wally-Knotens der verwendet werden soll. (without leading zeros)
+wally_ende: Die Nummer des letzten wally-Knotens der verwendet werden soll. (without leading zeros)
 
 -> Alle wally-Knoten in dem Bereich [wally-start, wally-ende] werden als Cluster genutzt.
 

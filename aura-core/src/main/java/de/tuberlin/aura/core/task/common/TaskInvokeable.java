@@ -1,15 +1,15 @@
 package de.tuberlin.aura.core.task.common;
 
+import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import org.apache.log4j.Logger;
+
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.IOEvents;
-import org.apache.log4j.Logger;
-
-import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-
-public abstract class TaskInvokeable {
+public abstract class TaskInvokeable<T> {
 
     // ---------------------------------------------------
     // Constructors.
@@ -39,6 +39,10 @@ public abstract class TaskInvokeable {
                 activeChannelSet.add(td.taskID);
             }
         }
+
+        this.writer = new RecordWriter();
+
+        this.reader = new RecordReader();
     }
 
     // ---------------------------------------------------
@@ -52,6 +56,10 @@ public abstract class TaskInvokeable {
     private final AtomicBoolean isSuspended;
 
     private final List<Set<UUID>> activeGates;
+
+    private RecordWriter writer;
+
+    private RecordReader reader;
 
     private volatile boolean isRunning;
 
@@ -69,17 +77,24 @@ public abstract class TaskInvokeable {
         return context.taskBinding.outputGateBindings.get(gateIndex).get(channelIndex).taskID;
     }
 
-    public void emit(int gateIndex, int channelIndex, DataIOEvent event) {
-        context.outputGates.get(gateIndex).writeDataToChannel(channelIndex, event);
+    public void emit(int gateIndex, int channelIndex, DataIOEvent buffer) {
+        context.outputGates.get(gateIndex).writeDataToChannel(channelIndex, buffer);
     }
 
-    public DataIOEvent absorb(int gateIndex) {
+    public void emit(int gateIndex, int channelIndex, Record<T> record, DataBufferEvent buffer) {
+        this.writer.writeRecord(record, buffer);
+        context.outputGates.get(gateIndex).writeDataToChannel(channelIndex, buffer);
+    }
+
+    public Record<T> absorb(int gateIndex) {
         try {
 
             if (activeGates.get(gateIndex).size() == 0)
                 return null;
 
             final DataIOEvent event = context.inputGates.get(gateIndex).getInputQueue().take();
+
+            LOG.info("received data message from task " + event.srcTaskID);
 
             // TODO: Is that the right place?
             if (IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(event.type)) {
@@ -93,13 +108,17 @@ public abstract class TaskInvokeable {
                     isRunning &= acs.isEmpty();
                 }
                 isRunning = !isRunning;
+            } else {
+                Record<T> record = this.reader.readRecord((DataBufferEvent) event);
+                return record;
             }
 
-            return event;
         } catch (InterruptedException e) {
             LOG.error(e);
             return null;
         }
+
+        return null;
     }
 
     public boolean isTaskRunning() {
