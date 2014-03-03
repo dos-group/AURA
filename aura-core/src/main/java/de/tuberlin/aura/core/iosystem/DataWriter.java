@@ -35,7 +35,7 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
 
-// TODO: let the buffer size be configurable
+// TODO: let the bufferQueue size be configurable
 public class DataWriter {
 
     public static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
@@ -83,9 +83,9 @@ public class DataWriter {
 
         private volatile boolean shutdown = false;
 
-        private BufferQueue<IOEvents.DataIOEvent> queue;
+        private BufferQueue<IOEvents.DataIOEvent> transferQueue;
 
-        private BufferQueue<IOEvents.DataIOEvent> buffer;
+        private BufferQueue<IOEvents.DataIOEvent> bufferQueue;
 
         private Future<Void> pollResult;
 
@@ -116,8 +116,8 @@ public class DataWriter {
             bootstrap.connect(address).addListener(new ConnectListener());
         }
 
-        public void setBuffer(BufferQueue<IOEvents.DataIOEvent> buffer) {
-            this.buffer = buffer;
+        public void setBufferQueue(BufferQueue<IOEvents.DataIOEvent> bufferQueue) {
+            this.bufferQueue = bufferQueue;
         }
 
         /**
@@ -159,7 +159,8 @@ public class DataWriter {
          * Writes the event to the channel.
          * 
          * If the the gate the channel is connected to is not open yet, the events are buffered in a
-         * queue. If this intermediate queue is full, this method blocks until the gate is opened.
+         * transferQueue. If this intermediate transferQueue is full, this method blocks until the
+         * gate is opened.
          * 
          * @param event
          */
@@ -167,29 +168,34 @@ public class DataWriter {
 
             if (gateOpen.get()) {
                 try {
-                    this.queue.put(event);
+                    this.transferQueue.put(event);
 
-                    // if it was blocked, and we have elements in the buffer, we first have to drain
-                    // the buffer to the queue before we allow further
-                    // writes to the queue to achieve in order.
+                    // if it was blocked, and we have elements in the bufferQueue, we first have to
+                    // drain
+                    // the bufferQueue to the transferQueue before we allow further
+                    // writes to the transferQueue to achieve in order.
 
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    LOG.error("Write of event " + event + " was interrupted.", e);
                 }
             } else {
-                // add into buffer
+          // add into bufferQueue
                 final Lock lock = DataWriter.this.drainLock;
                 lock.lock();
                 try {
-                    while (!this.queue.offer(event)) {
+                    // TODO: handle spurious wakeup!
+                    if (!this.bufferQueue.offer(event)) {
                         drainCond.await();
+                        // write elements which was not enqueued into the bufferQueue to outgoing
+                        // transferQueue
+                        this.transferQueue.put(event);
                     }
 
-                    // if it was blocked, drain to queue
+          // if it was blocked, drain to transferQueue
                     // done by handler for the open gate event
 
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    LOG.error("Write of event " + event + " was interrupted (buffer handle).", e);
                 } finally {
                     lock.unlock();
                 }
@@ -207,12 +213,12 @@ public class DataWriter {
 
             // force interrupt
             if (!awaitExhaustion) {
-                // stops send, even if events left in the queue
+                // stops send, even if events left in the transferQueue
                 shutdown = true;
             }
 
             // even if we shutdown gracefully, we have to send an interrupt
-            // otherwise the thread would never return, if the queue is already empty and the poll
+            // otherwise the thread would never return, if the transferQueue is already empty and the poll
             // thread is blocked in the take method.
             pollResult.cancel(true);
 
@@ -238,14 +244,14 @@ public class DataWriter {
         }
 
         public void setOutputQueue(BufferQueue<IOEvents.DataIOEvent> queue) {
-            this.queue = queue;
-            LOG.debug("buffer queue attached.");
+            this.transferQueue = queue;
+        LOG.debug("Buffer queue attached.");
             queueReady.countDown();
         }
 
         /**
-         * Takes buffers from the context queue and writes them to the channel. If the channel is
-         * currently not writable, no calls to the channel are made.
+         * Takes buffers from the context transferQueue and writes them to the channel. If the
+         * channel is currently not writable, no calls to the channel are made.
          */
         private class Poll implements Callable<Void> {
 
@@ -257,7 +263,7 @@ public class DataWriter {
                     queueReady.await();
                 } catch (InterruptedException e) {
                     if (shutdown) {
-                        LOG.info("Shutdown signal received, while queue was still not attached.");
+                        LOG.info("Shutdown signal received, while transferQueue was still not attached.");
                         return null;
                     }
                 }
@@ -266,53 +272,37 @@ public class DataWriter {
                     try {
                         if (channelWritable.get()) {
 
-                            IOEvents.DataIOEvent dataIOEvent = queue.take();
+                            IOEvents.DataIOEvent dataIOEvent = transferQueue.take();
 
                             if (dataIOEvent instanceof IOEvents.DataBufferEvent) {
                                 int received = ByteBuffer.wrap(((IOEvents.DataBufferEvent) dataIOEvent).data).getInt();
                                 LOG.error("sending :" + received);
-                     }
+                            }
 
                             if (dataIOEvent.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
                                 LOG.debug("data source exhausted. shutting down poll thread.");
                                 shutdown = true;
                             }
 
-                            // Thread.sleep(3000);
-
-                            // try {
                             channel.writeAndFlush(dataIOEvent).syncUninterruptibly();
-                            // } catch (InterruptedException e) {
-                            // // 1. interrupt while writing
-                            // // 2. interrupt while the queue already acquired the lock in the take
-                            // method
-                            // // -> take is not canceled, handle here
-                            // if (!shutdown) {
-                            // LOG.error("unexpected interrupt while sending event.", e);
-                            // shutdown = true;
-                            // }
-                            //
-                            // interruptedEvent = dataIOEvent;
-                            // }
                         } else {
-                            LOG.trace("spinning");
+     LOG.trace("Channel not writable.");
                         }
                     } catch (InterruptedException e) {
                         // interrupted during take command, 2. scenarios
-                        // 1. interrupt while queue was empty -> event == null, queue == empty
-                        // 2. interrupt before the queue acquired the lock -> event == null, queue
-                        // == not empty
+                        // 1. interrupt while transferQueue was empty -> event == null,
+                        // transferQueue == empty
+                        // 2. interrupt before the transferQueue acquired the lock -> event == null,
+                        // transferQueue == not empty
 
-                        // if shutdown is NOT set, no normal termination, soo log exception?
-                        // if (!shutdown) {
-                        // LOG.error("unexpected interrupt while buffer queue was empty.", e);
-                        // shutdown = true;
-                        // }
+                        // either the thread is forced to shut down -> shutdown == true
+                        // or gracefully, send events in transferQueue before shutdown -> shutdown == false
                     }
                 }
 
                 LOG.debug("Polling Thread is closing.");
 
+                // signal shutdown method
                 pollFinished.countDown();
                 return null;
             }
@@ -327,20 +317,16 @@ public class DataWriter {
                     case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN:
                         LOG.info("RECEIVED GATE OPEN EVENT");
 
-
-
-                        // TODO: check wether we have to block the write method here
-
-                        // buffer may have more capacity than queue
+               // bufferQueue may have more capacity than transferQueue
                         // so we have to wait until elements are sent over net to drain the rest
 
                         // TODO: blocking, so move away from I/O loop!!!
 
                         final Lock lock = DataWriter.this.drainLock;
                         lock.lock();
-            try {
-                        while (!buffer.isEmpty()) {
-                            buffer.drainTo(queue);
+                        try {
+                            while (!bufferQueue.isEmpty()) {
+                           bufferQueue.drainTo(transferQueue);
                             }
                             drainCond.signalAll();
                         } finally {
@@ -354,10 +340,11 @@ public class DataWriter {
                         // dispatch event to output gate
 
                         break;
+
                     case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE:
                         LOG.info("RECEIVED GATE CLOSE EVENT");
 
-                        // disable write to output queue
+                 // disable write to output transferQueue
                         gateOpen.set(false);
 
                         gateEvent.setChannel(ctx.channel());
@@ -366,9 +353,10 @@ public class DataWriter {
                         // as the gate is closed, now events could be enqueued at this point
                         IOEvents.DataIOEvent closedGate =
                                 new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED, srcID, dstID);
-                        queue.offer(closedGate);
+                        transferQueue.offer(closedGate);
 
                         break;
+
                     default:
                         LOG.error("RECEIVED UNKNOWN EVENT TYPE: " + gateEvent.type);
                         break;
@@ -437,10 +425,10 @@ public class DataWriter {
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup).channel(LocalChannel.class)
-            // the mark the outbound buffer has to reach in order to change the writable state of a
-         // channel true
+            // the mark the outbound bufferQueue has to reach in order to change the writable state of a
+            // channel true
               .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-              // the mark the outbound buffer has to reach in order to change the writable state of
+              // the mark the outbound bufferQueue has to reach in order to change the writable state of
               // a channel false
               .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
 
@@ -467,13 +455,13 @@ public class DataWriter {
               // false, means that messages get only sent if the size of the data reached a relevant
               // amount.
               .option(ChannelOption.TCP_NODELAY, false)
-              // size of the system lvl send buffer PER SOCKET
-              // -> buffer size, as we always have only 1 channel per socket in the client case
+              // size of the system lvl send bufferQueue PER SOCKET
+              // -> bufferQueue size, as we always have only 1 channel per socket in the client case
               .option(ChannelOption.SO_SNDBUF, bufferSize)
-              // the mark the outbound buffer has to reach in order to change the writable state of
+              // the mark the outbound bufferQueue has to reach in order to change the writable state of
               // a channel true
               .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-              // the mark the outbound buffer has to reach in order to change the writable state of
+              // the mark the outbound bufferQueue has to reach in order to change the writable state of
               // a channel false
               .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
 

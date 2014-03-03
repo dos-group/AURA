@@ -177,7 +177,7 @@ public final class TaskManager implements WM2TMProtocol {
 
                         DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.payload;
                         channelWriter.setOutputQueue(queue);
-                        channelWriter.setBuffer(buffer);
+                        channelWriter.setBufferQueue(buffer);
 
                         context.outputGates.get(gateIndex).setChannelWriter(channelIndex, channelWriter);
 
