@@ -4,6 +4,6 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 
 public interface ClientWMProtocol {
 
-	public void submitTopology(final AuraTopology topology);
+    public void submitTopology(final AuraTopology topology);
 
 }

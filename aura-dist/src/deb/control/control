@@ -1,0 +1,8 @@
+Package: [[name]]
+Version: [[version]]
+Section: misc
+Depends: default-jre
+Priority: low
+Architecture: all
+Description: Aura is a distributed parallel data processing system
+Maintainer: Aura team <contact@getaura.org>

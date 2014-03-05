@@ -21,305 +21,291 @@ import de.tuberlin.aura.core.iosystem.IOEvents.RPCCallerRequestEvent;
 
 public final class RPCManager {
 
-	// ---------------------------------------------------
-	// Constants.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Constants.
+    // ---------------------------------------------------
 
-	// for debugging use -1.
-	private static final long RPC_RESPONSE_TIMEOUT = -1; // 5000; // in ms
+    // for debugging use -1.
+    private static final long RPC_RESPONSE_TIMEOUT = -1; // 5000; // in ms
 
-	// ---------------------------------------------------
-	// Inner Classes.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
 
-	/**
+    /**
      *
      */
-	public static final class MethodSignature implements Serializable {
+    public static final class MethodSignature implements Serializable {
 
-		private static final long serialVersionUID = 698401142453803590L;
+        private static final long serialVersionUID = 698401142453803590L;
 
-		public MethodSignature(String className,
-				String methodName,
-				Class<?>[] argumentTypes,
-				Object[] arguments,
-				Class<?> returnType) {
-			// sanity check.
-			if (className == null)
-				throw new IllegalArgumentException("className == null");
-			if (methodName == null)
-				throw new IllegalArgumentException("methodName == null");
-			if (returnType == null)
-				throw new IllegalArgumentException("methodArguments == null");
+        public MethodSignature(String className, String methodName, Class<?>[] argumentTypes, Object[] arguments, Class<?> returnType) {
+            // sanity check.
+            if (className == null)
+                throw new IllegalArgumentException("className == null");
+            if (methodName == null)
+                throw new IllegalArgumentException("methodName == null");
+            if (returnType == null)
+                throw new IllegalArgumentException("methodArguments == null");
 
-			this.className = className;
+            this.className = className;
 
-			this.methodName = methodName;
+            this.methodName = methodName;
 
-			if (arguments != null) {
-				this.argumentTypes = argumentTypes;
-				this.arguments = arguments;
-			} else {
-				this.argumentTypes = null;
-				this.arguments = null;
-			}
+            if (arguments != null) {
+                this.argumentTypes = argumentTypes;
+                this.arguments = arguments;
+            } else {
+                this.argumentTypes = null;
+                this.arguments = null;
+            }
 
-			this.returnType = returnType;
-		}
+            this.returnType = returnType;
+        }
 
-		public final String className;
+        public final String className;
 
-		public final String methodName;
+        public final String methodName;
 
-		public final Class<?>[] argumentTypes;
+        public final Class<?>[] argumentTypes;
 
-		public final Object[] arguments;
+        public final Object[] arguments;
 
-		public final Class<?> returnType;
-	}
+        public final Class<?> returnType;
+    }
 
-	/**
+    /**
      *
      */
-	@SuppressWarnings("unused")
-	private static final class ProtocolCallerProxy implements InvocationHandler {
+    @SuppressWarnings("unused")
+    private static final class ProtocolCallerProxy implements InvocationHandler {
 
-		public ProtocolCallerProxy(final UUID dstMachineID,
-				final IOManager ioManager) {
-			// sanity check.
-			if (ioManager == null)
-				throw new IllegalArgumentException("ioManager == null");
+        public ProtocolCallerProxy(final UUID dstMachineID, final IOManager ioManager) {
+            // sanity check.
+            if (ioManager == null)
+                throw new IllegalArgumentException("ioManager == null");
 
-			this.dstMachineID = dstMachineID;
+            this.dstMachineID = dstMachineID;
 
-			this.ioManager = ioManager;
-		}
+            this.ioManager = ioManager;
+        }
 
-		private final UUID dstMachineID;
+        private final UUID dstMachineID;
 
-		private final IOManager ioManager;
+        private final IOManager ioManager;
 
-		private final static Map<UUID, CountDownLatch> callerTable = new HashMap<UUID, CountDownLatch>();
+        private final static Map<UUID, CountDownLatch> callerTable = new HashMap<UUID, CountDownLatch>();
 
-		private final static Map<UUID, Object> callerResultTable = new HashMap<UUID, Object>();
+        private final static Map<UUID, Object> callerResultTable = new HashMap<UUID, Object>();
 
-		@SuppressWarnings("unchecked")
-		public static <T> T createProtocolProxy(final UUID dstMachineID,
-				final Class<T> protocolInterface,
-				final IOManager ioManager) {
+        @SuppressWarnings("unchecked")
+        public static <T> T createProtocolProxy(final UUID dstMachineID, final Class<T> protocolInterface, final IOManager ioManager) {
 
-			final ProtocolCallerProxy pc = new ProtocolCallerProxy(dstMachineID, ioManager);
-			return (T) Proxy.newProxyInstance(protocolInterface.getClassLoader(),
-				new Class[] { protocolInterface }, pc);
-		}
+            final ProtocolCallerProxy pc = new ProtocolCallerProxy(dstMachineID, ioManager);
+            return (T) Proxy.newProxyInstance(protocolInterface.getClassLoader(), new Class[] {protocolInterface}, pc);
+        }
 
-		@Override
-		public Object invoke(Object proxy, Method method, Object[] methodArguments)
-				throws Throwable {
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] methodArguments) throws Throwable {
 
-			// check if all arguments implement serializable
-			int argumentIndex = 0;
-			for (final Object argument : methodArguments) {
-				if (!(argument instanceof Serializable))
-					throw new IllegalStateException("argument [" + argumentIndex + "] is not instance of" +
-						"<" + Serializable.class.getCanonicalName() + ">");
-				++argumentIndex;
-			}
+            // check if all arguments implement serializable
+            int argumentIndex = 0;
+            for (final Object argument : methodArguments) {
+                if (!(argument instanceof Serializable))
+                    throw new IllegalStateException("argument [" + argumentIndex + "] is not instance of" + "<"
+                            + Serializable.class.getCanonicalName() + ">");
+                ++argumentIndex;
+            }
 
-			final MethodSignature methodInfo = new MethodSignature(
-				method.getDeclaringClass().getSimpleName(),
-				method.getName(),
-				method.getParameterTypes(),
-				methodArguments,
-				method.getReturnType()
-				);
+            final MethodSignature methodInfo =
+                    new MethodSignature(method.getDeclaringClass().getSimpleName(),
+                                        method.getName(),
+                                        method.getParameterTypes(),
+                                        methodArguments,
+                                        method.getReturnType());
 
-			// every remote call is identified by a unique id. The id is used to
-			// resolve the associated response from remote site.
-			final UUID callUID = UUID.randomUUID();
-			final CountDownLatch cdl = new CountDownLatch(1);
-			callerTable.put(callUID, cdl);
+            // every remote call is identified by a unique id. The id is used to
+            // resolve the associated response from remote site.
+            final UUID callUID = UUID.randomUUID();
+            final CountDownLatch cdl = new CountDownLatch(1);
+            callerTable.put(callUID, cdl);
 
-			// send to server...
-			ioManager.sendEvent(dstMachineID, new RPCCallerRequestEvent(callUID, methodInfo));
+            // send to server...
+            ioManager.sendEvent(dstMachineID, new RPCCallerRequestEvent(callUID, methodInfo));
 
-			try {
-				if (RPC_RESPONSE_TIMEOUT > 0) {
-					// block the caller thread until we get some response...
-					// ...but with a specified timeout to avoid indefinitely blocking of caller.
-					cdl.await(RPC_RESPONSE_TIMEOUT, TimeUnit.MILLISECONDS);
-				} else {
-					cdl.await();
-				}
-			} catch (InterruptedException e) {
-				LOG.info(e);
-			}
+            try {
+                if (RPC_RESPONSE_TIMEOUT > 0) {
+                    // block the caller thread until we get some response...
+                    // ...but with a specified timeout to avoid indefinitely blocking of caller.
+                    cdl.await(RPC_RESPONSE_TIMEOUT, TimeUnit.MILLISECONDS);
+                } else {
+                    cdl.await();
+                }
+            } catch (InterruptedException e) {
+                LOG.info(e);
+            }
 
-			// if is no result available, then a response time-out happened...
-			if (!callerResultTable.containsKey(callUID))
-				throw new IllegalStateException("no result of remote call " + callUID + " available");
+            // if is no result available, then a response time-out happened...
+            if (!callerResultTable.containsKey(callUID))
+                throw new IllegalStateException("no result of remote call " + callUID + " available");
 
-			// result is allowed to be null -> void as return type.
-			final Object result = callerResultTable.get(callUID);
-			// clean up our tables.
-			callerResultTable.remove(callUID);
-			callerTable.remove(callUID);
+            // result is allowed to be null -> void as return type.
+            final Object result = callerResultTable.get(callUID);
+            // clean up our tables.
+            callerResultTable.remove(callUID);
+            callerTable.remove(callUID);
 
-			// TODO: should we pass a crashed call to the caller?
-			if (result instanceof Throwable)
-				throw new IllegalStateException((Throwable) result);
+            // TODO: should we pass a crashed call to the caller?
+            if (result instanceof Throwable)
+                throw new IllegalStateException((Throwable) result);
 
-			return result;
-		}
+            return result;
+        }
 
-		public static void notifyCaller(final UUID callUID, final Object result) {
-			// sanity check.
-			if (callUID == null)
-				throw new IllegalArgumentException("callUID == null");
+        public static void notifyCaller(final UUID callUID, final Object result) {
+            // sanity check.
+            if (callUID == null)
+                throw new IllegalArgumentException("callUID == null");
 
-			callerResultTable.put(callUID, result);
-			//final CountDownLatch cdl = RPCManager.ProtocolCallerProxy.callerTable.get(callUID);
-			final CountDownLatch cdl = callerTable.get(callUID);
-			cdl.countDown();
-		}
-	}
+            callerResultTable.put(callUID, result);
+            // final CountDownLatch cdl = RPCManager.ProtocolCallerProxy.callerTable.get(callUID);
+            final CountDownLatch cdl = callerTable.get(callUID);
+            cdl.countDown();
+        }
+    }
 
-	/**
+    /**
      *
      */
-	private final class ProtocolCalleeProxy {
+    private final class ProtocolCalleeProxy {
 
-		private final Map<String, Object> calleeTable = new HashMap<String, Object>();
+        private final Map<String, Object> calleeTable = new HashMap<String, Object>();
 
-		public void registerProtocol(final Object protocolImplementation, final Class<?> protocolInterface) {
-			calleeTable.put(protocolInterface.getSimpleName(), protocolImplementation);
-		}
+        public void registerProtocol(final Object protocolImplementation, final Class<?> protocolInterface) {
+            calleeTable.put(protocolInterface.getSimpleName(), protocolImplementation);
+        }
 
-		public RPCCalleeResponseEvent callMethod(final UUID callUID,
-				final MethodSignature methodInfo) {
-			// sanity check.
-			if (callUID == null)
-				throw new IllegalArgumentException("callUID == null");
-			if (methodInfo == null)
-				throw new IllegalArgumentException("methodInfo == null");
+        public RPCCalleeResponseEvent callMethod(final UUID callUID, final MethodSignature methodInfo) {
+            // sanity check.
+            if (callUID == null)
+                throw new IllegalArgumentException("callUID == null");
+            if (methodInfo == null)
+                throw new IllegalArgumentException("methodInfo == null");
 
-			final Object protocolImplementation = calleeTable.get(methodInfo.className);
+            final Object protocolImplementation = calleeTable.get(methodInfo.className);
 
-			if (protocolImplementation == null) {
-				return new RPCCalleeResponseEvent(callUID,
-					new IllegalStateException("found no protocol implementation"));
-			}
+            if (protocolImplementation == null) {
+                return new RPCCalleeResponseEvent(callUID, new IllegalStateException("found no protocol implementation"));
+            }
 
-			synchronized (protocolImplementation) {
-				// TODO: Maybe we could do some caching of method signatures
-				// on the callee site for frequent repeated calls...
+            synchronized (protocolImplementation) {
+                // TODO: Maybe we could do some caching of method signatures
+                // on the callee site for frequent repeated calls...
 
-				try {
-					final Method method = protocolImplementation.getClass().getMethod(methodInfo.methodName,
-						methodInfo.argumentTypes);
-					final Object result = method.invoke(protocolImplementation, methodInfo.arguments);
-					return new RPCCalleeResponseEvent(callUID, result);
-				} catch (Exception e) {
-					return new RPCCalleeResponseEvent(callUID, e);
-				}
-			}
-		}
-	}
+                try {
+                    final Method method = protocolImplementation.getClass().getMethod(methodInfo.methodName, methodInfo.argumentTypes);
+                    final Object result = method.invoke(protocolImplementation, methodInfo.arguments);
+                    return new RPCCalleeResponseEvent(callUID, result);
+                } catch (Exception e) {
+                    return new RPCCalleeResponseEvent(callUID, e);
+                }
+            }
+        }
+    }
 
-	/**
+    /**
      *
      */
-	private final class RPCEventHandler extends EventHandler {
+    private final class RPCEventHandler extends EventHandler {
 
-		@Handle(event = RPCCallerRequestEvent.class)
-		private void handleRPCRequest(final RPCCallerRequestEvent event) {
-			new Thread(new Runnable() {
-				@Override
-				public void run() {
-					final RPCCalleeResponseEvent calleeMsg =
-						//RPCManager.ProtocolCalleeProxy.callMethod(event.callUID, event.methodSignature);
-							calleeProxy.callMethod(event.callUID, event.methodSignature);
+        @Handle(event = RPCCallerRequestEvent.class)
+        private void handleRPCRequest(final RPCCallerRequestEvent event) {
+            new Thread(new Runnable() {
 
-					ioManager.sendEvent(event.getSrcMachineID(), calleeMsg);
-				}
-			}).start();
-		}
+                @Override
+                public void run() {
+                    final RPCCalleeResponseEvent calleeMsg =
+                    // RPCManager.ProtocolCalleeProxy.callMethod(event.callUID,
+                    // event.methodSignature);
+                            calleeProxy.callMethod(event.callUID, event.methodSignature);
 
-		@Handle(event = RPCCalleeResponseEvent.class)
-		private void handleRPCResponse(final RPCCalleeResponseEvent event) {
-			ProtocolCallerProxy.notifyCaller(event.callUID, event.result);
-		}
-	}
+                    ioManager.sendEvent(event.getSrcMachineID(), calleeMsg);
+                }
+            }).start();
+        }
 
-	// ---------------------------------------------------
-	// Constructors.
-	// ---------------------------------------------------
+        @Handle(event = RPCCalleeResponseEvent.class)
+        private void handleRPCResponse(final RPCCalleeResponseEvent event) {
+            ProtocolCallerProxy.notifyCaller(event.callUID, event.result);
+        }
+    }
 
-	public RPCManager(final IOManager ioManager) {
-		// sanity check.
-		if (ioManager == null)
-			throw new IllegalArgumentException("ioManager == null");
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
-		this.ioManager = ioManager;
+    public RPCManager(final IOManager ioManager) {
+        // sanity check.
+        if (ioManager == null)
+            throw new IllegalArgumentException("ioManager == null");
 
-		this.rpcEventHandler = new RPCEventHandler();
+        this.ioManager = ioManager;
 
-		this.cachedProxies = new HashMap<Pair<Class<?>, UUID>, Object>();
+        this.rpcEventHandler = new RPCEventHandler();
 
-		final String[] rpcEvents = {
-			ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST,
-			ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE
-		};
+        this.cachedProxies = new HashMap<Pair<Class<?>, UUID>, Object>();
 
-		this.ioManager.addEventListener(rpcEvents, rpcEventHandler);
+        final String[] rpcEvents = {ControlEventType.CONTROL_EVENT_RPC_CALLER_REQUEST, ControlEventType.CONTROL_EVENT_RPC_CALLEE_RESPONSE};
 
-		this.calleeProxy = new ProtocolCalleeProxy();
-	}
+        this.ioManager.addEventListener(rpcEvents, rpcEventHandler);
 
-	// ---------------------------------------------------
-	// Fields.
-	// ---------------------------------------------------
+        this.calleeProxy = new ProtocolCalleeProxy();
+    }
 
-	private static final Logger LOG = Logger.getLogger(RPCManager.class);
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
-	private final IOManager ioManager;
+    private static final Logger LOG = Logger.getLogger(RPCManager.class);
 
-	private final Map<Pair<Class<?>, UUID>, Object> cachedProxies;
+    private final IOManager ioManager;
 
-	private final RPCEventHandler rpcEventHandler;
+    private final Map<Pair<Class<?>, UUID>, Object> cachedProxies;
 
-	private final ProtocolCalleeProxy calleeProxy;
+    private final RPCEventHandler rpcEventHandler;
 
-	// ---------------------------------------------------
-	// Public.
-	// ---------------------------------------------------
+    private final ProtocolCalleeProxy calleeProxy;
 
-	public void registerRPCProtocolImpl(Object protocolImplementation, Class<?> protocolInterface) {
-		// sanity check.
-		if (protocolImplementation == null)
-			throw new IllegalArgumentException("protocolImplementation == null");
-		if (protocolInterface == null)
-			throw new IllegalArgumentException("protocolInterface == null");
+    // ---------------------------------------------------
+    // Public.
+    // ---------------------------------------------------
 
-		//ProtocolCalleeProxy.registerProtocol(protocolImplementation, protocolInterface);
-		calleeProxy.registerProtocol(protocolImplementation, protocolInterface);
-	}
+    public void registerRPCProtocolImpl(Object protocolImplementation, Class<?> protocolInterface) {
+        // sanity check.
+        if (protocolImplementation == null)
+            throw new IllegalArgumentException("protocolImplementation == null");
+        if (protocolInterface == null)
+            throw new IllegalArgumentException("protocolInterface == null");
 
-	public <T> T getRPCProtocolProxy(final Class<T> protocolInterface, final MachineDescriptor dstMachine) {
-		// sanity check.
-		if (protocolInterface == null)
-			throw new IllegalArgumentException("protocolInterface == null");
-		if (dstMachine == null)
-			throw new IllegalArgumentException("dstMachine == null");
+        // ProtocolCalleeProxy.registerProtocol(protocolImplementation, protocolInterface);
+        calleeProxy.registerProtocol(protocolImplementation, protocolInterface);
+    }
 
-		final Pair<Class<?>, UUID> proxyKey = new Pair<Class<?>, UUID>(protocolInterface, dstMachine.uid);
-		@SuppressWarnings("unchecked")
-		T proxy = (T) cachedProxies.get(proxyKey);
-		if (proxy == null) {
-			proxy = ProtocolCallerProxy.createProtocolProxy(dstMachine.uid, protocolInterface, ioManager);
-			cachedProxies.put(proxyKey, proxy);
-		}
+    public <T> T getRPCProtocolProxy(final Class<T> protocolInterface, final MachineDescriptor dstMachine) {
+        // sanity check.
+        if (protocolInterface == null)
+            throw new IllegalArgumentException("protocolInterface == null");
+        if (dstMachine == null)
+            throw new IllegalArgumentException("dstMachine == null");
 
-		return proxy;
-	}
+        final Pair<Class<?>, UUID> proxyKey = new Pair<Class<?>, UUID>(protocolInterface, dstMachine.uid);
+        @SuppressWarnings("unchecked")
+        T proxy = (T) cachedProxies.get(proxyKey);
+        if (proxy == null) {
+            proxy = ProtocolCallerProxy.createProtocolProxy(dstMachine.uid, protocolInterface, ioManager);
+            cachedProxies.put(proxyKey, proxy);
+        }
+
+        return proxy;
+    }
 }

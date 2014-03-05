@@ -16,53 +16,51 @@ import org.slf4j.LoggerFactory;
 @ThreadSafe
 public class ZkConnectionWatcher implements Watcher {
 
-	// ---------------------------------------------------
-	// Fields.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
-	/** Logger.*/
-	private static final Logger LOG = LoggerFactory
-		.getLogger(ZkConnectionWatcher.class);
+    /** Logger. */
+    private static final Logger LOG = LoggerFactory.getLogger(ZkConnectionWatcher.class);
 
-	/** Events received by this class are passed on to this handler.*/
-	private IEventHandler handler;
+    /** Events received by this class are passed on to this handler. */
+    private IEventHandler handler;
 
-	// ---------------------------------------------------
-	// Constructors.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
-	/**
-	 * Constructor.
-	 *
-	 * @param handler
-	 *        Forward all events that are received by this class to this
-	 *        event handler for further processing.
-	 */
-	public ZkConnectionWatcher(IEventHandler handler) {
-		this.handler = handler;
-	}
+    /**
+     * Constructor.
+     * 
+     * @param handler Forward all events that are received by this class to this event handler for
+     *        further processing.
+     */
+    public ZkConnectionWatcher(IEventHandler handler) {
+        this.handler = handler;
+    }
 
-	// ---------------------------------------------------
-	// Public.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Public.
+    // ---------------------------------------------------
 
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public void process(WatchedEvent event) {
-		LOG.debug("Received event: {}", event.getState().toString());
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void process(WatchedEvent event) {
+        LOG.debug("Received event: {}", event.getState().toString());
 
-		// Check the state of the received event.
-		switch (event.getState()) {
-		case Expired:
-			de.tuberlin.aura.core.common.eventsystem.Event zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(
-				ZkHelper.EVENT_TYPE_CONNECTION_EXPIRED);
-			this.handler.handleEvent(zkEvent);
-			break;
-		default:
-			// Nothing special to do
-			break;
-		}
-	}
+        // Check the state of the received event.
+        switch (event.getState()) {
+            case Expired:
+                de.tuberlin.aura.core.common.eventsystem.Event zkEvent =
+                        new de.tuberlin.aura.core.common.eventsystem.Event(ZkHelper.EVENT_TYPE_CONNECTION_EXPIRED);
+                this.handler.handleEvent(zkEvent);
+                break;
+            default:
+                // Nothing special to do
+                break;
+        }
+    }
 }

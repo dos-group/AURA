@@ -21,147 +21,146 @@ import de.tuberlin.aura.core.zookeeper.ZkHelper;
 
 public class WorkloadManager implements ClientWMProtocol {
 
-	// ---------------------------------------------------
-	// Inner Classes.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
 
-	private final class IORedispatcher extends EventHandler {
+    private final class IORedispatcher extends EventHandler {
 
-		@Handle(event = MonitoringEvent.class, type = MonitoringEvent.MONITORING_TASK_STATE_EVENT)
-		private void handleMonitoredTaskStateEvent(final MonitoringEvent event) {
-			registeredToplogies.get(event.topologyID).dispatchEvent(event);
-		}
-	}
+        @Handle(event = MonitoringEvent.class, type = MonitoringEvent.MONITORING_TASK_STATE_EVENT)
+        private void handleMonitoredTaskStateEvent(final MonitoringEvent event) {
+            registeredToplogies.get(event.topologyID).dispatchEvent(event);
+        }
+    }
 
-	// ---------------------------------------------------
-	// Constructors.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
-	public WorkloadManager(final String zkServer, int dataPort, int controlPort) {
-		this(zkServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
-	}
+    public WorkloadManager(final String zkServer, int dataPort, int controlPort) {
+        this(zkServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
+    }
 
-	public WorkloadManager(final String zkServer, final MachineDescriptor machine) {
-		// sanity check.
-		ZkHelper.checkConnectionString(zkServer);
-		if (machine == null)
-			throw new IllegalArgumentException("machine == null");
+    public WorkloadManager(final String zkServer, final MachineDescriptor machine) {
+        // sanity check.
+        ZkHelper.checkConnectionString(zkServer);
+        if (machine == null)
+            throw new IllegalArgumentException("machine == null");
 
-		this.machine = machine;
+        this.machine = machine;
 
-		this.ioManager = new IOManager(this.machine);
+        this.ioManager = new IOManager(this.machine);
 
-		this.rpcManager = new RPCManager(ioManager);
+        this.rpcManager = new RPCManager(ioManager);
 
-		this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machine);
+        this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machine);
 
-		this.registeredToplogies = new ConcurrentHashMap<UUID, TopologyController>();
+        this.registeredToplogies = new ConcurrentHashMap<UUID, TopologyController>();
 
-		rpcManager.registerRPCProtocolImpl(this, ClientWMProtocol.class);
+        rpcManager.registerRPCProtocolImpl(this, ClientWMProtocol.class);
 
-		this.ioHandler = new IORedispatcher();
+        this.ioHandler = new IORedispatcher();
 
-		final String[] IOEvents = { ControlEventType.CONTROL_EVENT_TASK_STATE,
-                                    MonitoringEvent.MONITORING_TASK_STATE_EVENT };
+        final String[] IOEvents = {ControlEventType.CONTROL_EVENT_TASK_STATE, MonitoringEvent.MONITORING_TASK_STATE_EVENT};
 
-		ioManager.addEventListener(IOEvents, ioHandler);
-	}
+        ioManager.addEventListener(IOEvents, ioHandler);
+    }
 
-	// ---------------------------------------------------
-	// Fields.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
-	private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
+    private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
 
-	private final MachineDescriptor machine;
+    private final MachineDescriptor machine;
 
-	private final IOManager ioManager;
+    private final IOManager ioManager;
 
-	private final RPCManager rpcManager;
+    private final RPCManager rpcManager;
 
-	private final InfrastructureManager infrastructureManager;
+    private final InfrastructureManager infrastructureManager;
 
-	private final Map<UUID, TopologyController> registeredToplogies;
+    private final Map<UUID, TopologyController> registeredToplogies;
 
-	private final IORedispatcher ioHandler;
+    private final IORedispatcher ioHandler;
 
-	// ---------------------------------------------------
-	// Public.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Public.
+    // ---------------------------------------------------
 
-	@Override
-	public void submitTopology(final AuraTopology topology) {
-		// sanity check.
-		if (topology == null)
-			throw new IllegalArgumentException("topology == null");
+    @Override
+    public void submitTopology(final AuraTopology topology) {
+        // sanity check.
+        if (topology == null)
+            throw new IllegalArgumentException("topology == null");
 
-		if (registeredToplogies.containsKey(topology.name))
-			throw new IllegalStateException("topology already submitted");
+        if (registeredToplogies.containsKey(topology.name))
+            throw new IllegalStateException("topology already submitted");
 
-		LOG.info("TOPOLOGY '" + topology.name + "' SUBMITTED");
-		registerTopology(topology).assembleTopology();
-	}
+        LOG.info("TOPOLOGY '" + topology.name + "' SUBMITTED");
+        registerTopology(topology).assembleTopology();
+    }
 
-	public TopologyController registerTopology(final AuraTopology topology) {
-		// sanity check.
-		if (topology == null)
-			throw new IllegalArgumentException("topology == null");
+    public TopologyController registerTopology(final AuraTopology topology) {
+        // sanity check.
+        if (topology == null)
+            throw new IllegalArgumentException("topology == null");
 
-		final TopologyController topologyController = new TopologyController(this, topology);
-		registeredToplogies.put(topology.topologyID, topologyController);
-		return topologyController;
-	}
+        final TopologyController topologyController = new TopologyController(this, topology);
+        registeredToplogies.put(topology.topologyID, topologyController);
+        return topologyController;
+    }
 
-	public void unregisterTopology(final UUID topologyID) {
-		// sanity check.
-		if (topologyID == null)
-			throw new IllegalArgumentException("topologyID == null");
+    public void unregisterTopology(final UUID topologyID) {
+        // sanity check.
+        if (topologyID == null)
+            throw new IllegalArgumentException("topologyID == null");
 
-		if (registeredToplogies.remove(topologyID) == null)
-			throw new IllegalStateException("topologyID not found");
-	}
+        if (registeredToplogies.remove(topologyID) == null)
+            throw new IllegalStateException("topologyID not found");
+    }
 
-	public RPCManager getRPCManager() {
-		return rpcManager;
-	}
+    public RPCManager getRPCManager() {
+        return rpcManager;
+    }
 
-	public IOManager getIOManager() {
-		return ioManager;
-	}
+    public IOManager getIOManager() {
+        return ioManager;
+    }
 
-	public InfrastructureManager getInfrastructureManager() {
-		return infrastructureManager;
-	}
+    public InfrastructureManager getInfrastructureManager() {
+        return infrastructureManager;
+    }
 
-	// ---------------------------------------------------
-	// Entry Point.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Entry Point.
+    // ---------------------------------------------------
 
-	public static void main(final String[] args) {
+    public static void main(final String[] args) {
 
-		final Logger rootLOG = Logger.getRootLogger();
+        final Logger rootLOG = Logger.getRootLogger();
 
-		final SimpleLayout layout = new SimpleLayout();
-		final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-		rootLOG.addAppender(consoleAppender);
+        final SimpleLayout layout = new SimpleLayout();
+        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        rootLOG.addAppender(consoleAppender);
 
-		int dataPort = -1;
-		int controlPort = -1;
-		String zkServer = null;
-		if (args.length == 3) {
-			try {
-				zkServer = args[0];
-				dataPort = Integer.parseInt(args[1]);
-				controlPort = Integer.parseInt(args[2]);
-			} catch (NumberFormatException e) {
-				System.err.println("Argument" + " must be an integer");
-				System.exit(1);
-			}
-		} else {
-			System.err.println("only two numeric arguments allowed: dataPort, controlPort");
-			System.exit(1);
-		}
+        int dataPort = -1;
+        int controlPort = -1;
+        String zkServer = null;
+        if (args.length == 3) {
+            try {
+                zkServer = args[0];
+                dataPort = Integer.parseInt(args[1]);
+                controlPort = Integer.parseInt(args[2]);
+            } catch (NumberFormatException e) {
+                System.err.println("Argument" + " must be an integer");
+                System.exit(1);
+            }
+        } else {
+            System.err.println("only two numeric arguments allowed: dataPort, controlPort");
+            System.exit(1);
+        }
 
-		new WorkloadManager(zkServer, dataPort, controlPort);
-	}
+        new WorkloadManager(zkServer, dataPort, controlPort);
+    }
 }

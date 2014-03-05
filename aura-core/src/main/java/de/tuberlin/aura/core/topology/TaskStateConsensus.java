@@ -9,8 +9,8 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * TODO: We need a clean and safe PAXOS implementation!
- * This here is something like a two-phase commit.
+ * TODO: We need a clean and safe PAXOS implementation! This here is something like a two-phase
+ * commit.
  */
 public final class TaskStateConsensus {
 
@@ -58,11 +58,10 @@ public final class TaskStateConsensus {
 
     public synchronized boolean voteSuccess(final IOEvents.MonitoringEvent.TaskStateUpdate stateUpdate) {
 
-        if(!isVotingActive)
+        if (!isVotingActive)
             return false;
 
-        if (!positiveStates.contains(stateUpdate.nextTaskState) &&
-                (negativeStates != null && !negativeStates.contains(stateUpdate.nextTaskState)))
+        if (!positiveStates.contains(stateUpdate.nextTaskState) && (negativeStates != null && !negativeStates.contains(stateUpdate.nextTaskState)))
             return false;
 
         if (taskIDs.size() > 0) {
@@ -81,8 +80,7 @@ public final class TaskStateConsensus {
 
     public boolean voteFail(final IOEvents.MonitoringEvent.TaskStateUpdate stateUpdate) {
 
-        final boolean result = isVotingActive && negativeStates != null
-                && negativeStates.contains(stateUpdate.nextTaskState);
+        final boolean result = isVotingActive && negativeStates != null && negativeStates.contains(stateUpdate.nextTaskState);
 
         if (result) {
             isConsensus = isVotingActive = false;

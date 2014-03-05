@@ -1,0 +1,15 @@
+*.class
+*.iml
+*.jar
+*.swp
+.idea
+.classpath
+.cache
+.metadata
+.project
+.settings
+.version.properties
+filter.properties
+tmp
+target
+

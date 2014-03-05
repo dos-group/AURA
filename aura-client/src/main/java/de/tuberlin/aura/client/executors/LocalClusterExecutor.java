@@ -23,151 +23,154 @@ import de.tuberlin.aura.workloadmanager.WorkloadManager;
 
 public final class LocalClusterExecutor {
 
-	// ---------------------------------------------------
-	// Constants.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Constants.
+    // ---------------------------------------------------
 
-	public static final HardwareDescriptor MACHINE_HARDWARE = new HardwareDescriptor(
-		(short) 4, 2L * 1024L * 1024L * 1024L, new HDDDescriptor(
-			10L * 1024L * 1024L * 1024L));
+    public static final HardwareDescriptor MACHINE_HARDWARE = new HardwareDescriptor((short) 4,
+                                                                                     2L * 1024L * 1024L * 1024L,
+                                                                                     new HDDDescriptor(10L * 1024L * 1024L * 1024L));
 
-	// ---------------------------------------------------
-	// Inner Classes.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
 
-	public static enum LocalExecutionMode {
+    public static enum LocalExecutionMode {
 
-		EXECUTION_MODE_SINGLE_PROCESS,
+        EXECUTION_MODE_SINGLE_PROCESS,
 
-		EXECUTION_MODE_MULTIPLE_PROCESSES
-	}
+        EXECUTION_MODE_MULTIPLE_PROCESSES
+    }
 
-	// ---------------------------------------------------
-	// Constructors.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
-	public LocalClusterExecutor(final LocalExecutionMode mode, boolean startupZookeeper, final String zkServer,
-			int numNodes) {
-		this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000);
-	}
+    public LocalClusterExecutor(final LocalExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes) {
+        this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000);
+    }
 
-	public LocalClusterExecutor(final LocalExecutionMode mode, boolean startupZookeeper, final String zkServer,
-			int numNodes, int zkClientPort,
-			int numConnections, int tickTime) {
-		// sanity check.
-		ZkHelper.checkConnectionString(zkServer);
-		if (numNodes < 1)
-			throw new IllegalArgumentException("numNodes < 1");
+    public LocalClusterExecutor(final LocalExecutionMode mode,
+                                boolean startupZookeeper,
+                                final String zkServer,
+                                int numNodes,
+                                int zkClientPort,
+                                int numConnections,
+                                int tickTime) {
+        // sanity check.
+        ZkHelper.checkConnectionString(zkServer);
+        if (numNodes < 1)
+            throw new IllegalArgumentException("numNodes < 1");
 
-		this.reservedPorts = new HashSet<Integer>();
+        this.reservedPorts = new HashSet<Integer>();
 
-		this.tmList = new ArrayList<TaskManager>();
+        this.tmList = new ArrayList<TaskManager>();
 
-		this.peList = new ArrayList<ProcessExecutor>();
+        this.peList = new ArrayList<ProcessExecutor>();
 
-		// ------- bootstrap zookeeper server -------
+        // ------- bootstrap zookeeper server -------
 
-		if (startupZookeeper) {
-			final File dir = new File(System.getProperty("java.io.tmpdir"), "zookeeper").getAbsoluteFile();
-			if (dir.exists()) {
-				try {
-					FileUtils.deleteDirectory(dir);
-				} catch (IOException e) {
-					LOG.error(e);
-				}
-			}
+        if (startupZookeeper) {
+            final File dir = new File(System.getProperty("java.io.tmpdir"), "zookeeper").getAbsoluteFile();
+            if (dir.exists()) {
+                try {
+                    FileUtils.deleteDirectory(dir);
+                } catch (IOException e) {
+                    LOG.error(e);
+                }
+            }
 
-			try {
-				this.zookeeperServer = new ZooKeeperServer(dir, dir, tickTime);
+            try {
+                this.zookeeperServer = new ZooKeeperServer(dir, dir, tickTime);
                 this.zookeeperServer.setMaxSessionTimeout(10000000);
-				this.zookeeperCNXNFactory = new NIOServerCnxnFactory();
-				this.zookeeperCNXNFactory.configure(new InetSocketAddress(zkClientPort), numConnections);
-				this.zookeeperCNXNFactory.startup(zookeeperServer);
-			} catch (IOException | InterruptedException e) {
-				throw new IllegalStateException(e);
-			}
-		} else {
-			zookeeperServer = null;
-			zookeeperCNXNFactory = null;
-		}
+                this.zookeeperCNXNFactory = new NIOServerCnxnFactory();
+                this.zookeeperCNXNFactory.configure(new InetSocketAddress(zkClientPort), numConnections);
+                this.zookeeperCNXNFactory.startup(zookeeperServer);
+            } catch (IOException | InterruptedException e) {
+                throw new IllegalStateException(e);
+            }
+        } else {
+            zookeeperServer = null;
+            zookeeperCNXNFactory = null;
+        }
 
-		// ------- bootstrap local cluster -------
+        // ------- bootstrap local cluster -------
 
-		switch (mode) {
+        switch (mode) {
 
-		case EXECUTION_MODE_SINGLE_PROCESS: {
-			new WorkloadManager(zkServer, getFreePort(), getFreePort());
-			for (int i = 0; i < numNodes; ++i) {
-				tmList.add(new TaskManager(zkServer, getFreePort(), getFreePort()));
-			}
-		}
-			break;
+            case EXECUTION_MODE_SINGLE_PROCESS: {
+                new WorkloadManager(zkServer, getFreePort(), getFreePort());
+                for (int i = 0; i < numNodes; ++i) {
+                    tmList.add(new TaskManager(zkServer, getFreePort(), getFreePort()));
+                }
+            }
+                break;
 
-		case EXECUTION_MODE_MULTIPLE_PROCESSES: {
-			try {
-				peList.add(new ProcessExecutor(WorkloadManager.class).execute(zkServer, new Integer(getFreePort()).toString(),
-					new Integer(getFreePort()).toString()));
-				Thread.sleep(1000);
-				for (int i = 0; i < numNodes; ++i) {
-					peList.add(new ProcessExecutor(TaskManager.class).execute(zkServer,
-						new Integer(getFreePort()).toString(),
-						new Integer(getFreePort()).toString()));
-					Thread.sleep(1000);
-				}
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-			break;
+            case EXECUTION_MODE_MULTIPLE_PROCESSES: {
+                try {
+                    peList.add(new ProcessExecutor(WorkloadManager.class).execute(zkServer,
+                                                                                  new Integer(getFreePort()).toString(),
+                                                                                  new Integer(getFreePort()).toString()));
+                    Thread.sleep(1000);
+                    for (int i = 0; i < numNodes; ++i) {
+                        peList.add(new ProcessExecutor(TaskManager.class).execute(zkServer,
+                                                                                  new Integer(getFreePort()).toString(),
+                                                                                  new Integer(getFreePort()).toString()));
+                        Thread.sleep(1000);
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+                break;
 
-		default:
-			throw new IllegalStateException("execution mode not known");
-		}
-	}
+            default:
+                throw new IllegalStateException("execution mode not known");
+        }
+    }
 
-	// ---------------------------------------------------
-	// Fields.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
-	private static final Logger LOG = Logger.getLogger(LocalClusterExecutor.class);
+    private static final Logger LOG = Logger.getLogger(LocalClusterExecutor.class);
 
-	private final Set<Integer> reservedPorts;
+    private final Set<Integer> reservedPorts;
 
-	private final List<TaskManager> tmList;
+    private final List<TaskManager> tmList;
 
-	private final List<ProcessExecutor> peList;
+    private final List<ProcessExecutor> peList;
 
-	private final ZooKeeperServer zookeeperServer;
+    private final ZooKeeperServer zookeeperServer;
 
-	private final NIOServerCnxnFactory zookeeperCNXNFactory;
+    private final NIOServerCnxnFactory zookeeperCNXNFactory;
 
-	// ---------------------------------------------------
-	// Public.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Public.
+    // ---------------------------------------------------
 
-	public void shutdown() {
-		for(final ProcessExecutor pe : peList) {
-			pe.destroy();
-		}
-		this.zookeeperCNXNFactory.closeAll();
-		System.exit(0);
-	}
+    public void shutdown() {
+        for (final ProcessExecutor pe : peList) {
+            pe.destroy();
+        }
+        this.zookeeperCNXNFactory.closeAll();
+        System.exit(0);
+    }
 
-	// ---------------------------------------------------
-	// Private.
-	// ---------------------------------------------------
+    // ---------------------------------------------------
+    // Private.
+    // ---------------------------------------------------
 
-	private int getFreePort() {
-		int freePort = -1;
-		do {
-			try {
-				final ServerSocket ss = new ServerSocket(0);
-				freePort = ss.getLocalPort();
-				ss.close();
-			} catch (IOException e) {
-			}
-		} while (reservedPorts.contains(freePort) || freePort < 1024 || freePort > 65535);
-		reservedPorts.add(freePort);
-		return freePort;
-	}
+    private int getFreePort() {
+        int freePort = -1;
+        do {
+            try {
+                final ServerSocket ss = new ServerSocket(0);
+                freePort = ss.getLocalPort();
+                ss.close();
+            } catch (IOException e) {}
+        } while (reservedPorts.contains(freePort) || freePort < 1024 || freePort > 65535);
+        reservedPorts.add(freePort);
+        return freePort;
+    }
 }

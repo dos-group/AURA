@@ -1,0 +1,73 @@
+<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+	<id>src</id>
+	<formats>
+		<format>dir</format>
+	</formats>
+
+	<includeBaseDirectory>true</includeBaseDirectory>
+	<baseDirectory>aura-${project.version}</baseDirectory>
+
+	<!-- copy all jar files and their dependencies -->
+	<dependencySets>
+		<dependencySet>
+			<outputDirectory>src</outputDirectory>
+			<unpack>true</unpack>
+			<unpackOptions>
+				<excludes>
+					<exclude>META-INF/MANIFEST.MF</exclude>
+					<exclude>META-INF</exclude>
+				</excludes>
+			</unpackOptions>
+			<useTransitiveDependencies>false</useTransitiveDependencies>
+			<useProjectArtifact>false</useProjectArtifact>
+			<useProjectAttachments>false</useProjectAttachments>
+
+			<includes>
+				<include>*:sources</include>
+			</includes>
+		</dependencySet>
+
+	</dependencySets>
+
+	<fileSets>
+
+		<!-- copy start scripts -->
+		<fileSet>
+			<directory>src/main/aura-bin/bin</directory>
+			<outputDirectory>bin</outputDirectory>
+			<fileMode>0755</fileMode>
+		</fileSet>
+
+		<!-- copy default configuration -->
+		<fileSet>
+			<directory>src/main/aura-bin/conf</directory>
+			<outputDirectory>conf</outputDirectory>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
+		<!-- copy README file -->
+		<fileSet>
+			<directory>src/main/aura-bin/docs</directory>
+			<outputDirectory>docs</outputDirectory>
+			<fileMode>0644</fileMode>
+		</fileSet>
+
+
+		<!-- copy JavaDocs -->
+		<!--
+		<fileSet>
+			<directory>../target/apidocs</directory>
+			<directory>../target</directory>
+			<includes>
+				<include>aura-*-javadoc.jar</include>
+			</includes>
+			<outputDirectory>docs/javadoc</outputDirectory>
+			<fileMode>0644</fileMode>
+		</fileSet>
+		-->
+
+	</fileSets>
+
+</assembly>
