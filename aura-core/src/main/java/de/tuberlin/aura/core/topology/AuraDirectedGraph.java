@@ -22,7 +22,7 @@ public class AuraDirectedGraph {
      */
 	public static final class AuraTopology implements Serializable {
 
-		private static final long serialVersionUID = 8527931035756128232L;
+		private static final long serialVersionUID = 1;
 
 		// ---------------------------------------------------
 		// Aura Topology Properties.
@@ -411,7 +411,7 @@ public class AuraDirectedGraph {
      */
 	public static final class Node implements Visitable<Node>, Serializable {
 
-		private static final long serialVersionUID = -7726710143171176855L;
+		private static final long serialVersionUID = -1;
 
 		// ---------------------------------------------------
 		// Node Properties.
