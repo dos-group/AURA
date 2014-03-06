@@ -1,17 +1,13 @@
 package de.tuberlin.aura.core.iosystem;
 
-import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
-import org.slf4j.Logger;
-
 import java.util.HashMap;
 import java.util.Map;
 
-public class QueueManager<T> {
+import org.slf4j.Logger;
 
-    public enum GATE {
-        IN,
-        OUT
-    }
+import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+
+public class QueueManager<T> {
 
     private final static Logger LOG = org.slf4j.LoggerFactory.getLogger(QueueManager.class);
 
@@ -21,16 +17,19 @@ public class QueueManager<T> {
 
     private final Map<LongKey, BufferQueue<T>> outputQueues;
 
-    private final BufferQueueFactory<T> queueFactory;
+    private final BufferQueue.FACTORY<T> queueFactory;
 
-    private QueueManager(BufferQueueFactory<T> factory) {
+    private QueueManager(BufferQueue.FACTORY<T> factory) {
         this.inputQueues = new HashMap<>();
         this.outputQueues = new HashMap<>();
         this.queueFactory = factory;
     }
 
+    // ---------------------------------------------------
+    // Public.
+    // ---------------------------------------------------
 
-    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext, BufferQueueFactory<F> queueFactory) {
+    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext, BufferQueue.FACTORY<F> queueFactory) {
         QueueManager<F> instance = new QueueManager<>(queueFactory);
         BINDINGS.put(taskContext, instance);
         return instance;
@@ -59,6 +58,14 @@ public class QueueManager<T> {
         return queue;
     }
 
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
+
+    public enum GATE {
+        IN,
+        OUT
+    }
 
     /**
      * We assume here that values for gate and channel do not exceed 16 bit (which is reasonable as

@@ -201,7 +201,11 @@ public final class TaskRuntimeContext {
             for (final OutputGate og : outputGates) {
                 // TODO: maybe replace with event?!
                 for (final DataWriter.ChannelWriter channelWriter : og.getAllChannelWriter()) {
-                    channelWriter.shutdown(true);
+
+                    // TODO: do we want to force the shutdown, meaning we discard remaining events
+                    // in the queue
+                    // or wait to send them out?
+                    channelWriter.shutdown(false);
                 }
             }
         }

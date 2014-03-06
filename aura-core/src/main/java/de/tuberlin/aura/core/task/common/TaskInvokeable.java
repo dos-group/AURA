@@ -1,12 +1,18 @@
 package de.tuberlin.aura.core.task.common;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 
 public abstract class TaskInvokeable {
@@ -30,12 +36,23 @@ public abstract class TaskInvokeable {
 
         this.isRunning = true;
 
-        this.activeGates = new ArrayList<Set<UUID>>();
+        this.activeGates = new ArrayList<>();
+
+        this.closedGates = new ArrayList<>();
+
+        this.gateCloseFinished = new ArrayList<>();
 
         for (final List<Descriptors.TaskDescriptor> tdList : context.taskBinding.inputGateBindings) {
+            final Map<UUID, Boolean> closedChannels = new HashMap<UUID, Boolean>();
+            closedGates.add(closedChannels);
+
             final Set<UUID> activeChannelSet = new HashSet<UUID>();
             activeGates.add(activeChannelSet);
+
+            gateCloseFinished.add(new AtomicBoolean(false));
+
             for (final Descriptors.TaskDescriptor td : tdList) {
+                closedChannels.put(td.taskID, false);
                 activeChannelSet.add(td.taskID);
             }
         }
@@ -54,6 +71,10 @@ public abstract class TaskInvokeable {
     private final List<Set<UUID>> activeGates;
 
     private volatile boolean isRunning;
+
+    private final List<AtomicBoolean> gateCloseFinished;
+
+    private final List<Map<UUID, Boolean>> closedGates;
 
     // ---------------------------------------------------
     // Public.
@@ -79,23 +100,61 @@ public abstract class TaskInvokeable {
             if (activeGates.get(gateIndex).size() == 0)
                 return null;
 
-            final DataIOEvent event = context.inputGates.get(gateIndex).getInputQueue().take();
+            boolean retrieve = true;
 
-            // TODO: Is that the right place?
-            if (IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(event.type)) {
+            DataIOEvent event = null;
 
-                final Set<UUID> activeChannelSet = activeGates.get(gateIndex);
+            while (retrieve) {
+                event = context.inputGates.get(gateIndex).getInputQueue().take();
 
-                if (!activeChannelSet.remove(event.srcTaskID))
-                    throw new IllegalStateException();
+                switch (event.type) {
+                    case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
+                        final Set<UUID> activeChannelSet = activeGates.get(gateIndex);
 
-                for (final Set<UUID> acs : activeGates) {
-                    isRunning &= acs.isEmpty();
+                        if (!activeChannelSet.remove(event.srcTaskID))
+                            throw new IllegalStateException();
+
+                        if (activeChannelSet.isEmpty()) {
+                            retrieve = false;
+                            event = null;
+                        }
+
+                        // check if all gates are exhausted
+                        for (final Set<UUID> acs : activeGates) {
+                            isRunning &= acs.isEmpty();
+                        }
+                        isRunning = !isRunning;
+
+                        break;
+                    case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED:
+                        final Map<UUID, Boolean> closedChannels = closedGates.get(gateIndex);
+
+                        if (!closedChannels.containsKey(event.srcTaskID))
+                            throw new IllegalStateException();
+
+                        closedChannels.put(event.srcTaskID, true);
+
+                        boolean allClosed = true;
+                        for (boolean closed : closedChannels.values()) {
+                            allClosed &= closed;
+                        }
+
+                        if (allClosed) {
+                            gateCloseFinished.get(gateIndex).set(true);
+                            retrieve = false;
+                            event = null;
+                        }
+                        break;
+
+                    // data event -> absorb
+                    default:
+                        retrieve = false;
+                        break;
                 }
-                isRunning = !isRunning;
             }
 
             return event;
+
         } catch (InterruptedException e) {
             LOG.error(e);
             return null;
@@ -106,12 +165,27 @@ public abstract class TaskInvokeable {
         return isRunning;
     }
 
-    public void openGate(int channelIndex) {
-        context.inputGates.get(channelIndex).openGate();
+    public boolean isGateClosed(int gateIndex) {
+        return gateCloseFinished.get(gateIndex).get();
     }
 
-    public void closeGate(int channelIndex) {
-        context.inputGates.get(channelIndex).closeGate();
+    public void openGate(int gateIndex) {
+        if (context.inputGates == null) {
+            throw new IllegalStateException("Task has no input gates.");
+        }
+        context.inputGates.get(gateIndex).openGate();
+    }
+
+    public void closeGate(int gateIndex) {
+        if (context.inputGates == null) {
+            throw new IllegalStateException("Task has no input gates.");
+        }
+        if (gateCloseFinished.get(gateIndex).get()) {
+            LOG.warn("Gate " + gateIndex + " is already closed.");
+        } else {
+            gateCloseFinished.get(gateIndex).set(false);
+            context.inputGates.get(gateIndex).closeGate();
+        }
     }
 
     public int getTaskIndex() {

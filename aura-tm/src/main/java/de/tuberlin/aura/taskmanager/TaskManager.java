@@ -1,5 +1,18 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
@@ -28,19 +41,6 @@ import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
 import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
-
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 public final class TaskManager implements WM2TMProtocol {
 

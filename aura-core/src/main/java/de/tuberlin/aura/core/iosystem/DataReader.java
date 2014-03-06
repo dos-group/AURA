@@ -2,8 +2,6 @@ package de.tuberlin.aura.core.iosystem;
 
 import java.net.SocketAddress;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -13,13 +11,10 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -30,67 +25,82 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 
 public class DataReader {
 
     public static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
 
-    protected final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
-
-    private final int bufferSize;
+    public final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
 
     private final IEventDispatcher dispatcher;
 
     /**
-     * Queues the single channels write their data into. There are possibly more channels that write
-     * into a single queue. Each {@see de.tuberlin.aura.core.task.gates.InputGate} as exactly one
-     * queue.
+     * Each queue associated with this data reader is given a unique (per data reader) index.
      */
-    private final List<BufferQueue<IOEvents.DataIOEvent>> queues;
+    private int queueIndex;
 
     /**
-     * In order to write the data to the correct queue, we map (channel) -> queue index (in {@see
-     * queues})
+     * (queue index) -> (queue)
+     * 
+     * There are possibly more channels that write into a single queue. Each {@see
+     * de.tuberlin.aura.core.task.gates.InputGate} as exactly one queue.
+     */
+    private final Map<Integer, BufferQueue<IOEvents.DataIOEvent>> inputQueues;
+
+    /**
+     * (channel) -> (queue index)
+     * 
+     * Maps the channel to the index of the queue (for map {@see inputQueues}).
      */
     private final Map<Channel, Integer> channelToQueueIndex;
 
     /**
-     * In order to get the queue that belongs to the {@see InputGate}, we map (task id, gate index)
-     * -> queue index (in {@see queues})
+     * (task id, gate index) -> (queue index)
+     * 
+     * Maps the gate of a specific task to the index of the queue (for map {@see inputQueues}).
      */
     private final Map<Pair<UUID, Integer>, Integer> gateToQueueIndex;
 
+    /**
+     * (task id, gate index) -> { (channel index) -> (channel) }
+     * 
+     * Maps the gate of a specific task to its connected channels. The connected channels are
+     * identified by their channel index.
+     */
     private final Map<Pair<UUID, Integer>, Map<Integer, Channel>> connectedChannels;
 
-
-    private ByteBufAllocator contextLevelAllocator;
-
+    /**
+     * Creates a new Data Reader. There should only be one Data Reader per task manager.
+     * 
+     * @param dispatcher the dispatcher to which events should be published.
+     */
     public DataReader(IEventDispatcher dispatcher) {
-        this(dispatcher, DEFAULT_BUFFER_SIZE);
-    }
-
-    public DataReader(IEventDispatcher dispatcher, int bufferSize) {
         this.dispatcher = dispatcher;
 
-        // TODO: need for concurrent queue?! after start we just read values?
-        queues = new LinkedList<>();
+        inputQueues = new HashMap<>();
         channelToQueueIndex = new HashMap<>();
         gateToQueueIndex = new HashMap<>();
-
         connectedChannels = new HashMap<>();
 
-        if ((bufferSize & (bufferSize - 1)) != 0) {
-            LOG.warn("The given buffer size is not a power of two.");
-            this.bufferSize = Util.nextPowerOf2(bufferSize);
-        } else {
-            this.bufferSize = bufferSize;
-        }
+        queueIndex = 0;
     }
 
     // ---------------------------------------------------
     // Public.
     // ---------------------------------------------------
 
+    /**
+     * Binds a new channel to the data reader.
+     * 
+     * Notice: the reader does not shut down the worker group. This is in the callers
+     * responsibility.
+     * 
+     * @param type the connection type of the channel to bind.
+     * @param address the remote address the channel should be connected to.
+     * @param workerGroup the event loop the channel should be associated with.
+     * @param <T> the type of channel this connection uses.
+     */
     public <T extends Channel> void bind(final ConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
 
         ServerBootstrap bootstrap = type.bootStrap(workerGroup);
@@ -101,7 +111,8 @@ public class DataReader {
                 ch.pipeline()
                   .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
                   .addLast(new DataHandler())
-                  .addLast(new EventHandler());
+                  .addLast(new EventHandler())
+                  .addLast(new ObjectEncoder());
             }
         });
 
@@ -120,22 +131,28 @@ public class DataReader {
                 }
             }).sync();
 
-            // TODO: add explicit close hook
+            // TODO: add explicit close hook?!
 
         } catch (InterruptedException e) {
             LOG.error("failed to initialize network server", e);
             throw new IllegalStateException("failed to initialize network server", e);
-        } finally {
-            // TODO: shutdown event loop group eventLoopGroup.shutdownGracefully();
         }
     }
 
+    /**
+     * Returns the queue which is assigned to the gate of the task.
+     * 
+     * @param taskID the task id which the gate belongs to.
+     * @param gateIndex the gate index.
+     * @return the queue assigned to the gate, or null if no queue is assigned.
+     */
     public BufferQueue<IOEvents.DataIOEvent> getInputQueue(final UUID taskID, final int gateIndex) {
         if (!gateToQueueIndex.containsKey(new Pair<UUID, Integer>(taskID, gateIndex))) {
             return null;
         }
-        return queues.get(gateToQueueIndex.get(new Pair<UUID, Integer>(taskID, gateIndex)));
+        return inputQueues.get(gateToQueueIndex.get(new Pair<UUID, Integer>(taskID, gateIndex)));
     }
+
 
     public void bindQueue(final UUID srcTaskID,
                           final Channel channel,
@@ -148,8 +165,8 @@ public class DataReader {
         if (gateToQueueIndex.containsKey(index)) {
             queueIndex = gateToQueueIndex.get(index);
         } else {
-            this.queues.add(queue);
-            queueIndex = queues.size() - 1;
+            queueIndex = newQueueIndex();
+            inputQueues.put(queueIndex, queue);
             gateToQueueIndex.put(index, queueIndex);
         }
         channelToQueueIndex.put(channel, queueIndex);
@@ -164,6 +181,10 @@ public class DataReader {
         connectedChannels.put(index, channels);
     }
 
+    private Integer newQueueIndex() {
+        return queueIndex++;
+    }
+
     public boolean isConnected(UUID contextID, int gateIndex, int channelIndex) {
         Pair<UUID, Integer> index = new Pair<>(contextID, gateIndex);
         return connectedChannels.containsKey(index) && connectedChannels.get(index).containsKey(channelIndex);
@@ -171,7 +192,8 @@ public class DataReader {
     }
 
     public void write(final UUID taskID, final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event) {
-        connectedChannels.get(new Pair<UUID, Integer>(taskID, gateIndex)).get(channelIndex).writeAndFlush(event);
+        Pair<UUID, Integer> index = new Pair<>(taskID, gateIndex);
+        connectedChannels.get(index).get(channelIndex).writeAndFlush(event);
     }
 
     // ---------------------------------------------------
@@ -182,8 +204,13 @@ public class DataReader {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataBufferEvent event) {
-            // event.setChannel(ctx.channel());
-            queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
+            try {
+
+                inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -192,69 +219,32 @@ public class DataReader {
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event) throws Exception {
 
-            // LOG.info("got event: " + event.type);
-            if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)) {
+            switch (event.type) {
+                case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
+                    // TODO: ensure that queue is bound before first data buffer event arrives
 
-                // TODO: ensure that queue is bound before first data buffer event arrives
+                    IOEvents.GenericIOEvent connected =
+                            new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+                                                        DataReader.this,
+                                                        event.srcTaskID,
+                                                        event.dstTaskID);
+                    connected.setChannel(ctx.channel());
+                    dispatcher.dispatchEvent(connected);
+                    break;
 
-                IOEvents.GenericIOEvent connected =
-                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                    DataReader.this,
-                                                    event.srcTaskID,
-                                                    event.dstTaskID);
-                connected.setChannel(ctx.channel());
-                dispatcher.dispatchEvent(connected);
-            } else if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
-                queues.get(channelToQueueIndex.get(ctx.channel())).offer(event);
-            } else {
-                event.setChannel(ctx.channel());
-                dispatcher.dispatchEvent(event);
+                case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
+                    inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                    break;
+
+                case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED:
+                    inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                    break;
+
+                default:
+                    event.setChannel(ctx.channel());
+                    dispatcher.dispatchEvent(event);
+                    break;
             }
-        }
-    }
-
-    // TODO: Make use of flip buffer
-    // TODO see FixedLengthFrameDecoder for more error resistant solution
-    // TODO use the context lvl buffer provider here instead of i/o lvl
-    private class MergeBufferInHandler extends ChannelInboundHandlerAdapter {
-
-        private ByteBuf buf;
-
-        @Override
-        public void handlerAdded(ChannelHandlerContext ctx) {
-            buf = contextLevelAllocator.buffer(bufferSize, bufferSize);
-        }
-
-        @Override
-        public void handlerRemoved(ChannelHandlerContext ctx) {
-            buf.release();
-            buf = null;
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-            ByteBuf m = (ByteBuf) msg;
-            // do not overflow the destination buffer
-            buf.writeBytes(m, Math.min(m.readableBytes(), bufferSize - buf.readableBytes()));
-
-            while (buf.readableBytes() >= bufferSize) {
-                ctx.fireChannelRead(buf);
-                buf.clear();
-
-                // add rest of buffer to dest
-                // sadly this is not true // guaranteed to not overflow, if we set the rcv_buffer
-                // size to buffer size
-                // assert m.writableBytes() <= bufferSize;
-                buf.writeBytes(m, Math.min(m.readableBytes(), bufferSize - buf.readableBytes()));
-            }
-            m.release();
-        }
-
-        @Override
-        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-            // TODO: proper exception handling
-            cause.printStackTrace();
-            ctx.close();
         }
     }
 
@@ -280,6 +270,23 @@ public class DataReader {
 
     public static class NetworkConnection implements ConnectionType<SocketChannel> {
 
+        private final int bufferSize;
+
+        public NetworkConnection(int bufferSize) {
+            if ((bufferSize & (bufferSize - 1)) != 0) {
+                // not a power of two
+                LOG.warn("The given buffer size is not a power of two.");
+
+                this.bufferSize = Util.nextPowerOf2(bufferSize);
+            } else {
+                this.bufferSize = bufferSize;
+            }
+        }
+
+        public NetworkConnection() {
+            this(DEFAULT_BUFFER_SIZE);
+      }
+
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             ServerBootstrap b = new ServerBootstrap();
@@ -288,6 +295,8 @@ public class DataReader {
             b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
             // sets the max. number of pending, not yet fully connected (handshake) channels
              .option(ChannelOption.SO_BACKLOG, 128)
+
+             .option(ChannelOption.SO_RCVBUF, bufferSize)
              // set keep alive, so idle connections are persistent
              .childOption(ChannelOption.SO_KEEPALIVE, true);
 
