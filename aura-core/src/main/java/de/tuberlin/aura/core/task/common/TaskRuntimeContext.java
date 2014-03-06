@@ -1,6 +1,10 @@
 package de.tuberlin.aura.core.task.common;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
@@ -106,8 +110,9 @@ public final class TaskRuntimeContext {
 
         final String[] taskEvents =
                 {DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                        DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, DataEventType.DATA_EVENT_BUFFER,
-                        DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT};
+                        DataEventType.DATA_EVENT_BUFFER, DataEventType.DATA_EVENT_SOURCE_EXHAUSTED,
+                        TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT};
+
 
         dispatcher.addEventListener(taskEvents, handler);
     }
@@ -205,7 +210,7 @@ public final class TaskRuntimeContext {
                     // TODO: do we want to force the shutdown, meaning we discard remaining events
                     // in the queue
                     // or wait to send them out?
-                    channelWriter.shutdown(false);
+                    channelWriter.shutdown(true);
                 }
             }
         }
