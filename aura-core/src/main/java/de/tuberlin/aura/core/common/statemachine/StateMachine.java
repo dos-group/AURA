@@ -290,7 +290,7 @@ public final class StateMachine {
 
         topologyFSM.doTransition(TopologyTransition.TOPOLOGY_TRANSITION_FINISH);
 
-        topologyFSM.doTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN);
+        //topologyFSM.doTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN);
 
     }
 }
