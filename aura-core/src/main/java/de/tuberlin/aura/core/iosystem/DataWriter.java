@@ -2,7 +2,6 @@ package de.tuberlin.aura.core.iosystem;
 
 import java.net.SocketAddress;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -79,7 +78,7 @@ public class DataWriter {
 
         private final CountDownLatch pollFinished = new CountDownLatch(1);
 
-        private Future<Void> pollResult;
+        private Future<?> pollResult;
 
         private final CountDownLatch queueReady = new CountDownLatch(1);
 
@@ -183,7 +182,7 @@ public class DataWriter {
          * Takes buffers from the context transferQueue and writes them to the channel. If the
          * channel is currently not writable, no calls to the channel are made.
          */
-        private class Poll implements Callable<Void> {
+        private class Poll implements Runnable {
 
             private final Logger LOG = LoggerFactory.getLogger(Poll.class);
 
@@ -193,7 +192,7 @@ public class DataWriter {
              * managed by the executor.
              */
             @Override
-            public Void call() throws Exception {
+            public void run() {
                 try {
                     queueReady.await();
                 } catch (InterruptedException e) {
@@ -238,7 +237,6 @@ public class DataWriter {
 
                 // signal shutdown method
                 pollFinished.countDown();
-                return null;
             }
         }
 
@@ -264,7 +262,7 @@ public class DataWriter {
                         LOG.info("RECEIVED GATE CLOSE EVENT");
 
 
-  awaitGateOpenLatch.reset();
+                        awaitGateOpenLatch.reset();
                         gateOpen.set(false);
 
                         gateEvent.setChannel(ctx.channel());
