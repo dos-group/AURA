@@ -8,7 +8,17 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.*;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -18,23 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.local.LocalAddress;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
 
 public final class IOManager extends EventDispatcher {
 
@@ -130,8 +123,8 @@ public final class IOManager extends EventDispatcher {
 
                     if (cf.isSuccess()) {
                         cf.channel().writeAndFlush(new ControlIOEvent(ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                                      srcMachineID,
-                                                                      dstMachineID));
+                                srcMachineID,
+                                dstMachineID));
                         final ControlIOEvent event =
                                 new ControlIOEvent(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, srcMachineID, dstMachineID);
                         event.setChannel(cf.channel());
@@ -162,6 +155,7 @@ public final class IOManager extends EventDispatcher {
 
         this.channelBuilder = new ChannelBuilder();
 
+        // TODO: Number of I/O threads
         final NioEventLoopGroup nioInputEventLoopGroup = new NioEventLoopGroup();
 
         this.dataReader = new DataReader(IOManager.this);

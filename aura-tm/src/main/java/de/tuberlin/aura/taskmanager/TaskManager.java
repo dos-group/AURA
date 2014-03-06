@@ -24,6 +24,7 @@ import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
 import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
 import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.zookeeper.KeeperException;
@@ -466,7 +467,9 @@ public final class TaskManager implements WM2TMProtocol {
 
         // TODO: To allow cycles in the execution graph we have to split up
         // installation and wiring of tasks in the deployment phase!
+        long start = System.nanoTime();
         wireOutputDataChannels(taskDescriptor, taskBindingDescriptor);
+        LOG.info("Connection setup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
 
         List<TaskRuntimeContext> contextList = topologyTaskContextMap.get(taskDescriptor.topologyID);
         if (contextList == null) {
@@ -487,6 +490,7 @@ public final class TaskManager implements WM2TMProtocol {
         final PatternLayout layout = new PatternLayout("%d %p - %m%n");
         final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
         rootLOG.addAppender(consoleAppender);
+        rootLOG.setLevel(Level.INFO);
 
         int dataPort = -1;
         int controlPort = -1;
@@ -505,7 +509,9 @@ public final class TaskManager implements WM2TMProtocol {
             System.exit(1);
         }
 
+        long start = System.nanoTime();
         new TaskManager(zkServer, dataPort, controlPort);
+        LOG.info("TM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
     }
 
     public RPCManager getRPCManager() {

@@ -11,6 +11,7 @@ import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
 import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
@@ -142,6 +143,7 @@ public class WorkloadManager implements ClientWMProtocol {
         final PatternLayout layout = new PatternLayout("%d %p - %m%n");
         final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
         rootLOG.addAppender(consoleAppender);
+        rootLOG.setLevel(Level.INFO);
 
         int dataPort = -1;
         int controlPort = -1;
@@ -160,6 +162,8 @@ public class WorkloadManager implements ClientWMProtocol {
             System.exit(1);
         }
 
+        long start = System.nanoTime();
         new WorkloadManager(zkServer, dataPort, controlPort);
+        LOG.info("WM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
     }
 }

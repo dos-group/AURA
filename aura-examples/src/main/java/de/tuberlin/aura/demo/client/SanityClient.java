@@ -1,7 +1,6 @@
 package de.tuberlin.aura.demo.client;
 
 import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.client.executors.LocalClusterExecutor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
@@ -41,7 +40,7 @@ public final class SanityClient {
 
         private static final int BUFFER_SIZE = 64000;
 
-        private static final int RECORDS = 100;
+        private static final int RECORDS = 10000;
 
         public Source(final TaskRuntimeContext context, final Logger LOG) {
             super(context, LOG);
@@ -59,7 +58,7 @@ public final class SanityClient {
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getOutputTaskID(0, index);
                     final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
-                    final Record<SanityBenchmarkRecord> record = new Record<>(new SanityBenchmarkRecord(index));
+                    final Record<SanityBenchmarkRecord> record = new Record<>(new SanityBenchmarkRecord(outputTaskID));
 
                     emit(0, index, record, outputBuffer);
                     ++send;
@@ -115,14 +114,14 @@ public final class SanityClient {
                         final UUID outputTaskID = getOutputTaskID(0, index);
                         final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
 
-                        if (record.getData().nextTask != getTaskIndex()) {
-                            LOG.error("Buffer expected taskID: " + Integer.toString(record.getData().nextTask)
-                                    + " but found " + Integer.toString(getTaskIndex()) + " Task: " + getTaskName());
+                        if (!record.getData().nextTask.equals(getTaskID())) {
+                            LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString()
+                                    + " but found " + getTaskID() + " Task: " + getTaskName());
                         } else {
                             ++correct;
                         }
 
-                        record.getData().nextTask = index;
+                        record.getData().nextTask = outputTaskID;
                         emit(0, index, record, outputBuffer);
                     }
                 } else {
@@ -166,6 +165,11 @@ public final class SanityClient {
                 final Record<SanityBenchmarkRecord> record = absorb(0);
 
                 if (record != null) {
+                    if (!record.getData().nextTask.equals(getTaskID())) {
+                        LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString()
+                                + " but found " + getTaskID() + " Task: " + getTaskName());
+                    }
+
                     ++receivedRecords;
                 }
 
@@ -190,9 +194,9 @@ public final class SanityClient {
         LOG.addAppender(consoleAppender);
         LOG.setLevel(Level.INFO);
 
-        // final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
-        final String zookeeperAddress = "localhost:2181";
-        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6);
+        final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
+        // final String zookeeperAddress = "localhost:2181";
+        // final LocalClusterExecutor lce = new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6);
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
@@ -202,10 +206,11 @@ public final class SanityClient {
                 .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
                 .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class);
 
-        final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
+        AuraTopology at;
 
-        for (int i = 0; i < 1; ++i) {
-            ac.submitTopology(at1, null);
+        for (int i = 1; i <= 10; ++i) {
+            at = atb1.build("Job " + Integer.toString(i), EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
+            ac.submitTopology(at, null);
 
             try {
                 Thread.sleep(30000);
@@ -220,6 +225,6 @@ public final class SanityClient {
             e.printStackTrace();
         }
 
-        lce.shutdown();
+        //lce.shutdown();
     }
 }

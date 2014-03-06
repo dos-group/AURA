@@ -40,7 +40,7 @@ public final class BenchmarkClient {
 
         private static final int BUFFER_SIZE = 64000;
 
-        private static final int RECORDS = 1000;
+        private static final int RECORDS = 10000;
 
         public Task1Exe(final TaskRuntimeContext context, final Logger LOG) {
             super(context, LOG);
@@ -51,17 +51,21 @@ public final class BenchmarkClient {
 
             final UUID taskID = getTaskID();
 
-            for (int i = 0; i < RECORDS; ++i) {
+            long start = System.nanoTime();
+            byte[][] buffers = new byte[RECORDS][BUFFER_SIZE];
+            LOG.info("Buffer init time: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
 
+            start = System.nanoTime();
+            for (int i = 0; i < RECORDS; ++i) {
                 final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getOutputTaskID(0, index);
-                    final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
+                    final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, buffers[i]);
                     final Record<BenchmarkRecord> record = new Record<>(new BenchmarkRecord());
 
                     emit(0, index, record, outputBuffer);
 
-                    LOG.info("Emit at: " + record.getData().time);
+                    LOG.debug("Emit at: " + record.getData().time);
                 }
 
 //                try {
@@ -70,6 +74,8 @@ public final class BenchmarkClient {
 //                    LOG.error(e);
 //                }
             }
+
+            LOG.info("Emit time: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
 
             final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
             for (int index = 0; index < outputs.size(); ++index) {
@@ -107,7 +113,7 @@ public final class BenchmarkClient {
                         final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
                         emit(0, index, record, outputBuffer);
 
-                        LOG.info("Emit at: " + record.getData().time);
+                        LOG.debug("Emit at: " + record.getData().time);
                     }
                 } else {
                     for (int index = 0; index < outputs.size(); ++index) {
@@ -220,7 +226,7 @@ public final class BenchmarkClient {
             double avgLatency = (double) latencySum / (double) latencies.size();
             long medianLatency = MedianHelper.findMedian(latencies);
 
-            LOG.debug("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) + "|"
+            LOG.info("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) + "|"
                     + Long.toString(maxLatency) + "|" + Long.toString(medianLatency));
 
             closeGate(0);
@@ -237,10 +243,11 @@ public final class BenchmarkClient {
         final SimpleLayout layout = new SimpleLayout();
         final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
         LOG.addAppender(consoleAppender);
-        LOG.setLevel(Level.DEBUG);
+        LOG.setLevel(Level.INFO);
 
         final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
-        //final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+        //final String zookeeperAddress = "localhost:2181";
+        //final LocalClusterExecutor lce = new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 5);
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
@@ -281,7 +288,7 @@ public final class BenchmarkClient {
         };
 
 
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 5; ++i) {
             ac.submitTopology(at1, monitoringHandler);
 
             try {
@@ -299,6 +306,6 @@ public final class BenchmarkClient {
             e.printStackTrace();
         }
 
-        // lce.shutdown();
+//        lce.shutdown();
     }
 }

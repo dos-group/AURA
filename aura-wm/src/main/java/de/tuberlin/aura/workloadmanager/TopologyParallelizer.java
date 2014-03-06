@@ -1,26 +1,15 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.task.usercode.UserCode;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
 import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
+
+import java.util.*;
 
 public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopology> {
 
@@ -100,12 +89,13 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                     executionNodeInputs.put(n.uid, inputDescriptors);
                                 }
 
+                                // Assignment of channels
                                 for (final ExecutionNode srcEN : n.getExecutionNodes())
                                     inputDescriptors.add(srcEN.getTaskDescriptor());
                             }
 
                         }
-                            break;
+                        break;
 
                         case POINT_TO_POINT: {
 
@@ -146,8 +136,8 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             } else { // dstDegree < srcDegree
 
                                 final int numOfDstLinks = srcDegree / dstDegree; // number of links
-                                                                                 // per dst
-                                                                                 // execution node.
+                                // per dst
+                                // execution node.
                                 final int numOfNodesWithOneAdditionalLink = srcDegree % dstDegree;
                                 final Iterator<ExecutionNode> srcIter = n.getExecutionNodes().iterator();
 
@@ -177,7 +167,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
                     }
                 }
 
@@ -209,7 +199,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
 
                         case POINT_TO_POINT: {
 
@@ -249,8 +239,8 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             } else { // dstDegree < srcDegree
 
                                 final int numOfDstLinks = srcDegree / dstDegree; // number of links
-                                                                                 // per dst
-                                                                                 // execution node.
+                                // per dst
+                                // execution node.
                                 final int numOfNodesWithOneAdditionalLink = srcDegree % dstDegree;
                                 final Iterator<ExecutionNode> srcIter = element.getExecutionNodes().iterator();
 
@@ -281,7 +271,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
                     }
                 }
 

@@ -30,9 +30,11 @@ public class SanityEvaluator {
                         if (line.contains("SOURCE")) {
                             String[] tokens = line.split("\\|");
                             sumSources += Integer.parseInt(tokens[1]);
+                            System.out.println(line);
                         } else if (line.contains("SINK")) {
                             String[] tokens = line.split("\\|");
                             sumSinks += Integer.parseInt(tokens[1]);
+                            System.out.println(line);
                         } else if (line.toLowerCase().contains("error")) {
                             System.out.println(line);
                         } else if (line.toLowerCase().contains("exception")) {

@@ -1,20 +1,5 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
-
-import net.jcip.annotations.NotThreadSafe;
-
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -22,6 +7,19 @@ import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
+import net.jcip.annotations.NotThreadSafe;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 
 @NotThreadSafe
 public class InfrastructureManager extends EventDispatcher implements IInfrastructureManager {
@@ -37,8 +35,8 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
          */
         @Override
         public synchronized void process(WatchedEvent event) {
-            LOG.debug("received event: " + event.getState().toString());
-            LOG.debug("received event: " + event.getType().toString());
+            LOG.info("received event: " + event.getState().toString());
+            LOG.info("received event: " + event.getType().toString());
 
             try {
                 switch (event.getType()) {
@@ -99,16 +97,24 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     // Fields.
     // ---------------------------------------------------
 
-    /** Logger. */
+    /**
+     * Logger.
+     */
     private static final Logger LOG = LoggerFactory.getLogger(InfrastructureManager.class);
 
-    /** The only instance of this class. */
+    /**
+     * The only instance of this class.
+     */
     private static InfrastructureManager INSTANCE;
 
-    /** The connection to the ZooKeeper-cluster. */
+    /**
+     * The connection to the ZooKeeper-cluster.
+     */
     private ZooKeeper zookeeper;
 
-    /** Stores all task manager nodes. */
+    /**
+     * Stores all task manager nodes.
+     */
     private final HashMap<UUID, MachineDescriptor> nodeMap;
 
     private final MachineDescriptor wmMachine;
@@ -118,9 +124,10 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
+
     /**
      * Constructor.
-     * 
+     *
      * @param zkServers This string must contain the connection to the ZooKeeper-cluster.
      */
     private InfrastructureManager(final String zkServers, final MachineDescriptor wmMachine) {
@@ -181,10 +188,10 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
 
     /**
      * Get an instance of the infrastructure manager.
-     * 
+     *
      * @param zkServers This string must contain the connection to the ZooKeeper-cluster.
      */
-    public static InfrastructureManager getInstance(final String zkServers, final MachineDescriptor wmMachine) {
+    public static synchronized InfrastructureManager getInstance(final String zkServers, final MachineDescriptor wmMachine) {
         if (INSTANCE == null) {
             INSTANCE = new InfrastructureManager(zkServers, wmMachine);
         }

@@ -61,6 +61,8 @@ public abstract class TaskInvokeable<T> {
 
     private RecordReader reader;
 
+    private int exhaustedEventSources;
+
     private volatile boolean isRunning;
 
     // ---------------------------------------------------
@@ -71,6 +73,10 @@ public abstract class TaskInvokeable<T> {
 
     public UUID getTaskID() {
         return context.task.taskID;
+    }
+
+    public String getTaskName() {
+        return context.task.name;
     }
 
     public UUID getOutputTaskID(int gateIndex, int channelIndex) {
@@ -94,25 +100,29 @@ public abstract class TaskInvokeable<T> {
 
             final DataIOEvent event = context.inputGates.get(gateIndex).getInputQueue().take();
 
-            LOG.info("received data message from task " + event.srcTaskID);
+            LOG.debug("received data message from task " + event.srcTaskID);
 
             // TODO: Is that the right place?
             if (IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(event.type)) {
+                ++exhaustedEventSources;
 
-                final Set<UUID> activeChannelSet = activeGates.get(gateIndex);
+                if (exhaustedEventSources == context.inputGates.get(gateIndex).getNumChannels()) {
+                    final Set<UUID> activeChannelSet = activeGates.get(gateIndex);
 
-                if (!activeChannelSet.remove(event.srcTaskID))
-                    throw new IllegalStateException();
+                    if (!activeChannelSet.remove(event.srcTaskID))
+                        throw new IllegalStateException();
 
-                for (final Set<UUID> acs : activeGates) {
-                    isRunning &= acs.isEmpty();
+                    for (final Set<UUID> acs : activeGates) {
+                        isRunning &= acs.isEmpty();
+                    }
+                    isRunning = !isRunning;
+                } else {
+                    return absorb(gateIndex);
                 }
-                isRunning = !isRunning;
             } else {
                 Record<T> record = this.reader.readRecord((DataBufferEvent) event);
                 return record;
             }
-
         } catch (InterruptedException e) {
             LOG.error(e);
             return null;

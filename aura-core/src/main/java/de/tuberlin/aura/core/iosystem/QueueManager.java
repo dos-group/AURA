@@ -23,6 +23,10 @@ public class QueueManager<T> {
 
     private final BufferQueueFactory<T> queueFactory;
 
+    private int inputQueuesCounter;
+
+    private int outputQueuesCounter;
+
     private QueueManager(BufferQueueFactory<T> factory) {
         this.inputQueues = new HashMap<>();
         this.outputQueues = new HashMap<>();
@@ -42,8 +46,10 @@ public class QueueManager<T> {
             return inputQueues.get(gateIndex);
         }
 
-        final BufferQueue<T> queue = queueFactory.newInstance();
+        final BufferQueue<T> queue = queueFactory.newInstance("InputQueue " + Integer.toString(inputQueuesCounter));
         inputQueues.put(gateIndex, queue);
+        ++this.inputQueuesCounter;
+
         return queue;
     }
 
@@ -54,8 +60,10 @@ public class QueueManager<T> {
             return outputQueues.get(key);
         }
 
-        final BufferQueue<T> queue = queueFactory.newInstance();
+        final BufferQueue<T> queue = queueFactory.newInstance("OutputQueue " + Integer.toString(outputQueuesCounter));
         outputQueues.put(key, queue);
+        ++this.outputQueuesCounter;
+
         return queue;
     }
 

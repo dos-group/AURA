@@ -1,9 +1,7 @@
 package de.tuberlin.aura.demo.client;
 
 import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
@@ -36,13 +34,13 @@ public final class MapReduceClient {
     /**
      *
      */
-    public static class Task1Exe extends TaskInvokeable {
+    public static class Source extends TaskInvokeable {
 
         private static final int BUFFER_SIZE = 64000;
 
         private static final int RECORDS = 1000;
 
-        public Task1Exe(final TaskRuntimeContext context, final Logger LOG) {
+        public Source(final TaskRuntimeContext context, final Logger LOG) {
             super(context, LOG);
         }
 
@@ -244,45 +242,17 @@ public final class MapReduceClient {
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Source.class)
                 .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
                 .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
                 .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
                 .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task4Exe.class);
 
-        final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task5", 2, 1), Task1Exe.class)
-                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
-                .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
 
         final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
-        final AuraTopology at2 = atb2.build("Job 2", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
-
-        final EventHandler monitoringHandler = new EventHandler() {
-
-            @Handle(event = IOEvents.MonitoringEvent.class, type = IOEvents.MonitoringEvent.MONITORING_TOPOLOGY_STATE_EVENT)
-            private void handleMonitoredTopologyEvent(final IOEvents.MonitoringEvent event) {
-                LOG.info(event.type + ": " + event.topologyStateUpdate.currentTopologyState.toString() + " ---- "
-                        + event.topologyStateUpdate.topologyTransition.toString() + " ----> "
-                        + event.topologyStateUpdate.nextTopologyState.toString() + " - " + event.topologyStateUpdate.currentTopologyState.toString()
-                        + " duration (" + event.topologyStateUpdate.stateDuration + "ms)");
-            }
-
-            @Handle(event = IOEvents.MonitoringEvent.class, type = IOEvents.MonitoringEvent.MONITORING_TASK_STATE_EVENT)
-            private void handleMonitoredTaskEvent(final IOEvents.MonitoringEvent event) {
-                LOG.info(event.type + ": " + event.taskStateUpdate.currentTaskState.toString() + " ---- "
-                        + event.taskStateUpdate.taskTransition.toString() + " ----> " + event.taskStateUpdate.nextTaskState.toString() + " - "
-                        + event.taskStateUpdate.currentTaskState.toString() + " duration (" + event.taskStateUpdate.stateDuration + "ms)");
-            }
-        };
-
 
         for (int i = 0; i < 10; ++i) {
-            ac.submitTopology(at1, monitoringHandler);
+            ac.submitTopology(at1, null);
 
             try {
                 Thread.sleep(30000);
@@ -290,8 +260,6 @@ public final class MapReduceClient {
                 LOG.error(e);
             }
         }
-
-        //ac.submitTopology(at2, null);
 
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();

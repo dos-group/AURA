@@ -80,6 +80,7 @@ case $1 in
 		echo "Install Aura..."
 
 		ssh -t -t "$USER@$WALLYMASTER" << SSHEND
+	rm -rf $AURA_PATH/
 	mkdir -p $AURA_PATH/
 	exit
 SSHEND

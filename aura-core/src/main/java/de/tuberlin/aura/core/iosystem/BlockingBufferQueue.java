@@ -3,51 +3,79 @@ package de.tuberlin.aura.core.iosystem;
 import org.apache.log4j.Logger;
 
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class BlockingBufferQueue<T> implements BufferQueue<T> {
 
     private final Logger LOG = Logger.getRootLogger();
 
-    private final BlockingQueue<T> backingQueue;
+    private final BlockingQueue<DataHolder<T>> backingQueue;
 
-    private HashMap<T, Long> queuingTimes;
+    private String name;
 
-    BlockingBufferQueue() {
-        this.backingQueue = new ArrayBlockingQueue<>(1000, true);
-        this.queuingTimes = new HashMap<>();
+    private long sumLatency;
+
+    private long sumQueueSize;
+
+    private int counter;
+
+
+    BlockingBufferQueue(String name) {
+        this.name = name;
+        this.backingQueue = new LinkedBlockingQueue<>();
+        //this.backingQueue = new ArrayBlockingQueue<>(1024, true);
     }
 
     @Override
     public T take() throws InterruptedException {
-        T val = backingQueue.take();
-        LOG.debug("TIME_IN_QUEUE|" + Long.toString(System.currentTimeMillis() - this.queuingTimes.get(val)) + "|" +
-                Integer.toString(this.backingQueue.size()));
+        DataHolder<T> val = backingQueue.take();
 
-        return val;
+        this.sumLatency += (System.currentTimeMillis() - val.time);
+        this.sumQueueSize += this.backingQueue.size();
+        ++this.counter;
+
+        if (this.counter == 1000) {
+            LOG.info(this.name + ": TIME_IN_QUEUE|" + Double.toString((double) this.sumLatency / (double) this.counter) + "|" +
+                    Double.toString((double) this.sumQueueSize / (double) this.counter));
+
+            this.counter = 0;
+            this.sumLatency = 0;
+            this.sumQueueSize = 0;
+        }
+
+        return val.data;
     }
 
     @Override
     public void offer(T value) {
 
-        LOG.debug("PUT_QUEUE:" + Integer.toString(this.backingQueue.size()));
+//      LOG.debug("PUT_QUEUE:" + Integer.toString(this.backingQueue.size()));
+        DataHolder<T> holder = new DataHolder<>();
+        holder.time = System.currentTimeMillis();
+        holder.data = value;
 
-        this.queuingTimes.put(value, System.currentTimeMillis());
-        backingQueue.offer(value);
+        backingQueue.offer(holder);
     }
 
     @Override
     public int drainTo(Collection<? super T> dump) {
-        return backingQueue.drainTo(dump);
+
+        // TODO: Fix this!
+        return 0;
     }
 
     public static class Factory<F> implements BufferQueueFactory<F> {
 
         @Override
-        public BufferQueue<F> newInstance() {
-            return new BlockingBufferQueue<F>();
+        public BufferQueue<F> newInstance(String name) {
+            return new BlockingBufferQueue<F>(name);
         }
+    }
+
+    public class DataHolder<T> {
+        public long time;
+
+        public T data;
     }
 }

@@ -25,8 +25,8 @@ public class BenchmarkEvaluator {
         long medSum = 0l;
         int results = 0;
 
-        ArrayList<Long> queuingTimes = new ArrayList<>();
-        ArrayList<Integer> queueSize = new ArrayList<>();
+        ArrayList<Double> queuingTimes = new ArrayList<>();
+        ArrayList<Double> queueSize = new ArrayList<>();
 
         File rootFolder = new File(this.path);
         for (File folder : rootFolder.listFiles()) {
@@ -54,8 +54,8 @@ public class BenchmarkEvaluator {
                             System.out.println(line);
                         } else if (line.contains("TIME_IN_QUEUE")) {
                             String[] tokens = line.split("\\|");
-                            queuingTimes.add(Long.parseLong(tokens[1]));
-                            queueSize.add(Integer.parseInt(tokens[2]));
+                            queuingTimes.add(Double.parseDouble(tokens[1]));
+                            queueSize.add(Double.parseDouble(tokens[2]));
                         }
                     }
 
@@ -70,11 +70,11 @@ public class BenchmarkEvaluator {
             }
         }
 
-        long minQueueLatency = Long.MAX_VALUE;
-        long maxQueueLatency = Long.MIN_VALUE;
-        long queueLatencySum = 0l;
+        double minQueueLatency = Long.MAX_VALUE;
+        double maxQueueLatency = Long.MIN_VALUE;
+        double queueLatencySum = 0l;
 
-        for (long latency : queuingTimes) {
+        for (double latency : queuingTimes) {
             queueLatencySum += latency;
 
             if (latency < minQueueLatency) {
@@ -86,8 +86,8 @@ public class BenchmarkEvaluator {
             }
         }
 
-        long queueSizeSum = 0;
-        for (int size : queueSize) {
+        double queueSizeSum = 0;
+        for (double size : queueSize) {
             queueSizeSum += size;
         }
 
@@ -96,9 +96,9 @@ public class BenchmarkEvaluator {
         System.out.println("Max Latency: " + Double.toString(maxSum / (double) results) + " ms");
         System.out.println("Median Latency: " + Double.toString((double) medSum / (double) results) + " ms");
         System.out.println("Avg Queue Latency: " + Double.toString(queueLatencySum / (double) queuingTimes.size()) + " ms");
-        System.out.println("Min Queue Latency: " + Long.toString(minQueueLatency) + " ms");
-        System.out.println("Max Queue Latency: " + Long.toString(maxQueueLatency) + " ms");
-        System.out.println("Median Queue Latency: " + MedianHelper.findMedian(queuingTimes) + " ms");
+        System.out.println("Min Queue Latency: " + Double.toString(minQueueLatency) + " ms");
+        System.out.println("Max Queue Latency: " + Double.toString(maxQueueLatency) + " ms");
+        System.out.println("Median Queue Latency: " + MedianHelper.findMedianDouble(queuingTimes) + " ms");
         System.out.println("Avg Queue Size: " + Double.toString((double) queueSizeSum / (double) queueSize.size()));
     }
 

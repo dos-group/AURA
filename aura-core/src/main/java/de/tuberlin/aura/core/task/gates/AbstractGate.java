@@ -34,4 +34,8 @@ public abstract class AbstractGate {
     // Public.
     // ---------------------------------------------------
 
+    public int getNumChannels() {
+        return this.numChannels;
+    }
+
 }
