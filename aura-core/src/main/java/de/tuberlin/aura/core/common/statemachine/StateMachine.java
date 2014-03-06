@@ -2,7 +2,10 @@ package de.tuberlin.aura.core.common.statemachine;
 
 import de.tuberlin.aura.core.common.utils.Pair;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public final class StateMachine {
 
@@ -15,7 +18,7 @@ public final class StateMachine {
         public final class TransitionBuilder<S extends Enum<S>, T extends Enum<T>> {
 
             public TransitionBuilder(final FiniteStateMachineBuilder<S,T> fsmBuilder) {
-                // snanity check.
+                // sanity check.
                 if(fsmBuilder == null)
                     throw new IllegalArgumentException("fsmBuilder == null");
 
@@ -27,7 +30,7 @@ public final class StateMachine {
             private S currentState;
 
             private TransitionBuilder<S,T> currentState(final S state) {
-                // Sanity check.
+                // sanity check.
                 if(state == null)
                     throw new IllegalArgumentException("state == null");
                 this.currentState = state;
@@ -35,7 +38,7 @@ public final class StateMachine {
             }
 
             public FiniteStateMachineBuilder<S,T> addTransition(final T transition, final S nextState) {
-                // Sanity check.
+                // sanity check.
                 if(transition == null)
                     throw new IllegalArgumentException("transition == null");
                 if(nextState == null)
@@ -48,11 +51,14 @@ public final class StateMachine {
                 }
 
                 transitionMap.put(transition, nextState);
-
                 return fsmBuilder;
             }
 
             public FiniteStateMachineBuilder<S,T> noTransition() {
+                // sanity check.
+                if (fsmBuilder.finalStates.contains(currentState))
+                    throw new IllegalStateException();
+                fsmBuilder.finalStates.add(currentState);
                 return fsmBuilder;
             }
         }
@@ -64,6 +70,8 @@ public final class StateMachine {
         private final Map<S,Pair<StateAction<S,T>,Map<T,S>>> stateTransitionMtx;
 
         private final TransitionBuilder<S,T> transitionBuilder;
+
+        private final Set<S> finalStates;
 
 
         public FiniteStateMachineBuilder(final Class<S> stateClazz, final Class<T> transitionClazz, final S errorState) {
@@ -84,10 +92,12 @@ public final class StateMachine {
             this.transitionClazz = transitionClazz;
 
             this.transitionBuilder = new TransitionBuilder<>(this);
+
+            this.finalStates = new HashSet<>();
         }
 
         public TransitionBuilder<S,T> defineState(final S state, final StateAction<S,T> action) {
-            // Sanity check.
+            // sanity check.
             if(state == null)
                 throw new IllegalArgumentException("state == null");
 
@@ -113,32 +123,41 @@ public final class StateMachine {
         }
 
         public FiniteStateMachine<S,T> build(final S initialState) {
-            return new FiniteStateMachine<>(stateTransitionMtx, initialState, errorState);
+            return new FiniteStateMachine<>(stateTransitionMtx, initialState, errorState, finalStates);
         }
     }
 
     public static final class FiniteStateMachine<S,T> {
 
-        private final Map<S, Pair<StateAction<S,T>, Map<T, S>>> stateTransitionMtx;
+        private final Map<S, Pair<StateAction<S, T>, Map<T, S>>> stateTransitionMtx;
 
         private final S errorState;
 
         private S currentState;
 
-        public FiniteStateMachine(final Map<S, Pair<StateAction<S,T>, Map<T, S>>> stateTransitionMtx, final S initialState, final S errorState) {
-            // Sanity check.
+        private final Set<S> finalStates;
+
+        public FiniteStateMachine(final Map<S, Pair<StateAction<S, T>, Map<T, S>>> stateTransitionMtx,
+                                  final S initialState,
+                                  final S errorState,
+                                  final Set<S> finalStates) {
+            // sanity check.
             if(stateTransitionMtx == null)
                 throw new IllegalArgumentException("stateTransitionMtx == null");
             if(initialState == null)
-                throw new IllegalStateException("initialState == null");
+                throw new IllegalArgumentException("initialState == null");
             if(errorState == null)
-                throw new IllegalStateException("errorState == null");
+                throw new IllegalArgumentException("errorState == null");
+            if (finalStates == null)
+                throw new IllegalArgumentException("finalStates == null");
 
             this.stateTransitionMtx = stateTransitionMtx;
 
             this.currentState = initialState;
 
             this.errorState = errorState;
+
+            this.finalStates = finalStates;
         }
 
         public void start() {
@@ -150,11 +169,8 @@ public final class StateMachine {
             if(transition == null)
                 throw new IllegalArgumentException("transition == null ");
 
-            if(currentState instanceof StateBase) {
-                final StateBase state = (StateBase)currentState;
-                if(state.isFinalState()) {
-                    throw new IllegalStateException(state + " is a final state, no transition allowed");
-                }
+            if (finalStates.contains(currentState)) {
+                throw new IllegalStateException(currentState + " is a final state, no transition allowed");
             }
 
             final Pair<StateAction<S,T>,Map<T,S>> transitionSpace = stateTransitionMtx.get(currentState);
@@ -179,46 +195,33 @@ public final class StateMachine {
 
     }
 
-    public static interface StateBase {
-
-        public boolean isFinalState();
-    }
 
     /**
      *
      */
-    public static enum TopologyState implements StateBase {
+    public static enum TopologyState {
 
-        TOPOLOGY_STATE_CREATED(false),
+        TOPOLOGY_STATE_CREATED,
 
-        TOPOLOGY_STATE_PARALLELIZED(false),
+        TOPOLOGY_STATE_PARALLELIZED,
 
-        TOPOLOGY_STATE_SCHEDULED(false),
+        TOPOLOGY_STATE_SCHEDULED,
 
-        TOPOLOGY_STATE_DEPLOYED(false),
+        TOPOLOGY_STATE_DEPLOYED,
 
-        TOPOLOGY_STATE_RUNNING(false),
+        TOPOLOGY_STATE_RUNNING,
 
-        TOPOLOGY_STATE_FINISHED(true),
+        TOPOLOGY_STATE_FINISHED,
 
-        TOPOLOGY_STATE_FAILURE(true),
+        TOPOLOGY_STATE_FAILURE,
 
-        ERROR(true);
+        ERROR;
 
-        TopologyState(final boolean finalState) {
-
-            this.finalState = finalState;
-
+        TopologyState() {
             this.context = new StateContext();
         }
 
-        public final boolean finalState;
-
         public final StateContext context;
-
-        public boolean isFinalState() {
-            return finalState;
-        }
     }
 
     /**
@@ -290,7 +293,7 @@ public final class StateMachine {
 
         topologyFSM.doTransition(TopologyTransition.TOPOLOGY_TRANSITION_FINISH);
 
-        //topologyFSM.doTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN);
+        topologyFSM.doTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN);
 
     }
 }
