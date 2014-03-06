@@ -8,7 +8,10 @@ public interface BufferQueue<T> extends Iterable<T> {
 
     void put(T value) throws InterruptedException;
 
-    int drainTo(BufferQueue<? super T> dump);
-
     boolean isEmpty();
+
+    public interface FACTORY<T> {
+
+        BufferQueue<T> newInstance();
+    }
 }

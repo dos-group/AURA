@@ -173,11 +173,9 @@ public final class TaskManager implements WM2TMProtocol {
                     if (outputTask.taskID.equals(event.dstTaskID)) {
                         // get the right queue manager for task context
                         BufferQueue<DataIOEvent> queue = context.queueManager.getOutputQueue(gateIndex, channelIndex);
-                        BufferQueue<DataIOEvent> buffer = context.queueManager.getIntermediateBuffer(gateIndex, channelIndex);
 
                         DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.payload;
                         channelWriter.setOutputQueue(queue);
-                        channelWriter.setBufferQueue(buffer);
 
                         context.outputGates.get(gateIndex).setChannelWriter(channelIndex, channelWriter);
 

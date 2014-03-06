@@ -263,6 +263,8 @@ public final class Client {
                     sum_count += count;
 
                     count++;
+                } else {
+                    LOG.error(inputBuffer);
                 }
 
 
@@ -272,7 +274,11 @@ public final class Client {
 
                 if (count == 10) {
                     closeGate(0);
-                    Thread.sleep(10000);
+                }
+
+                if (isGateClosed(0)) {
+                    Thread.sleep(3000);
+                    LOG.error("opened again");
                     openGate(0);
                 }
 
@@ -286,7 +292,7 @@ public final class Client {
 
             LOG.info("RECEIVED ELEMENTS: " + count);
 
-      //closeGate(0);
+            // closeGate(0);
         }
     }
 
@@ -302,7 +308,7 @@ public final class Client {
         // LOG.setLevel(Level.DEBUG);
 
         final String zookeeperAddress = "localhost:2181";
-        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6);
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
@@ -323,9 +329,9 @@ public final class Client {
             .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
         final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
-            .connectTo("Task33", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task33", 1, 1), Task33Exe.class)
+        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
+        // .connectTo("Task33", Edge.TransferType.POINT_TO_POINT)
+        // .addNode(new Node(UUID.randomUUID(), "Task33", 10, 1), Task33Exe.class)
             .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
             .addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
 

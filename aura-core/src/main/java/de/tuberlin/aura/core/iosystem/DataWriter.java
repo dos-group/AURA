@@ -1,7 +1,6 @@
 package de.tuberlin.aura.core.iosystem;
 
 import java.net.SocketAddress;
-import java.nio.ByteBuffer;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -9,14 +8,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
+import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -42,11 +39,6 @@ public class DataWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataWriter.class);
 
-    private final ReentrantLock drainLock = new ReentrantLock();
-
-    private final Condition drainCond = drainLock.newCondition();
-
-    // dispatch information
     private final IEventDispatcher dispatcher;
 
     private final EventLoopGroup workerGroup;
@@ -67,13 +59,13 @@ public class DataWriter {
         return new ChannelWriter<>(type, srcTaskID, dstTaskID, address);
     }
 
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
+
     public class ChannelWriter<T extends Channel> {
 
-        private final AtomicBoolean channelWritable = new AtomicBoolean(false);
-
-        private final CountDownLatch queueReady = new CountDownLatch(1);
-
-        private final CountDownLatch pollFinished = new CountDownLatch(1);
+        // connection
 
         private final UUID srcID;
 
@@ -81,21 +73,31 @@ public class DataWriter {
 
         private Channel channel;
 
+        // poll thread
+
         private volatile boolean shutdown = false;
 
-        private BufferQueue<IOEvents.DataIOEvent> transferQueue;
-
-        private BufferQueue<IOEvents.DataIOEvent> bufferQueue;
+        private final CountDownLatch pollFinished = new CountDownLatch(1);
 
         private Future<Void> pollResult;
 
-        private IOEvents.DataIOEvent interruptedEvent;
+        private final CountDownLatch queueReady = new CountDownLatch(1);
+
+        private final AtomicBoolean channelWritable = new AtomicBoolean(false);
+
+        private BufferQueue<IOEvents.DataIOEvent> transferQueue;
+
+        // gate semantics
+
+        private final ResettableCountDownLatch awaitGateOpenLatch;
 
         private AtomicBoolean gateOpen = new AtomicBoolean(false);
 
         public ChannelWriter(final OutgoingConnectionType<T> type, final UUID srcID, final UUID dstID, final SocketAddress address) {
             this.srcID = srcID;
             this.dstID = dstID;
+
+            this.awaitGateOpenLatch = new ResettableCountDownLatch(1);
 
             Bootstrap bootstrap = type.bootStrap(workerGroup);
             bootstrap.handler(new ChannelInitializer<T>() {
@@ -116,45 +118,6 @@ public class DataWriter {
             bootstrap.connect(address).addListener(new ConnectListener());
         }
 
-        public void setBufferQueue(BufferQueue<IOEvents.DataIOEvent> bufferQueue) {
-            this.bufferQueue = bufferQueue;
-        }
-
-        /**
-         * Sets the channel if the connection to the server was successful.
-         */
-        private class ConnectListener implements ChannelFutureListener {
-
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isDone()) {
-                    if (future.isSuccess()) {
-
-                        channel = future.channel();
-                        LOG.debug("channel successfully connected.");
-
-                        Poll pollThread = new Poll();
-                        pollResult = pollThreadExecutor.submit(pollThread);
-
-                        future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                                                srcID,
-                                                                                dstID));
-                        final IOEvents.GenericIOEvent event =
-                                new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                                            ChannelWriter.this,
-                                                            srcID,
-                                                            dstID);
-                        event.setChannel(future.channel());
-                        dispatcher.dispatchEvent(event);
-
-                    } else if (future.cause() != null) {
-                        LOG.error("connection attempt failed: ", future.cause());
-                        throw new IllegalStateException("connection attempt failed.", future.cause());
-                    }
-                }
-            }
-        }
-
         /**
          * Writes the event to the channel.
          * 
@@ -165,51 +128,21 @@ public class DataWriter {
          * @param event
          */
         public void write(IOEvents.DataIOEvent event) {
-
-            if (gateOpen.get()) {
-                try {
-                    this.transferQueue.put(event);
-
-                    // if it was blocked, and we have elements in the bufferQueue, we first have to
-                    // drain
-                    // the bufferQueue to the transferQueue before we allow further
-                    // writes to the transferQueue to achieve in order.
-
-                } catch (InterruptedException e) {
-                    LOG.error("Write of event " + event + " was interrupted.", e);
+            try {
+                if (!gateOpen.get()) {
+                    awaitGateOpenLatch.await();
                 }
-            } else {
-          // add into bufferQueue
-                final Lock lock = DataWriter.this.drainLock;
-                lock.lock();
-                try {
-                    // TODO: handle spurious wakeup!
-                    if (!this.bufferQueue.offer(event)) {
-                        drainCond.await();
-                        // write elements which was not enqueued into the bufferQueue to outgoing
-                        // transferQueue
-                        this.transferQueue.put(event);
-                    }
 
-          // if it was blocked, drain to transferQueue
-                    // done by handler for the open gate event
-
-                } catch (InterruptedException e) {
-                    LOG.error("Write of event " + event + " was interrupted (buffer handle).", e);
-                } finally {
-                    lock.unlock();
-                }
+                this.transferQueue.put(event);
+            } catch (InterruptedException e) {
+                LOG.error("Write of event " + event + " was interrupted.", e);
             }
-
         }
 
         /**
-         * Shut down the channel writer. If there was an ongoing write which could not be finished,
-         * the {@see DataIOEvent} is dispatched.
+         * Shut down the channel writer.
          */
         public void shutdown(boolean awaitExhaustion) {
-            // this should work as we exit the loop on interrupt
-            // in case it does not work we have to use a future and wait explicitly
 
             // force interrupt
             if (!awaitExhaustion) {
@@ -218,17 +151,14 @@ public class DataWriter {
             }
 
             // even if we shutdown gracefully, we have to send an interrupt
-            // otherwise the thread would never return, if the transferQueue is already empty and the poll
-            // thread is blocked in the take method.
+            // otherwise the thread would never return, if the transferQueue is already empty and
+            // the poll thread is blocked in the take method.
             pollResult.cancel(true);
 
             try {
                 // we can't use the return value of result cause we have to interrupt the thread
                 // therefore we need the latch and the field
                 pollFinished.await();
-                if (interruptedEvent != null) {
-                    // dispatcher.dispatchEvent(interruptedEvent);
-                }
             } catch (InterruptedException e) {
                 LOG.error("Receiving future from poll thread failed. Interrupt.", e);
             } finally {
@@ -245,7 +175,7 @@ public class DataWriter {
 
         public void setOutputQueue(BufferQueue<IOEvents.DataIOEvent> queue) {
             this.transferQueue = queue;
-        LOG.debug("Buffer queue attached.");
+            LOG.debug("Event queue attached.");
             queueReady.countDown();
         }
 
@@ -257,14 +187,21 @@ public class DataWriter {
 
             private final Logger LOG = LoggerFactory.getLogger(Poll.class);
 
+
+            /*
+             * We use a Callable here to be able to shutdown single threads instead of all threads
+             * managed by the executor.
+             */
             @Override
             public Void call() throws Exception {
                 try {
                     queueReady.await();
                 } catch (InterruptedException e) {
                     if (shutdown) {
-                        LOG.info("Shutdown signal received, while transferQueue was still not attached.");
-                        return null;
+                        LOG.info("Shutdown signal received. Queue was not attached.");
+                        // set shutdown true, as the interrupt occurred while the queue was not
+                        // attached yet.
+                        shutdown = true;
                     }
                 }
 
@@ -274,19 +211,15 @@ public class DataWriter {
 
                             IOEvents.DataIOEvent dataIOEvent = transferQueue.take();
 
-                            if (dataIOEvent instanceof IOEvents.DataBufferEvent) {
-                                int received = ByteBuffer.wrap(((IOEvents.DataBufferEvent) dataIOEvent).data).getInt();
-                                LOG.error("sending :" + received);
-                            }
-
                             if (dataIOEvent.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
-                                LOG.debug("data source exhausted. shutting down poll thread.");
+                                LOG.debug("Data source exhausted. Shutting down poll thread.");
                                 shutdown = true;
                             }
 
                             channel.writeAndFlush(dataIOEvent).syncUninterruptibly();
+
                         } else {
-     LOG.trace("Channel not writable.");
+                            LOG.trace("Channel not writable.");
                         }
                     } catch (InterruptedException e) {
                         // interrupted during take command, 2. scenarios
@@ -296,7 +229,8 @@ public class DataWriter {
                         // transferQueue == not empty
 
                         // either the thread is forced to shut down -> shutdown == true
-                        // or gracefully, send events in transferQueue before shutdown -> shutdown == false
+                        // or gracefully, send events in transferQueue before shutdown -> shutdown
+                     // == false
                     }
                 }
 
@@ -317,23 +251,8 @@ public class DataWriter {
                     case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN:
                         LOG.info("RECEIVED GATE OPEN EVENT");
 
-               // bufferQueue may have more capacity than transferQueue
-                        // so we have to wait until elements are sent over net to drain the rest
-
-                        // TODO: blocking, so move away from I/O loop!!!
-
-                        final Lock lock = DataWriter.this.drainLock;
-                        lock.lock();
-                        try {
-                            while (!bufferQueue.isEmpty()) {
-                           bufferQueue.drainTo(transferQueue);
-                            }
-                            drainCond.signalAll();
-                        } finally {
-                            lock.unlock();
-                        }
-
                         gateOpen.set(true);
+                        awaitGateOpenLatch.countDown();
 
                         gateEvent.setChannel(ctx.channel());
                         dispatcher.dispatchEvent(gateEvent);
@@ -344,7 +263,8 @@ public class DataWriter {
                     case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE:
                         LOG.info("RECEIVED GATE CLOSE EVENT");
 
-                 // disable write to output transferQueue
+
+  awaitGateOpenLatch.reset();
                         gateOpen.set(false);
 
                         gateEvent.setChannel(ctx.channel());
@@ -365,21 +285,53 @@ public class DataWriter {
         }
 
         /**
+         * Sets the channel if the connection to the server was successful.
+         */
+        private class ConnectListener implements ChannelFutureListener {
+
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isDone()) {
+                    if (future.isSuccess()) {
+
+                        channel = future.channel();
+                        LOG.debug("Channel successfully connected.");
+
+                        Poll pollThread = new Poll();
+                        pollResult = pollThreadExecutor.submit(pollThread);
+
+                        future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+                                                                                srcID,
+                                                                                dstID));
+                        final IOEvents.GenericIOEvent event =
+                                new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
+                                                            ChannelWriter.this,
+                                                            srcID,
+                                                            dstID);
+                        event.setChannel(future.channel());
+                        dispatcher.dispatchEvent(event);
+
+                    } else if (future.cause() != null) {
+                        LOG.error("Connection attempt failed: ", future.cause());
+                        throw new IllegalStateException("connection attempt failed.", future.cause());
+                    }
+                }
+            }
+        }
+
+    /**
          * Sets the writable flag for this channel.
          */
         private class WritableHandler extends ChannelInboundHandlerAdapter {
 
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                // LOG.trace("channelActive");
                 channelWritable.set(ctx.channel().isWritable());
                 ctx.fireChannelActive();
             }
 
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-                // LOG.debug("channelWritabilityChanged: " + (ctx.channel().isWritable() ?
-                // "writable" : "blocked"));
                 channelWritable.set(ctx.channel().isWritable());
                 ctx.fireChannelWritabilityChanged();
             }
@@ -414,7 +366,7 @@ public class DataWriter {
     public static class LocalConnection extends AbstractConnection<LocalChannel> {
 
         public LocalConnection() {
-            super(DEFAULT_BUFFER_SIZE);
+           super();
         }
 
         public LocalConnection(int bufferSize) {
@@ -425,10 +377,12 @@ public class DataWriter {
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup).channel(LocalChannel.class)
-            // the mark the outbound bufferQueue has to reach in order to change the writable state of a
+            // the mark the outbound bufferQueue has to reach in order to change the writable state
+           // of a
             // channel true
               .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-              // the mark the outbound bufferQueue has to reach in order to change the writable state of
+              // the mark the outbound bufferQueue has to reach in order to change the writable
+      // state of
               // a channel false
               .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
 
@@ -439,7 +393,7 @@ public class DataWriter {
     public static class NetworkConnection extends AbstractConnection<SocketChannel> {
 
         public NetworkConnection() {
-            super(DEFAULT_BUFFER_SIZE);
+ super();
         }
 
         public NetworkConnection(int bufferSize) {
@@ -458,11 +412,13 @@ public class DataWriter {
               // size of the system lvl send bufferQueue PER SOCKET
               // -> bufferQueue size, as we always have only 1 channel per socket in the client case
               .option(ChannelOption.SO_SNDBUF, bufferSize)
-              // the mark the outbound bufferQueue has to reach in order to change the writable state of
-              // a channel true
+              // the mark the outbound bufferQueue has to reach in order to change the writable
+              // state of
+             // a channel true
               .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-              // the mark the outbound bufferQueue has to reach in order to change the writable state of
-              // a channel false
+              // the mark the outbound bufferQueue has to reach in order to change the writable
+              // state of
+            // a channel false
               .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
 
             return bs;

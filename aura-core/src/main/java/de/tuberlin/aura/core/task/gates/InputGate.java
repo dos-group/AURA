@@ -31,6 +31,7 @@ public final class InputGate extends AbstractGate {
 
     private static final Logger LOG = LoggerFactory.getLogger(InputGate.class);
 
+
     // ---------------------------------------------------
     // Public.
     // ---------------------------------------------------
@@ -61,10 +62,10 @@ public final class InputGate extends AbstractGate {
                                                                                    srcID,
                                                                                    context.task.taskID));
         }
-
     }
 
     public BufferQueue<DataIOEvent> getInputQueue() {
         return channelReader.getInputQueue(context.task.taskID, gateIndex);
     }
+
 }

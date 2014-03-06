@@ -17,14 +17,11 @@ public class QueueManager<T> {
 
     private final Map<LongKey, BufferQueue<T>> outputQueues;
 
-    private final Map<LongKey, BufferQueue<T>> intermediateBuffers;
+    private final BufferQueue.FACTORY<T> queueFactory;
 
-    private final BufferQueueFactory<T> queueFactory;
-
-    private QueueManager(BufferQueueFactory<T> factory) {
+    private QueueManager(BufferQueue.FACTORY<T> factory) {
         this.inputQueues = new HashMap<>();
         this.outputQueues = new HashMap<>();
-        this.intermediateBuffers = new HashMap<>();
         this.queueFactory = factory;
     }
 
@@ -32,7 +29,7 @@ public class QueueManager<T> {
     // Public.
     // ---------------------------------------------------
 
-    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext, BufferQueueFactory<F> queueFactory) {
+    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext, BufferQueue.FACTORY<F> queueFactory) {
         QueueManager<F> instance = new QueueManager<>(queueFactory);
         BINDINGS.put(taskContext, instance);
         return instance;
@@ -58,17 +55,6 @@ public class QueueManager<T> {
 
         final BufferQueue<T> queue = queueFactory.newInstance();
         outputQueues.put(key, queue);
-        return queue;
-    }
-
-    public BufferQueue<T> getIntermediateBuffer(int gateIndex, int channelIndex) {
-        final LongKey key = new LongKey(gateIndex, channelIndex);
-        if (intermediateBuffers.containsKey(key)) {
-            return intermediateBuffers.get(key);
-        }
-
-        final BufferQueue<T> queue = queueFactory.newInstance();
-        intermediateBuffers.put(key, queue);
         return queue;
     }
 
