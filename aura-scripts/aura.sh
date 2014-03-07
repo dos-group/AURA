@@ -1,8 +1,8 @@
 #!/bin/sh
-USER="chwuertz"
+USER="andreas.kunft"
 URL="cit.tu-berlin.de"
 
-LOCAL_AURA_PATH="/home/teots/workspace/aura"
+LOCAL_AURA_PATH="/home/akunft/dev/AURA"
 HOME_PATH="/home/$USER"
 AURA_PATH="$HOME_PATH/aura"
 DATA_PATH="/data/$USER"
@@ -80,16 +80,31 @@ case $1 in
 		echo "Install Aura..."
 
 		ssh -t -t "$USER@$WALLYMASTER" << SSHEND
-mkdir -p $AURA_PATH/
-mkdir -p $AURA_DATA_PATH/
-mkdir -p $AURA_DATA_PATH/logs
-mkdir -p $AURA_DATA_PATH/data
-mkdir -p $BENCHMARK_PATH
+	rm -rf $AURA_PATH/
+	mkdir -p $AURA_PATH/
+	exit
+SSHEND
+
+		scp -r $LOCAL_AURA_PATH/* $USER@$WALLYMASTER:$AURA_PATH/ > /dev/null
+
+		ssh -t -t "$USER@$WALLYMASTER" << SSHEND
 cd $AURA_PATH/
 mvn clean install
 exit
 SSHEND
-		scp -r $LOCAL_AURA_PATH/* $USER@$WALLYMASTER:$AURA_PATH/ > /dev/null
+
+		for i in $(seq $2 $3); do
+			ADDRESS="wally`printf "%03d" $i`.$URL"
+
+			ssh -t -t "$USER@$ADDRESS" << SSHEND
+mkdir -p $AURA_DATA_PATH/
+mkdir -p $AURA_DATA_PATH/logs
+mkdir -p $AURA_DATA_PATH/data
+mkdir -p $BENCHMARK_PATH
+mkdir -p $DATA_PATH/zookeeper/data
+exit
+SSHEND
+		done		
 	;;
 	# Setup
 	setup)
@@ -118,6 +133,7 @@ SSHEND
 			printf "Start TaskManager on $ADDRESS ... "
 
 			if [ $i -lt $(($2 + $ZOOKEEPERS)) ]; then
+				echo "START ZOOKEEPER"
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 sh $ZOOKEEPER_PATH/bin/zkServer.sh start
 exit
@@ -144,6 +160,30 @@ exit
 SSHEND
 			fi
 		printf "done\n"
+		done
+	;;
+	# Get the benchmarks
+	get_benchmarks)
+		for i in $(seq $2 $3); do
+			ADDRESS="wally`printf "%03d" $i`.$URL"
+			printf "Get benchmarks from $ADDRESS ... "
+			
+			mkdir -p /home/akunft/logs/$ADDRESS
+			scp -r $USER@$ADDRESS:$AURA_DATA_PATH/logs/* /home/akunft/logs/$ADDRESS > /dev/null
+			
+			printf "done\n"
+		done
+	;;	
+	# Cleanup benchmarks
+	cleanup_benchmarks)
+		for i in $(seq $2 $3); do
+			ADDRESS="wally`printf "%03d" $i`.$URL"
+			printf "Cleanup benchmarks on $ADDRESS ... "
+			
+			ssh -t -t "$USER@$ADDRESS" << SSHEND
+cat /dev/null > $AURA_DATA_PATH/logs/log
+exit
+SSHEND
 		done
 	;;
 	# Stop
@@ -214,4 +254,3 @@ SSHEND
 		echo "cleanup\t\tDeletes all log files on all wally servers in the given range."
 	;;
 esac
-

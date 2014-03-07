@@ -1,8 +1,5 @@
 package de.tuberlin.aura.demo.client;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.util.EnumSet;
 import java.util.List;
@@ -11,8 +8,6 @@ import java.util.UUID;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.client.executors.LocalClusterExecutor;
-import de.tuberlin.aura.client.executors.LocalClusterExecutor.LocalExecutionMode;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
@@ -31,7 +26,9 @@ public final class Client {
     private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
-    private Client() {}
+    private Client() {
+
+    }
 
     /**
      *
@@ -239,10 +236,10 @@ public final class Client {
 
                 final DataIOEvent inputBuffer = absorb(0);
 
-                if (inputBuffer instanceof DataBufferEvent) {
+                if (inputBuffer != null) {
 
                     int received = ByteBuffer.wrap(((DataBufferEvent) inputBuffer).data).getInt();
-                    LOG.error("- received: " + received + " - count: " + count);
+                    // LOG.error("- received: " + received + " - count: " + count);
 
 
                     sum_received += received;
@@ -250,10 +247,8 @@ public final class Client {
 
                     count++;
                 } else {
-                    LOG.error(inputBuffer);
+                    // LOG.error(inputBuffer);
                 }
-
-
 
                 // LOG.info("received data message from task " + inputBuffer.srcTaskID + " // " +
                 // inputBuffer.toString());
@@ -293,9 +288,14 @@ public final class Client {
         // LOG.addAppender(consoleAppender);
         // LOG.setLevel(Level.DEBUG);
 
-        final String zookeeperAddress = "localhost:2181";
-        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6);
-        final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
+        // final String zookeeperAddress = "localhost:2181";
+        // final LocalClusterExecutor lce = new
+        // LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true,
+        // zookeeperAddress, 6);
+        // final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
+
+        final String zookeeperAddress = "wally100.cit.tu-berlin.de:2181";
+        final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
         // atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
@@ -315,11 +315,11 @@ public final class Client {
             .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
         final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
-            .connectTo("Task33", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task33", 1, 1), Task33Exe.class)
+        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 50, 1), Task1Exe.class)
+        // .connectTo("Task33", Edge.TransferType.ALL_TO_ALL)
+        // .addNode(new Node(UUID.randomUUID(), "Task33", 5, 1), Task33Exe.class)
             .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
+            .addNode(new Node(UUID.randomUUID(), "Task4", 50, 1), Task4Exe.class);
 
         final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
 
@@ -346,12 +346,12 @@ public final class Client {
         // ac.submitTopology(at1, monitoringHandler);
         ac.submitTopology(at2, null);
 
-        try {
-            new BufferedReader(new InputStreamReader(System.in)).readLine();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        lce.shutdown();
+        // try {
+        // new BufferedReader(new InputStreamReader(System.in)).readLine();
+        // } catch (IOException e) {
+        // e.printStackTrace();
+        // }
+        //
+        //     lce.shutdown();
     }
 }

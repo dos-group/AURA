@@ -1,16 +1,16 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
-
-import org.apache.log4j.Logger;
-
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class TaskExecutionUnit {
 
@@ -56,7 +56,7 @@ public final class TaskExecutionUnit {
 
                 try {
                     invokeable.execute();
-                } catch (Exception e) {
+                } catch (Throwable e) {
 
                     LOG.error(e.getLocalizedMessage());
 

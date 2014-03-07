@@ -4,19 +4,17 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.iosystem.IOEvents.MonitoringEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.MonitoringEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
 
 public class WorkloadManager implements ClientWMProtocol {
@@ -137,12 +135,6 @@ public class WorkloadManager implements ClientWMProtocol {
     // ---------------------------------------------------
 
     public static void main(final String[] args) {
-
-        final Logger rootLOG = Logger.getRootLogger();
-
-        final SimpleLayout layout = new SimpleLayout();
-        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-        rootLOG.addAppender(consoleAppender);
 
         int dataPort = -1;
         int controlPort = -1;
