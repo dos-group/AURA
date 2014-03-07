@@ -1,26 +1,29 @@
 package de.tuberlin.aura.client.api;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.ZooKeeper;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.MonitoringEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.ZooKeeper;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 public final class AuraClient {
 
@@ -35,6 +38,16 @@ public final class AuraClient {
             final EventHandler handler = registeredTopologyMonitors.get(event.topologyID);
             if (handler != null)
                 handler.handleEvent(event);
+        }
+
+        @Handle(event = IOEvents.ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
+        private void handleTopologyFinished(final IOEvents.ControlIOEvent event) {
+            LOG.info("Topology finished.");
+        }
+
+        @Handle(event = IOEvents.ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE)
+        private void handleTopologyFailure(final IOEvents.ControlIOEvent event) {
+            LOG.info("Topology failed.");
         }
     }
 
@@ -77,7 +90,9 @@ public final class AuraClient {
 
         ioHandler = new IORedispatcher();
 
-        final String[] IOEvents = {MonitoringEvent.MONITORING_TOPOLOGY_STATE_EVENT, MonitoringEvent.MONITORING_TASK_STATE_EVENT};
+        final String[] IOEvents =
+                {MonitoringEvent.MONITORING_TOPOLOGY_STATE_EVENT, MonitoringEvent.MONITORING_TASK_STATE_EVENT,
+                        ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE};
 
         ioManager.addEventListener(IOEvents, ioHandler);
 

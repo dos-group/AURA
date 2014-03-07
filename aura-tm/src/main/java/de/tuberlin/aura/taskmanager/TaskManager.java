@@ -7,9 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 
@@ -267,20 +265,20 @@ public final class TaskManager implements WM2TMProtocol {
                     }
                         break;
                     case TASK_STATE_FINISHED: {
-                        context.close();
+                        context.close(true);
                         taskContextMap.remove(context.task.taskID);
                         topologyTaskContextMap.get(context.task.topologyID).remove(context);
                     }
                         break;
                     case TASK_STATE_FAILURE: {
-                        context.close();
+                        context.close(false);
                         taskContextMap.remove(context.task.taskID);
                         topologyTaskContextMap.get(context.task.topologyID).remove(context);
                     }
                         break;
                     case TASK_STATE_CANCELED: {
                         context.getInvokeable().cancel();
-                        context.close();
+                        context.close(false);
                         taskContextMap.remove(context.task.taskID);
                         topologyTaskContextMap.get(context.task.topologyID).remove(context);
                     }
@@ -481,12 +479,6 @@ public final class TaskManager implements WM2TMProtocol {
     // ---------------------------------------------------
 
     public static void main(final String[] args) {
-
-        final Logger rootLOG = Logger.getRootLogger();
-
-        final SimpleLayout layout = new SimpleLayout();
-        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-        rootLOG.addAppender(consoleAppender);
 
         int dataPort = -1;
         int controlPort = -1;

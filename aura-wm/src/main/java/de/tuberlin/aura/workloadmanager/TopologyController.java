@@ -1,26 +1,27 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.*;
+import java.util.EnumSet;
+import java.util.Map;
 
-import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.topology.TaskStateConsensus;
-import de.tuberlin.aura.core.topology.TopologyStateMachine;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPipeline;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
+import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
+import de.tuberlin.aura.core.topology.TaskStateConsensus;
 import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
+import de.tuberlin.aura.core.topology.TopologyStateMachine;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyState;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
 
@@ -159,11 +160,13 @@ public class TopologyController extends EventDispatcher {
                 case TOPOLOGY_STATE_RUNNING: {}
                     break;
                 case TOPOLOGY_STATE_FINISHED: {
+                    ioManager.sendEvent(topology.machineID, new IOEvents.ControlIOEvent(ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED));
                     workloadManager.unregisterTopology(topology.topologyID);
                     TopologyController.this.removeAllEventListener();
                 }
                     break;
                 case TOPOLOGY_STATE_FAILURE: {
+                    ioManager.sendEvent(topology.machineID, new IOEvents.ControlIOEvent(ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE));
                     workloadManager.unregisterTopology(topology.topologyID);
                     TopologyController.this.removeAllEventListener();
                 }

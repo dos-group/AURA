@@ -201,7 +201,7 @@ public final class TaskRuntimeContext {
         return invokeable;
     }
 
-    public void close() {
+    public void close(boolean awaitExhaustion) {
         if (outputGates != null) {
             for (final OutputGate og : outputGates) {
                 // TODO: maybe replace with event?!
@@ -210,7 +210,7 @@ public final class TaskRuntimeContext {
                     // TODO: do we want to force the shutdown, meaning we discard remaining events
                     // in the queue
                     // or wait to send them out?
-                    channelWriter.shutdown(true);
+                    channelWriter.shutdown(awaitExhaustion);
                 }
             }
         }

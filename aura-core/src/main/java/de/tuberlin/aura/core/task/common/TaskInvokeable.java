@@ -7,10 +7,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
 
+import de.tuberlin.aura.core.common.Pool;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
@@ -41,6 +44,8 @@ public abstract class TaskInvokeable {
         this.closedGates = new ArrayList<>();
 
         this.gateCloseFinished = new ArrayList<>();
+
+        this.latch = new CountDownLatch(1);
 
         for (final List<Descriptors.TaskDescriptor> tdList : context.taskBinding.inputGateBindings) {
             final Map<UUID, Boolean> closedChannels = new HashMap<UUID, Boolean>();
@@ -75,6 +80,8 @@ public abstract class TaskInvokeable {
     private final List<AtomicBoolean> gateCloseFinished;
 
     private final List<Map<UUID, Boolean>> closedGates;
+
+    private final CountDownLatch latch;
 
     // ---------------------------------------------------
     // Public.
@@ -176,16 +183,31 @@ public abstract class TaskInvokeable {
         context.inputGates.get(gateIndex).openGate();
     }
 
-    public void closeGate(int gateIndex) {
+    public Future<?> closeGate(final int gateIndex) {
         if (context.inputGates == null) {
             throw new IllegalStateException("Task has no input gates.");
         }
-        if (gateCloseFinished.get(gateIndex).get()) {
-            LOG.warn("Gate " + gateIndex + " is already closed.");
-        } else {
-            gateCloseFinished.get(gateIndex).set(false);
-            context.inputGates.get(gateIndex).closeGate();
-        }
+
+        return Pool.Manager.executorService.submit(new Runnable() {
+
+            @Override
+            public void run() {
+                if (gateCloseFinished.get(gateIndex).get()) {
+                    LOG.warn("Gate " + gateIndex + " is already closed.");
+                } else {
+                    gateCloseFinished.get(gateIndex).set(false);
+                    context.inputGates.get(gateIndex).closeGate();
+                }
+                try {
+                    latch.await();
+
+
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     public int getTaskIndex() {

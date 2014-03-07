@@ -4,13 +4,13 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
+import de.tuberlin.aura.core.iosystem.RPCManager;
+import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
-import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
 
@@ -70,7 +70,8 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                     final WM2TMProtocol tmProtocol =
                             rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
                     tmProtocol.installTask(tdd);
-                    LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString());
+                    // LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: "
+                    // + tdd.toString());
                 }
             }
         });

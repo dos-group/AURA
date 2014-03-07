@@ -58,6 +58,10 @@ public final class IOEvents {
         public static final String CONTROL_EVENT_TASK_STATE = "CONTROL_EVENT_TASK_STATE";
 
         public static final String CONTROL_EVENT_INCOMPLETE_EVENT = "CONTROL_EVENT_INCOMPLETE_EVENT";
+
+        public static final String CONTROL_EVENT_TOPOLOGY_FINISHED = "CONTROL_EVENT_TOPOLOGY_FINISHED";
+
+        public static final String CONTROL_EVENT_TOPOLOGY_FAILURE = "CONTROL_EVENT_TOPOLOGY_FAILURE";
     }
 
     /**
