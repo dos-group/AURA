@@ -265,20 +265,20 @@ public final class TaskManager implements WM2TMProtocol {
                     }
                         break;
                     case TASK_STATE_FINISHED: {
-                        context.close();
+                        context.close(true);
                         taskContextMap.remove(context.task.taskID);
                         topologyTaskContextMap.get(context.task.topologyID).remove(context);
                     }
                         break;
                     case TASK_STATE_FAILURE: {
-                        context.close();
+                        context.close(false);
                         taskContextMap.remove(context.task.taskID);
                         topologyTaskContextMap.get(context.task.topologyID).remove(context);
                     }
                         break;
                     case TASK_STATE_CANCELED: {
                         context.getInvokeable().cancel();
-                        context.close();
+                        context.close(false);
                         taskContextMap.remove(context.task.taskID);
                         topologyTaskContextMap.get(context.task.topologyID).remove(context);
                     }
