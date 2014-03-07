@@ -49,7 +49,7 @@ public final class Client {
 
             final UUID taskID = getTaskID();
 
-            for (int i = 0; i < 100; ++i) {
+            for (int i = 0; i < 10000; ++i) {
 
                 final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
@@ -61,13 +61,6 @@ public final class Client {
 
                     final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, buffer.array());
                     emit(0, index, outputBuffer);
-                    LOG.error("---> 1 emit");
-                }
-
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    LOG.error(e);
                 }
             }
 
@@ -139,16 +132,9 @@ public final class Client {
 
                 final DataIOEvent leftInputBuffer = absorb(0);
 
-                if (leftInputBuffer != null)
-                    LOG.info("[" + getTaskIndex() + "] inner " + leftInputBuffer.srcTaskID);
-
-                if (leftInputBuffer instanceof DataBufferEvent) {
-
-                    int received = ByteBuffer.wrap(((DataBufferEvent) leftInputBuffer).data).getInt();
-                    LOG.error("- inner:" + received);
-                }
-
-                if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null ? null : leftInputBuffer.type)) {
+                if (leftInputBuffer != null) {
+                    // if (!DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(leftInputBuffer == null
+                    // ? null : leftInputBuffer.type)) {
                     final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
                     for (int index = 0; index < outputs.size(); ++index) {
 
@@ -168,7 +154,7 @@ public final class Client {
                 emit(0, index, exhaustedEvent);
             }
 
-            // closeGate(0);
+            //closeGate(0);
             // closeGate(1);
         }
     }
@@ -272,15 +258,15 @@ public final class Client {
                 // LOG.info("received data message from task " + inputBuffer.srcTaskID + " // " +
                 // inputBuffer.toString());
 
-                if (count == 10) {
-                    closeGate(0);
-                }
-
-                if (isGateClosed(0)) {
-                    Thread.sleep(3000);
-                    LOG.error("opened again");
-                    openGate(0);
-                }
+                // if (count == 10) {
+                // closeGate(0);
+                // }
+                //
+                // if (isGateClosed(0)) {
+                // Thread.sleep(3000);
+                // LOG.error("opened again");
+                // openGate(0);
+//                }
 
                 // inputActive =
                 // !DataEventType.DATA_EVENT_SOURCE_EXHAUSTED.equals(inputBuffer.type);
@@ -329,9 +315,9 @@ public final class Client {
             .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
         final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-        // .connectTo("Task33", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Task33", 10, 1), Task33Exe.class)
+        atb2.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
+            .connectTo("Task33", Edge.TransferType.POINT_TO_POINT)
+            .addNode(new Node(UUID.randomUUID(), "Task33", 1, 1), Task33Exe.class)
             .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
             .addNode(new Node(UUID.randomUUID(), "Task4", 1, 1), Task4Exe.class);
 

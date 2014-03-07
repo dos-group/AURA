@@ -94,7 +94,7 @@ public abstract class TaskInvokeable {
         context.outputGates.get(gateIndex).writeDataToChannel(channelIndex, event);
     }
 
-    public DataIOEvent absorb(int gateIndex) {
+    public IOEvents.DataBufferEvent absorb(int gateIndex) {
         try {
 
             if (activeGates.get(gateIndex).size() == 0)
@@ -153,7 +153,7 @@ public abstract class TaskInvokeable {
                 }
             }
 
-            return event;
+            return (IOEvents.DataBufferEvent) event;
 
         } catch (InterruptedException e) {
             LOG.error(e);
