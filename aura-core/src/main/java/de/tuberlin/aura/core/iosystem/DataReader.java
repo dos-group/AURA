@@ -1,24 +1,9 @@
 package de.tuberlin.aura.core.iosystem;
 
-import java.net.SocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -26,6 +11,13 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.net.SocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class DataReader {
 
@@ -42,7 +34,7 @@ public class DataReader {
 
     /**
      * (queue index) -> (queue)
-     * 
+     * <p/>
      * There are possibly more channels that write into a single queue. Each {@see
      * de.tuberlin.aura.core.task.gates.InputGate} as exactly one queue.
      */
@@ -50,21 +42,21 @@ public class DataReader {
 
     /**
      * (channel) -> (queue index)
-     * 
+     * <p/>
      * Maps the channel to the index of the queue (for map {@see inputQueues}).
      */
     private final Map<Channel, Integer> channelToQueueIndex;
 
     /**
      * (task id, gate index) -> (queue index)
-     * 
+     * <p/>
      * Maps the gate of a specific task to the index of the queue (for map {@see inputQueues}).
      */
     private final Map<Pair<UUID, Integer>, Integer> gateToQueueIndex;
 
     /**
      * (task id, gate index) -> { (channel index) -> (channel) }
-     * 
+     * <p/>
      * Maps the gate of a specific task to its connected channels. The connected channels are
      * identified by their channel index.
      */
@@ -72,7 +64,7 @@ public class DataReader {
 
     /**
      * Creates a new Data Reader. There should only be one Data Reader per task manager.
-     * 
+     *
      * @param dispatcher the dispatcher to which events should be published.
      */
     public DataReader(IEventDispatcher dispatcher) {
@@ -92,14 +84,14 @@ public class DataReader {
 
     /**
      * Binds a new channel to the data reader.
-     * 
+     * <p/>
      * Notice: the reader does not shut down the worker group. This is in the callers
      * responsibility.
-     * 
-     * @param type the connection type of the channel to bind.
-     * @param address the remote address the channel should be connected to.
+     *
+     * @param type        the connection type of the channel to bind.
+     * @param address     the remote address the channel should be connected to.
      * @param workerGroup the event loop the channel should be associated with.
-     * @param <T> the type of channel this connection uses.
+     * @param <T>         the type of channel this connection uses.
      */
     public <T extends Channel> void bind(final ConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
 
@@ -109,10 +101,10 @@ public class DataReader {
             @Override
             public void initChannel(T ch) throws Exception {
                 ch.pipeline()
-                  .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
-                  .addLast(new DataHandler())
-                  .addLast(new EventHandler())
-                  .addLast(new ObjectEncoder());
+                        .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
+                        .addLast(new DataHandler())
+                        .addLast(new EventHandler())
+                        .addLast(new ObjectEncoder());
             }
         });
 
@@ -141,8 +133,8 @@ public class DataReader {
 
     /**
      * Returns the queue which is assigned to the gate of the task.
-     * 
-     * @param taskID the task id which the gate belongs to.
+     *
+     * @param taskID    the task id which the gate belongs to.
      * @param gateIndex the gate index.
      * @return the queue assigned to the gate, or null if no queue is assigned.
      */
@@ -225,9 +217,9 @@ public class DataReader {
 
                     IOEvents.GenericIOEvent connected =
                             new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                        DataReader.this,
-                                                        event.srcTaskID,
-                                                        event.dstTaskID);
+                                    DataReader.this,
+                                    event.srcTaskID,
+                                    event.dstTaskID);
                     connected.setChannel(ctx.channel());
                     dispatcher.dispatchEvent(connected);
                     break;
@@ -236,7 +228,7 @@ public class DataReader {
                     inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
                     break;
 
-                case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED:
+                case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK:
                     inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
                     break;
 
@@ -285,7 +277,7 @@ public class DataReader {
 
         public NetworkConnection() {
             this(DEFAULT_BUFFER_SIZE);
-      }
+        }
 
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
@@ -293,12 +285,12 @@ public class DataReader {
             // TODO: check if its better to use a dedicated boss and worker group instead of one for
             // both
             b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
-            // sets the max. number of pending, not yet fully connected (handshake) channels
-             .option(ChannelOption.SO_BACKLOG, 128)
+                    // sets the max. number of pending, not yet fully connected (handshake) channels
+                    .option(ChannelOption.SO_BACKLOG, 128)
 
-             .option(ChannelOption.SO_RCVBUF, bufferSize)
-             // set keep alive, so idle connections are persistent
-             .childOption(ChannelOption.SO_KEEPALIVE, true);
+                    .option(ChannelOption.SO_RCVBUF, bufferSize)
+                            // set keep alive, so idle connections are persistent
+                    .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             return b;
         }

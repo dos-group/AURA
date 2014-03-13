@@ -7,7 +7,8 @@ import java.util.Map;
 public final class TaskStateMachine {
 
     // Disallow instantiation.
-    private TaskStateMachine() {}
+    private TaskStateMachine() {
+    }
 
     /**
      *
@@ -19,7 +20,7 @@ public final class TaskStateMachine {
      */
     public enum TaskState {
 
-        TASK_STATE_NOT_CONNECTED(false),
+        TASK_STATE_CREATED(false),
 
         TASK_STATE_OUTPUTS_CONNECTED(false),
 
@@ -91,7 +92,7 @@ public final class TaskStateMachine {
         t1.put(TaskTransition.TASK_TRANSITION_CANCEL, TaskState.TASK_STATE_UNDEFINED);
         t1.put(TaskTransition.TASK_TRANSITION_FAIL, TaskState.TASK_STATE_UNDEFINED);
 
-        mtx.put(TaskState.TASK_STATE_NOT_CONNECTED, Collections.unmodifiableMap(t1));
+        mtx.put(TaskState.TASK_STATE_CREATED, Collections.unmodifiableMap(t1));
 
         final Map<TaskTransition, TaskState> t2 = new HashMap<TaskTransition, TaskState>();
 

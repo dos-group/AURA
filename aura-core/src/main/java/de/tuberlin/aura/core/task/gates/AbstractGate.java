@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.task.gates;
 
-import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+import de.tuberlin.aura.core.task.common.TaskDriverContext;
 
 public abstract class AbstractGate {
 
@@ -8,7 +8,7 @@ public abstract class AbstractGate {
     // Constructors.
     // ---------------------------------------------------
 
-    public AbstractGate(final TaskRuntimeContext context, int gateIndex, int numChannels) {
+    public AbstractGate(final TaskDriverContext context, int gateIndex, int numChannels) {
         // sanity check.
         if (context == null)
             throw new IllegalArgumentException("context == null");
@@ -24,7 +24,7 @@ public abstract class AbstractGate {
     // Fields.
     // ---------------------------------------------------
 
-    protected final TaskRuntimeContext context;
+    protected final TaskDriverContext context;
 
     protected final int numChannels;
 

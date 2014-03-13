@@ -1,8 +1,5 @@
 package de.tuberlin.aura.core.iosystem;
 
-import java.io.Serializable;
-import java.util.UUID;
-
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
@@ -11,17 +8,22 @@ import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyState;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
 import io.netty.channel.Channel;
 
+import java.io.Serializable;
+import java.util.UUID;
+
 public final class IOEvents {
 
     // Disallow instantiation.
-    private IOEvents() {}
+    private IOEvents() {
+    }
 
     /**
      *
      */
     public static final class DataEventType {
 
-        private DataEventType() {}
+        private DataEventType() {
+        }
 
         public static final String DATA_EVENT_INPUT_CHANNEL_CONNECTED = "DATA_EVENT_INPUT_CHANNEL_CONNECTED";
 
@@ -31,11 +33,11 @@ public final class IOEvents {
 
         public static final String DATA_EVENT_OUTPUT_GATE_CLOSE = "DATA_EVENT_OUTPUT_GATE_CLOSE";
 
+        public static final String DATA_EVENT_OUTPUT_GATE_CLOSE_ACK = "DATA_EVENT_OUTPUT_GATE_CLOSE_ACK";
+
         public static final String DATA_EVENT_BUFFER = "DATA_EVENT_BUFFER";
 
         public static final String DATA_EVENT_SOURCE_EXHAUSTED = "DATA_EVENT_SOURCE_EXHAUSTED";
-
-        public static final String DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED = "DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED";
     }
 
     /**
@@ -43,21 +45,18 @@ public final class IOEvents {
      */
     public static final class ControlEventType {
 
-        private ControlEventType() {}
+        private ControlEventType() {
+        }
 
         public static final String CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED = "CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED";
 
         public static final String CONTROL_EVENT_INPUT_CHANNEL_CONNECTED = "CONTROL_EVENT_INPUT_CHANNEL_CONNECTED";
-
-        public static final String CONTROL_EVENT_MESSAGE = "CONTROL_EVENT_MESSAGE";
 
         public static final String CONTROL_EVENT_RPC_CALLER_REQUEST = "CONTROL_EVENT_RPC_CALLER_REQUEST";
 
         public static final String CONTROL_EVENT_RPC_CALLEE_RESPONSE = "CONTROL_EVENT_RPC_CALLEE_RESPONSE";
 
         public static final String CONTROL_EVENT_TASK_STATE = "CONTROL_EVENT_TASK_STATE";
-
-        public static final String CONTROL_EVENT_INCOMPLETE_EVENT = "CONTROL_EVENT_INCOMPLETE_EVENT";
 
         public static final String CONTROL_EVENT_TOPOLOGY_FINISHED = "CONTROL_EVENT_TOPOLOGY_FINISHED";
 
@@ -103,10 +102,10 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("GenericIOEvent = {")
-                                        .append(" type = " + type + ", ")
-                                        .append(" payload = " + payload.toString() + ", ")
-                                        .append(" }")
-                                        .toString();
+                    .append(" type = " + type + ", ")
+                    .append(" payload = " + payload.toString() + ", ")
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -137,11 +136,11 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("DataIOEvent = {")
-                                        .append(" type = " + type + ", ")
-                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
-                                        .append(" dstTaskID = " + dstTaskID.toString())
-                                        .append(" }")
-                                        .toString();
+                    .append(" type = " + type + ", ")
+                    .append(" srcTaskID = " + srcTaskID.toString() + ", ")
+                    .append(" dstTaskID = " + dstTaskID.toString())
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -178,13 +177,13 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("DataBufferMessage = {")
-                                        .append(" messageID = " + messageID.toString() + ", ")
-                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
-                                        .append(" dstTaskID = " + dstTaskID.toString() + ", ")
-                                        .append(" data = " + data + ", ")
-                                        .append(" length( data ) = " + data.length)
-                                        .append(" }")
-                                        .toString();
+                    .append(" messageID = " + messageID.toString() + ", ")
+                    .append(" srcTaskID = " + srcTaskID.toString() + ", ")
+                    .append(" dstTaskID = " + dstTaskID.toString() + ", ")
+                    .append(" data = " + data + ", ")
+                    .append(" length( data ) = " + data.length)
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -243,11 +242,11 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("ControlIOEvent = {")
-                                        .append(" type = " + type + ", ")
-                                        .append(" srcMachineID = " + srcMachineID.toString() + ", ")
-                                        .append(" dstMachineID = " + dstMachineID.toString())
-                                        .append(" }")
-                                        .toString();
+                    .append(" type = " + type + ", ")
+                    .append(" srcMachineID = " + srcMachineID.toString() + ", ")
+                    .append(" dstMachineID = " + dstMachineID.toString())
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -336,11 +335,11 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("TaskChangeStateEvent = {")
-                                        .append(" type = " + super.type + ", ")
-                                        .append(" taskID = " + topologyID + ", ")
-                                        .append(" taskTransition = " + transition.toString())
-                                        .append(" }")
-                                        .toString();
+                    .append(" type = " + super.type + ", ")
+                    .append(" taskID = " + topologyID + ", ")
+                    .append(" taskTransition = " + transition.toString())
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -361,11 +360,11 @@ public final class IOEvents {
 
             public TaskStateUpdate(final TaskStateUpdate taskStateUpdate) {
                 this(taskStateUpdate.taskID,
-                     taskStateUpdate.name,
-                     taskStateUpdate.currentTaskState,
-                     taskStateUpdate.nextTaskState,
-                     taskStateUpdate.taskTransition,
-                     taskStateUpdate.stateDuration);
+                        taskStateUpdate.name,
+                        taskStateUpdate.currentTaskState,
+                        taskStateUpdate.nextTaskState,
+                        taskStateUpdate.taskTransition,
+                        taskStateUpdate.stateDuration);
             }
 
             public TaskStateUpdate(final UUID taskID,
@@ -419,10 +418,10 @@ public final class IOEvents {
 
             public TopologyStateUpdate(final TopologyStateUpdate topologyStateUpdate) {
                 this(topologyStateUpdate.name,
-                     topologyStateUpdate.currentTopologyState,
-                     topologyStateUpdate.nextTopologyState,
-                     topologyStateUpdate.topologyTransition,
-                     topologyStateUpdate.stateDuration);
+                        topologyStateUpdate.currentTopologyState,
+                        topologyStateUpdate.nextTopologyState,
+                        topologyStateUpdate.topologyTransition,
+                        topologyStateUpdate.stateDuration);
             }
 
             public TopologyStateUpdate(final String name,

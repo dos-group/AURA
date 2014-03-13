@@ -1,13 +1,6 @@
 package de.tuberlin.aura.demo.rpc;
 
-import java.util.ArrayList;
-
-import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-
-import de.tuberlin.aura.demo.deployment.LocalDeployment;
-import de.tuberlin.aura.taskmanager.TaskManager;
 
 public class TestRPCClient {
 
@@ -23,7 +16,7 @@ public class TestRPCClient {
 
     public static void main(String[] args) {
 
-        final SimpleLayout layout = new SimpleLayout();
+        /*final SimpleLayout layout = new SimpleLayout();
         final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
         LOG.addAppender(consoleAppender);
 
@@ -36,6 +29,6 @@ public class TestRPCClient {
         // int i = protocol.foo( "foo on server", 10, UUID.randomUUID(), 5 );
         // LOG.info( "i = " + i );
 
-        protocol.foo1(new ArrayList<Integer>());
+        protocol.foo1(new ArrayList<Integer>());*/
     }
 }

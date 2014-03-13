@@ -1,14 +1,9 @@
 package de.tuberlin.aura.demo.rpc;
 
+import org.apache.log4j.Logger;
+
 import java.util.List;
 import java.util.UUID;
-
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-
-import de.tuberlin.aura.demo.deployment.LocalDeployment;
-import de.tuberlin.aura.taskmanager.TaskManager;
 
 public class TestRPCServer {
 
@@ -32,12 +27,12 @@ public class TestRPCServer {
 
     public static void main(String[] args) {
 
-        final SimpleLayout layout = new SimpleLayout();
+        /*final SimpleLayout layout = new SimpleLayout();
         final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
         LOG.addAppender(consoleAppender);
 
         final TaskManager taskManager = new TaskManager("localhost:2181", LocalDeployment.MACHINE_2_DESCRIPTOR);
-        taskManager.getRPCManager().registerRPCProtocolImpl(new FooImpl(), FooProtocol.class);
+        taskManager.getRPCManager().registerRPCProtocolImpl(new FooImpl(), FooProtocol.class);*/
 
         /*
          * try { Thread.sleep( 5000 ); } catch (InterruptedException e) { LOG.info( e ); }

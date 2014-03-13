@@ -1,31 +1,7 @@
 package de.tuberlin.aura.demo.client;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.ByteBuffer;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.UUID;
-
-import org.apache.log4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.client.executors.LocalClusterExecutor;
-import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-import de.tuberlin.aura.core.task.common.TaskInvokeable;
-import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-
 public final class TwoTaskTest {
-
+/*
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(TwoTaskTest.class);
 
     // Disallow Instantiation.
@@ -117,8 +93,8 @@ public final class TwoTaskTest {
     public static void main(String[] args) {
 
         final String zookeeperAddress = "localhost:2181";
-        final LocalClusterExecutor lce =
-                new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6);
+        final LocalClusterSimulator lce =
+                new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6);
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
         // final String zookeeperAddress = "wally100.cit.tu-berlin.de:2181";
@@ -143,5 +119,5 @@ public final class TwoTaskTest {
         }
 
         lce.shutdown();
-    }
+    }*/
 }

@@ -1,17 +1,16 @@
 package de.tuberlin.aura.core.iosystem;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.slf4j.Logger;
 
-import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class QueueManager<T> {
 
     private final static Logger LOG = org.slf4j.LoggerFactory.getLogger(QueueManager.class);
 
-    public static Map<TaskRuntimeContext, QueueManager> BINDINGS = new HashMap<TaskRuntimeContext, QueueManager>();
+    public static Map<UUID, QueueManager> BINDINGS = new HashMap<UUID, QueueManager>();
 
     private final Map<Integer, BufferQueue<T>> inputQueues;
 
@@ -29,9 +28,9 @@ public class QueueManager<T> {
     // Public.
     // ---------------------------------------------------
 
-    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext, BufferQueue.FACTORY<F> queueFactory) {
+    public static <F> QueueManager<F> newInstance(UUID taskID, BufferQueue.FACTORY<F> queueFactory) {
         QueueManager<F> instance = new QueueManager<>(queueFactory);
-        BINDINGS.put(taskContext, instance);
+        BINDINGS.put(taskID, instance);
         return instance;
     }
 

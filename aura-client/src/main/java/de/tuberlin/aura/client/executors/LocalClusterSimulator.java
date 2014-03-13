@@ -1,5 +1,16 @@
 package de.tuberlin.aura.client.executors;
 
+import de.tuberlin.aura.core.common.utils.ProcessExecutor;
+import de.tuberlin.aura.core.descriptors.Descriptors.HDDDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.HardwareDescriptor;
+import de.tuberlin.aura.core.zookeeper.ZkHelper;
+import de.tuberlin.aura.taskmanager.TaskManager;
+import de.tuberlin.aura.workloadmanager.WorkloadManager;
+import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.server.NIOServerCnxnFactory;
+import org.apache.zookeeper.server.ZooKeeperServer;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -9,33 +20,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.server.NIOServerCnxnFactory;
-import org.apache.zookeeper.server.ZooKeeperServer;
-
-import de.tuberlin.aura.core.common.utils.ProcessExecutor;
-import de.tuberlin.aura.core.descriptors.Descriptors.HDDDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.HardwareDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZkHelper;
-import de.tuberlin.aura.taskmanager.TaskManager;
-import de.tuberlin.aura.workloadmanager.WorkloadManager;
-
-public final class LocalClusterExecutor {
+public final class LocalClusterSimulator {
 
     // ---------------------------------------------------
     // Constants.
     // ---------------------------------------------------
 
     public static final HardwareDescriptor MACHINE_HARDWARE = new HardwareDescriptor((short) 4,
-                                                                                     2L * 1024L * 1024L * 1024L,
-                                                                                     new HDDDescriptor(10L * 1024L * 1024L * 1024L));
+            2L * 1024L * 1024L * 1024L,
+            new HDDDescriptor(10L * 1024L * 1024L * 1024L));
 
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
 
-    public static enum LocalExecutionMode {
+    public static enum ExecutionMode {
 
         EXECUTION_MODE_SINGLE_PROCESS,
 
@@ -46,17 +45,17 @@ public final class LocalClusterExecutor {
     // Constructors.
     // ---------------------------------------------------
 
-    public LocalClusterExecutor(final LocalExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes) {
+    public LocalClusterSimulator(final ExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes) {
         this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000);
     }
 
-    public LocalClusterExecutor(final LocalExecutionMode mode,
-                                boolean startupZookeeper,
-                                final String zkServer,
-                                int numNodes,
-                                int zkClientPort,
-                                int numConnections,
-                                int tickTime) {
+    public LocalClusterSimulator(final ExecutionMode mode,
+                                 boolean startupZookeeper,
+                                 final String zkServer,
+                                 int numNodes,
+                                 int zkClientPort,
+                                 int numConnections,
+                                 int tickTime) {
         // sanity check.
         ZkHelper.checkConnectionString(zkServer);
         if (numNodes < 1)
@@ -104,25 +103,25 @@ public final class LocalClusterExecutor {
                     tmList.add(new TaskManager(zkServer, getFreePort(), getFreePort()));
                 }
             }
-                break;
+            break;
 
             case EXECUTION_MODE_MULTIPLE_PROCESSES: {
                 try {
                     peList.add(new ProcessExecutor(WorkloadManager.class).execute(zkServer,
-                                                                                  new Integer(getFreePort()).toString(),
-                                                                                  new Integer(getFreePort()).toString()));
+                            new Integer(getFreePort()).toString(),
+                            new Integer(getFreePort()).toString()));
                     Thread.sleep(1000);
                     for (int i = 0; i < numNodes; ++i) {
                         peList.add(new ProcessExecutor(TaskManager.class).execute(zkServer,
-                                                                                  new Integer(getFreePort()).toString(),
-                                                                                  new Integer(getFreePort()).toString()));
+                                new Integer(getFreePort()).toString(),
+                                new Integer(getFreePort()).toString()));
                         Thread.sleep(1000);
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-                break;
+            break;
 
             default:
                 throw new IllegalStateException("execution mode not known");
@@ -133,7 +132,7 @@ public final class LocalClusterExecutor {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(LocalClusterExecutor.class);
+    private static final Logger LOG = Logger.getLogger(LocalClusterSimulator.class);
 
     private final Set<Integer> reservedPorts;
 
@@ -168,7 +167,8 @@ public final class LocalClusterExecutor {
                 final ServerSocket ss = new ServerSocket(0);
                 freePort = ss.getLocalPort();
                 ss.close();
-            } catch (IOException e) {}
+            } catch (IOException e) {
+            }
         } while (reservedPorts.contains(freePort) || freePort < 1024 || freePort > 65535);
         reservedPorts.add(freePort);
         return freePort;
