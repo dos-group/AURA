@@ -1,5 +1,9 @@
 package de.tuberlin.aura.core.task.usercode;
 
+import de.tuberlin.aura.core.common.utils.Compression;
+import org.apache.bcel.Repository;
+import org.apache.bcel.classfile.*;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -9,68 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import org.apache.bcel.Repository;
-import org.apache.bcel.classfile.ConstantClass;
-import org.apache.bcel.classfile.ConstantPool;
-import org.apache.bcel.classfile.DescendingVisitor;
-import org.apache.bcel.classfile.EmptyVisitor;
-import org.apache.bcel.classfile.JavaClass;
-
-import de.tuberlin.aura.core.common.utils.Compression;
-
 public final class UserCodeExtractor {
 
     // TODO: Look at ShrinkWrap
-
-    // ---------------------------------------------------
-    // Inner Classes.
-    // ---------------------------------------------------
-
-    /**
-     *
-     */
-    private static final class DependencyEmitter extends EmptyVisitor {
-
-        public DependencyEmitter(final JavaClass javaClass) {
-
-            this.javaClass = javaClass;
-
-            this.dependencies = new ArrayList<String>();
-        }
-
-        private final JavaClass javaClass;
-
-        private final List<String> dependencies;
-
-        @Override
-        public void visitConstantClass(final ConstantClass obj) {
-            final ConstantPool cp = javaClass.getConstantPool();
-            String bytes = obj.getBytes(cp);
-            dependencies.add(bytes);
-        }
-
-        public static List<String> analyze(final Class<?> clazz) {
-            final JavaClass javaClass = Repository.lookupClass(clazz);
-            final DependencyEmitter visitor = new DependencyEmitter(javaClass);
-            (new DescendingVisitor(javaClass, visitor)).visit();
-            return visitor.dependencies;
-        }
-    }
-
-    // ---------------------------------------------------
-    // Constructor.
-    // ---------------------------------------------------
-
-    public UserCodeExtractor() {
-        this(false);
-    }
-
-    public UserCodeExtractor(boolean analyseDependencies) {
-
-        this.standardDependencies = new ArrayList<String>();
-
-        this.analyseDependencies = analyseDependencies;
-    }
 
     // ---------------------------------------------------
     // Fields.
@@ -80,10 +25,36 @@ public final class UserCodeExtractor {
 
     private final boolean analyseDependencies;
 
+
+    // ---------------------------------------------------
+    // Constructor.
+    // ---------------------------------------------------
+
+    /**
+     *
+     */
+    public UserCodeExtractor() {
+        this(false);
+    }
+
+    /**
+     * @param analyseDependencies
+     */
+    public UserCodeExtractor(boolean analyseDependencies) {
+
+        this.standardDependencies = new ArrayList<>();
+
+        this.analyseDependencies = analyseDependencies;
+    }
+
     // ---------------------------------------------------
     // Public.
     // ---------------------------------------------------
 
+    /**
+     * @param path
+     * @return
+     */
     public UserCodeExtractor addStandardDependency(final String path) {
         // sanity check.
         if (path == null)
@@ -93,6 +64,10 @@ public final class UserCodeExtractor {
         return this;
     }
 
+    /**
+     * @param clazz
+     * @return
+     */
     public UserCode extractUserCodeClass(final Class<?> clazz) {
         // sanity check.
         if (clazz == null)
@@ -105,7 +80,7 @@ public final class UserCodeExtractor {
         if (analyseDependencies)
             dependencies = buildTransitiveDependencyClosure(clazz, new ArrayList<String>());
         else
-            dependencies = new ArrayList<String>();
+            dependencies = new ArrayList<>();
 
         return new UserCode(clazz.getName(), clazz.getSimpleName(), dependencies, Compression.compress(loadByteCode(clazz)));
     }
@@ -114,6 +89,11 @@ public final class UserCodeExtractor {
     // Private.
     // ---------------------------------------------------
 
+    /**
+     * @param clazz
+     * @param globalDependencies
+     * @return
+     */
     private List<String> buildTransitiveDependencyClosure(final Class<?> clazz, final List<String> globalDependencies) {
 
         final String fullQualifiedPath = clazz.getCanonicalName();
@@ -155,6 +135,10 @@ public final class UserCodeExtractor {
         return globalDependencies;
     }
 
+    /**
+     * @param clazz
+     * @return
+     */
     private byte[] loadByteCode(final Class<?> clazz) {
 
         // TODO: a simpler way possible!!
@@ -216,5 +200,40 @@ public final class UserCodeExtractor {
         }
 
         return clazzData;
+    }
+
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
+
+    /**
+     *
+     */
+    private static final class DependencyEmitter extends EmptyVisitor {
+
+        public DependencyEmitter(final JavaClass javaClass) {
+
+            this.javaClass = javaClass;
+
+            this.dependencies = new ArrayList<>();
+        }
+
+        private final JavaClass javaClass;
+
+        private final List<String> dependencies;
+
+        @Override
+        public void visitConstantClass(final ConstantClass obj) {
+            final ConstantPool cp = javaClass.getConstantPool();
+            String bytes = obj.getBytes(cp);
+            dependencies.add(bytes);
+        }
+
+        public static List<String> analyze(final Class<?> clazz) {
+            final JavaClass javaClass = Repository.lookupClass(clazz);
+            final DependencyEmitter visitor = new DependencyEmitter(javaClass);
+            (new DescendingVisitor(javaClass, visitor)).visit();
+            return visitor.dependencies;
+        }
     }
 }

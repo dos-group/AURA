@@ -13,14 +13,6 @@ import java.util.UUID;
 public final class InputGate extends AbstractGate {
 
     // ---------------------------------------------------
-    // Constructors.
-    // ---------------------------------------------------
-
-    public InputGate(final TaskDriverContext context, int gateIndex) {
-        super(context, gateIndex, context.taskBindingDescriptor.inputGateBindings.get(gateIndex).size());
-    }
-
-    // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
@@ -29,17 +21,24 @@ public final class InputGate extends AbstractGate {
     private static final Logger LOG = LoggerFactory.getLogger(InputGate.class);
 
     // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
+
+    /**
+     * @param context
+     * @param gateIndex
+     */
+    public InputGate(final TaskDriverContext context, int gateIndex) {
+        super(context, gateIndex, context.taskBindingDescriptor.inputGateBindings.get(gateIndex).size());
+    }
+
+    // ---------------------------------------------------
     // Public.
     // ---------------------------------------------------
 
-    public void setChannelReader(final DataReader channelReader) {
-        this.channelReader = channelReader;
-    }
-
-    public DataReader getChannelReader() {
-        return channelReader;
-    }
-
+    /**
+     *
+     */
     public void openGate() {
         for (int i = 0; i < numChannels; ++i) {
             final UUID srcID = context.taskBindingDescriptor.inputGateBindings.get(gateIndex).get(i).taskID;
@@ -55,6 +54,9 @@ public final class InputGate extends AbstractGate {
         }
     }
 
+    /**
+     *
+     */
     public void closeGate() {
         for (int i = 0; i < numChannels; ++i) {
             final UUID srcID = context.taskBindingDescriptor.inputGateBindings.get(gateIndex).get(i).taskID;
@@ -70,7 +72,24 @@ public final class InputGate extends AbstractGate {
         }
     }
 
+    /**
+     * @return
+     */
     public BufferQueue<DataIOEvent> getInputQueue() {
         return channelReader.getInputQueue(context.taskDescriptor.taskID, gateIndex);
+    }
+
+    /**
+     * @param channelReader
+     */
+    public void setChannelReader(final DataReader channelReader) {
+        this.channelReader = channelReader;
+    }
+
+    /**
+     * @return
+     */
+    public DataReader getChannelReader() {
+        return channelReader;
     }
 }

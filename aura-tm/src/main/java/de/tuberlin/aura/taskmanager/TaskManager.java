@@ -3,21 +3,21 @@ package de.tuberlin.aura.taskmanager;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import de.tuberlin.aura.core.task.common.TaskManagerContext;
-import de.tuberlin.aura.core.zookeeper.ZkConnectionWatcher;
-import de.tuberlin.aura.core.zookeeper.ZkHelper;
+import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
+import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -63,7 +63,7 @@ public final class TaskManager implements WM2TMProtocol {
 
     public TaskManager(final String zookeeperServer, final MachineDescriptor machine) {
         // sanity check.
-        ZkHelper.checkConnectionString(zookeeperServer);
+        ZookeeperHelper.checkConnectionString(zookeeperServer);
 
         if (machine == null)
             throw new IllegalArgumentException("machine == null");
@@ -101,12 +101,12 @@ public final class TaskManager implements WM2TMProtocol {
 
         this.ioManager.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, ioHandler);
 
-        this.ioManager.addEventListener(TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT, ioHandler);
+        this.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, ioHandler);
 
         // setup zookeeper.
         this.zookeeper = setupZookeeper(zookeeperServer);
 
-        this.workloadManagerMachine = (MachineDescriptor) ZkHelper.readFromZookeeper(this.zookeeper, ZkHelper.ZOOKEEPER_WORKLOADMANAGER);
+        this.workloadManagerMachine = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(this.zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
 
         // check postcondition.
         if (workloadManagerMachine == null)
@@ -129,7 +129,7 @@ public final class TaskManager implements WM2TMProtocol {
     }
 
     // ---------------------------------------------------
-    // Public.
+    // Public Methods.
     // ---------------------------------------------------
 
     /**
@@ -146,7 +146,7 @@ public final class TaskManager implements WM2TMProtocol {
     }
 
     // ---------------------------------------------------
-    // Private.
+    // Private Methods.
     // ---------------------------------------------------
 
     /**
@@ -156,8 +156,8 @@ public final class TaskManager implements WM2TMProtocol {
      */
     private ZooKeeper setupZookeeper(final String zookeeperServer) {
         try {
-            final ZooKeeper zookeeper = new ZooKeeper(zookeeperServer, ZkHelper.ZOOKEEPER_TIMEOUT,
-                    new ZkConnectionWatcher(
+            final ZooKeeper zookeeper = new ZooKeeper(zookeeperServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT,
+                    new ZookeeperConnectionWatcher(
                             new IEventHandler() {
 
                                 @Override
@@ -167,9 +167,9 @@ public final class TaskManager implements WM2TMProtocol {
                     )
             );
 
-            ZkHelper.initDirectories(zookeeper);
-            final String zkTaskManagerDir = ZkHelper.ZOOKEEPER_TASKMANAGERS + "/" + ownMachine.uid.toString();
-            ZkHelper.storeInZookeeper(zookeeper, zkTaskManagerDir, ownMachine);
+            ZookeeperHelper.initDirectories(zookeeper);
+            final String zkTaskManagerDir = ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + ownMachine.uid.toString();
+            ZookeeperHelper.storeInZookeeper(zookeeper, zkTaskManagerDir, ownMachine);
 
             return zookeeper;
 
@@ -198,7 +198,7 @@ public final class TaskManager implements WM2TMProtocol {
         List<TaskDriverContext> contexts = deployedTopologyTasks.get(topologyID);
 
         if (contexts == null) {
-            contexts = new ArrayList<TaskDriverContext>();
+            contexts = new ArrayList<>();
             deployedTopologyTasks.put(topologyID, contexts);
         }
 
@@ -210,46 +210,46 @@ public final class TaskManager implements WM2TMProtocol {
      * @param taskDriverCtx
      */
     private void unregisterTask(final TaskDriverContext taskDriverCtx) {
+        // sanity check.
+        if (taskDriverCtx == null)
+            throw new IllegalArgumentException("taskDriverCtx == null");
 
-        /*if(deployedTasks.remove(taskDriverCtx.taskDescriptor.taskID) == null)
+        if (deployedTasks.remove(taskDriverCtx.taskDescriptor.taskID) == null)
             throw new IllegalStateException("task is not deployed");
 
-       final List<TaskDriverContext> taskList = deployedTopologyTasks.get(taskDriverCtx.taskDescriptor.topologyID);
+        final List<TaskDriverContext> taskList = deployedTopologyTasks.get(taskDriverCtx.taskDescriptor.topologyID);
 
-        if(taskList == null)
+        if (taskList == null)
             throw new IllegalStateException();
 
-        if(!taskList.remove(taskDriverCtx))
+        if (!taskList.remove(taskDriverCtx))
             throw new IllegalStateException();
 
-        if(taskList.size() == 0)
-            deployedTopologyTasks.remove(taskDriverCtx.taskDescriptor.topologyID);*/
+        if (taskList.size() == 0)
+            deployedTopologyTasks.remove(taskDriverCtx.taskDescriptor.topologyID);
     }
 
-    // ---------------------------------------------------
-    // Entry Point.
-    // ---------------------------------------------------
+    /**
+     * @param event
+     */
+    private void dispatchRemoteTaskTransition(final IOEvents.TaskControlIOEvent event) {
+        // sanity check.
+        if (event == null)
+            throw new IllegalArgumentException("event == null");
+        if (!(event.getPayload() instanceof StateMachine.FSMTransitionEvent))
+            throw new IllegalArgumentException("event is not FSMTransitionEvent");
 
-    public static void main(final String[] args) {
-
-        int dataPort = -1;
-        int controlPort = -1;
-        String zkServer = null;
-        if (args.length == 3) {
-            try {
-                zkServer = args[0];
-                dataPort = Integer.parseInt(args[1]);
-                controlPort = Integer.parseInt(args[2]);
-            } catch (NumberFormatException e) {
-                System.err.println("Argument" + " must be an integer");
-                System.exit(1);
-            }
+        final List<TaskDriverContext> ctxList = deployedTopologyTasks.get(event.getTopologyID());
+        if (ctxList == null) {
+            //throw new IllegalArgumentException("ctxList == null");
+            LOG.info("Task driver context for topology [" + event.getTopologyID() + "] is removed");
         } else {
-            System.err.println("only two numeric arguments allowed: dataPort, controlPort");
-            System.exit(1);
+            for (final TaskDriverContext ctx : ctxList) {
+                if (ctx.taskDescriptor.taskID.equals(event.getTaskID())) {
+                    ctx.taskFSM.dispatchEvent((Event) event.getPayload());
+                }
+            }
         }
-
-        new TaskManager(zkServer, dataPort, controlPort);
     }
 
     // ---------------------------------------------------
@@ -281,17 +281,35 @@ public final class TaskManager implements WM2TMProtocol {
             deployedTasks.get(event.srcTaskID).driverDispatcher.dispatchEvent(event);
         }
 
-        @Handle(event = TaskStateTransitionEvent.class)
-        private void handleTaskStateTransitionEvent(final TaskStateTransitionEvent event) {
-            final List<TaskDriverContext> ctxList = deployedTopologyTasks.get(event.topologyID);
-            if (ctxList == null) {
-                throw new IllegalArgumentException("ctxList == null");
-            }
-            for (final TaskDriverContext ctx : ctxList) {
-                if (ctx.taskDescriptor.taskID.equals(event.taskID)) {
-                    ctx.driverDispatcher.dispatchEvent(event);
-                }
-            }
+        @Handle(event = IOEvents.TaskControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION)
+        private void handleTaskStateTransitionEvent(final IOEvents.TaskControlIOEvent event) {
+            dispatchRemoteTaskTransition(event);
         }
+    }
+
+    // ---------------------------------------------------
+    // Entry Point.
+    // ---------------------------------------------------
+
+    public static void main(final String[] args) {
+
+        int dataPort = -1;
+        int controlPort = -1;
+        String zkServer = null;
+        if (args.length == 3) {
+            try {
+                zkServer = args[0];
+                dataPort = Integer.parseInt(args[1]);
+                controlPort = Integer.parseInt(args[2]);
+            } catch (NumberFormatException e) {
+                System.err.println("Argument" + " must be an integer");
+                System.exit(1);
+            }
+        } else {
+            System.err.println("only two numeric arguments allowed: dataPort, controlPort");
+            System.exit(1);
+        }
+
+        new TaskManager(zkServer, dataPort, controlPort);
     }
 }

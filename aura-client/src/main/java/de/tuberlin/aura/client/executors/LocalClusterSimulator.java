@@ -1,9 +1,7 @@
 package de.tuberlin.aura.client.executors;
 
 import de.tuberlin.aura.core.common.utils.ProcessExecutor;
-import de.tuberlin.aura.core.descriptors.Descriptors.HDDDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.HardwareDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZkHelper;
+import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.taskmanager.TaskManager;
 import de.tuberlin.aura.workloadmanager.WorkloadManager;
 import org.apache.commons.io.FileUtils;
@@ -23,15 +21,7 @@ import java.util.Set;
 public final class LocalClusterSimulator {
 
     // ---------------------------------------------------
-    // Constants.
-    // ---------------------------------------------------
-
-    public static final HardwareDescriptor MACHINE_HARDWARE = new HardwareDescriptor((short) 4,
-            2L * 1024L * 1024L * 1024L,
-            new HDDDescriptor(10L * 1024L * 1024L * 1024L));
-
-    // ---------------------------------------------------
-    // Inner Classes.
+    // Execution Modes.
     // ---------------------------------------------------
 
     public static enum ExecutionMode {
@@ -42,13 +32,44 @@ public final class LocalClusterSimulator {
     }
 
     // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private static final Logger LOG = Logger.getLogger(LocalClusterSimulator.class);
+
+    private final Set<Integer> reservedPorts;
+
+    private final List<TaskManager> tmList;
+
+    private final List<ProcessExecutor> peList;
+
+    private final ZooKeeperServer zookeeperServer;
+
+    private final NIOServerCnxnFactory zookeeperCNXNFactory;
+
+    // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
+    /**
+     * @param mode
+     * @param startupZookeeper
+     * @param zkServer
+     * @param numNodes
+     */
     public LocalClusterSimulator(final ExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes) {
         this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000);
     }
 
+    /**
+     * @param mode
+     * @param startupZookeeper
+     * @param zkServer
+     * @param numNodes
+     * @param zkClientPort
+     * @param numConnections
+     * @param tickTime
+     */
     public LocalClusterSimulator(final ExecutionMode mode,
                                  boolean startupZookeeper,
                                  final String zkServer,
@@ -57,15 +78,15 @@ public final class LocalClusterSimulator {
                                  int numConnections,
                                  int tickTime) {
         // sanity check.
-        ZkHelper.checkConnectionString(zkServer);
+        ZookeeperHelper.checkConnectionString(zkServer);
         if (numNodes < 1)
             throw new IllegalArgumentException("numNodes < 1");
 
-        this.reservedPorts = new HashSet<Integer>();
+        this.reservedPorts = new HashSet<>();
 
-        this.tmList = new ArrayList<TaskManager>();
+        this.tmList = new ArrayList<>();
 
-        this.peList = new ArrayList<ProcessExecutor>();
+        this.peList = new ArrayList<>();
 
         // ------- bootstrap zookeeper server -------
 
@@ -108,13 +129,13 @@ public final class LocalClusterSimulator {
             case EXECUTION_MODE_MULTIPLE_PROCESSES: {
                 try {
                     peList.add(new ProcessExecutor(WorkloadManager.class).execute(zkServer,
-                            new Integer(getFreePort()).toString(),
-                            new Integer(getFreePort()).toString()));
+                            Integer.toString(getFreePort()),
+                            Integer.toString(getFreePort())));
                     Thread.sleep(1000);
                     for (int i = 0; i < numNodes; ++i) {
                         peList.add(new ProcessExecutor(TaskManager.class).execute(zkServer,
-                                new Integer(getFreePort()).toString(),
-                                new Integer(getFreePort()).toString()));
+                                Integer.toString(getFreePort()),
+                                Integer.toString(getFreePort())));
                         Thread.sleep(1000);
                     }
                 } catch (InterruptedException e) {
@@ -129,25 +150,12 @@ public final class LocalClusterSimulator {
     }
 
     // ---------------------------------------------------
-    // Fields.
+    // Public Methods.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(LocalClusterSimulator.class);
-
-    private final Set<Integer> reservedPorts;
-
-    private final List<TaskManager> tmList;
-
-    private final List<ProcessExecutor> peList;
-
-    private final ZooKeeperServer zookeeperServer;
-
-    private final NIOServerCnxnFactory zookeeperCNXNFactory;
-
-    // ---------------------------------------------------
-    // Public.
-    // ---------------------------------------------------
-
+    /**
+     *
+     */
     public void shutdown() {
         for (final ProcessExecutor pe : peList) {
             pe.destroy();
@@ -157,9 +165,12 @@ public final class LocalClusterSimulator {
     }
 
     // ---------------------------------------------------
-    // Private.
+    // Private Methods.
     // ---------------------------------------------------
 
+    /**
+     * @return
+     */
     private int getFreePort() {
         int freePort = -1;
         do {
@@ -168,6 +179,7 @@ public final class LocalClusterSimulator {
                 freePort = ss.getLocalPort();
                 ss.close();
             } catch (IOException e) {
+                LOG.info(e);
             }
         } while (reservedPorts.contains(freePort) || freePort < 1024 || freePort > 65535);
         reservedPorts.add(freePort);

@@ -1,27 +1,28 @@
 package de.tuberlin.aura.core.topology;
 
-import java.io.Serializable;
-import java.util.*;
-
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology.DeploymentType;
-import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
+import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology.DeploymentType;
+
+import java.io.Serializable;
+import java.util.*;
 
 public class AuraDirectedGraph {
 
     // Disallow instantiation.
-    private AuraDirectedGraph() {}
+    private AuraDirectedGraph() {
+    }
 
     /**
      *
      */
-    public static final class AuraTopology implements Serializable {
+    public static final class AuraTopology implements java.io.Serializable {
 
-        private static final long serialVersionUID = 8527931035756128232L;
+        private static final long serialVersionUID = -1L;
 
         // ---------------------------------------------------
         // Aura Topology Properties.
@@ -44,6 +45,34 @@ public class AuraDirectedGraph {
         }
 
         // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
+        public final UUID machineID;
+
+        public final String name;
+
+        public final UUID topologyID;
+
+        public final Map<String, Node> nodeMap;
+
+        public final Map<String, Node> sourceMap;
+
+        public final Map<String, Node> sinkMap;
+
+        public final Map<Pair<String, String>, Edge> edges;
+
+        public final Map<String, UserCode> userCodeMap;
+
+        public final Map<UUID, Node> uidNodeMap;
+
+        public final DeploymentType deploymentType;
+
+        public final EnumSet<MonitoringType> monitoringProperties;
+
+        public Map<UUID, ExecutionNode> executionNodeMap;
+
+        // ---------------------------------------------------
         // Constructor.
         // ---------------------------------------------------
 
@@ -58,6 +87,7 @@ public class AuraDirectedGraph {
                             final Map<UUID, Node> uidNodeMap,
                             final DeploymentType deploymentType,
                             final EnumSet<MonitoringType> monitoringProperties) {
+
             // sanity check.
             if (machineID == null)
                 throw new IllegalArgumentException("machineID == null");
@@ -108,35 +138,7 @@ public class AuraDirectedGraph {
         }
 
         // ---------------------------------------------------
-        // Fields.
-        // ---------------------------------------------------
-
-        public final UUID machineID;
-
-        public final String name;
-
-        public final UUID topologyID;
-
-        public final Map<String, Node> nodeMap;
-
-        public final Map<String, Node> sourceMap;
-
-        public final Map<String, Node> sinkMap;
-
-        public final Map<Pair<String, String>, Edge> edges;
-
-        public final Map<String, UserCode> userCodeMap;
-
-        public final Map<UUID, Node> uidNodeMap;
-
-        public final DeploymentType deploymentType;
-
-        public final EnumSet<MonitoringType> monitoringProperties;
-
-        public Map<UUID, ExecutionNode> executionNodeMap;
-
-        // ---------------------------------------------------
-        // Public.
+        // Public Methods.
         // ---------------------------------------------------
 
         public void setExecutionNodes(final Map<UUID, ExecutionNode> executionNodeMap) {
@@ -154,114 +156,6 @@ public class AuraDirectedGraph {
      *
      */
     public static final class AuraTopologyBuilder {
-
-        // ---------------------------------------------------
-        // Inner Classes.
-        // ---------------------------------------------------
-
-        public final class NodeConnector {
-
-            protected NodeConnector(final AuraTopologyBuilder tb) {
-                this.tb = tb;
-                this.edges = new ArrayList<Pair<String, String>>();
-                this.edgeProperties = new HashMap<Pair<String, String>, List<Object>>();
-            }
-
-            private final AuraTopologyBuilder tb;
-
-            private final List<Pair<String, String>> edges;
-
-            private final Map<Pair<String, String>, List<Object>> edgeProperties;
-
-            private Node srcNode;
-
-            public NodeConnector currentSource(final Node srcNode) {
-                this.srcNode = srcNode;
-                return this;
-            }
-
-            public AuraTopologyBuilder connectTo(final String dstNodeName,
-                                                 final Edge.TransferType transferType,
-                                                 final Edge.EdgeType edgeType,
-                                                 final Node.DataPersistenceType dataLifeTime,
-                                                 final Node.ExecutionType executionType) {
-                // sanity check.
-                if (dstNodeName == null)
-                    throw new IllegalArgumentException("dstNode == null");
-                if (transferType == null)
-                    throw new IllegalArgumentException("transferType == null");
-                if (edgeType == null)
-                    throw new IllegalArgumentException("edgeType == null");
-                if (dataLifeTime == null)
-                    throw new IllegalArgumentException("dataLifeTime == null");
-                if (executionType == null)
-                    throw new IllegalArgumentException("executionType == null");
-
-                Object[] properties = {transferType, edgeType, dataLifeTime, executionType};
-                edges.add(new Pair<String, String>(srcNode.name, dstNodeName));
-                edgeProperties.put(new Pair<String, String>(srcNode.name, dstNodeName), Arrays.asList(properties));
-                return tb;
-            }
-
-            public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType) {
-                return connectTo(dstNodeName,
-                                 transferType,
-                                 Edge.EdgeType.FORWARD_EDGE,
-                                 Node.DataPersistenceType.EPHEMERAL,
-                                 Node.ExecutionType.PIPELINED);
-            }
-
-            public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType) {
-                return connectTo(dstNodeName, transferType, edgeType, Node.DataPersistenceType.EPHEMERAL, Node.ExecutionType.PIPELINED);
-            }
-
-            public AuraTopologyBuilder connectTo(final String dstNodeName,
-                                                 final Edge.TransferType transferType,
-                                                 final Edge.EdgeType edgeType,
-                                                 final Node.DataPersistenceType dataLifeTime) {
-                return connectTo(dstNodeName, transferType, edgeType, dataLifeTime, Node.ExecutionType.PIPELINED);
-            }
-
-            public List<Pair<String, String>> getEdges() {
-                return Collections.unmodifiableList(edges);
-            }
-
-            public Map<Pair<String, String>, List<Object>> getEdgeProperties() {
-                return Collections.unmodifiableMap(edgeProperties);
-            }
-        }
-
-        // ---------------------------------------------------
-        // Constructor.
-        // ---------------------------------------------------
-
-        public AuraTopologyBuilder(final UUID machineID, final UserCodeExtractor codeExtractor) {
-            // sanity check.
-            if (machineID == null)
-                throw new IllegalArgumentException("machineID == null");
-            if (codeExtractor == null)
-                throw new IllegalArgumentException("codeExtractor == null");
-
-            this.machineID = machineID;
-
-            this.nodeMap = new HashMap<String, Node>();
-
-            this.sourceMap = new HashMap<String, Node>();
-
-            this.sinkMap = new HashMap<String, Node>();
-
-            this.edges = new HashMap<Pair<String, String>, Edge>();
-
-            this.nodeConnector = new NodeConnector(this);
-
-            this.codeExtractor = codeExtractor;
-
-            this.userCodeMap = new HashMap<String, UserCode>();
-
-            this.userCodeClazzMap = new HashMap<String, Class<?>>();
-
-            this.uidNodeMap = new HashMap<UUID, Node>();
-        }
 
         // ---------------------------------------------------
         // Fields.
@@ -290,7 +184,39 @@ public class AuraDirectedGraph {
         private boolean isBuilded = false;
 
         // ---------------------------------------------------
-        // Public.
+        // Constructor.
+        // ---------------------------------------------------
+
+        public AuraTopologyBuilder(final UUID machineID, final UserCodeExtractor codeExtractor) {
+            // sanity check.
+            if (machineID == null)
+                throw new IllegalArgumentException("machineID == null");
+            if (codeExtractor == null)
+                throw new IllegalArgumentException("codeExtractor == null");
+
+            this.machineID = machineID;
+
+            this.nodeMap = new HashMap<>();
+
+            this.sourceMap = new HashMap<>();
+
+            this.sinkMap = new HashMap<>();
+
+            this.edges = new HashMap<>();
+
+            this.nodeConnector = new NodeConnector(this);
+
+            this.codeExtractor = codeExtractor;
+
+            this.userCodeMap = new HashMap<>();
+
+            this.userCodeClazzMap = new HashMap<>();
+
+            this.uidNodeMap = new HashMap<>();
+        }
+
+        // ---------------------------------------------------
+        // Public Methods.
         // ---------------------------------------------------
 
         public NodeConnector addNode(final Node node, Class<?> userCodeClazz) {
@@ -353,7 +279,7 @@ public class AuraDirectedGraph {
 
                     final Node srcNode = nodeMap.get(entry.getFirst());
                     final Node dstNode = nodeMap.get(entry.getSecond());
-                    final List<Object> properties = edgeProperties.get(new Pair<String, String>(srcNode.name, dstNode.name));
+                    final List<Object> properties = edgeProperties.get(new Pair<>(srcNode.name, dstNode.name));
                     final Edge.TransferType transferType = (Edge.TransferType) properties.get(0);
                     final Edge.EdgeType edgeType = (Edge.EdgeType) properties.get(1);
 
@@ -362,7 +288,7 @@ public class AuraDirectedGraph {
                             throw new IllegalStateException(srcNode.name + " to " + dstNode.name + "is not a back coupling edge");
                     }
 
-                    edges.put(new Pair<String, String>(srcNode.name, dstNode.name), new Edge(srcNode, dstNode, transferType, edgeType));
+                    edges.put(new Pair<>(srcNode.name, dstNode.name), new Edge(srcNode, dstNode, transferType, edgeType));
 
                     if (edgeType != Edge.EdgeType.BACKWARD_EDGE) {
                         sourceMap.remove(dstNode.name);
@@ -383,16 +309,16 @@ public class AuraDirectedGraph {
             final UUID topologyID = UUID.randomUUID();
 
             return new AuraTopology(machineID,
-                                    name,
-                                    topologyID,
-                                    nodeMap,
-                                    sourceMap,
-                                    sinkMap,
-                                    edges,
-                                    userCodeMap,
-                                    uidNodeMap,
-                                    deploymentType,
-                                    monitoringProperties);
+                    name,
+                    topologyID,
+                    nodeMap,
+                    sourceMap,
+                    sinkMap,
+                    edges,
+                    userCodeMap,
+                    uidNodeMap,
+                    deploymentType,
+                    monitoringProperties);
         }
 
         private boolean validateBackCouplingEdge(final Set<Node> visitedNodes, final Node currentNode, final Node destNode) {
@@ -409,6 +335,82 @@ public class AuraDirectedGraph {
             }
             return false;
         }
+
+        // ---------------------------------------------------
+        // Inner Classes.
+        // ---------------------------------------------------
+
+        public final class NodeConnector {
+
+            protected NodeConnector(final AuraTopologyBuilder tb) {
+                this.tb = tb;
+                this.edges = new ArrayList<>();
+                this.edgeProperties = new HashMap<>();
+            }
+
+            private final AuraTopologyBuilder tb;
+
+            private final List<Pair<String, String>> edges;
+
+            private final Map<Pair<String, String>, List<Object>> edgeProperties;
+
+            private Node srcNode;
+
+            public NodeConnector currentSource(final Node srcNode) {
+                this.srcNode = srcNode;
+                return this;
+            }
+
+            public AuraTopologyBuilder connectTo(final String dstNodeName,
+                                                 final Edge.TransferType transferType,
+                                                 final Edge.EdgeType edgeType,
+                                                 final Node.DataPersistenceType dataLifeTime,
+                                                 final Node.ExecutionType executionType) {
+                // sanity check.
+                if (dstNodeName == null)
+                    throw new IllegalArgumentException("dstNode == null");
+                if (transferType == null)
+                    throw new IllegalArgumentException("transferType == null");
+                if (edgeType == null)
+                    throw new IllegalArgumentException("edgeType == null");
+                if (dataLifeTime == null)
+                    throw new IllegalArgumentException("dataLifeTime == null");
+                if (executionType == null)
+                    throw new IllegalArgumentException("executionType == null");
+
+                Object[] properties = {transferType, edgeType, dataLifeTime, executionType};
+                edges.add(new Pair<>(srcNode.name, dstNodeName));
+                edgeProperties.put(new Pair<>(srcNode.name, dstNodeName), Arrays.asList(properties));
+                return tb;
+            }
+
+            public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType) {
+                return connectTo(dstNodeName,
+                        transferType,
+                        Edge.EdgeType.FORWARD_EDGE,
+                        Node.DataPersistenceType.EPHEMERAL,
+                        Node.ExecutionType.PIPELINED);
+            }
+
+            public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType) {
+                return connectTo(dstNodeName, transferType, edgeType, Node.DataPersistenceType.EPHEMERAL, Node.ExecutionType.PIPELINED);
+            }
+
+            public AuraTopologyBuilder connectTo(final String dstNodeName,
+                                                 final Edge.TransferType transferType,
+                                                 final Edge.EdgeType edgeType,
+                                                 final Node.DataPersistenceType dataLifeTime) {
+                return connectTo(dstNodeName, transferType, edgeType, dataLifeTime, Node.ExecutionType.PIPELINED);
+            }
+
+            public List<Pair<String, String>> getEdges() {
+                return Collections.unmodifiableList(edges);
+            }
+
+            public Map<Pair<String, String>, List<Object>> getEdgeProperties() {
+                return Collections.unmodifiableMap(edgeProperties);
+            }
+        }
     }
 
     /**
@@ -416,7 +418,7 @@ public class AuraDirectedGraph {
      */
     public static final class Node implements Visitable<Node>, Serializable {
 
-        private static final long serialVersionUID = -7726710143171176855L;
+        private static final long serialVersionUID = -1L;
 
         // ---------------------------------------------------
         // Node Properties.
@@ -444,6 +446,28 @@ public class AuraDirectedGraph {
 
             NORMAL
         }
+
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
+        public final UUID uid;
+
+        public final String name;
+
+        public final int degreeOfParallelism;
+
+        public final int perWorkerParallelism;
+
+        public final DataPersistenceType dataPersistenceType;
+
+        public final ExecutionType executionType;
+
+        private final List<Node> inputs;
+
+        private final List<Node> outputs;
+
+        private final Map<UUID, ExecutionNode> executionNodes;
 
         // ---------------------------------------------------
         // Constructors.
@@ -485,11 +509,11 @@ public class AuraDirectedGraph {
 
             this.perWorkerParallelism = perWorkerParallelism;
 
-            this.inputs = new ArrayList<Node>();
+            this.inputs = new ArrayList<>();
 
-            this.outputs = new ArrayList<Node>();
+            this.outputs = new ArrayList<>();
 
-            this.executionNodes = new HashMap<UUID, ExecutionNode>();
+            this.executionNodes = new HashMap<>();
 
             this.dataPersistenceType = dataPersistenceType;
 
@@ -497,29 +521,7 @@ public class AuraDirectedGraph {
         }
 
         // ---------------------------------------------------
-        // Fields.
-        // ---------------------------------------------------
-
-        public final UUID uid;
-
-        public final String name;
-
-        public final int degreeOfParallelism;
-
-        public final int perWorkerParallelism;
-
-        public final DataPersistenceType dataPersistenceType;
-
-        public final ExecutionType executionType;
-
-        private final List<Node> inputs;
-
-        private final List<Node> outputs;
-
-        private final Map<UUID, ExecutionNode> executionNodes;
-
-        // ---------------------------------------------------
-        // Public.
+        // Public Methods.
         // ---------------------------------------------------
 
         public void addInput(final Node node) {
@@ -559,7 +561,7 @@ public class AuraDirectedGraph {
         }
 
         public List<ExecutionNode> getExecutionNodes() {
-            return Collections.unmodifiableList(new ArrayList<ExecutionNode>(executionNodes.values()));
+            return Collections.unmodifiableList(new ArrayList<>(executionNodes.values()));
         }
 
         @Override
@@ -576,6 +578,22 @@ public class AuraDirectedGraph {
      *
      */
     public static final class ExecutionNode implements Visitable<ExecutionNode> {
+
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
+        public final UUID uid;
+
+        public final Node logicalNode;
+
+        public final int taskIndex;
+
+        private TaskDescriptor taskDescriptor;
+
+        private TaskBindingDescriptor taskBindingDescriptor;
+
+        private TaskState currentState;
 
         // ---------------------------------------------------
         // Constructors.
@@ -598,23 +616,7 @@ public class AuraDirectedGraph {
         }
 
         // ---------------------------------------------------
-        // Fields.
-        // ---------------------------------------------------
-
-        public final UUID uid;
-
-        public final Node logicalNode;
-
-        public final int taskIndex;
-
-        private TaskDescriptor taskDescriptor;
-
-        private TaskBindingDescriptor taskBindingDescriptor;
-
-        private TaskState currentState;
-
-        // ---------------------------------------------------
-        // Public.
+        // Public Methods.
         // ---------------------------------------------------
 
         public void setState(final TaskState state) {
@@ -660,11 +662,11 @@ public class AuraDirectedGraph {
         @Override
         public String toString() {
             return (new StringBuilder()).append("ExecutionNode = {")
-                                        .append(" uid = " + uid.toString() + ", ")
-                                        .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-                                        .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
-                                        .append(" }")
-                                        .toString();
+                    .append(" uid = " + uid.toString() + ", ")
+                    .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
+                    .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
+                    .append(" }")
+                    .toString();
         }
 
         public void accept(final Visitor<ExecutionNode> visitor) {
@@ -677,7 +679,7 @@ public class AuraDirectedGraph {
      */
     public static final class Edge implements Serializable {
 
-        private static final long serialVersionUID = 707567426961035903L;
+        private static final long serialVersionUID = -1L;
 
         // ---------------------------------------------------
         // Edge Properties.
@@ -709,6 +711,18 @@ public class AuraDirectedGraph {
         }
 
         // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
+        public final Node srcNode;
+
+        public final Node dstNode;
+
+        public final TransferType transferType;
+
+        public final EdgeType edgeType;
+
+        // ---------------------------------------------------
         // Constructor.
         // ---------------------------------------------------
 
@@ -734,30 +748,18 @@ public class AuraDirectedGraph {
         }
 
         // ---------------------------------------------------
-        // Fields.
-        // ---------------------------------------------------
-
-        public final Node srcNode;
-
-        public final Node dstNode;
-
-        public final TransferType transferType;
-
-        public final EdgeType edgeType;
-
-        // ---------------------------------------------------
-        // Public.
+        // Public Methods.
         // ---------------------------------------------------
 
         @Override
         public String toString() {
             return (new StringBuilder()).append("Edge = {")
-                                        .append(" srcNode = " + srcNode.toString() + ", ")
-                                        .append(" dstNode = " + dstNode.toString() + ", ")
-                                        .append(" transferType = " + transferType.toString() + ", ")
-                                        .append(" edgeType = " + edgeType.toString() + ", ")
-                                        .append(" }")
-                                        .toString();
+                    .append(" srcNode = " + srcNode.toString() + ", ")
+                    .append(" dstNode = " + dstNode.toString() + ", ")
+                    .append(" transferType = " + transferType.toString() + ", ")
+                    .append(" edgeType = " + edgeType.toString() + ", ")
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -801,8 +803,8 @@ public class AuraDirectedGraph {
             if (visitor == null)
                 throw new IllegalArgumentException("visitor == null");
 
-            final Set<Node> visitedNodes = new HashSet<Node>();
-            final Queue<Node> q = new LinkedList<Node>();
+            final Set<Node> visitedNodes = new HashSet<>();
+            final Queue<Node> q = new LinkedList<>();
 
             final Collection<Node> startNodes;
             if (traverseBackwards)

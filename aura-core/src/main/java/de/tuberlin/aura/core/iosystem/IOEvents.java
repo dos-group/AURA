@@ -2,13 +2,8 @@ package de.tuberlin.aura.core.iosystem;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
-import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
-import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
-import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyState;
-import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
 import io.netty.channel.Channel;
 
-import java.io.Serializable;
 import java.util.UUID;
 
 public final class IOEvents {
@@ -56,11 +51,13 @@ public final class IOEvents {
 
         public static final String CONTROL_EVENT_RPC_CALLEE_RESPONSE = "CONTROL_EVENT_RPC_CALLEE_RESPONSE";
 
-        public static final String CONTROL_EVENT_TASK_STATE = "CONTROL_EVENT_TASK_STATE";
-
         public static final String CONTROL_EVENT_TOPOLOGY_FINISHED = "CONTROL_EVENT_TOPOLOGY_FINISHED";
 
         public static final String CONTROL_EVENT_TOPOLOGY_FAILURE = "CONTROL_EVENT_TOPOLOGY_FAILURE";
+
+        public static final String CONTROL_EVENT_REMOTE_TASK_TRANSITION = "CONTROL_EVENT_REMOTE_TASK_TRANSITION";
+
+        public static final String CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE = "CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE";
     }
 
     /**
@@ -68,13 +65,13 @@ public final class IOEvents {
      */
     public static class BaseIOEvent extends Event {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1L;
+
+        private Channel channel;
 
         public BaseIOEvent(final String type) {
             super(type);
         }
-
-        private Channel channel;
 
         public void setChannel(final Channel channel) {
             // sanity check.
@@ -114,7 +111,11 @@ public final class IOEvents {
      */
     public static class DataIOEvent extends BaseIOEvent {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1L;
+
+        public final UUID srcTaskID;
+
+        public final UUID dstTaskID;
 
         public DataIOEvent(final String type, final UUID srcTaskID, final UUID dstTaskID) {
             super(type);
@@ -128,10 +129,6 @@ public final class IOEvents {
 
             this.dstTaskID = dstTaskID;
         }
-
-        public final UUID srcTaskID;
-
-        public final UUID dstTaskID;
 
         @Override
         public String toString() {
@@ -150,6 +147,10 @@ public final class IOEvents {
     public static final class DataBufferEvent extends DataIOEvent {
 
         private static final long serialVersionUID = -1;
+
+        public final UUID messageID;
+
+        public final byte[] data;
 
         public DataBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final byte[] data) {
             this(UUID.randomUUID(), srcTaskID, dstTaskID, data);
@@ -170,10 +171,6 @@ public final class IOEvents {
             this.data = data;
         }
 
-        public final UUID messageID;
-
-        public final byte[] data;
-
         @Override
         public String toString() {
             return (new StringBuilder()).append("DataBufferMessage = {")
@@ -192,7 +189,11 @@ public final class IOEvents {
      */
     public static class ControlIOEvent extends BaseIOEvent {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1L;
+
+        private UUID srcMachineID;
+
+        private UUID dstMachineID;
 
         public ControlIOEvent(final String type) {
             super(type);
@@ -210,10 +211,6 @@ public final class IOEvents {
 
             this.dstMachineID = dstMachineID;
         }
-
-        private UUID srcMachineID;
-
-        private UUID dstMachineID;
 
         public void setSrcMachineID(final UUID srcMachineID) {
             // sanity check.
@@ -243,8 +240,8 @@ public final class IOEvents {
         public String toString() {
             return (new StringBuilder()).append("ControlIOEvent = {")
                     .append(" type = " + type + ", ")
-                    .append(" srcMachineID = " + srcMachineID.toString() + ", ")
-                    .append(" dstMachineID = " + dstMachineID.toString())
+                    .append(" srcMachineID = " + srcMachineID + ", ")
+                    .append(" dstMachineID = " + dstMachineID)
                     .append(" }")
                     .toString();
         }
@@ -253,9 +250,53 @@ public final class IOEvents {
     /**
      *
      */
+    public static class TaskControlIOEvent extends ControlIOEvent {
+
+        private static final long serialVersionUID = -1L;
+
+        private UUID topologyID;
+
+        private UUID taskID;
+
+        public TaskControlIOEvent(final String type) {
+            super(type);
+        }
+
+        public void setTopologyID(final UUID topologyID) {
+            // sanity check.
+            if (topologyID == null)
+                throw new IllegalArgumentException("topologyID == null");
+
+            this.topologyID = topologyID;
+        }
+
+        public UUID getTopologyID() {
+            return this.topologyID;
+        }
+
+        public void setTaskID(final UUID taskID) {
+            // sanity check.
+            if (taskID == null)
+                throw new IllegalArgumentException("taskID == null");
+
+            this.taskID = taskID;
+        }
+
+        public UUID getTaskID() {
+            return this.taskID;
+        }
+    }
+
+    /**
+     *
+     */
     public static final class RPCCallerRequestEvent extends ControlIOEvent {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1L;
+
+        public UUID callUID;
+
+        public MethodSignature methodSignature;
 
         public RPCCallerRequestEvent(final UUID callUID, final MethodSignature methodSignature) {
 
@@ -270,10 +311,6 @@ public final class IOEvents {
 
             this.methodSignature = methodSignature;
         }
-
-        public UUID callUID;
-
-        public MethodSignature methodSignature;
     }
 
     /**
@@ -281,7 +318,11 @@ public final class IOEvents {
      */
     public static final class RPCCalleeResponseEvent extends ControlIOEvent {
 
-        private static final long serialVersionUID = 1L;
+        private static final long serialVersionUID = -1L;
+
+        public UUID callUID;
+
+        public Object result;
 
         public RPCCalleeResponseEvent(final UUID callUID, final Object result) {
 
@@ -294,208 +335,5 @@ public final class IOEvents {
 
             this.result = result;
         }
-
-        public UUID callUID;
-
-        public Object result;
-    }
-
-    /**
-     *
-     */
-    public static final class TaskStateTransitionEvent extends ControlIOEvent {
-
-        private static final long serialVersionUID = 1L;
-
-        public static final String TASK_STATE_TRANSITION_EVENT = "TASK_STATE_TRANSITION_EVENT";
-
-        public TaskStateTransitionEvent(final TaskTransition transition) {
-            this(null, null, transition);
-        }
-
-        public TaskStateTransitionEvent(final UUID topologyID, final UUID taskID, final TaskTransition transition) {
-            super(TASK_STATE_TRANSITION_EVENT);
-            // sanity check.
-            if (transition == null)
-                throw new IllegalArgumentException("taskTransition == null");
-
-            this.topologyID = topologyID;
-
-            this.taskID = taskID;
-
-            this.transition = transition;
-        }
-
-        public final TaskTransition transition;
-
-        public final UUID topologyID;
-
-        public final UUID taskID;
-
-        @Override
-        public String toString() {
-            return (new StringBuilder()).append("TaskChangeStateEvent = {")
-                    .append(" type = " + super.type + ", ")
-                    .append(" taskID = " + topologyID + ", ")
-                    .append(" taskTransition = " + transition.toString())
-                    .append(" }")
-                    .toString();
-        }
-    }
-
-    /**
-     *
-     */
-    public static final class MonitoringEvent extends ControlIOEvent {
-
-        private static final long serialVersionUID = 1L;
-
-        public static final String MONITORING_TASK_STATE_EVENT = "MONITORING_TASK_STATE_EVENT";
-
-        public static final String MONITORING_TOPOLOGY_STATE_EVENT = "MONITORING_TOPOLOGY_STATE_EVENT";
-
-        public static final class TaskStateUpdate implements Serializable {
-
-            private static final long serialVersionUID = 1L;
-
-            public TaskStateUpdate(final TaskStateUpdate taskStateUpdate) {
-                this(taskStateUpdate.taskID,
-                        taskStateUpdate.name,
-                        taskStateUpdate.currentTaskState,
-                        taskStateUpdate.nextTaskState,
-                        taskStateUpdate.taskTransition,
-                        taskStateUpdate.stateDuration);
-            }
-
-            public TaskStateUpdate(final UUID taskID,
-                                   final String name,
-                                   final TaskState currentTaskState,
-                                   final TaskState nextTaskState,
-                                   final TaskTransition taskTransition,
-                                   final long stateDuration) {
-                // sanity check.
-                if (taskID == null)
-                    throw new IllegalArgumentException("taskID == null");
-                if (name == null)
-                    throw new IllegalArgumentException("name == null");
-                if (currentTaskState == null)
-                    throw new IllegalArgumentException("currentTaskState == null");
-                if (nextTaskState == null)
-                    throw new IllegalArgumentException("nextTaskState == null");
-                if (taskTransition == null)
-                    throw new IllegalArgumentException("taskTransition == null");
-
-                this.taskID = taskID;
-
-                this.name = name;
-
-                this.currentTaskState = currentTaskState;
-
-                this.nextTaskState = nextTaskState;
-
-                this.taskTransition = taskTransition;
-
-                this.stateDuration = stateDuration;
-            }
-
-            public final UUID taskID;
-
-            public final String name;
-
-            public final TaskState currentTaskState;
-
-            public final TaskState nextTaskState;
-
-            public final TaskTransition taskTransition;
-
-            public final long stateDuration;
-        }
-
-        public static final class TopologyStateUpdate implements Serializable {
-
-            private static final long serialVersionUID = 1L;
-
-
-            public TopologyStateUpdate(final TopologyStateUpdate topologyStateUpdate) {
-                this(topologyStateUpdate.name,
-                        topologyStateUpdate.currentTopologyState,
-                        topologyStateUpdate.nextTopologyState,
-                        topologyStateUpdate.topologyTransition,
-                        topologyStateUpdate.stateDuration);
-            }
-
-            public TopologyStateUpdate(final String name,
-                                       final TopologyState currentTopologyState,
-                                       final TopologyState nextTopologyState,
-                                       final TopologyTransition topologyTransition,
-                                       final long stateDuration) {
-                // sanity check.
-                if (name == null)
-                    throw new IllegalArgumentException("name == null");
-                if (currentTopologyState == null)
-                    throw new IllegalArgumentException("currentTopologyState == null");
-                if (nextTopologyState == null)
-                    throw new IllegalArgumentException("nextTopologyState == null");
-                if (topologyTransition == null)
-                    throw new IllegalArgumentException("topologyTransition == null");
-
-                this.name = name;
-
-                this.currentTopologyState = currentTopologyState;
-
-                this.nextTopologyState = nextTopologyState;
-
-                this.topologyTransition = topologyTransition;
-
-                this.stateDuration = stateDuration;
-            }
-
-            public final String name;
-
-            public final TopologyState currentTopologyState;
-
-            public final TopologyState nextTopologyState;
-
-            public final TopologyTransition topologyTransition;
-
-            public final long stateDuration;
-        }
-
-        public MonitoringEvent(final MonitoringEvent monitoringEvent) {
-            this(monitoringEvent.type, UUID.fromString(monitoringEvent.topologyID.toString()), monitoringEvent.taskStateUpdate != null
-                    ? new TaskStateUpdate(monitoringEvent.taskStateUpdate)
-                    : null, monitoringEvent.topologyStateUpdate != null ? new TopologyStateUpdate(monitoringEvent.topologyStateUpdate) : null);
-        }
-
-        public MonitoringEvent(final UUID topologyID, final TaskStateUpdate taskStateUpdate) {
-            this(MONITORING_TASK_STATE_EVENT, topologyID, taskStateUpdate, null);
-        }
-
-
-        public MonitoringEvent(final UUID topologyID, final TopologyStateUpdate topologyStateUpdate) {
-            this(MONITORING_TOPOLOGY_STATE_EVENT, topologyID, null, topologyStateUpdate);
-        }
-
-        public MonitoringEvent(final String type,
-                               final UUID topologyID,
-                               final TaskStateUpdate taskStateUpdate,
-                               final TopologyStateUpdate topologyStateUpdate) {
-            super(type);
-            // sanity check.
-            if (topologyID == null)
-                throw new IllegalArgumentException("topologyID == null");
-
-            this.topologyID = topologyID;
-
-            this.taskStateUpdate = taskStateUpdate;
-
-            this.topologyStateUpdate = topologyStateUpdate;
-        }
-
-        public final UUID topologyID;
-
-        public TaskStateUpdate taskStateUpdate;
-
-        public TopologyStateUpdate topologyStateUpdate;
     }
 }

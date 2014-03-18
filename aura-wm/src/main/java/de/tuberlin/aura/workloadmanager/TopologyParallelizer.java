@@ -1,26 +1,15 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
 import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
-import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
+import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
+
+import java.util.*;
 
 public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopology> {
 
@@ -33,7 +22,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
         parallelizeTopology(topology);
 
-        dispatcher.dispatchEvent(new TopologyStateTransitionEvent(TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE));
+        dispatcher.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE));
 
         return topology;
     }
@@ -47,7 +36,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
-        final Map<UUID, ExecutionNode> executionNodeMap = new HashMap<UUID, ExecutionNode>();
+        final Map<UUID, ExecutionNode> executionNodeMap = new HashMap<>();
 
         // First pass, create task descriptors.
         TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
@@ -78,10 +67,10 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                 // TODO: reduce code!
 
                 // Bind inputs of the execution nodes.
-                final Map<UUID, Map<UUID, List<TaskDescriptor>>> gateExecutionNodeInputs = new HashMap<UUID, Map<UUID, List<TaskDescriptor>>>();
+                final Map<UUID, Map<UUID, List<TaskDescriptor>>> gateExecutionNodeInputs = new HashMap<>();
                 for (final Node n : element.getInputs()) {
 
-                    final Edge ie = topology.edges.get(new Pair<String, String>(n.name, element.name));
+                    final Edge ie = topology.edges.get(new Pair<>(n.name, element.name));
                     switch (ie.transferType) {
 
                         case ALL_TO_ALL: {
@@ -90,13 +79,13 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                 Map<UUID, List<TaskDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get(dstEN.uid);
                                 if (executionNodeInputs == null) {
-                                    executionNodeInputs = new HashMap<UUID, List<TaskDescriptor>>();
+                                    executionNodeInputs = new HashMap<>();
                                     gateExecutionNodeInputs.put(dstEN.uid, executionNodeInputs);
                                 }
 
                                 List<TaskDescriptor> inputDescriptors = executionNodeInputs.get(n.uid);
                                 if (inputDescriptors == null) {
-                                    inputDescriptors = new ArrayList<TaskDescriptor>();
+                                    inputDescriptors = new ArrayList<>();
                                     executionNodeInputs.put(n.uid, inputDescriptors);
                                 }
 
@@ -105,7 +94,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
 
                         case POINT_TO_POINT: {
 
@@ -129,13 +118,13 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                         Map<UUID, List<TaskDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get(dstEN.uid);
                                         if (executionNodeInputs == null) {
-                                            executionNodeInputs = new HashMap<UUID, List<TaskDescriptor>>();
+                                            executionNodeInputs = new HashMap<>();
                                             gateExecutionNodeInputs.put(dstEN.uid, executionNodeInputs);
                                         }
 
                                         List<TaskDescriptor> inputDescriptors = executionNodeInputs.get(n.uid);
                                         if (inputDescriptors == null) {
-                                            inputDescriptors = new ArrayList<TaskDescriptor>();
+                                            inputDescriptors = new ArrayList<>();
                                             executionNodeInputs.put(n.uid, inputDescriptors);
                                         }
 
@@ -146,8 +135,8 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             } else { // dstDegree < srcDegree
 
                                 final int numOfDstLinks = srcDegree / dstDegree; // number of links
-                                                                                 // per dst
-                                                                                 // execution node.
+                                // per dst
+                                // execution node.
                                 final int numOfNodesWithOneAdditionalLink = srcDegree % dstDegree;
                                 final Iterator<ExecutionNode> srcIter = n.getExecutionNodes().iterator();
 
@@ -156,13 +145,13 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                     Map<UUID, List<TaskDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get(dstEN.uid);
                                     if (executionNodeInputs == null) {
-                                        executionNodeInputs = new HashMap<UUID, List<TaskDescriptor>>();
+                                        executionNodeInputs = new HashMap<>();
                                         gateExecutionNodeInputs.put(dstEN.uid, executionNodeInputs);
                                     }
 
                                     List<TaskDescriptor> inputDescriptors = executionNodeInputs.get(n.uid);
                                     if (inputDescriptors == null) {
-                                        inputDescriptors = new ArrayList<TaskDescriptor>();
+                                        inputDescriptors = new ArrayList<>();
                                         executionNodeInputs.put(n.uid, inputDescriptors);
                                     }
 
@@ -177,15 +166,15 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
                     }
                 }
 
                 // Bind outputs of the execution nodes.
-                final Map<UUID, Map<UUID, List<TaskDescriptor>>> gateExecutionNodeOutputs = new HashMap<UUID, Map<UUID, List<TaskDescriptor>>>();
+                final Map<UUID, Map<UUID, List<TaskDescriptor>>> gateExecutionNodeOutputs = new HashMap<>();
                 for (final Node n : element.getOutputs()) {
 
-                    final Edge ie = topology.edges.get(new Pair<String, String>(element.name, n.name));
+                    final Edge ie = topology.edges.get(new Pair<>(element.name, n.name));
                     switch (ie.transferType) {
 
                         case ALL_TO_ALL: {
@@ -194,13 +183,13 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                 Map<UUID, List<TaskDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get(srcEN.uid);
                                 if (executionNodeOutputs == null) {
-                                    executionNodeOutputs = new HashMap<UUID, List<TaskDescriptor>>();
+                                    executionNodeOutputs = new HashMap<>();
                                     gateExecutionNodeOutputs.put(srcEN.uid, executionNodeOutputs);
                                 }
 
                                 List<TaskDescriptor> outputDescriptors = executionNodeOutputs.get(n.uid);
                                 if (outputDescriptors == null) {
-                                    outputDescriptors = new ArrayList<TaskDescriptor>();
+                                    outputDescriptors = new ArrayList<>();
                                     executionNodeOutputs.put(n.uid, outputDescriptors);
                                 }
 
@@ -209,7 +198,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
 
                         case POINT_TO_POINT: {
 
@@ -227,13 +216,13 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                     Map<UUID, List<TaskDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get(srcEN.uid);
                                     if (executionNodeOutputs == null) {
-                                        executionNodeOutputs = new HashMap<UUID, List<TaskDescriptor>>();
+                                        executionNodeOutputs = new HashMap<>();
                                         gateExecutionNodeOutputs.put(srcEN.uid, executionNodeOutputs);
                                     }
 
                                     List<TaskDescriptor> outputDescriptors = executionNodeOutputs.get(n.uid);
                                     if (outputDescriptors == null) {
-                                        outputDescriptors = new ArrayList<TaskDescriptor>();
+                                        outputDescriptors = new ArrayList<>();
                                         executionNodeOutputs.put(n.uid, outputDescriptors);
                                     }
 
@@ -249,8 +238,8 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             } else { // dstDegree < srcDegree
 
                                 final int numOfDstLinks = srcDegree / dstDegree; // number of links
-                                                                                 // per dst
-                                                                                 // execution node.
+                                // per dst
+                                // execution node.
                                 final int numOfNodesWithOneAdditionalLink = srcDegree % dstDegree;
                                 final Iterator<ExecutionNode> srcIter = element.getExecutionNodes().iterator();
 
@@ -265,13 +254,13 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                         Map<UUID, List<TaskDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get(srcEN.uid);
                                         if (executionNodeOutputs == null) {
-                                            executionNodeOutputs = new HashMap<UUID, List<TaskDescriptor>>();
+                                            executionNodeOutputs = new HashMap<>();
                                             gateExecutionNodeOutputs.put(srcEN.uid, executionNodeOutputs);
                                         }
 
                                         List<TaskDescriptor> outputDescriptors = executionNodeOutputs.get(n.uid);
                                         if (outputDescriptors == null) {
-                                            outputDescriptors = new ArrayList<TaskDescriptor>();
+                                            outputDescriptors = new ArrayList<>();
                                             executionNodeOutputs.put(n.uid, outputDescriptors);
                                         }
 
@@ -281,7 +270,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
                     }
                 }
 
@@ -296,7 +285,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                         if (inputsPerGateCollection instanceof List)
                             inputsPerGateList = (List<List<TaskDescriptor>>) inputsPerGateCollection;
                         else
-                            inputsPerGateList = new ArrayList<List<TaskDescriptor>>(inputsPerGateCollection);
+                            inputsPerGateList = new ArrayList<>(inputsPerGateCollection);
                     }
 
                     final Map<UUID, List<TaskDescriptor>> outputsPerGate = gateExecutionNodeOutputs.get(en.uid);
@@ -307,7 +296,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                         if (outputsPerGateCollection instanceof List)
                             outputsPerGateList = (List<List<TaskDescriptor>>) outputsPerGate.values();
                         else
-                            outputsPerGateList = new ArrayList<List<TaskDescriptor>>(outputsPerGate.values());
+                            outputsPerGateList = new ArrayList<>(outputsPerGate.values());
                     }
 
                     final TaskBindingDescriptor bindingDescriptor =

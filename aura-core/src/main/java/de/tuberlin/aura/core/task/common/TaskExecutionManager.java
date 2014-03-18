@@ -27,6 +27,8 @@ public final class TaskExecutionManager extends EventDispatcher {
 
     private static final Logger LOG = Logger.getLogger(TaskExecutionManager.class);
 
+    private final Descriptors.MachineDescriptor machineDescriptor;
+
     private final int numberOfCores;
 
     private TaskExecutionUnit[] executionUnit;
@@ -41,6 +43,8 @@ public final class TaskExecutionManager extends EventDispatcher {
         // sanity check.
         if (machineDescriptor == null)
             throw new IllegalArgumentException("machineDescriptor == null");
+
+        this.machineDescriptor = machineDescriptor;
 
         this.numberOfCores = machineDescriptor.hardware.cpuCores;
 
@@ -62,7 +66,7 @@ public final class TaskExecutionManager extends EventDispatcher {
             throw new IllegalArgumentException("driverContext == null");
 
         int tmpMin, tmpMinOld;
-        tmpMin = tmpMinOld = executionUnit[0].getNumberOfEnqueuedTasks();
+        tmpMinOld = executionUnit[0].getNumberOfEnqueuedTasks();
         int selectedEU = 0;
 
         for (int i = 1; i < numberOfCores; ++i) {
@@ -77,7 +81,7 @@ public final class TaskExecutionManager extends EventDispatcher {
 
         LOG.info("EXECUTE TASK " + driverContext.taskDescriptor.name + " ["
                 + driverContext.taskDescriptor.taskID + "]" + " ON EXECUTION UNIT ("
-                + executionUnit[selectedEU].getExecutionUnitID() + ")");
+                + executionUnit[selectedEU].getExecutionUnitID() + ") ON MACHINE [" + machineDescriptor.uid + "]");
     }
 
 

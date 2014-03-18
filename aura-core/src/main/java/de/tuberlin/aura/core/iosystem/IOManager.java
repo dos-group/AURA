@@ -8,7 +8,17 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.*;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.handler.codec.serialization.ObjectDecoder;
+import io.netty.handler.codec.serialization.ObjectEncoder;
 import org.apache.log4j.Logger;
 
 import java.net.InetSocketAddress;
@@ -19,24 +29,302 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.local.LocalAddress;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
-
 public final class IOManager extends EventDispatcher {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private static final Logger LOG = Logger.getLogger(IOManager.class);
+
+    public final MachineDescriptor machine;
+
+    private final Map<Pair<UUID, UUID>, Channel> controlIOConnections;
+
+    private final ChannelBuilder channelBuilder;
+
+    private final LocalAddress localAddress = new LocalAddress(UUID.randomUUID().toString());
+
+    private final EventHandler controlEventHandler;
+
+    private final DataReader dataReader;
+
+    private final DataWriter dataWriter;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
+
+    public IOManager(final MachineDescriptor machine) {
+        super(false);
+
+        // sanity check.
+        if (machine == null) {
+            throw new IllegalArgumentException("machine == null");
+        }
+
+        this.machine = machine;
+
+        this.controlIOConnections = new ConcurrentHashMap<>();
+
+        this.channelBuilder = new ChannelBuilder();
+
+        final NioEventLoopGroup nioInputEventLoopGroup = new NioEventLoopGroup();
+
+        this.dataReader = new DataReader(IOManager.this);
+
+        this.dataWriter = new DataWriter(IOManager.this, channelBuilder.netOutputEventLoopGroup);
+
+        startNetworkDataMessageServer(this.machine, nioInputEventLoopGroup);
+
+        startNetworkControlMessageServer(this.machine, nioInputEventLoopGroup);
+
+        startLocalDataMessageServer(nioInputEventLoopGroup);
+
+        this.controlEventHandler = new ControlIOChannelEventHandler();
+
+        this.addEventListener(ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED, controlEventHandler);
+
+        this.addEventListener(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, controlEventHandler);
+    }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
+    /**
+     * @param srcTaskID
+     * @param dstTaskID
+     * @param dstMachine
+     */
+    public void connectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
+        // sanity check.
+        if (srcTaskID == null) {
+            throw new IllegalArgumentException("srcTask == null");
+        }
+        if (dstTaskID == null) {
+            throw new IllegalArgumentException("dstTask == null");
+        }
+        if (dstMachine == null) {
+            throw new IllegalArgumentException("dstTask == null");
+        }
+
+        if (machine.equals(dstMachine)) {
+            channelBuilder.buildLocalDataChannel(srcTaskID, dstTaskID);
+        } else {
+            channelBuilder.buildNetworkDataChannel(srcTaskID, dstTaskID, dstMachine.dataAddress);
+        }
+    }
+
+    /**
+     * @param srcTaskID
+     * @param dstTaskID
+     * @param dstMachine
+     */
+    public void disconnectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
+        // sanity check.
+        if (srcTaskID == null) {
+            throw new IllegalArgumentException("srcTask == null");
+        }
+        if (dstTaskID == null) {
+            throw new IllegalArgumentException("dstTask == null");
+        }
+        if (dstMachine == null) {
+            throw new IllegalArgumentException("dstTask == null");
+        }
+
+    }
+
+    /**
+     * @param dstMachine
+     */
+    public void connectMessageChannelBlocking(final MachineDescriptor dstMachine) {
+        // sanity check.
+        if (dstMachine == null) {
+            throw new IllegalArgumentException("dstMachine == null");
+        }
+        if (machine.controlAddress.equals(dstMachine.controlAddress)) {
+            throw new IllegalArgumentException("can not setup message channel");
+        }
+
+        // If connection already exists, we return.
+        if (controlIOConnections.get(new Pair<>(machine.uid, dstMachine.uid)) != null) {
+            LOG.info("connection already established");
+            return;
+        }
+
+        // TODO: brrrr, use something different to make the call blocking until the channel is
+        // established!
+        // Maybe a design with a Future?
+
+        final Lock threadLock = new ReentrantLock();
+        final Condition condition = threadLock.newCondition();
+
+        // TODO: that´s bullshit, we make here assumptions on the evaluation order of the event
+        // handlers. Against the general event contract!
+        final IEventHandler localHandler = new IEventHandler() {
+
+            // runs in the channel thread...
+            @Override
+            public void handleEvent(Event e) {
+                if (e instanceof ControlIOEvent) {
+                    final ControlIOEvent event = (ControlIOEvent) e;
+                    if (dstMachine.uid.equals(event.getDstMachineID())) {
+                        threadLock.lock();
+                        condition.signal();
+                        threadLock.unlock();
+                    }
+                }
+            }
+        };
+
+        addEventListener(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler);
+        channelBuilder.buildNetworkControlChannel(machine.uid, dstMachine.uid, dstMachine.controlAddress);
+
+        threadLock.lock();
+        try {
+            condition.await();
+        } catch (InterruptedException e) {
+            LOG.info(e);
+        } finally {
+            threadLock.unlock();
+        }
+
+        removeEventListener(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler);
+    }
+
+    /**
+     * @param dstMachine
+     * @return
+     */
+    public Channel getControlIOChannel(final MachineDescriptor dstMachine) {
+        // sanity check.
+        if (machine == null) {
+            throw new IllegalArgumentException("machine == null");
+        }
+
+        return controlIOConnections.get(new Pair<>(machine.uid, dstMachine.uid));
+    }
+
+    /**
+     * @param dstMachine
+     * @param event
+     */
+    public void sendEvent(final MachineDescriptor dstMachine, final ControlIOEvent event) {
+        // sanity check.
+        if (dstMachine == null) {
+            throw new IllegalArgumentException("machine == null");
+        }
+
+        sendEvent(dstMachine.uid, event);
+    }
+
+    /**
+     * @param dstMachineID
+     * @param event
+     */
+    public void sendEvent(final UUID dstMachineID, final ControlIOEvent event) {
+
+        // sanity check.
+        if (dstMachineID == null) {
+            throw new IllegalArgumentException("machine == null");
+        }
+        if (event == null) {
+            throw new IllegalArgumentException("event == null");
+        }
+
+        final Channel channel = controlIOConnections.get(new Pair<>(machine.uid, dstMachineID));
+
+        if (channel == null) {
+            throw new IllegalStateException("channel is not registered");
+        }
+
+        event.setSrcMachineID(machine.uid);
+        event.setDstMachineID(dstMachineID);
+        try {
+            channel.writeAndFlush(event).sync();
+        } catch (InterruptedException e) {
+            LOG.error(e);
+        }
+
+        /*
+         * if( event instanceof RPCCallerRequestEvent ) { final RPCCallerRequestEvent e =
+         * (RPCCallerRequestEvent)event; LOG.info("-----------> RPC REQUEST : " +
+         * channel.toString()); LOG.info("             --> machine.uid : " + machine.uid);
+         * LOG.info("             --> method : " + e.methodSignature.methodName);
+         * LOG.info("             --> src machine : " + e.getSrcMachineID());
+         * LOG.info("             --> dst machine : " + e.getDstMachineID());
+         * LOG.info("             --> call uid : " + e.callUID); }
+         * 
+         * if( event instanceof RPCCalleeResponseEvent ) { final RPCCalleeResponseEvent e =
+         * (RPCCalleeResponseEvent)event; LOG.info("-----------> RPC RESPONSE : " +
+         * channel.toString()); LOG.info("             --> machine.uid : " + machine.uid);
+         * LOG.info("             --> src machine : " + e.getSrcMachineID());
+         * LOG.info("             --> dst machine : " + e.getDstMachineID());
+         * LOG.info("             --> call uid : " + e.callUID); }
+         */
+    }
+
+    // ---------------------------------------------------
+    // Private Methods.
+    // ---------------------------------------------------
+
+    /**
+     * @param machine
+     * @param nelg
+     */
+    private void startNetworkDataMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
+
+        // TODO: Test if one event loop is enough or if we should use one loop to as acceptor and
+        // one for the read/write
+        dataReader.bind(new DataReader.NetworkConnection(), machine.dataAddress, nelg);
+    }
+
+    /**
+     * @param nelg
+     */
+    private void startLocalDataMessageServer(final NioEventLoopGroup nelg) {
+
+        dataReader.bind(new DataReader.LocalConnection(), localAddress, nelg);
+    }
+
+    /**
+     * @param machine
+     * @param nelg
+     */
+    private void startNetworkControlMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
+        final ServerBootstrap bootstrap = new ServerBootstrap();
+        bootstrap.group(nelg).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
+
+            @Override
+            protected void initChannel(SocketChannel ch) throws Exception {
+                ch.pipeline().addFirst(new ObjectEncoder());
+                ch.pipeline().addFirst(new ControlIOChannelHandler());
+                ch.pipeline().addFirst(new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
+            }
+        });
+
+        final ChannelFuture cf = bootstrap.bind(machine.controlAddress);
+        cf.addListener(new ChannelFutureListener() {
+
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (cf.isSuccess()) {
+                    LOG.info("network server bound to adress " + machine.dataAddress);
+                } else {
+                    LOG.error("bound attempt failed: " + cf.cause().getLocalizedMessage());
+                    throw new IllegalStateException("could not start netty network server");
+                }
+            }
+        });
+
+        // Wait until the netty-server is bound.
+        try {
+            cf.sync();
+        } catch (InterruptedException e) {
+            LOG.error(e);
+        }
+    }
 
     // ---------------------------------------------------
     // Inner Classes.
@@ -46,7 +334,6 @@ public final class IOManager extends EventDispatcher {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final ControlIOEvent event) throws Exception {
-
             event.setChannel(ctx.channel());
             dispatchEvent(event);
         }
@@ -59,13 +346,13 @@ public final class IOManager extends EventDispatcher {
 
         @Handle(event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED)
         private void handleControlChannelInputConnected(final ControlIOEvent event) {
-            controlIOConnections.put(new Pair<UUID, UUID>(machine.uid, event.getSrcMachineID()), event.getChannel());
+            controlIOConnections.put(new Pair<>(machine.uid, event.getSrcMachineID()), event.getChannel());
             LOG.info("CONTROL I/O CONNECTION BETWEEN MACHINE " + event.getSrcMachineID() + " AND " + event.getDstMachineID() + " ESTABLISHED");
         }
 
         @Handle(event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED)
         private void handleControlChannelOutputConnected(final ControlIOEvent event) {
-            controlIOConnections.put(new Pair<UUID, UUID>(machine.uid, event.getDstMachineID()), event.getChannel());
+            controlIOConnections.put(new Pair<>(machine.uid, event.getDstMachineID()), event.getChannel());
             LOG.info("CONTROL I/O CONNECTION BETWEEN MACHINE " + event.getSrcMachineID() + " AND " + event.getDstMachineID() + " ESTABLISHED");
         }
     }
@@ -130,8 +417,8 @@ public final class IOManager extends EventDispatcher {
 
                     if (cf.isSuccess()) {
                         cf.channel().writeAndFlush(new ControlIOEvent(ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                                      srcMachineID,
-                                                                      dstMachineID));
+                                srcMachineID,
+                                dstMachineID));
                         final ControlIOEvent event =
                                 new ControlIOEvent(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, srcMachineID, dstMachineID);
                         event.setChannel(cf.channel());
@@ -141,261 +428,6 @@ public final class IOManager extends EventDispatcher {
                     }
                 }
             });
-        }
-    }
-
-    // ---------------------------------------------------
-    // Constructors.
-    // ---------------------------------------------------
-
-    public IOManager(final MachineDescriptor machine) {
-        super(false);
-
-        // sanity check.
-        if (machine == null) {
-            throw new IllegalArgumentException("machine == null");
-        }
-
-        this.machine = machine;
-
-        this.controlIOConnections = new ConcurrentHashMap<Pair<UUID, UUID>, Channel>();
-
-        this.channelBuilder = new ChannelBuilder();
-
-        final NioEventLoopGroup nioInputEventLoopGroup = new NioEventLoopGroup();
-
-        this.dataReader = new DataReader(IOManager.this);
-
-        this.dataWriter = new DataWriter(IOManager.this, channelBuilder.netOutputEventLoopGroup);
-
-        startNetworkDataMessageServer(this.machine, nioInputEventLoopGroup);
-        startNetworkControlMessageServer(this.machine, nioInputEventLoopGroup);
-        startLocalDataMessageServer(nioInputEventLoopGroup);
-
-        this.controlEventHandler = new ControlIOChannelEventHandler();
-        this.addEventListener(ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED, controlEventHandler);
-        this.addEventListener(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, controlEventHandler);
-    }
-
-    // ---------------------------------------------------
-    // Fields.
-    // ---------------------------------------------------
-
-    private static final Logger LOG = Logger.getLogger(IOManager.class);
-
-    public final MachineDescriptor machine;
-
-    private final Map<Pair<UUID, UUID>, Channel> controlIOConnections;
-
-    private final ChannelBuilder channelBuilder;
-
-    private final LocalAddress localAddress = new LocalAddress(UUID.randomUUID().toString());
-
-    private final EventHandler controlEventHandler;
-
-    private final DataReader dataReader;
-
-    private final DataWriter dataWriter;
-
-    // ---------------------------------------------------
-    // Public.
-    // ---------------------------------------------------
-
-    public void connectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
-        // sanity check.
-        if (srcTaskID == null) {
-            throw new IllegalArgumentException("srcTask == null");
-        }
-        if (dstTaskID == null) {
-            throw new IllegalArgumentException("dstTask == null");
-        }
-        if (dstMachine == null) {
-            throw new IllegalArgumentException("dstTask == null");
-        }
-
-        if (machine.equals(dstMachine)) {
-            channelBuilder.buildLocalDataChannel(srcTaskID, dstTaskID);
-        } else {
-            channelBuilder.buildNetworkDataChannel(srcTaskID, dstTaskID, dstMachine.dataAddress);
-        }
-    }
-
-    public void disconnectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
-        // sanity check.
-        if (srcTaskID == null) {
-            throw new IllegalArgumentException("srcTask == null");
-        }
-        if (dstTaskID == null) {
-            throw new IllegalArgumentException("dstTask == null");
-        }
-        if (dstMachine == null) {
-            throw new IllegalArgumentException("dstTask == null");
-        }
-
-    }
-
-    public void connectMessageChannelBlocking(final MachineDescriptor dstMachine) {
-        // sanity check.
-        if (dstMachine == null) {
-            throw new IllegalArgumentException("dstMachine == null");
-        }
-        if (machine.controlAddress.equals(dstMachine.controlAddress)) {
-            throw new IllegalArgumentException("can not setup message channel");
-        }
-
-        // If connection already exists, we return.
-        if (controlIOConnections.get(new Pair<UUID, UUID>(machine.uid, dstMachine.uid)) != null) {
-            LOG.info("connection already established");
-            return;
-        }
-
-        // TODO: brrrr, use something different to make the call blocking until the channel is
-        // established!
-        // Maybe a design with a Future?
-
-        final Lock threadLock = new ReentrantLock();
-        final Condition condition = threadLock.newCondition();
-
-        // TODO: that´s bullshit, we make here assumptions on the evaluation order of the event
-        // handlers. Against the general event contract!
-        final IEventHandler localHandler = new IEventHandler() {
-
-            // runs in the channel thread...
-            @Override
-            public void handleEvent(Event e) {
-                if (e instanceof ControlIOEvent) {
-                    final ControlIOEvent event = (ControlIOEvent) e;
-                    if (dstMachine.uid.equals(event.getDstMachineID())) {
-                        threadLock.lock();
-                        condition.signal();
-                        threadLock.unlock();
-                    }
-                }
-            }
-        };
-
-        addEventListener(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler);
-        channelBuilder.buildNetworkControlChannel(machine.uid, dstMachine.uid, dstMachine.controlAddress);
-
-        threadLock.lock();
-        try {
-            condition.await();
-        } catch (InterruptedException e) {
-            LOG.info(e);
-        } finally {
-            threadLock.unlock();
-        }
-
-        removeEventListener(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler);
-    }
-
-    public Channel getControlIOChannel(final MachineDescriptor dstMachine) {
-        // sanity check.
-        if (machine == null) {
-            throw new IllegalArgumentException("machine == null");
-        }
-
-        return controlIOConnections.get(new Pair<UUID, UUID>(machine.uid, dstMachine.uid));
-    }
-
-    public void sendEvent(final MachineDescriptor dstMachine, final ControlIOEvent event) {
-        // sanity check.
-        if (dstMachine == null) {
-            throw new IllegalArgumentException("machine == null");
-        }
-
-        sendEvent(dstMachine.uid, event);
-    }
-
-    public void sendEvent(final UUID dstMachineID, final ControlIOEvent event) {
-        // sanity check.
-        if (dstMachineID == null) {
-            throw new IllegalArgumentException("machine == null");
-        }
-        if (event == null) {
-            throw new IllegalArgumentException("event == null");
-        }
-
-        final Channel channel = controlIOConnections.get(new Pair<UUID, UUID>(machine.uid, dstMachineID));
-
-        if (channel == null) {
-            throw new IllegalStateException("channel is not registered");
-        }
-
-        event.setSrcMachineID(machine.uid);
-        event.setDstMachineID(dstMachineID);
-        try {
-            channel.writeAndFlush(event).sync();
-        } catch (InterruptedException e) {
-            LOG.error(e);
-        }
-
-        /*
-         * if( event instanceof RPCCallerRequestEvent ) { final RPCCallerRequestEvent e =
-         * (RPCCallerRequestEvent)event; LOG.info("-----------> RPC REQUEST : " +
-         * channel.toString()); LOG.info("             --> machine.uid : " + machine.uid);
-         * LOG.info("             --> method : " + e.methodSignature.methodName);
-         * LOG.info("             --> src machine : " + e.getSrcMachineID());
-         * LOG.info("             --> dst machine : " + e.getDstMachineID());
-         * LOG.info("             --> call uid : " + e.callUID); }
-         * 
-         * if( event instanceof RPCCalleeResponseEvent ) { final RPCCalleeResponseEvent e =
-         * (RPCCalleeResponseEvent)event; LOG.info("-----------> RPC RESPONSE : " +
-         * channel.toString()); LOG.info("             --> machine.uid : " + machine.uid);
-         * LOG.info("             --> src machine : " + e.getSrcMachineID());
-         * LOG.info("             --> dst machine : " + e.getDstMachineID());
-         * LOG.info("             --> call uid : " + e.callUID); }
-         */
-    }
-
-    // ---------------------------------------------------
-    // Private.
-    // ---------------------------------------------------
-
-    private void startNetworkDataMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
-
-        // TODO: Test if one event loop is enough or if we should use one loop to as acceptor and
-        // one for the read/write
-        dataReader.bind(new DataReader.NetworkConnection(), machine.dataAddress, nelg);
-    }
-
-    private void startLocalDataMessageServer(final NioEventLoopGroup nelg) {
-
-        dataReader.bind(new DataReader.LocalConnection(), localAddress, nelg);
-    }
-
-
-    private void startNetworkControlMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
-        final ServerBootstrap bootstrap = new ServerBootstrap();
-        bootstrap.group(nelg).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {
-
-            @Override
-            protected void initChannel(SocketChannel ch) throws Exception {
-                ch.pipeline().addFirst(new ObjectEncoder());
-                ch.pipeline().addFirst(new ControlIOChannelHandler());
-                ch.pipeline().addFirst(new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
-            }
-        });
-
-        final ChannelFuture cf = bootstrap.bind(machine.controlAddress);
-        cf.addListener(new ChannelFutureListener() {
-
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                if (cf.isSuccess()) {
-                    LOG.info("network server bound to adress " + machine.dataAddress);
-                } else {
-                    LOG.error("bound attempt failed: " + cf.cause().getLocalizedMessage());
-                    throw new IllegalStateException("could not start netty network server");
-                }
-            }
-        });
-
-        // Wait until the netty-server is bound.
-        try {
-            cf.sync();
-        } catch (InterruptedException e) {
-            LOG.error(e);
         }
     }
 }

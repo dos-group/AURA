@@ -2,13 +2,14 @@ package de.tuberlin.aura.taskmanager;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
-import de.tuberlin.aura.core.task.common.TaskStateMachine;
+import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.gates.OutputGate;
 import org.apache.log4j.Logger;
 
@@ -51,9 +52,9 @@ public final class TaskDataProducer implements DataProducer {
 
         driverContext.driverDispatcher.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, producerEventHandler);
 
-        this.taskIDToGateIndex = new HashMap<UUID, Integer>();
+        this.taskIDToGateIndex = new HashMap<>();
 
-        this.channelIndexToTaskID = new HashMap<Integer, UUID>();
+        this.channelIndexToTaskID = new HashMap<>();
 
         createOutputMappings();
 
@@ -158,18 +159,16 @@ public final class TaskDataProducer implements DataProducer {
 
         if (driverContext.taskBindingDescriptor.outputGateBindings.size() <= 0) {
 
-            driverContext.driverDispatcher.dispatchEvent(
-                    new IOEvents.TaskStateTransitionEvent(
-                            driverContext.taskDescriptor.topologyID,
-                            driverContext.taskDescriptor.taskID,
-                            TaskStateMachine.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED
+            driverContext.taskFSM.dispatchEvent(
+                    new StateMachine.FSMTransitionEvent<>(
+                            TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED
                     )
             );
 
             return null;
         }
 
-        final List<OutputGate> outputGates = new ArrayList<OutputGate>(driverContext.taskBindingDescriptor.outputGateBindings.size());
+        final List<OutputGate> outputGates = new ArrayList<>(driverContext.taskBindingDescriptor.outputGateBindings.size());
         for (int gateIndex = 0; gateIndex < driverContext.taskBindingDescriptor.outputGateBindings.size(); ++gateIndex) {
             outputGates.add(new OutputGate(driverContext, gateIndex, this));
         }
@@ -179,7 +178,7 @@ public final class TaskDataProducer implements DataProducer {
 
     /**
      * Create the mapping between task ID and corresponding gate index and
-     * the between channel index and the corresponding task ID.
+     * between the channel index and the corresponding task ID.
      */
     private void createOutputMappings() {
         int channelIndex = 0;
@@ -233,11 +232,9 @@ public final class TaskDataProducer implements DataProducer {
             }
 
             if (allOutputGatesConnected) {
-                driverContext.driverDispatcher.dispatchEvent(
-                        new IOEvents.TaskStateTransitionEvent(
-                                driverContext.taskDescriptor.topologyID,
-                                driverContext.taskDescriptor.taskID,
-                                TaskStateMachine.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED
+                driverContext.taskFSM.dispatchEvent(
+                        new StateMachine.FSMTransitionEvent<>(
+                                TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED
                         )
                 );
             }

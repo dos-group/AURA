@@ -2,13 +2,14 @@ package de.tuberlin.aura.taskmanager;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
-import de.tuberlin.aura.core.task.common.TaskStateMachine;
+import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.gates.InputGate;
 import org.apache.log4j.Logger;
 
@@ -62,9 +63,9 @@ public final class TaskDataConsumer implements DataConsumer {
         driverContext.driverDispatcher.addEventListener(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, consumerEventHandler);
 
         // create mappings for input gates.
-        this.taskIDToGateIndex = new HashMap<UUID, Integer>();
+        this.taskIDToGateIndex = new HashMap<>();
 
-        this.channelIndexToTaskID = new HashMap<Integer, UUID>();
+        this.channelIndexToTaskID = new HashMap<>();
 
         createInputMappings();
 
@@ -228,18 +229,16 @@ public final class TaskDataConsumer implements DataConsumer {
 
         if (driverContext.taskBindingDescriptor.inputGateBindings.size() <= 0) {
 
-            driverContext.driverDispatcher.dispatchEvent(
-                    new IOEvents.TaskStateTransitionEvent(
-                            driverContext.taskDescriptor.topologyID,
-                            driverContext.taskDescriptor.taskID,
-                            TaskStateMachine.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED
+            driverContext.taskFSM.dispatchEvent(
+                    new StateMachine.FSMTransitionEvent<>(
+                            TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED
                     )
             );
 
             return null;
         }
 
-        final List<InputGate> inputGates = new ArrayList<InputGate>(driverContext.taskBindingDescriptor.inputGateBindings.size());
+        final List<InputGate> inputGates = new ArrayList<>(driverContext.taskBindingDescriptor.inputGateBindings.size());
         for (int gateIndex = 0; gateIndex < driverContext.taskBindingDescriptor.inputGateBindings.size(); ++gateIndex) {
             inputGates.add(new InputGate(driverContext, gateIndex)); // TODO:
         }
@@ -253,10 +252,10 @@ public final class TaskDataConsumer implements DataConsumer {
     private void setupInputGates() {
         for (final List<Descriptors.TaskDescriptor> tdList : driverContext.taskBindingDescriptor.inputGateBindings) {
 
-            final Map<UUID, Boolean> closedChannels = new HashMap<UUID, Boolean>();
+            final Map<UUID, Boolean> closedChannels = new HashMap<>();
             closedGates.add(closedChannels);
 
-            final Set<UUID> activeChannelSet = new HashSet<UUID>();
+            final Set<UUID> activeChannelSet = new HashSet<>();
             activeGates.add(activeChannelSet);
 
             gateCloseFinished.add(new AtomicBoolean(false));
@@ -342,11 +341,9 @@ public final class TaskDataConsumer implements DataConsumer {
             }
 
             if (allInputGatesConnected) {
-                driverContext.driverDispatcher.dispatchEvent(
-                        new IOEvents.TaskStateTransitionEvent(
-                                driverContext.taskDescriptor.topologyID,
-                                driverContext.taskDescriptor.taskID,
-                                TaskStateMachine.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED
+                driverContext.taskFSM.dispatchEvent(
+                        new StateMachine.FSMTransitionEvent<>(
+                                TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED
                         )
                 );
             }

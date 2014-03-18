@@ -24,7 +24,7 @@ import java.util.UUID;
 
 public final class Client {
 
-    private static final Logger LOG = Logger.getRootLogger();
+    //private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
     private Client() {
@@ -48,7 +48,8 @@ public final class Client {
 
             final UUID taskID = driverContext.taskDescriptor.taskID;
 
-            for (int i = 0; i < 500; ++i) {
+            int i = 0;
+            while (i++ < 500 && isInvokeableRunning()) {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
@@ -82,7 +83,8 @@ public final class Client {
 
             final UUID taskID = driverContext.taskDescriptor.taskID;
 
-            for (int i = 0; i < 1000; ++i) {
+            int i = 0;
+            while (i++ < 1000 && isInvokeableRunning()) {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
@@ -120,32 +122,23 @@ public final class Client {
         @Override
         public void run() throws Throwable {
 
-            int count = 0;
-
-            while (!consumer.isExhausted()) {
+            while (!consumer.isExhausted() && isInvokeableRunning()) {
 
                 final DataIOEvent left = consumer.absorb(0);
                 final DataIOEvent right = consumer.absorb(1);
 
-                //if (left != null)
-                //    LOG.info("input left received data message from task " + left.srcTaskID);
-                //if (right != null)
-                //    LOG.info("input right: received data message from task " + right.srcTaskID);
+                if (left != null)
+                    LOG.info("input left received data message from task " + left.srcTaskID);
+                if (right != null)
+                    LOG.info("input right: received data message from task " + right.srcTaskID);
 
                 if (left != null || right != null) {
-
                     final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                     for (int index = 0; index < outputs.size(); ++index) {
-
                         final UUID outputTaskID = getTaskID(0, index);
                         final DataIOEvent outputBuffer = new DataBufferEvent(driverContext.taskDescriptor.taskID, outputTaskID, new byte[64 << 10]);
                         producer.emit(0, index, outputBuffer);
                     }
-
-                    if (count == 150)
-                        throw new IllegalStateException();
-
-                    count++;
                 }
             }
         }
@@ -176,14 +169,8 @@ public final class Client {
 
         @Override
         public void run() throws Throwable {
-
-            while (!consumer.isExhausted()) {
-
-                final DataIOEvent input = consumer.absorb(0);
-
-                if (input != null) {
-                    //LOG.info("- received");
-                }
+            while (!consumer.isExhausted() && isInvokeableRunning()) {
+                consumer.absorb(0);
             }
         }
     }

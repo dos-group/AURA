@@ -18,6 +18,8 @@ public abstract class TaskInvokeable implements TaskLifecycle {
 
     protected final Logger LOG;
 
+    protected boolean isRunning;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -43,6 +45,8 @@ public abstract class TaskInvokeable implements TaskLifecycle {
         this.consumer = consumer;
 
         this.LOG = LOG;
+
+        this.isRunning = true;
     }
 
     // ---------------------------------------------------
@@ -52,25 +56,28 @@ public abstract class TaskInvokeable implements TaskLifecycle {
     public void create() throws Throwable {
     }
 
-    ;
-
     public void open() throws Throwable {
     }
-
-    ;
 
     public void close() throws Throwable {
     }
 
-    ;
-
     public void release() throws Throwable {
     }
 
-    ;
-
-
     public UUID getTaskID(int gateIndex, int channelIndex) {
         return driverContext.taskBindingDescriptor.outputGateBindings.get(gateIndex).get(channelIndex).taskID;
+    }
+
+    public void stopInvokeable() {
+        isRunning = false;
+    }
+
+    // ---------------------------------------------------
+    // Protected Methods.
+    // ---------------------------------------------------
+
+    protected boolean isInvokeableRunning() {
+        return isRunning;
     }
 }

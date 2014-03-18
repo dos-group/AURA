@@ -1,18 +1,6 @@
 package de.tuberlin.aura.core.zookeeper;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkArgument;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
 import net.jcip.annotations.NotThreadSafe;
-
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -21,14 +9,20 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.*;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
- * This class wraps helper methods for interacting with ZooKeeper. TODO: authors?
+ * This class wraps helper methods for interacting with ZooKeeper.
  */
 @NotThreadSafe
-public class ZkHelper {
+public class ZookeeperHelper {
 
     // Disallow instantiation.
-    private ZkHelper() {}
+    private ZookeeperHelper() {
+    }
 
     // ---------------------------------------------------
     // Zookeeper Event Constants.
@@ -44,28 +38,38 @@ public class ZkHelper {
     // Fields.
     // ---------------------------------------------------
 
-    /** Logger. */
-    private static final Logger LOG = LoggerFactory.getLogger(ZkHelper.class);
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(ZookeeperHelper.class);
 
-    /** ZooKeeper session timeout in ms. */
+    /**
+     * ZooKeeper session timeout in ms.
+     */
     public static final int ZOOKEEPER_TIMEOUT = 5000;
 
-    /** Root folder in ZooKeeper. */
+    /**
+     * Root folder in ZooKeeper.
+     */
     public static final String ZOOKEEPER_ROOT = "/aura";
 
-    /** Folder for the task-managers. */
+    /**
+     * Folder for the task-managers.
+     */
     public static final String ZOOKEEPER_TASKMANAGERS = ZOOKEEPER_ROOT + "/taskmanagers";
 
-    /** Folder for the workload-manager. */
+    /**
+     * Folder for the workload-manager.
+     */
     public static final String ZOOKEEPER_WORKLOADMANAGER = ZOOKEEPER_ROOT + "/workloadmanager";
 
     // ---------------------------------------------------
-    // Public.
+    // Public Methods.
     // ---------------------------------------------------
 
     /**
      * Initialize the directory structure in ZooKeeper.
-     * 
+     *
      * @throws KeeperException
      * @throws InterruptedException
      */
@@ -85,7 +89,7 @@ public class ZkHelper {
 
     /**
      * Check whether the format of the ZooKeeper connection string is valid.
-     * 
+     *
      * @param zkServers The connection string.
      */
     public static void checkConnectionString(String zkServers) {
@@ -94,17 +98,22 @@ public class ZkHelper {
         for (String token : tokens) {
             final String[] parts = token.split(":");
             try {
-                InetAddress.getByName(parts[0]);
+                //InetAddress.getByName(parts[0]);
                 final int port = Integer.parseInt(parts[1]);
                 checkArgument(port > 1024 && port < 65535, "Port {} is invalid", port);
-            } catch (UnknownHostException e) {
-                LOG.error("Could not find the ZooKeeper host: {}", parts[0]);
+                //} catch (UnknownHostException e) {
+                //    LOG.error("Could not find the ZooKeeper host: {}", parts[0]);
             } catch (NumberFormatException e) {
                 LOG.error("Could not parse the port {}", parts[1]);
             }
         }
     }
 
+    /**
+     * @param zk
+     * @param dir
+     * @param object
+     */
     public static void storeInZookeeper(final ZooKeeper zk, final String dir, final Object object) {
         try {
             final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -121,6 +130,11 @@ public class ZkHelper {
         }
     }
 
+    /**
+     * @param zk
+     * @param dir
+     * @return
+     */
     public static Object readFromZookeeper(final ZooKeeper zk, final String dir) {
         try {
             final byte[] data = zk.getData(dir, false, null);

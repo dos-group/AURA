@@ -1,28 +1,25 @@
 package de.tuberlin.aura.core.descriptors;
 
-import java.io.File;
-import java.net.InetAddress;
-
 import de.tuberlin.aura.core.common.utils.InetHelper;
 import de.tuberlin.aura.core.descriptors.Descriptors.HDDDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.HardwareDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 
+import java.io.File;
+import java.net.InetAddress;
+
 /**
- * Singleton.
- * 
- * @author Christian Wuertz
+ *
  */
 public final class DescriptorFactory {
 
-    /**
-     * Do not allow instances of this class.
-     */
-    private DescriptorFactory() {}
+    // Disallow instantiation.
+    private DescriptorFactory() {
+    }
 
     /**
      * Builds the {@link MachineDescriptor} for the machine this processes is running on.
-     * 
+     *
      * @return A {@link MachineDescriptor}.
      */
     public static MachineDescriptor createMachineDescriptor(int dataPort, int controlPort) {

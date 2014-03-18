@@ -31,6 +31,11 @@ public final class OutputGate extends AbstractGate {
     // Constructors.
     // ---------------------------------------------------
 
+    /**
+     * @param driverContext
+     * @param gateIndex
+     * @param producer
+     */
     public OutputGate(final TaskDriverContext driverContext, int gateIndex, final DataProducer producer) {
         super(driverContext, gateIndex, driverContext.taskBindingDescriptor.outputGateBindings.get(gateIndex).size());
 
@@ -55,6 +60,10 @@ public final class OutputGate extends AbstractGate {
     // Public.
     // ---------------------------------------------------
 
+    /**
+     * @param channelIndex
+     * @param data
+     */
     public void writeDataToChannel(final int channelIndex, final DataIOEvent data) {
         // sanity check.
         if (data == null) {
@@ -64,10 +73,17 @@ public final class OutputGate extends AbstractGate {
         channelWriter.get(channelIndex).write(data);
     }
 
+    /**
+     * @return
+     */
     public List<DataWriter.ChannelWriter> getAllChannelWriter() {
         return Collections.unmodifiableList(channelWriter);
     }
 
+    /**
+     * @param channelIndex
+     * @param channel
+     */
     public void setChannelWriter(int channelIndex, final DataWriter.ChannelWriter channel) {
         // sanity check.
         if (channelIndex < 0) {
@@ -83,6 +99,10 @@ public final class OutputGate extends AbstractGate {
         channelWriter.set(channelIndex, channel);
     }
 
+    /**
+     * @param channelIndex
+     * @return
+     */
     public DataWriter.ChannelWriter getChannelWriter(int channelIndex) {
         // sanity check.
         if (channelIndex < 0) {
@@ -98,6 +118,10 @@ public final class OutputGate extends AbstractGate {
         return channelWriter.get(channelIndex);
     }
 
+    /**
+     * @param channelIndex
+     * @return
+     */
     public boolean isGateOpen(final int channelIndex) {
         return openChannelList.get(channelIndex);
     }

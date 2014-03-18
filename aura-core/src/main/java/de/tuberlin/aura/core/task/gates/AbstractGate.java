@@ -5,9 +5,24 @@ import de.tuberlin.aura.core.task.common.TaskDriverContext;
 public abstract class AbstractGate {
 
     // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    protected final TaskDriverContext context;
+
+    protected final int numChannels;
+
+    protected final int gateIndex;
+
+    // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
+    /**
+     * @param context
+     * @param gateIndex
+     * @param numChannels
+     */
     public AbstractGate(final TaskDriverContext context, int gateIndex, int numChannels) {
         // sanity check.
         if (context == null)
@@ -19,19 +34,4 @@ public abstract class AbstractGate {
 
         this.gateIndex = gateIndex;
     }
-
-    // ---------------------------------------------------
-    // Fields.
-    // ---------------------------------------------------
-
-    protected final TaskDriverContext context;
-
-    protected final int numChannels;
-
-    protected final int gateIndex;
-
-    // ---------------------------------------------------
-    // Public.
-    // ---------------------------------------------------
-
 }

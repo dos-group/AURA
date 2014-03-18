@@ -1,35 +1,43 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.log4j.Logger;
-
-import de.tuberlin.aura.core.common.eventsystem.EventHandler;
+import de.tuberlin.aura.core.common.eventsystem.Event;
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
-import de.tuberlin.aura.core.iosystem.IOEvents.MonitoringEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.zookeeper.ZkHelper;
+import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import org.apache.log4j.Logger;
+
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+
+// TODO: introduce the concept of a session, that allows to submit multiple queries...
 
 public class WorkloadManager implements ClientWMProtocol {
 
     // ---------------------------------------------------
-    // Inner Classes.
+    // Fields.
     // ---------------------------------------------------
 
-    private final class IORedispatcher extends EventHandler {
+    private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
 
-        @Handle(event = MonitoringEvent.class, type = MonitoringEvent.MONITORING_TASK_STATE_EVENT)
-        private void handleMonitoredTaskStateEvent(final MonitoringEvent event) {
-            registeredToplogies.get(event.topologyID).dispatchEvent(event);
-        }
-    }
+    private final MachineDescriptor machineDescriptor;
+
+    private final IOManager ioManager;
+
+    private final RPCManager rpcManager;
+
+    private final InfrastructureManager infrastructureManager;
+
+    private final Map<UUID, TopologyController> registeredTopologies;
+
+    private final WorkloadManagerContext managerContext;
 
     // ---------------------------------------------------
     // Constructors.
@@ -39,48 +47,53 @@ public class WorkloadManager implements ClientWMProtocol {
         this(zkServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
     }
 
-    public WorkloadManager(final String zkServer, final MachineDescriptor machine) {
+    public WorkloadManager(final String zkServer, final MachineDescriptor machineDescriptor) {
         // sanity check.
-        ZkHelper.checkConnectionString(zkServer);
-        if (machine == null)
-            throw new IllegalArgumentException("machine == null");
+        ZookeeperHelper.checkConnectionString(zkServer);
+        if (machineDescriptor == null)
+            throw new IllegalArgumentException("machineDescriptor == null");
 
-        this.machine = machine;
+        this.machineDescriptor = machineDescriptor;
 
-        this.ioManager = new IOManager(this.machine);
+        this.ioManager = new IOManager(this.machineDescriptor);
 
         this.rpcManager = new RPCManager(ioManager);
 
-        this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machine);
+        this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machineDescriptor);
 
-        this.registeredToplogies = new ConcurrentHashMap<UUID, TopologyController>();
+        this.registeredTopologies = new ConcurrentHashMap<UUID, TopologyController>();
 
         rpcManager.registerRPCProtocolImpl(this, ClientWMProtocol.class);
 
-        this.ioHandler = new IORedispatcher();
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE,
+                new IEventHandler() {
 
-        final String[] IOEvents = {ControlEventType.CONTROL_EVENT_TASK_STATE, MonitoringEvent.MONITORING_TASK_STATE_EVENT};
+                    @Override
+                    public void handleEvent(Event e) {
+                        final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
+                        registeredTopologies.get(event.getTopologyID()).dispatchEvent(event);
+                    }
+                }
+        );
 
-        ioManager.addEventListener(IOEvents, ioHandler);
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION,
+                new IEventHandler() {
+
+                    @Override
+                    public void handleEvent(Event e) {
+                        final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
+                        registeredTopologies.get(event.getTopologyID()).getTopologyFSMDispatcher().dispatchEvent((Event) event.getPayload());
+                    }
+                }
+        );
+
+        this.managerContext = new WorkloadManagerContext(
+                this,
+                ioManager,
+                rpcManager,
+                infrastructureManager
+        );
     }
-
-    // ---------------------------------------------------
-    // Fields.
-    // ---------------------------------------------------
-
-    private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
-
-    private final MachineDescriptor machine;
-
-    private final IOManager ioManager;
-
-    private final RPCManager rpcManager;
-
-    private final InfrastructureManager infrastructureManager;
-
-    private final Map<UUID, TopologyController> registeredToplogies;
-
-    private final IORedispatcher ioHandler;
 
     // ---------------------------------------------------
     // Public.
@@ -92,7 +105,7 @@ public class WorkloadManager implements ClientWMProtocol {
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
-        if (registeredToplogies.containsKey(topology.name))
+        if (registeredTopologies.containsKey(topology.name))
             throw new IllegalStateException("topology already submitted");
 
         LOG.info("TOPOLOGY '" + topology.name + "' SUBMITTED");
@@ -104,8 +117,8 @@ public class WorkloadManager implements ClientWMProtocol {
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
-        final TopologyController topologyController = new TopologyController(this, topology);
-        registeredToplogies.put(topology.topologyID, topologyController);
+        final TopologyController topologyController = new TopologyController(managerContext, topology);
+        registeredTopologies.put(topology.topologyID, topologyController);
         return topologyController;
     }
 
@@ -114,20 +127,8 @@ public class WorkloadManager implements ClientWMProtocol {
         if (topologyID == null)
             throw new IllegalArgumentException("topologyID == null");
 
-        if (registeredToplogies.remove(topologyID) == null)
+        if (registeredTopologies.remove(topologyID) == null)
             throw new IllegalStateException("topologyID not found");
-    }
-
-    public RPCManager getRPCManager() {
-        return rpcManager;
-    }
-
-    public IOManager getIOManager() {
-        return ioManager;
-    }
-
-    public InfrastructureManager getInfrastructureManager() {
-        return infrastructureManager;
     }
 
     // ---------------------------------------------------
@@ -139,6 +140,7 @@ public class WorkloadManager implements ClientWMProtocol {
         int dataPort = -1;
         int controlPort = -1;
         String zkServer = null;
+
         if (args.length == 3) {
             try {
                 zkServer = args[0];

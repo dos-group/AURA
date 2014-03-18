@@ -2,23 +2,22 @@ package de.tuberlin.aura.taskmanager;
 
 
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
-import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.task.common.*;
+import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
+import de.tuberlin.aura.core.task.common.TaskStates.TaskTransition;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
 import org.apache.log4j.Logger;
 
 import java.lang.reflect.Constructor;
-import java.util.Map;
 
 /**
- * The driver provide the lifecycle methods of an deployable aura task.
- * The lifecycle methods are called by the task execution unit.
+ *
  */
 public final class TaskDriver extends EventDispatcher implements TaskDriverLifecycle {
 
@@ -44,11 +43,9 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
     private TaskInvokeable invokeable;
 
-    private final IEventHandler handler;
-
-    private TaskStateMachine.TaskState taskState;
-
     private final TaskDriverContext driverContext;
+
+    private final StateMachine.FiniteStateMachine<TaskState, TaskTransition> taskFSM;
 
     // ---------------------------------------------------
     // Constructors.
@@ -69,11 +66,11 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         this.taskBindingDescriptor = deploymentDescriptor.taskBindingDescriptor;
 
-        this.handler = new TaskEventHandler();
+        this.taskFSM = createTaskFSM();
 
         this.queueManager = QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>());
 
-        this.driverContext = new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager);
+        this.driverContext = new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM);
     }
 
     // ---------------------------------------------------
@@ -84,19 +81,13 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
         return driverContext;
     }
 
-    // ---------------------------------------------------
-    // Task Driver Lifecycle.
-    // ---------------------------------------------------
+    // ------------- Task Driver Lifecycle ---------------
 
     /**
      *
      */
     @Override
     public void startupDriver() {
-
-        taskState = TaskStateMachine.TaskState.TASK_STATE_CREATED;
-
-        this.addEventListener(IOEvents.TaskStateTransitionEvent.TASK_STATE_TRANSITION_EVENT, handler);
 
         dataConsumer = new TaskDataConsumer(driverContext);
 
@@ -138,11 +129,9 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
             LOG.error(t.getLocalizedMessage());
 
-            dispatchEvent(
-                    new IOEvents.TaskStateTransitionEvent(
-                            taskDescriptor.topologyID,
-                            taskDescriptor.taskID,
-                            TaskStateMachine.TaskTransition.TASK_TRANSITION_FAIL
+            taskFSM.dispatchEvent(
+                    new StateMachine.FSMTransitionEvent<>(
+                            TaskTransition.TASK_TRANSITION_FAIL
                     )
             );
 
@@ -151,11 +140,9 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         // TODO: Wait until all gates are closed?
 
-        dispatchEvent(
-                new IOEvents.TaskStateTransitionEvent(
-                        taskDescriptor.topologyID,
-                        taskDescriptor.taskID,
-                        TaskStateMachine.TaskTransition.TASK_TRANSITION_FINISH
+        taskFSM.dispatchEvent(
+                new StateMachine.FSMTransitionEvent<>(
+                        TaskTransition.TASK_TRANSITION_FINISH
                 )
         );
     }
@@ -165,6 +152,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
      */
     @Override
     public void teardownDriver(boolean awaitExhaustion) {
+
+        invokeable.stopInvokeable();
 
         dataProducer.shutdownProducer(awaitExhaustion);
 
@@ -182,6 +171,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
     private Class<? extends TaskInvokeable> implantInvokeableCode(final UserCode userCode) {
         // Try to register the bytecode as a class in the JVM.
         final UserCodeImplanter codeImplanter = new UserCodeImplanter(this.getClass().getClassLoader());
+        @SuppressWarnings("unchecked")
         final Class<? extends TaskInvokeable> userCodeClazz =
                 (Class<? extends TaskInvokeable>) codeImplanter.implantUserCodeClass(userCode);
         // sanity check.
@@ -189,22 +179,6 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
             throw new IllegalArgumentException("userCodeClazz == null");
 
         return userCodeClazz;
-    }
-
-    /**
-     * @param transition
-     * @return
-     */
-    private TaskStateMachine.TaskState doTaskStateTransition(final TaskStateMachine.TaskTransition transition) {
-        // sanity check.
-        if (transition == null)
-            throw new IllegalArgumentException("taskTransition == null");
-
-        final Map<TaskStateMachine.TaskTransition, TaskStateMachine.TaskState> transitionsSpace =
-                TaskStateMachine.TASK_STATE_TRANSITION_MATRIX.get(taskState);
-        final TaskStateMachine.TaskState nextState = transitionsSpace.get(transition);
-        taskState = nextState;
-        return taskState;
     }
 
     /**
@@ -234,11 +208,6 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                             LOG
                     );
 
-            // sanity check.
-            if (invokeable == null) {
-                throw new IllegalStateException("invokeable == null");
-            }
-
             return invokeable;
 
         } catch (Exception e) {
@@ -246,95 +215,129 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
         }
     }
 
-    // ---------------------------------------------------
-    // Inner Classes.
-    // ---------------------------------------------------
-
     /**
-     *
+     * @return
      */
-    private final class TaskEventHandler extends EventHandler {
+    private StateMachine.FiniteStateMachine<TaskState, TaskTransition> createTaskFSM() {
 
-        private long timeOfLastStateChange = System.currentTimeMillis();
+        final StateMachine.FiniteStateMachineBuilder<TaskState, TaskTransition> taskFSMBuilder
+                = new StateMachine.FiniteStateMachineBuilder<>(TaskState.class, TaskTransition.class, TaskState.ERROR);
 
-        @Handle(event = IOEvents.TaskStateTransitionEvent.class)
-        private void handleTaskStateTransition(final IOEvents.TaskStateTransitionEvent event) {
-            synchronized (taskState) {
+        final StateMachine.FiniteStateMachine<TaskState, TaskTransition> taskFSM = taskFSMBuilder
+                .defineState(TaskState.TASK_STATE_CREATED)
+                .addTransition(TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, TaskState.TASK_STATE_INPUTS_CONNECTED)
+                .and().addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, TaskState.TASK_STATE_OUTPUTS_CONNECTED)
+                .defineState(TaskState.TASK_STATE_INPUTS_CONNECTED)
+                .addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, TaskState.TASK_STATE_READY)
+                .defineState(TaskState.TASK_STATE_OUTPUTS_CONNECTED)
+                .addTransition(TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, TaskState.TASK_STATE_READY)
+                .defineState(TaskState.TASK_STATE_READY)
+                .addTransition(TaskTransition.TASK_TRANSITION_RUN, TaskState.TASK_STATE_RUNNING)
+                .defineState(TaskState.TASK_STATE_RUNNING)
+                .addTransition(TaskTransition.TASK_TRANSITION_FINISH, TaskState.TASK_STATE_FINISHED)
+                .and().addTransition(TaskTransition.TASK_TRANSITION_CANCEL, TaskState.TASK_STATE_CANCELED)
+                .and().addTransition(TaskTransition.TASK_TRANSITION_FAIL, TaskState.TASK_STATE_FAILURE)
+                .and().addTransition(TaskTransition.TASK_TRANSITION_SUSPEND, TaskState.TASK_STATE_PAUSED)
+                        //.nestFSM(TaskState.TASK_STATE_RUNNING, operatorFSM)
+                .defineState(TaskState.TASK_STATE_FINISHED)
+                .noTransition()
+                .defineState(TaskState.TASK_STATE_CANCELED)
+                .noTransition()
+                .defineState(TaskState.TASK_STATE_FAILURE)
+                .noTransition()
+                .defineState(TaskState.TASK_STATE_PAUSED)
+                .addTransition(TaskTransition.TASK_TRANSITION_RESUME, TaskState.TASK_STATE_RUNNING)
+                .setInitialState(TaskState.TASK_STATE_CREATED)
+                .build();
 
-                final TaskStateMachine.TaskState oldState = taskState;
+        taskFSM.addGlobalStateListener(
+                new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+                    @Override
+                    public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
 
-                if (taskState == TaskStateMachine.TaskState.TASK_STATE_FINISHED)
-                    return;
+                        final IOEvents.TaskControlIOEvent stateUpdate =
+                                new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE);
 
-                if (taskState == TaskStateMachine.TaskState.TASK_STATE_CANCELED)
-                    return;
+                        stateUpdate.setPayload(state);
+                        stateUpdate.setTaskID(taskDescriptor.taskID);
+                        stateUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                final TaskStateMachine.TaskState nextState = doTaskStateTransition(event.transition);
+                        managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, stateUpdate);
 
-                final long currentTime = System.currentTimeMillis();
-
-                final IOEvents.MonitoringEvent.TaskStateUpdate taskStateUpdate =
-                        new IOEvents.MonitoringEvent.TaskStateUpdate(
-                                taskDescriptor.taskID,
-                                taskDescriptor.name,
-                                oldState,
-                                nextState,
-                                event.transition,
-                                currentTime - timeOfLastStateChange
-                        );
-
-                timeOfLastStateChange = currentTime;
-
-                managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine,
-                        new IOEvents.MonitoringEvent(
-                                taskDescriptor.topologyID,
-                                taskStateUpdate
-                        )
-                );
-
-                switch (nextState) {
-
-                    case TASK_STATE_CREATED: {
+                        LOG.info("CHANGE STATE OF TASK " + taskDescriptor.name
+                                + " [" + taskDescriptor.taskID + "] FROM "
+                                + previousState + " TO " + state
+                                + "  [" + transition.toString() + "]");
                     }
-                    break;
-                    case TASK_STATE_INPUTS_CONNECTED: {
-                    }
-                    break;
-                    case TASK_STATE_OUTPUTS_CONNECTED: {
-                    }
-                    break;
-                    case TASK_STATE_READY: {
-                    }
-                    break;
-                    case TASK_STATE_RECOVER: {
-                    }
-                    break;
-                    case TASK_STATE_PAUSED: {
-                    }
-                    break;
-                    case TASK_STATE_RUNNING: {
-                    }
-                    break;
-                    case TASK_STATE_FINISHED: {
-                    }
-                    break;
-                    case TASK_STATE_FAILURE: {
-                    }
-                    break;
-                    case TASK_STATE_CANCELED: {
-                    }
-                    break;
-
-                    case TASK_STATE_UNDEFINED: {
-                        throw new IllegalStateException("task " + taskDescriptor.name + " [" + taskDescriptor.taskID + "] from state " + oldState
-                                + " to " + taskState + " is not defined  [" + event.transition.toString() + "]");
-                    }
-                    default:
-                        break;
                 }
-                LOG.info("CHANGE STATE OF TASK " + taskDescriptor.name + " [" + taskDescriptor.taskID + "] FROM " + oldState + " TO "
-                        + taskState + "  [" + event.transition.toString() + "]");
-            }
-        }
+        );
+
+        taskFSM.addStateListener(TaskState.ERROR,
+                new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+
+                    @Override
+                    public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
+                        throw new IllegalStateException("task " + taskDescriptor.name
+                                + " [" + taskDescriptor.taskID + "] from state " + previousState
+                                + " to " + state + " is not defined  [" + transition.toString() + "]");
+                    }
+                }
+        );
+
+        taskFSM.addStateListener(TaskState.TASK_STATE_READY,
+                new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+
+                    @Override
+                    public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
+
+                        final IOEvents.TaskControlIOEvent transitionUpdate =
+                                new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
+
+                        transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
+                        transitionUpdate.setTaskID(taskDescriptor.taskID);
+                        transitionUpdate.setTopologyID(taskDescriptor.topologyID);
+
+                        managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
+                    }
+                }
+        );
+
+        taskFSM.addStateListener(TaskState.TASK_STATE_FINISHED,
+                new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+
+                    @Override
+                    public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
+
+                        final IOEvents.TaskControlIOEvent transitionUpdate =
+                                new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
+
+                        transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
+                        transitionUpdate.setTaskID(taskDescriptor.taskID);
+                        transitionUpdate.setTopologyID(taskDescriptor.topologyID);
+
+                        managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
+                    }
+                }
+        );
+
+        taskFSM.addStateListener(TaskState.TASK_STATE_FAILURE,
+                new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+
+                    @Override
+                    public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
+
+                        final IOEvents.TaskControlIOEvent transitionUpdate =
+                                new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
+
+                        transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FAIL));
+                        transitionUpdate.setTaskID(taskDescriptor.taskID);
+                        transitionUpdate.setTopologyID(taskDescriptor.topologyID);
+
+                        managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
+                    }
+                }
+        );
+
+        return taskFSM;
     }
 }
