@@ -226,9 +226,9 @@ public final class RPCManager {
                 LOG.info(e);
             }
 
-            // if is no result available, then a response time-out happened...
+            // if is no result hasFree, then a response time-out happened...
             if (!callerResultTable.containsKey(callUID))
-                throw new IllegalStateException("no result of remote call " + callUID + " available");
+                throw new IllegalStateException("no result of remote call " + callUID + " hasFree");
 
             // result is allowed to be null -> void as return type.
             final Object result = callerResultTable.get(callUID);

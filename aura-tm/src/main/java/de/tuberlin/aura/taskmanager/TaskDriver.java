@@ -51,7 +51,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDriver(final TaskManagerContext managerContext, final Descriptors.TaskDeploymentDescriptor deploymentDescriptor) {
+    public TaskDriver(final TaskManagerContext managerContext,
+                      final Descriptors.TaskDeploymentDescriptor deploymentDescriptor) {
         super(true);
 
         // sanity check.
@@ -250,6 +251,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 .setInitialState(TaskState.TASK_STATE_CREATED)
                 .build();
 
+        // global state listener, that reacts to all state changes.
+
         taskFSM.addGlobalStateListener(
                 new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
                     @Override
@@ -272,6 +275,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 }
         );
 
+        // error state listener.
+
         taskFSM.addStateListener(TaskState.ERROR,
                 new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
 
@@ -283,6 +288,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                     }
                 }
         );
+
+        // task ready state listener.
 
         taskFSM.addStateListener(TaskState.TASK_STATE_READY,
                 new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
@@ -302,6 +309,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 }
         );
 
+        // task finish state listener.
+
         taskFSM.addStateListener(TaskState.TASK_STATE_FINISHED,
                 new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
 
@@ -319,6 +328,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                     }
                 }
         );
+
+        // task failure state listener.
 
         taskFSM.addStateListener(TaskState.TASK_STATE_FAILURE,
                 new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
