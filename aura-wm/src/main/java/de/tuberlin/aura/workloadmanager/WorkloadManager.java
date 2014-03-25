@@ -55,7 +55,7 @@ public class WorkloadManager implements ClientWMProtocol {
 
         this.machineDescriptor = machineDescriptor;
 
-        this.ioManager = new IOManager(this.machineDescriptor);
+        this.ioManager = new IOManager(this.machineDescriptor, null);
 
         this.rpcManager = new RPCManager(ioManager);
 

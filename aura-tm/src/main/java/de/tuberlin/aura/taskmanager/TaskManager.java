@@ -12,6 +12,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
@@ -53,6 +54,9 @@ public final class TaskManager implements WM2TMProtocol {
 
     private final Map<UUID, List<TaskDriverContext>> deployedTopologyTasks;
 
+
+    private final MemoryManager.BufferMemoryManager bufferMemoryManager;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -74,12 +78,11 @@ public final class TaskManager implements WM2TMProtocol {
 
         this.deployedTopologyTasks = new HashMap<>();
 
-        // setup IO and execution managers.
-        this.ioManager = new IOManager(machine);
+        // Setup buffer memory management.
+        this.bufferMemoryManager = new MemoryManager.BufferMemoryManager(machine);
 
-        this.rpcManager = new RPCManager(ioManager);
-
-        this.executionManager = new TaskExecutionManager(ownMachine);
+        // Setup execution manager.
+        this.executionManager = new TaskExecutionManager(ownMachine, this.bufferMemoryManager);
 
         this.executionManager.addEventListener(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
                 new IEventHandler() {
@@ -89,6 +92,11 @@ public final class TaskManager implements WM2TMProtocol {
                         unregisterTask((TaskDriverContext) e.getPayload());
                     }
                 });
+
+        // setup IO.
+        this.ioManager = setupIOManager(machine, executionManager);
+
+        this.rpcManager = new RPCManager(ioManager);
 
         // setup IORedispatcher.
         this.ioHandler = new IORedispatcher();
@@ -176,6 +184,16 @@ public final class TaskManager implements WM2TMProtocol {
         } catch (IOException | KeeperException | InterruptedException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /**
+     * @param machineDescriptor
+     * @return
+     */
+    private IOManager setupIOManager(final MachineDescriptor machineDescriptor,
+                                     final TaskExecutionManager executionManager) {
+        final IOManager ioManager = new IOManager(machineDescriptor, executionManager);
+        return ioManager;
     }
 
     /**

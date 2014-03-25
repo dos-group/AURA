@@ -2,6 +2,7 @@ package de.tuberlin.aura.core.task.common;
 
 
 import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.MemoryManager;
 
 import java.util.UUID;
 
@@ -16,4 +17,7 @@ public interface DataProducer {
     public abstract UUID getOutputTaskIDFromChannelIndex(int channelIndex);
 
     public abstract int getOutputGateIndexFromTaskID(final UUID taskID);
+
+
+    public abstract MemoryManager.MemoryView alloc();
 }

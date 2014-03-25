@@ -3,16 +3,13 @@ package de.tuberlin.aura.demo.client;
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -24,7 +21,7 @@ import java.util.UUID;
 
 public final class Client {
 
-    //private static final Logger LOG = Logger.getRootLogger();
+    private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
     private Client() {
@@ -53,7 +50,8 @@ public final class Client {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[64 << 10]);
+                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final IOEvents.DataIOEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
                     producer.emit(0, index, outputBuffer);
                 }
             }
@@ -88,7 +86,8 @@ public final class Client {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[64 << 10]);
+                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final IOEvents.DataIOEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
                     producer.emit(0, index, outputBuffer);
                 }
             }
@@ -124,19 +123,24 @@ public final class Client {
 
             while (!consumer.isExhausted() && isInvokeableRunning()) {
 
-                final DataIOEvent left = consumer.absorb(0);
-                final DataIOEvent right = consumer.absorb(1);
+                final IOEvents.TransferBufferEvent left = consumer.absorb(0);
+                final IOEvents.TransferBufferEvent right = consumer.absorb(1);
 
-                if (left != null)
+                if (left != null) {
                     LOG.info("input left received data message from task " + left.srcTaskID);
-                if (right != null)
+                    left.buffer.free();
+                }
+                if (right != null) {
                     LOG.info("input right: received data message from task " + right.srcTaskID);
+                    right.buffer.free();
+                }
 
                 if (left != null || right != null) {
                     final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                     for (int index = 0; index < outputs.size(); ++index) {
                         final UUID outputTaskID = getTaskID(0, index);
-                        final DataIOEvent outputBuffer = new DataBufferEvent(driverContext.taskDescriptor.taskID, outputTaskID, new byte[64 << 10]);
+                        final MemoryManager.MemoryView buffer = producer.alloc();
+                        final IOEvents.DataIOEvent outputBuffer = new IOEvents.TransferBufferEvent(driverContext.taskDescriptor.taskID, outputTaskID, buffer);
                         producer.emit(0, index, outputBuffer);
                     }
                 }
@@ -170,7 +174,10 @@ public final class Client {
         @Override
         public void run() throws Throwable {
             while (!consumer.isExhausted() && isInvokeableRunning()) {
-                consumer.absorb(0);
+                final IOEvents.TransferBufferEvent buffer = consumer.absorb(0);
+                LOG.info("received: " + buffer);
+                if (buffer != null)
+                    buffer.buffer.free();
             }
         }
     }
@@ -187,20 +194,20 @@ public final class Client {
         // LOG.setLevel(Level.DEBUG);
 
         final String zookeeperAddress = "localhost:2181";
-        final LocalClusterSimulator lce = new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 8);
+        final LocalClusterSimulator lce = new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
-        final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        final AuraDirectedGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
-        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
-                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
-                .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
+        atb1.addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
+                .connectTo("Task3", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
+                .connectTo("Task3", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
+                .connectTo("Task4", AuraDirectedGraph.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
 
-        final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
+        final AuraDirectedGraph.AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraDirectedGraph.AuraTopology.MonitoringType.NO_MONITORING));
 
         ac.submitTopology(at1, null);
 

@@ -114,7 +114,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * </pre>
  * <p/>
  * <p/>
- * Memory consistency effects: Actions in a thread prior to calling {@code countDown()} <a
+ * MemoryView consistency effects: Actions in a thread prior to calling {@code countDown()} <a
  * href="package-summary.html#MemoryVisibility"><i>happen-before</i></a> actions following a
  * successful return from a corresponding {@code await()} in another thread.
  *

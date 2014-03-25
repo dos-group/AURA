@@ -7,6 +7,7 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.*;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskTransition;
@@ -71,7 +72,15 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         this.queueManager = QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>());
 
-        this.driverContext = new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM);
+        this.driverContext = new TaskDriverContext(
+                this,
+                managerContext,
+                taskDescriptor,
+                taskBindingDescriptor,
+                this,
+                queueManager,
+                taskFSM
+        );
     }
 
     // ---------------------------------------------------
@@ -88,11 +97,17 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
      *
      */
     @Override
-    public void startupDriver() {
+    public void startupDriver(final MemoryManager.Allocator inputAllocator,
+                              final MemoryManager.Allocator outputAllocator) {
+        // sanity check.
+        if (inputAllocator == null)
+            throw new IllegalArgumentException("inputAllocator == null");
+        if (outputAllocator == null)
+            throw new IllegalArgumentException("outputAllocator == null");
 
-        dataConsumer = new TaskDataConsumer(driverContext);
+        dataConsumer = new TaskDataConsumer(driverContext, inputAllocator);
 
-        dataProducer = new TaskDataProducer(driverContext);
+        dataProducer = new TaskDataProducer(driverContext, outputAllocator);
 
         invokeableClazz = implantInvokeableCode(taskDescriptor.userCode);
 

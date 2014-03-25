@@ -2,15 +2,13 @@ package de.tuberlin.aura.core.iosystem;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,17 +60,26 @@ public class DataReader {
      */
     private final Map<Pair<UUID, Integer>, Map<Integer, Channel>> connectedChannels;
 
+
+    final TaskExecutionManager executionManager;
+
     /**
      * Creates a new Data Reader. There should only be one Data Reader per task manager.
      *
      * @param dispatcher the dispatcher to which events should be published.
      */
-    public DataReader(IEventDispatcher dispatcher) {
+    public DataReader(IEventDispatcher dispatcher, final TaskExecutionManager executionManager) {
+
         this.dispatcher = dispatcher;
 
+        this.executionManager = executionManager;
+
         inputQueues = new HashMap<>();
+
         channelToQueueIndex = new HashMap<>();
+
         gateToQueueIndex = new HashMap<>();
+
         connectedChannels = new HashMap<>();
 
         queueIndex = 0;
@@ -93,7 +100,9 @@ public class DataReader {
      * @param workerGroup the event loop the channel should be associated with.
      * @param <T>         the type of channel this connection uses.
      */
-    public <T extends Channel> void bind(final ConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
+    public <T extends Channel> void bind(final ConnectionType<T> type,
+                                         final SocketAddress address,
+                                         final EventLoopGroup workerGroup) {
 
         ServerBootstrap bootstrap = type.bootStrap(workerGroup);
         bootstrap.childHandler(new ChannelInitializer<T>() {
@@ -101,10 +110,11 @@ public class DataReader {
             @Override
             public void initChannel(T ch) throws Exception {
                 ch.pipeline()
-                        .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
+                        .addLast(KryoEventSerializer.getLengthDecoder())
+                        .addLast(new KryoEventSerializer.KryoOutboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(null, executionManager)))
+                        .addLast(new KryoEventSerializer.KryoInboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(null, executionManager)))
                         .addLast(new DataHandler())
-                        .addLast(new EventHandler())
-                        .addLast(new ObjectEncoder());
+                        .addLast(new EventHandler());
             }
         });
 
@@ -192,10 +202,10 @@ public class DataReader {
     // Inner Classes.
     // ---------------------------------------------------
 
-    private final class DataHandler extends SimpleChannelInboundHandler<IOEvents.DataBufferEvent> {
+    private final class DataHandler extends SimpleChannelInboundHandler<IOEvents.TransferBufferEvent> {
 
         @Override
-        protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataBufferEvent event) {
+        protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.TransferBufferEvent event) {
             try {
 
                 inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);

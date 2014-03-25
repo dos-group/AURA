@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface DataConsumer {
 
-    public abstract IOEvents.DataBufferEvent absorb(int gateIndex) throws InterruptedException;
+    public abstract IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException;
 
     public abstract void shutdownConsumer();
 

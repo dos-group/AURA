@@ -62,16 +62,20 @@ public final class AuraClient {
             throw new IllegalArgumentException("controlPort invalid port number");
 
         final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(dataPort, controlPort);
-        this.ioManager = new IOManager(md);
+
+        this.ioManager = new IOManager(md, null);
+
         this.rpcManager = new RPCManager(ioManager);
 
         this.codeExtractor = new UserCodeExtractor(false);
+
         this.codeExtractor.addStandardDependency("java")
                 .addStandardDependency("org/apache/log4j")
                 .addStandardDependency("io/netty")
                 .addStandardDependency("de/tuberlin/aura/core");
 
         final ZooKeeper zookeeper;
+
         final MachineDescriptor wmMachineDescriptor;
         try {
             zookeeper = new ZooKeeper(zkServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(new IEventHandler() {

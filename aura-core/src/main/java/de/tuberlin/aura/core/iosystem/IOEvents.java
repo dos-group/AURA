@@ -2,6 +2,7 @@ package de.tuberlin.aura.core.iosystem;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import io.netty.channel.Channel;
 
 import java.util.UUID;
@@ -144,41 +145,41 @@ public final class IOEvents {
     /**
      *
      */
-    public static final class DataBufferEvent extends DataIOEvent {
+    public static final class TransferBufferEvent extends DataIOEvent {
 
         private static final long serialVersionUID = -1;
 
         public final UUID messageID;
 
-        public final byte[] data;
+        //public final byte[] data;
 
-        public DataBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final byte[] data) {
-            this(UUID.randomUUID(), srcTaskID, dstTaskID, data);
+        public final MemoryManager.MemoryView buffer;
+
+        public TransferBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.MemoryView buffer) {
+            this(UUID.randomUUID(), srcTaskID, dstTaskID, buffer);
         }
 
-        public DataBufferEvent(final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final byte[] data) {
+        public TransferBufferEvent(final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.MemoryView buffer) {
 
             super(DataEventType.DATA_EVENT_BUFFER, srcTaskID, dstTaskID);
 
             // sanity check.
             if (messageID == null)
                 throw new IllegalArgumentException("messageID == null");
-            if (data == null)
-                throw new IllegalArgumentException("data == null");
+            if (buffer == null)
+                throw new IllegalArgumentException("buffer == null");
 
             this.messageID = messageID;
 
-            this.data = data;
+            this.buffer = buffer;
         }
 
         @Override
         public String toString() {
-            return (new StringBuilder()).append("DataBufferMessage = {")
+            return (new StringBuilder()).append("TransferBufferEvent = {")
                     .append(" messageID = " + messageID.toString() + ", ")
                     .append(" srcTaskID = " + srcTaskID.toString() + ", ")
                     .append(" dstTaskID = " + dstTaskID.toString() + ", ")
-                    .append(" data = " + data + ", ")
-                    .append(" length( data ) = " + data.length)
                     .append(" }")
                     .toString();
         }

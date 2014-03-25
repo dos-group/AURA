@@ -7,6 +7,7 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskStates;
@@ -46,16 +47,23 @@ public final class TaskDataConsumer implements DataConsumer {
 
     private final IEventHandler consumerEventHandler;
 
+    private final MemoryManager.Allocator allocator;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataConsumer(final TaskDriverContext driverContext) {
+    public TaskDataConsumer(final TaskDriverContext driverContext,
+                            final MemoryManager.Allocator allocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
+        if (allocator == null)
+            throw new IllegalArgumentException("allocator == null");
 
         this.driverContext = driverContext;
+
+        this.allocator = allocator;
 
         // event handling.
         this.consumerEventHandler = new ConsumerEventHandler();
@@ -88,7 +96,7 @@ public final class TaskDataConsumer implements DataConsumer {
     // Public Methods.
     // ---------------------------------------------------
 
-    public IOEvents.DataBufferEvent absorb(int gateIndex) throws InterruptedException {
+    public IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException {
 
         if (activeGates.get(gateIndex).size() == 0)
             return null;
@@ -150,7 +158,7 @@ public final class TaskDataConsumer implements DataConsumer {
             }
         }
 
-        return (IOEvents.DataBufferEvent) event;
+        return (IOEvents.TransferBufferEvent) event;
     }
 
     /**
@@ -363,7 +371,7 @@ public final class TaskDataConsumer implements DataConsumer {
  * @return
  * @throws InterruptedException
  */
-    /*public IOEvents.DataBufferEvent absorb(int gateIndex) throws InterruptedException {
+    /*public IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException {
 
         final IOEvents.DataIOEvent event;
 
@@ -437,5 +445,5 @@ public final class TaskDataConsumer implements DataConsumer {
             }
         }
 
-        return (IOEvents.DataBufferEvent) event;
+        return (IOEvents.TransferBufferEvent) event;
     }*/

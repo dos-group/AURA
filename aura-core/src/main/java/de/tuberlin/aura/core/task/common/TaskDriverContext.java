@@ -47,4 +47,16 @@ public final class TaskDriverContext {
 
         this.taskFSM = taskFSM;
     }
+
+    // -------------- Execution Unit Assignment --------------
+
+    private int assignedExecutionUnitIndex = -1;
+
+    public void setAssignedExecutionUnitIndex(int assignedExecutionUnitIndex) {
+        this.assignedExecutionUnitIndex = assignedExecutionUnitIndex;
+    }
+
+    public int getAssignedExecutionUnitIndex() {
+        return this.assignedExecutionUnitIndex;
+    }
 }

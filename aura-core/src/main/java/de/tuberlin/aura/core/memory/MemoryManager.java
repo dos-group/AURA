@@ -1,12 +1,12 @@
 package de.tuberlin.aura.core.memory;
 
-import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import org.apache.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -22,7 +22,7 @@ public final class MemoryManager {
     /**
      *
      */
-    public static final class Memory {
+    public static final class MemoryView {
 
         // ---------------------------------------------------
         // Fields.
@@ -40,11 +40,11 @@ public final class MemoryManager {
         // Constructors.
         // ---------------------------------------------------
 
-        public Memory(final Allocator allocator, final byte[] memory) {
+        public MemoryView(final Allocator allocator, final byte[] memory) {
             this(allocator, memory, 0, memory.length);
         }
 
-        public Memory(final Allocator allocator, final byte[] memory, int baseOffset, int size) {
+        public MemoryView(final Allocator allocator, final byte[] memory, int baseOffset, int size) {
             // sanity check.
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
@@ -99,9 +99,9 @@ public final class MemoryManager {
 
         public static final int BUFFER_SIZE = BufferAllocator._64K;
 
-        public static final double BUFFER_LOAD_FACTOR = 0.7;
+        public static final double BUFFER_LOAD_FACTOR = 0.1;
 
-        public static final int ALLOCATORS_PER_GROUP = 4;
+        public static final int NUM_OF_ALLOCATORS_PER_GROUP = 4;
 
         // ---------------------------------------------------
         // Fields.
@@ -115,7 +115,11 @@ public final class MemoryManager {
 
         private final int globalBufferCount;
 
-        public final ThreadLocal<Allocator> threadBufferAllocator;
+        //private final ThreadLocal<BufferAllocatorGroup> threadBufferAllocator;
+
+        private final List<BufferAllocatorGroup> allocatorGroups;
+
+        private final AtomicInteger allocatorIndex;
 
         // ---------------------------------------------------
         // Constructors.
@@ -132,23 +136,32 @@ public final class MemoryManager {
 
             this.maxMemory = runtime.maxMemory();
 
+            final int numOfExecutionUnits = machineDescriptor.hardware.cpuCores;
+
+            final int groupsPerExecutionUnit = 2;
+
             this.globalBufferCount = (int) ((maxMemory * BUFFER_LOAD_FACTOR) / BUFFER_SIZE);
 
-            final int perExecutionUnitBuffers = globalBufferCount / machineDescriptor.hardware.cpuCores;
+            final int perExecutionUnitBuffers = globalBufferCount / numOfExecutionUnits;
 
-            final int buffersPerAllocator = perExecutionUnitBuffers / ALLOCATORS_PER_GROUP;
+            final int buffersPerAllocator = (perExecutionUnitBuffers / groupsPerExecutionUnit) / NUM_OF_ALLOCATORS_PER_GROUP;
 
-            this.threadBufferAllocator = new ThreadLocal<Allocator>() {
+            this.allocatorGroups = setupBufferAllocatorGroups(
+                    numOfExecutionUnits * groupsPerExecutionUnit,
+                    NUM_OF_ALLOCATORS_PER_GROUP,
+                    buffersPerAllocator,
+                    BufferAllocator._64K
+            );
 
-                @Override
-                protected Allocator initialValue() {
-                    final List<Allocator> initialAllocators = new ArrayList<>();
-                    for (int i = 0; i < ALLOCATORS_PER_GROUP; ++i) {
-                        initialAllocators.add(new BufferAllocator(BUFFER_SIZE, buffersPerAllocator));
-                    }
-                    return new BufferAllocatorGroup(BUFFER_SIZE, initialAllocators);
-                }
-            };
+            this.allocatorIndex = new AtomicInteger(0);
+
+            //this.threadBufferAllocator = new ThreadLocal<BufferAllocatorGroup>() {
+
+            //    @Override
+            //    protected BufferAllocatorGroup initialValue() {
+            //        return allocatorGroups.get(allocatorIndex.getAndIncrement() % allocatorGroups.size());
+            //    }
+            //};
         }
 
         // ---------------------------------------------------
@@ -167,8 +180,29 @@ public final class MemoryManager {
             return runtime.totalMemory();
         }
 
-        public Allocator getAllocator() {
-            return threadBufferAllocator.get();
+        public BufferAllocatorGroup getBufferAllocatorGroup() {
+            return allocatorGroups.get(allocatorIndex.getAndIncrement() % allocatorGroups.size());
+        }
+
+        // ---------------------------------------------------
+        // Private Methods.
+        // ---------------------------------------------------
+
+        private List<BufferAllocatorGroup> setupBufferAllocatorGroups(final int numOfAllocatorGroups,
+                                                                      final int numOfAllocatorsPerGroup,
+                                                                      final int buffersPerAllocator,
+                                                                      final int bufferSize) {
+
+            final List<BufferAllocatorGroup> allocatorGroups = new ArrayList<>();
+            for (int i = 0; i < numOfAllocatorGroups; ++i) {
+                final List<Allocator> initialAllocators = new ArrayList<>();
+
+                for (int j = 0; j < numOfAllocatorsPerGroup; ++j)
+                    initialAllocators.add(new BufferAllocator(bufferSize, buffersPerAllocator));
+
+                allocatorGroups.add(new BufferAllocatorGroup(bufferSize, initialAllocators));
+            }
+            return allocatorGroups;
         }
     }
 
@@ -177,9 +211,9 @@ public final class MemoryManager {
      */
     public static interface Allocator {
 
-        public abstract Memory alloc();
+        public abstract MemoryView alloc();
 
-        public abstract void free(final Memory memory);
+        public abstract void free(final MemoryView memory);
 
         public abstract boolean hasFree();
 
@@ -253,16 +287,17 @@ public final class MemoryManager {
         // ---------------------------------------------------
 
         @Override
-        public Memory alloc() {
+        public MemoryView alloc() {
             for (final Allocator allocator : assignedAllocators) {
-                if (allocator.hasFree())
+                if (allocator.hasFree()) {
                     return allocator.alloc();
+                }
             }
             return assignedAllocators.get(0).alloc();
         }
 
         @Override
-        public void free(Memory memory) {
+        public void free(MemoryView memory) {
             memory.free();
         }
 
@@ -309,9 +344,9 @@ public final class MemoryManager {
 
         private final byte[] memoryArena;
 
-        private final BlockingQueue<Memory> freeList;
+        private final BlockingQueue<MemoryView> freeList;
 
-        private final Set<Memory> usedSet;
+        private final Set<MemoryView> usedSet;
 
         // ---------------------------------------------------
         // Constructor.
@@ -337,8 +372,8 @@ public final class MemoryManager {
 
             this.usedSet = new HashSet<>();
 
-            for (int i = 0; i < bufferCount - 1; ++i) {
-                this.freeList.add(new Memory(this, memoryArena, i * bufferSize, bufferSize));
+            for (int i = 0; i < bufferCount; ++i) {
+                this.freeList.add(new MemoryView(this, memoryArena, i * bufferSize, bufferSize));
             }
         }
 
@@ -347,9 +382,9 @@ public final class MemoryManager {
         // ---------------------------------------------------
 
         @Override
-        public Memory alloc() {
+        public MemoryView alloc() {
             try {
-                final Memory memory = freeList.take();
+                final MemoryView memory = freeList.take();
                 usedSet.add(memory);
                 return memory;
             } catch (InterruptedException ie) {
@@ -358,7 +393,7 @@ public final class MemoryManager {
         }
 
         @Override
-        public void free(final Memory memory) {
+        public void free(final MemoryView memory) {
             // sanity check.
             if (memory == null)
                 throw new IllegalArgumentException("memory == null");
@@ -392,6 +427,6 @@ public final class MemoryManager {
 
     public static void main(String[] arg) {
 
-        final BufferMemoryManager mm = new BufferMemoryManager(DescriptorFactory.createMachineDescriptor(14124, 12232));
+        //final BufferMemoryManager mm = new BufferMemoryManager(DescriptorFactory.createMachineDescriptor(14124, 12232));
     }
 }

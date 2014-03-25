@@ -2,14 +2,13 @@ package de.tuberlin.aura.core.iosystem;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,13 +30,11 @@ public class DataWriter {
 
     private final IEventDispatcher dispatcher;
 
-    private final EventLoopGroup workerGroup;
-
     private ExecutorService pollThreadExecutor;
 
-    public DataWriter(IEventDispatcher dispatcher, final EventLoopGroup workerGroup) {
+    public DataWriter(IEventDispatcher dispatcher) {
+
         this.dispatcher = dispatcher;
-        this.workerGroup = workerGroup;
 
         this.pollThreadExecutor = Executors.newCachedThreadPool();
     }
@@ -45,8 +42,11 @@ public class DataWriter {
     public <T extends Channel> ChannelWriter<T> bind(final UUID srcTaskID,
                                                      final UUID dstTaskID,
                                                      final OutgoingConnectionType<T> type,
-                                                     final SocketAddress address) {
-        return new ChannelWriter<>(type, srcTaskID, dstTaskID, address);
+                                                     final SocketAddress address,
+                                                     final NioEventLoopGroup eventLoopGroup,
+                                                     final MemoryManager.Allocator allocator) {
+
+        return new ChannelWriter<>(type, srcTaskID, dstTaskID, address, eventLoopGroup, allocator);
     }
 
     // ---------------------------------------------------
@@ -62,6 +62,8 @@ public class DataWriter {
         private final UUID dstID;
 
         private Channel channel;
+
+        private final EventLoopGroup eventLoopGroup;
 
         // poll thread
 
@@ -83,22 +85,31 @@ public class DataWriter {
 
         private AtomicBoolean gateOpen = new AtomicBoolean(false);
 
-        public ChannelWriter(final OutgoingConnectionType<T> type, final UUID srcID, final UUID dstID, final SocketAddress address) {
+        public ChannelWriter(final OutgoingConnectionType<T> type,
+                             final UUID srcID, final UUID dstID,
+                             final SocketAddress address,
+                             final EventLoopGroup eventLoopGroup,
+                             final MemoryManager.Allocator allocator) {
+
             this.srcID = srcID;
+
             this.dstID = dstID;
 
             this.awaitGateOpenLatch = new ResettableCountDownLatch(1);
 
-            Bootstrap bootstrap = type.bootStrap(workerGroup);
+            this.eventLoopGroup = eventLoopGroup;
+
+            Bootstrap bootstrap = type.bootStrap(this.eventLoopGroup);
             bootstrap.handler(new ChannelInitializer<T>() {
 
                 @Override
                 protected void initChannel(T ch) throws Exception {
                     ch.pipeline()
-                            .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
+                            .addLast(KryoEventSerializer.getLengthDecoder())
+                            .addLast(new KryoEventSerializer.KryoOutboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(allocator, null)))
+                            .addLast(new KryoEventSerializer.KryoInboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(allocator, null)))
                             .addLast(new OpenCloseGateHandler())
-                            .addLast(new WritableHandler())
-                            .addLast(new ObjectEncoder());
+                            .addLast(new WritableHandler());
                 }
             });
 

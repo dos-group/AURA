@@ -30,7 +30,7 @@ public final class TwoTaskTest {
                     buffer.putInt(i);
                     buffer.flip();
 
-                    final DataIOEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, buffer.array());
+                    final DataIOEvent outputBuffer = new TransferBufferEvent(taskID, outputTaskID, buffer.array());
                     emit(0, index, outputBuffer);
                 }
             }
@@ -67,7 +67,7 @@ public final class TwoTaskTest {
 
                 if (inputBuffer != null) {
 
-                    int received = ByteBuffer.wrap(((DataBufferEvent) inputBuffer).data).getInt();
+                    int received = ByteBuffer.wrap(((TransferBufferEvent) inputBuffer).data).getInt();
                     // LOG.error("- received: " + received + " - count: " + count);
 
 

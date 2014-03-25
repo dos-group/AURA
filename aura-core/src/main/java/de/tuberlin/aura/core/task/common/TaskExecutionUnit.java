@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.task.common;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.BlockingQueue;
@@ -28,21 +29,36 @@ public final class TaskExecutionUnit {
 
     private TaskDriverContext currentTaskCtx;
 
+
+    private final MemoryManager.BufferAllocatorGroup inputAllocator;
+
+    private final MemoryManager.BufferAllocatorGroup outputAllocator;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskExecutionUnit(final TaskExecutionManager executionManager, final int executionUnitID) {
+    public TaskExecutionUnit(final TaskExecutionManager executionManager,
+                             final int executionUnitID,
+                             final MemoryManager.BufferAllocatorGroup inputAllocator,
+                             final MemoryManager.BufferAllocatorGroup outputAllocator) {
         // sanity check.
         if (executionManager == null)
             throw new IllegalArgumentException("executionManager == null");
-        if (executionUnitID < 0) {
+        if (executionUnitID < 0)
             throw new IllegalArgumentException("executionUnitID < 0");
-        }
+        if (inputAllocator == null)
+            throw new IllegalArgumentException("inputAllocator == null");
+        if (outputAllocator == null)
+            throw new IllegalArgumentException("outputAllocator == null");
 
         this.executionManager = executionManager;
 
         this.executionUnitID = executionUnitID;
+
+        this.inputAllocator = inputAllocator;
+
+        this.outputAllocator = outputAllocator;
 
         this.executorThread = new Thread(new ExecutionUnitRunner());
 
@@ -94,6 +110,27 @@ public final class TaskExecutionUnit {
      */
     public int getNumberOfEnqueuedTasks() {
         return taskQueue.size() + (currentTaskCtx != null ? 1 : 0);
+    }
+
+    /**
+     * @return
+     */
+    public TaskDriverContext getCurrentTaskDriverContext() {
+        return currentTaskCtx;
+    }
+
+    /**
+     * @return
+     */
+    public MemoryManager.BufferAllocatorGroup getInputAllocator() {
+        return inputAllocator;
+    }
+
+    /**
+     * @return
+     */
+    public MemoryManager.BufferAllocatorGroup getOutputAllocator() {
+        return outputAllocator;
     }
 
     // ---------------------------------------------------
@@ -179,7 +216,10 @@ public final class TaskExecutionUnit {
                         }
                 );
 
-                currentTaskCtx.taskDriver.startupDriver();
+                currentTaskCtx.taskDriver.startupDriver(
+                        inputAllocator,
+                        outputAllocator
+                );
 
                 try {
                     executeLatch.await();

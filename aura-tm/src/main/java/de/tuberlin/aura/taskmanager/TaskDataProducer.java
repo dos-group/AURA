@@ -7,6 +7,7 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskStates;
@@ -36,16 +37,24 @@ public final class TaskDataProducer implements DataProducer {
 
     private final IEventHandler producerEventHandler;
 
+
+    private final MemoryManager.Allocator allocator;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataProducer(final TaskDriverContext driverContext) {
+    public TaskDataProducer(final TaskDriverContext driverContext,
+                            final MemoryManager.Allocator allocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
+        if (allocator == null)
+            throw new IllegalArgumentException("allocator == null");
 
         this.driverContext = driverContext;
+
+        this.allocator = allocator;
 
         // event handling.
         this.producerEventHandler = new ProducerEventHandler();
@@ -132,6 +141,14 @@ public final class TaskDataProducer implements DataProducer {
         return taskIDToGateIndex.get(taskID);
     }
 
+    /**
+     * @return
+     */
+    @Override
+    public MemoryManager.MemoryView alloc() {
+        return allocator.alloc();
+    }
+
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------
@@ -144,7 +161,13 @@ public final class TaskDataProducer implements DataProducer {
         if (driverContext.taskBindingDescriptor.outputGateBindings.size() > 0) {
             for (final List<Descriptors.TaskDescriptor> outputGate : driverContext.taskBindingDescriptor.outputGateBindings) {
                 for (final Descriptors.TaskDescriptor outputTask : outputGate) {
-                    driverContext.managerContext.ioManager.connectDataChannel(driverContext.taskDescriptor.taskID, outputTask.taskID, outputTask.getMachineDescriptor());
+
+                    driverContext.managerContext.ioManager.connectDataChannel(
+                            driverContext.taskDescriptor.taskID,
+                            outputTask.taskID,
+                            outputTask.getMachineDescriptor(),
+                            allocator
+                    );
                 }
             }
         }
@@ -206,17 +229,18 @@ public final class TaskDataProducer implements DataProducer {
                 int channelIndex = 0;
                 boolean allOutputChannelsPerGateConnected = true;
 
-                for (Descriptors.TaskDescriptor outputTask : outputGate) {
+                for (final Descriptors.TaskDescriptor outputTask : outputGate) {
 
                     // Set the channel on right position.
                     if (outputTask.taskID.equals(event.dstTaskID)) {
                         // get the right queue manager for task context
-                        BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutputQueue(gateIndex, channelIndex);
+                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutputQueue(gateIndex, channelIndex);
 
-                        DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.payload;
+                        final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.payload;
                         channelWriter.setOutputQueue(queue);
 
-                        outputGates.get(gateIndex).setChannelWriter(channelIndex, channelWriter);
+                        final OutputGate og = outputGates.get(gateIndex);
+                        og.setChannelWriter(channelIndex, channelWriter);   // TODO: Sometimes NullPointerException.
 
                         LOG.info("OUTPUT CONNECTION FROM " + driverContext.taskDescriptor.name + " [" +
                                 driverContext.taskDescriptor.taskID + "] TO TASK " + outputTask.name + " ["

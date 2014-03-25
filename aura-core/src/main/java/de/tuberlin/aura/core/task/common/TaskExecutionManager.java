@@ -4,7 +4,10 @@ package de.tuberlin.aura.core.task.common;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.memory.MemoryManager;
 import org.apache.log4j.Logger;
+
+import java.util.UUID;
 
 public final class TaskExecutionManager extends EventDispatcher {
 
@@ -12,6 +15,9 @@ public final class TaskExecutionManager extends EventDispatcher {
     // Execution Manager Events.
     // ---------------------------------------------------
 
+    /**
+     *
+     */
     public static final class TaskExecutionEvent extends Event {
 
         public static final String EXECUTION_MANAGER_EVENT_UNREGISTER_TASK = "EXECUTION_MANAGER_EVENT_UNREGISTER_TASK";
@@ -25,26 +31,59 @@ public final class TaskExecutionManager extends EventDispatcher {
     // Fields.
     // ---------------------------------------------------
 
+    //private static TaskExecutionManager instance = null;
+
     private static final Logger LOG = Logger.getLogger(TaskExecutionManager.class);
 
     private final Descriptors.MachineDescriptor machineDescriptor;
 
     private final int numberOfCores;
 
-    private TaskExecutionUnit[] executionUnit;
+    private final TaskExecutionUnit[] executionUnit;
+
+    private final MemoryManager.BufferMemoryManager bufferMemoryManager;
+
+    // ---------------------------------------------------
+    // Static Methods.
+    // ---------------------------------------------------
+
+    /*public static TaskExecutionManager createInstance(final Descriptors.MachineDescriptor machineDescriptor,
+                                                      final MemoryManager.BufferMemoryManager bufferMemoryManager) {
+        if(instance == null) {
+            instance = new TaskExecutionManager(machineDescriptor, bufferMemoryManager);
+            return instance;
+        } else
+            throw new IllegalStateException("instance != null");
+    }
+
+    public static TaskExecutionManager getInstance() {
+        if(instance != null) {
+            return instance;
+        } else
+            throw new IllegalStateException("instance == null");
+    }*/
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor) {
+    /**
+     * @param machineDescriptor
+     * @param bufferMemoryManager
+     */
+    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor,
+                                final MemoryManager.BufferMemoryManager bufferMemoryManager) {
         super(false);
 
         // sanity check.
         if (machineDescriptor == null)
             throw new IllegalArgumentException("machineDescriptor == null");
+        if (bufferMemoryManager == null)
+            throw new IllegalArgumentException("bufferMemoryManager == null");
 
         this.machineDescriptor = machineDescriptor;
+
+        this.bufferMemoryManager = bufferMemoryManager;
 
         this.numberOfCores = machineDescriptor.hardware.cpuCores;
 
@@ -77,6 +116,7 @@ public final class TaskExecutionManager extends EventDispatcher {
             }
         }
 
+        driverContext.setAssignedExecutionUnitIndex(selectedEU);
         executionUnit[selectedEU].enqueueTask(driverContext);
 
         LOG.info("EXECUTE TASK " + driverContext.taskDescriptor.name + " ["
@@ -84,6 +124,24 @@ public final class TaskExecutionManager extends EventDispatcher {
                 + executionUnit[selectedEU].getExecutionUnitID() + ") ON MACHINE [" + machineDescriptor.uid + "]");
     }
 
+    /**
+     * @param taskID
+     * @return
+     */
+    public TaskExecutionUnit findTaskExecutionUnitByTaskID(final UUID taskID) {
+        // sanity check.
+        if (taskID == null)
+            throw new IllegalArgumentException("taskID == null");
+
+        for (int i = 0; i < numberOfCores; ++i) {
+            final TaskExecutionUnit eu = executionUnit[i];
+            final TaskDriverContext taskCtx = eu.getCurrentTaskDriverContext();
+            if (taskCtx != null && taskID.equals(taskCtx.taskDescriptor.taskID)) {
+                return eu;
+            }
+        }
+        return null;
+    }
 
     // ---------------------------------------------------
     // Private Methods.
@@ -94,7 +152,9 @@ public final class TaskExecutionManager extends EventDispatcher {
      */
     private void initializeExecutionUnits() {
         for (int i = 0; i < numberOfCores; ++i) {
-            this.executionUnit[i] = new TaskExecutionUnit(this, i);
+            final MemoryManager.BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
+            final MemoryManager.BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
+            this.executionUnit[i] = new TaskExecutionUnit(this, i, inputBuffer, outputBuffer);
             this.executionUnit[i].start();
         }
     }
