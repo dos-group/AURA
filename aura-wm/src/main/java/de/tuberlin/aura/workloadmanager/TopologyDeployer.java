@@ -1,32 +1,15 @@
 package de.tuberlin.aura.workloadmanager;
 
-import org.apache.log4j.Logger;
-
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
-import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
-import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
+import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
+import org.apache.log4j.Logger;
 
 public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> {
-
-    // ---------------------------------------------------
-    // Constructors.
-    // ---------------------------------------------------
-
-    public TopologyDeployer(final RPCManager rpcManager) {
-        // sanity check.
-        if (rpcManager == null)
-            throw new IllegalArgumentException("rpcManager == null");
-
-        this.rpcManager = rpcManager;
-    }
 
     // ---------------------------------------------------
     // Fields.
@@ -37,7 +20,22 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
     private final RPCManager rpcManager;
 
     // ---------------------------------------------------
-    // Public.
+    // Constructors.
+    // ---------------------------------------------------
+
+    /**
+     * @param rpcManager
+     */
+    public TopologyDeployer(final RPCManager rpcManager) {
+        // sanity check.
+        if (rpcManager == null)
+            throw new IllegalArgumentException("rpcManager == null");
+
+        this.rpcManager = rpcManager;
+    }
+
+    // ---------------------------------------------------
+    // Public Methods.
     // ---------------------------------------------------
 
     @Override
@@ -45,15 +43,18 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
 
         deployTopology(topology);
 
-        dispatcher.dispatchEvent(new TopologyStateTransitionEvent(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY));
+        dispatcher.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY));
 
         return topology;
     }
 
     // ---------------------------------------------------
-    // Private.
+    // Private Methods.
     // ---------------------------------------------------
 
+    /**
+     * @param topology
+     */
     private synchronized void deployTopology(final AuraTopology topology) {
 
         // Deploying.
@@ -64,14 +65,13 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                 for (final ExecutionNode en : element.getExecutionNodes()) {
                     final TaskDeploymentDescriptor tdd =
                             new TaskDeploymentDescriptor(en.getTaskDescriptor(),
-                                                         en.getTaskBindingDescriptor(),
-                                                         en.logicalNode.dataPersistenceType,
-                                                         en.logicalNode.executionType);
+                                    en.getTaskBindingDescriptor(),
+                                    en.logicalNode.dataPersistenceType,
+                                    en.logicalNode.executionType);
                     final WM2TMProtocol tmProtocol =
                             rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
                     tmProtocol.installTask(tdd);
-                    // LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: "
-                    // + tdd.toString());
+                    LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString());
                 }
             }
         });

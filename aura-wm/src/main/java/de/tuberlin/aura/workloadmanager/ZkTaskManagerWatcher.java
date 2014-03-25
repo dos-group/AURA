@@ -1,12 +1,8 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.util.HashSet;
-import java.util.List;
-import java.util.UUID;
-
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
+import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -14,18 +10,22 @@ import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
-import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZkHelper;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
 
 /**
  * TODO: Put all watchers in one class like the descriptors?
  */
 public class ZkTaskManagerWatcher implements Watcher {
 
-    /**
-     * Logger.
-     */
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private static final Logger LOG = LoggerFactory.getLogger(ZkTaskManagerWatcher.class);
 
     /**
@@ -41,17 +41,23 @@ public class ZkTaskManagerWatcher implements Watcher {
     // TODO: Secure
     public HashSet<String> nodes;
 
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
+
     /**
-     * Constructor.
-     * 
-     * @param dispatcher Forward all events that are received by this class to this event handler
-     *        for further processing.
+     * @param handler
+     * @param zk
      */
     public ZkTaskManagerWatcher(IEventHandler handler, ZooKeeper zk) {
         this.handler = handler;
         this.zk = zk;
-        this.nodes = new HashSet<String>();
+        this.nodes = new HashSet<>();
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     /**
      * {@inheritDoc}
@@ -65,9 +71,9 @@ public class ZkTaskManagerWatcher implements Watcher {
             switch (event.getType()) {
                 case NodeChildrenChanged:
                     // Find out whether a node was created or deleted.
-                    List<String> nodeList = this.zk.getChildren(ZkHelper.ZOOKEEPER_TASKMANAGERS, false);
+                    List<String> nodeList = this.zk.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, false);
 
-                    de.tuberlin.aura.core.common.eventsystem.Event zkEvent = null;
+                    de.tuberlin.aura.core.common.eventsystem.Event zkEvent;
                     if (this.nodes.size() < nodeList.size()) {
                         // A node has been added.
                         MachineDescriptor newNode = null;
@@ -83,7 +89,7 @@ public class ZkTaskManagerWatcher implements Watcher {
                             }
                         }
 
-                        zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZkHelper.EVENT_TYPE_NODE_ADDED, newNode);
+                        zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_ADDED, newNode);
                     } else {
                         // A node has been removed.
                         String nodeName = null;
@@ -94,7 +100,7 @@ public class ZkTaskManagerWatcher implements Watcher {
                             }
                         }
 
-                        zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZkHelper.EVENT_TYPE_NODE_REMOVED, UUID.fromString(nodeName));
+                        zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_REMOVED, UUID.fromString(nodeName));
                     }
 
                     // Forward the event.
@@ -105,7 +111,7 @@ public class ZkTaskManagerWatcher implements Watcher {
             }
 
             // Stay interested in changes within the worker folder.
-            this.zk.getChildren(ZkHelper.ZOOKEEPER_TASKMANAGERS, this);
+            this.zk.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, this);
         } catch (IOException e) {
             LOG.error("Read from ZooKeeper failed", e);
         } catch (ClassNotFoundException e) {

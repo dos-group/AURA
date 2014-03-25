@@ -6,12 +6,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ *
+ */
 public final class ProcessExecutor {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private final Class<?> executeableClazz;
+
+    private Process process;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
+    /**
+     * @param executeableClazz
+     */
     public ProcessExecutor(final Class<?> executeableClazz) {
         // sanity check.
         if (executeableClazz == null)
@@ -29,17 +43,13 @@ public final class ProcessExecutor {
     }
 
     // ---------------------------------------------------
-    // Fields.
-    // ---------------------------------------------------
-
-    private final Class<?> executeableClazz;
-
-    private Process process;
-
-    // ---------------------------------------------------
     // Public.
     // ---------------------------------------------------
 
+    /**
+     * @param params
+     * @return
+     */
     public ProcessExecutor execute(String... params) {
 
         final String javaRuntime = System.getProperty("java.home") + "/bin/java";
@@ -65,6 +75,9 @@ public final class ProcessExecutor {
         return this;
     }
 
+    /**
+     *
+     */
     public void destroy() {
         if (process == null)
             throw new IllegalStateException("process == null");

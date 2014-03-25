@@ -1,20 +1,25 @@
 package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.ExecutionNode;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.TopologyBreadthFirstTraverser;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Visitor;
-import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
-import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
+import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
 public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology> {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private InfrastructureManager infrastructureManager;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
+    /**
+     * @param infrastructureManager
+     */
     public TopologyScheduler(final InfrastructureManager infrastructureManager) {
         // sanity check.
         if (infrastructureManager == null)
@@ -24,29 +29,30 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
     }
 
     // ---------------------------------------------------
-    // Fields.
+    // Public Methods.
     // ---------------------------------------------------
 
-    private InfrastructureManager infrastructureManager;
-
-    // ---------------------------------------------------
-    // Public.
-    // ---------------------------------------------------
-
+    /**
+     * @param topology
+     * @return
+     */
     @Override
     public AuraTopology apply(AuraTopology topology) {
 
         scheduleTopology(topology);
 
-        dispatcher.dispatchEvent(new TopologyStateTransitionEvent(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE));
+        dispatcher.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE));
 
         return topology;
     }
 
     // ---------------------------------------------------
-    // Private.
+    // Private Methods.
     // ---------------------------------------------------
 
+    /**
+     * @param topology
+     */
     private void scheduleTopology(AuraTopology topology) {
 
         // Scheduling.

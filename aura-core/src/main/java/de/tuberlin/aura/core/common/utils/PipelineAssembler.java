@@ -1,9 +1,9 @@
 package de.tuberlin.aura.core.common.utils;
 
+import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 
 public class PipelineAssembler {
 
@@ -19,7 +19,7 @@ public class PipelineAssembler {
 
             this.dispatcher = dispatcher;
 
-            this.phases = new ArrayList<AssemblyPhase<Object, Object>>();
+            this.phases = new ArrayList<>();
         }
 
         private final IEventDispatcher dispatcher;

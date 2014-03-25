@@ -1,17 +1,20 @@
 package de.tuberlin.aura.core.iosystem;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.slf4j.Logger;
 
-import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class QueueManager<T> {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private final static Logger LOG = org.slf4j.LoggerFactory.getLogger(QueueManager.class);
 
-    public static Map<TaskRuntimeContext, QueueManager> BINDINGS = new HashMap<TaskRuntimeContext, QueueManager>();
+    public static Map<UUID, QueueManager> BINDINGS = new HashMap<UUID, QueueManager>();
 
     private final Map<Integer, BufferQueue<T>> inputQueues;
 
@@ -26,15 +29,25 @@ public class QueueManager<T> {
     }
 
     // ---------------------------------------------------
-    // Public.
+    // Public Methods.
     // ---------------------------------------------------
 
-    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext, BufferQueue.FACTORY<F> queueFactory) {
+    /**
+     * @param taskID
+     * @param queueFactory
+     * @param <F>
+     * @return
+     */
+    public static <F> QueueManager<F> newInstance(UUID taskID, BufferQueue.FACTORY<F> queueFactory) {
         QueueManager<F> instance = new QueueManager<>(queueFactory);
-        BINDINGS.put(taskContext, instance);
+        BINDINGS.put(taskID, instance);
         return instance;
     }
 
+    /**
+     * @param gateIndex
+     * @return
+     */
     public BufferQueue<T> getInputQueue(int gateIndex) {
 
         if (inputQueues.containsKey(gateIndex)) {
@@ -46,6 +59,11 @@ public class QueueManager<T> {
         return queue;
     }
 
+    /**
+     * @param gateIndex
+     * @param channelIndex
+     * @return
+     */
     public BufferQueue<T> getOutputQueue(int gateIndex, int channelIndex) {
 
         final LongKey key = new LongKey(gateIndex, channelIndex);
@@ -62,6 +80,9 @@ public class QueueManager<T> {
     // Inner Classes.
     // ---------------------------------------------------
 
+    /**
+     *
+     */
     public enum GATE {
         IN,
         OUT

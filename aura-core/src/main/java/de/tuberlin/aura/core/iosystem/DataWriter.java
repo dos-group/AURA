@@ -1,5 +1,17 @@
 package de.tuberlin.aura.core.iosystem;
 
+import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
+import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
+import de.tuberlin.aura.core.memory.MemoryManager;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.SocketAddress;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -7,28 +19,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
-import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.local.LocalChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.serialization.ClassResolvers;
-import io.netty.handler.codec.serialization.ObjectDecoder;
-import io.netty.handler.codec.serialization.ObjectEncoder;
 
 
 // TODO: let the bufferQueue size be configurable
@@ -40,13 +30,11 @@ public class DataWriter {
 
     private final IEventDispatcher dispatcher;
 
-    private final EventLoopGroup workerGroup;
-
     private ExecutorService pollThreadExecutor;
 
-    public DataWriter(IEventDispatcher dispatcher, final EventLoopGroup workerGroup) {
+    public DataWriter(IEventDispatcher dispatcher) {
+
         this.dispatcher = dispatcher;
-        this.workerGroup = workerGroup;
 
         this.pollThreadExecutor = Executors.newCachedThreadPool();
     }
@@ -54,8 +42,11 @@ public class DataWriter {
     public <T extends Channel> ChannelWriter<T> bind(final UUID srcTaskID,
                                                      final UUID dstTaskID,
                                                      final OutgoingConnectionType<T> type,
-                                                     final SocketAddress address) {
-        return new ChannelWriter<>(type, srcTaskID, dstTaskID, address);
+                                                     final SocketAddress address,
+                                                     final NioEventLoopGroup eventLoopGroup,
+                                                     final MemoryManager.Allocator allocator) {
+
+        return new ChannelWriter<>(type, srcTaskID, dstTaskID, address, eventLoopGroup, allocator);
     }
 
     // ---------------------------------------------------
@@ -71,6 +62,8 @@ public class DataWriter {
         private final UUID dstID;
 
         private Channel channel;
+
+        private final EventLoopGroup eventLoopGroup;
 
         // poll thread
 
@@ -92,22 +85,31 @@ public class DataWriter {
 
         private AtomicBoolean gateOpen = new AtomicBoolean(false);
 
-        public ChannelWriter(final OutgoingConnectionType<T> type, final UUID srcID, final UUID dstID, final SocketAddress address) {
+        public ChannelWriter(final OutgoingConnectionType<T> type,
+                             final UUID srcID, final UUID dstID,
+                             final SocketAddress address,
+                             final EventLoopGroup eventLoopGroup,
+                             final MemoryManager.Allocator allocator) {
+
             this.srcID = srcID;
+
             this.dstID = dstID;
 
             this.awaitGateOpenLatch = new ResettableCountDownLatch(1);
 
-            Bootstrap bootstrap = type.bootStrap(workerGroup);
+            this.eventLoopGroup = eventLoopGroup;
+
+            Bootstrap bootstrap = type.bootStrap(this.eventLoopGroup);
             bootstrap.handler(new ChannelInitializer<T>() {
 
                 @Override
                 protected void initChannel(T ch) throws Exception {
                     ch.pipeline()
-                      .addLast(new ObjectDecoder(ClassResolvers.softCachingResolver(getClass().getClassLoader())))
-                      .addLast(new OpenCloseGateHandler())
-                      .addLast(new WritableHandler())
-                      .addLast(new ObjectEncoder());
+                            .addLast(KryoEventSerializer.getLengthDecoder())
+                            .addLast(new KryoEventSerializer.KryoOutboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(allocator, null)))
+                            .addLast(new KryoEventSerializer.KryoInboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(allocator, null)))
+                            .addLast(new OpenCloseGateHandler())
+                            .addLast(new WritableHandler());
                 }
             });
 
@@ -119,11 +121,11 @@ public class DataWriter {
 
         /**
          * Writes the event to the channel.
-         * 
+         * <p/>
          * If the the gate the channel is connected to is not open yet, the events are buffered in a
          * transferQueue. If this intermediate transferQueue is full, this method blocks until the
          * gate is opened.
-         * 
+         *
          * @param event
          */
         public void write(IOEvents.DataIOEvent event) {
@@ -229,7 +231,7 @@ public class DataWriter {
 
                         // either the thread is forced to shut down -> shutdown == true
                         // or gracefully, send events in transferQueue before shutdown -> shutdown
-                     // == false
+                        // == false
                     }
                 }
 
@@ -270,7 +272,7 @@ public class DataWriter {
 
                         // as the gate is closed, now events could be enqueued at this point
                         IOEvents.DataIOEvent closedGate =
-                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_FINISHED, srcID, dstID);
+                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK, srcID, dstID);
                         transferQueue.offer(closedGate);
 
                         break;
@@ -299,13 +301,13 @@ public class DataWriter {
                         pollResult = pollThreadExecutor.submit(pollThread);
 
                         future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                                                srcID,
-                                                                                dstID));
+                                srcID,
+                                dstID));
                         final IOEvents.GenericIOEvent event =
                                 new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                                            ChannelWriter.this,
-                                                            srcID,
-                                                            dstID);
+                                        ChannelWriter.this,
+                                        srcID,
+                                        dstID);
                         event.setChannel(future.channel());
                         dispatcher.dispatchEvent(event);
 
@@ -317,7 +319,7 @@ public class DataWriter {
             }
         }
 
-    /**
+        /**
          * Sets the writable flag for this channel.
          */
         private class WritableHandler extends ChannelInboundHandlerAdapter {
@@ -364,7 +366,7 @@ public class DataWriter {
     public static class LocalConnection extends AbstractConnection<LocalChannel> {
 
         public LocalConnection() {
-           super();
+            super();
         }
 
         public LocalConnection(int bufferSize) {
@@ -375,14 +377,12 @@ public class DataWriter {
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup).channel(LocalChannel.class)
-            // the mark the outbound bufferQueue has to reach in order to change the writable state
-           // of a
-            // channel true
-              .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-              // the mark the outbound bufferQueue has to reach in order to change the writable
-      // state of
-              // a channel false
-              .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
+                    // the mark the outbound bufferQueue has to reach in order
+                    // to change the writable state of a channel true
+                    .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
+                            // the mark the outbound bufferQueue has to reach in order
+                            // to change the writable state of a channel false
+                    .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
 
             return bs;
         }
@@ -391,7 +391,7 @@ public class DataWriter {
     public static class NetworkConnection extends AbstractConnection<SocketChannel> {
 
         public NetworkConnection() {
- super();
+            super();
         }
 
         public NetworkConnection(int bufferSize) {
@@ -402,22 +402,22 @@ public class DataWriter {
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup).channel(NioSocketChannel.class)
-            // true, periodically heartbeats from tcp
-              .option(ChannelOption.SO_KEEPALIVE, true)
-              // false, means that messages get only sent if the size of the data reached a relevant
-              // amount.
-              .option(ChannelOption.TCP_NODELAY, false)
-              // size of the system lvl send bufferQueue PER SOCKET
-              // -> bufferQueue size, as we always have only 1 channel per socket in the client case
-              .option(ChannelOption.SO_SNDBUF, bufferSize)
-              // the mark the outbound bufferQueue has to reach in order to change the writable
-              // state of
-             // a channel true
-              .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-              // the mark the outbound bufferQueue has to reach in order to change the writable
-              // state of
-            // a channel false
-              .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
+                    // true, periodically heartbeats from tcp
+                    .option(ChannelOption.SO_KEEPALIVE, true)
+                            // false, means that messages get only sent if the size of the data reached a relevant
+                            // amount.
+                    .option(ChannelOption.TCP_NODELAY, false)
+                            // size of the system lvl send bufferQueue PER SOCKET
+                            // -> bufferQueue size, as we always have only 1 channel per socket in the client case
+                    .option(ChannelOption.SO_SNDBUF, bufferSize)
+                            // the mark the outbound bufferQueue has to reach in order to change the writable
+                            // state of
+                            // a channel true
+                    .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
+                            // the mark the outbound bufferQueue has to reach in order to change the writable
+                            // state of
+                            // a channel false
+                    .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
 
             return bs;
         }

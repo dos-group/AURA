@@ -1,5 +1,8 @@
 package de.tuberlin.aura.core.descriptors;
 
+import de.tuberlin.aura.core.task.usercode.UserCode;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -7,20 +10,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import de.tuberlin.aura.core.task.usercode.UserCode;
-
 public final class Descriptors {
 
     // Disallow instantiation.
-    private Descriptors() {}
+    private Descriptors() {
+    }
 
     /**
-    *
-    */
+     *
+     */
     public static final class MachineDescriptor implements Serializable {
 
-        private static final long serialVersionUID = -826435800717651651L;
+        private static final long serialVersionUID = -1L;
 
         public MachineDescriptor(InetAddress address, int dataPort, int controlPort, HardwareDescriptor hardware) {
             this(UUID.randomUUID(), address, dataPort, controlPort, hardware);
@@ -88,24 +89,24 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("MachineDescriptor = {")
-                                        .append(" uid = " + uid.toString())
-                                        .append(", ")
-                                        .append(" netAddress = " + dataAddress)
-                                        .append(", ")
-                                        .append(" controlAddress = " + controlAddress)
-                                        .append(", ")
-                                        .append(hardware)
-                                        .append(" }")
-                                        .toString();
+                    .append(" uid = " + uid.toString())
+                    .append(", ")
+                    .append(" netAddress = " + dataAddress)
+                    .append(", ")
+                    .append(" controlAddress = " + controlAddress)
+                    .append(", ")
+                    .append(hardware)
+                    .append(" }")
+                    .toString();
         }
     }
 
     public static final class HardwareDescriptor implements Serializable {
 
         /**
-		 *
-		 */
-        private static final long serialVersionUID = -1014379658418868396L;
+         *
+         */
+        private static final long serialVersionUID = -1L;
 
         public HardwareDescriptor(int cpuCores, long sizeOfRAM, HDDDescriptor hdd) {
             this(UUID.randomUUID(), cpuCores, sizeOfRAM, hdd);
@@ -153,24 +154,24 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("HardwareDescriptor = {")
-                                        .append(" uid = " + uid.toString())
-                                        .append(", ")
-                                        .append(" cpuCores = " + cpuCores)
-                                        .append(", ")
-                                        .append(" sizeOfRAM = " + sizeOfRAM)
-                                        .append(", ")
-                                        .append(hdd)
-                                        .append(" }")
-                                        .toString();
+                    .append(" uid = " + uid.toString())
+                    .append(", ")
+                    .append(" cpuCores = " + cpuCores)
+                    .append(", ")
+                    .append(" sizeOfRAM = " + sizeOfRAM)
+                    .append(", ")
+                    .append(hdd)
+                    .append(" }")
+                    .toString();
         }
     }
 
     public static final class HDDDescriptor implements Serializable {
 
         /**
-		 *
-		 */
-        private static final long serialVersionUID = -259046081534037297L;
+         *
+         */
+        private static final long serialVersionUID = -1L;
 
         public HDDDescriptor(long sizeOfHDD) {
             this(UUID.randomUUID(), sizeOfHDD);
@@ -208,11 +209,11 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("HDDDescriptor = {")
-                                        .append(" uid = " + uid.toString())
-                                        .append(", ")
-                                        .append(" sizeOfHDD = " + sizeOfHDD)
-                                        .append(" }")
-                                        .toString();
+                    .append(" uid = " + uid.toString())
+                    .append(", ")
+                    .append(" sizeOfHDD = " + sizeOfHDD)
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -221,7 +222,7 @@ public final class Descriptors {
      */
     public static final class TaskDescriptor implements Serializable {
 
-        private static final long serialVersionUID = 7425151926496852885L;
+        private static final long serialVersionUID = -1L;
 
         public TaskDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final UserCode userCode) {
             // sanity check.
@@ -294,11 +295,11 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("TaskDescriptor = {")
-                                        .append(" machine = " + machine.toString() + ", ")
-                                        .append(" uid = " + taskID.toString() + ", ")
-                                        .append(" name = " + name)
-                                        .append(" }")
-                                        .toString();
+                    .append(" machine = " + machine.toString() + ", ")
+                    .append(" uid = " + taskID.toString() + ", ")
+                    .append(" name = " + name)
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -307,7 +308,7 @@ public final class Descriptors {
      */
     public static final class TaskBindingDescriptor implements Serializable {
 
-        private static final long serialVersionUID = -2803770527065206844L;
+        private static final long serialVersionUID = -1L;
 
         public TaskBindingDescriptor(final TaskDescriptor task,
                                      final List<List<TaskDescriptor>> inputGateBindings,
@@ -354,11 +355,11 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("TaskBindingDescriptor = {")
-            // .append( " task = " + task.toString() + ", " )
-                                        .append(" inputGates = " + inputGateBindings.toString() + ", ")
-                                        .append(" outputGates = " + outputGateBindings.toString())
-                                        .append(" }")
-                                        .toString();
+                    // .append( " task = " + task.toString() + ", " )
+                    .append(" inputGates = " + inputGateBindings.toString() + ", ")
+                    .append(" outputGates = " + outputGateBindings.toString())
+                    .append(" }")
+                    .toString();
         }
     }
 
@@ -367,7 +368,7 @@ public final class Descriptors {
      */
     public static final class TaskDeploymentDescriptor implements Serializable {
 
-        private static final long serialVersionUID = 6533439159854768522L;
+        private static final long serialVersionUID = -1L;
 
         public TaskDeploymentDescriptor(final TaskDescriptor taskDescriptor,
                                         final TaskBindingDescriptor taskBindingDescriptor,
@@ -420,10 +421,10 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("TaskDeploymentDescriptor = {")
-                                        .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-                                        .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
-                                        .append(" }")
-                                        .toString();
+                    .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
+                    .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
+                    .append(" }")
+                    .toString();
         }
     }
 }

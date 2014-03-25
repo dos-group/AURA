@@ -1,5 +1,7 @@
 package de.tuberlin.aura.core.common.eventsystem;
 
+import org.apache.log4j.Logger;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.InvocationTargetException;
@@ -8,12 +10,10 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
-
 public abstract class EventHandler implements IEventHandler {
 
     // ---------------------------------------------------
-    // Inner Classes.
+    // Annotations.
     // ---------------------------------------------------
 
     @Retention(RetentionPolicy.RUNTIME)
@@ -22,19 +22,6 @@ public abstract class EventHandler implements IEventHandler {
         Class<? extends Event> event();
 
         String type() default "";
-    }
-
-    // ---------------------------------------------------
-    // Constructors.
-    // ---------------------------------------------------
-
-    public EventHandler() {
-
-        this.eventHandlerMap = new HashMap<Class<?>, Method>();
-
-        this.multiTypeEventHandlerMap = new HashMap<Class<?>, Map<String, Method>>();
-
-        register(this.getClass());
     }
 
     // ---------------------------------------------------
@@ -48,9 +35,28 @@ public abstract class EventHandler implements IEventHandler {
     private final Map<Class<?>, Map<String, Method>> multiTypeEventHandlerMap;
 
     // ---------------------------------------------------
-    // Public.
+    // Constructors.
     // ---------------------------------------------------
 
+    /**
+     *
+     */
+    public EventHandler() {
+
+        this.eventHandlerMap = new HashMap<>();
+
+        this.multiTypeEventHandlerMap = new HashMap<>();
+
+        register(this.getClass());
+    }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
+    /**
+     * @param event
+     */
     @Override
     public void handleEvent(final Event event) {
         Method m = eventHandlerMap.get(event.getClass());
@@ -79,18 +85,24 @@ public abstract class EventHandler implements IEventHandler {
     }
 
     // ---------------------------------------------------
-    // Protected.
+    // Protected Methods.
     // ---------------------------------------------------
 
+    /**
+     * @param e
+     */
     protected void handleUnknownEvent(final Event e) {
         // throw new IllegalStateException( e.toString() );
         LOG.debug("unknown event " + e);
     }
 
     // ---------------------------------------------------
-    // Private.
+    // Private Methods.
     // ---------------------------------------------------
 
+    /**
+     * @param clazz
+     */
     private void register(final Class<?> clazz) {
         for (final Method m : clazz.getDeclaredMethods()) {
             if (m.isAnnotationPresent(Handle.class)) {
@@ -99,15 +111,15 @@ public abstract class EventHandler implements IEventHandler {
                     final Handle handle = m.getAnnotation(Handle.class);
                     if ("".equals(handle.type())) {
 
-                        if (eventHandlerMap.containsKey(handle.type()))
-                            throw new IllegalStateException("event already registered");
+                        //if (eventHandlerMap.containsKey(handle.type()))
+                        //    throw new IllegalStateException("event already registered");
 
                         eventHandlerMap.put(handle.event(), m);
 
                     } else {
                         Map<String, Method> handlerTable = multiTypeEventHandlerMap.get(handle.event());
                         if (handlerTable == null) {
-                            handlerTable = new Hashtable<String, Method>();
+                            handlerTable = new Hashtable<>();
                             multiTypeEventHandlerMap.put(handle.event(), handlerTable);
                         }
 

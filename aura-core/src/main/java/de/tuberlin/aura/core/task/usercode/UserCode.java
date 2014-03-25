@@ -6,8 +6,30 @@ import java.util.List;
 
 public final class UserCode implements Serializable {
 
-    private static final long serialVersionUID = 4279439116924482785L;
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
+    private static final long serialVersionUID = -1L;
+
+    public final String className;
+
+    public final String simpleClassName;
+
+    public final List<String> classDependencies;
+
+    public final byte[] classByteCode;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
+
+    /**
+     * @param className
+     * @param simpleClassName
+     * @param classDependencies
+     * @param byteCode
+     */
     public UserCode(final String className, final String simpleClassName, final List<String> classDependencies, final byte[] byteCode) {
         // sanity check.
         if (className == null)
@@ -27,12 +49,4 @@ public final class UserCode implements Serializable {
 
         this.classByteCode = byteCode;
     }
-
-    public final String className;
-
-    public final String simpleClassName;
-
-    public final List<String> classDependencies;
-
-    public final byte[] classByteCode;
 }
