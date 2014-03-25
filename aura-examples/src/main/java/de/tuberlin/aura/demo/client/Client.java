@@ -32,7 +32,8 @@ public final class Client {
     private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
-    private Client() {}
+    private Client() {
+    }
 
     /**
      *
@@ -209,8 +210,9 @@ public final class Client {
         LOG.addAppender(consoleAppender);
         LOG.setLevel(Level.DEBUG);
 
+        final String measurementPath = "/home/teots/Desktop/measurements";
         final String zookeeperAddress = "localhost:2181";
-        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4, measurementPath);
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
@@ -223,17 +225,17 @@ public final class Client {
         // .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
         atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-            .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Task2", 3, 1), Task2Exe.class)
-            .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
-            .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
+                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Node(UUID.randomUUID(), "Task2", 3, 1), Task2Exe.class)
+                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
+                .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
         final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
         atb2.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-            .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
+                .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
 
         final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
 

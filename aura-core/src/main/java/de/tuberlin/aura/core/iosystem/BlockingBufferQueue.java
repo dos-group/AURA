@@ -1,5 +1,8 @@
 package de.tuberlin.aura.core.iosystem;
 
+import de.tuberlin.aura.core.statistic.AccumulatedLatencyMeasurement;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
+import de.tuberlin.aura.core.statistic.MeasurementType;
 import org.apache.log4j.Logger;
 
 import java.util.Collection;
@@ -20,9 +23,11 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
 
     private int counter;
 
+    private MeasurementManager measurementManager;
 
-    BlockingBufferQueue(String name) {
+    BlockingBufferQueue(String name, MeasurementManager measurementManager) {
         this.name = name;
+        this.measurementManager = measurementManager;
         this.backingQueue = new LinkedBlockingQueue<>();
         //this.backingQueue = new ArrayBlockingQueue<>(1024, true);
     }
@@ -36,8 +41,11 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         ++this.counter;
 
         if (this.counter == 1000) {
-            LOG.info(this.name + ": TIME_IN_QUEUE|" + Double.toString((double) this.sumLatency / (double) this.counter) + "|" +
-                    Double.toString((double) this.sumQueueSize / (double) this.counter));
+            AccumulatedLatencyMeasurement m = new AccumulatedLatencyMeasurement(MeasurementType.LATENCY, "Queue: " + this.name, -1, -1, (double) this.sumLatency / (double) this.counter, -1);
+            this.measurementManager.add(m);
+
+//            LOG.info(this.name + ": TIME_IN_QUEUE|" + Double.toString((double) this.sumLatency / (double) this.counter) + "|" +
+//                    Double.toString((double) this.sumQueueSize / (double) this.counter));
 
             this.counter = 0;
             this.sumLatency = 0;
@@ -68,8 +76,8 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     public static class Factory<F> implements BufferQueueFactory<F> {
 
         @Override
-        public BufferQueue<F> newInstance(String name) {
-            return new BlockingBufferQueue<F>(name);
+        public BufferQueue<F> newInstance(String name, MeasurementManager measurementManager) {
+            return new BlockingBufferQueue<F>(name, measurementManager);
         }
     }
 

@@ -16,6 +16,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
@@ -268,6 +269,9 @@ public final class TaskManager implements WM2TMProtocol {
                     case TASK_STATE_FINISHED: {
                         taskContextMap.remove(context.task.taskID);
                         topologyTaskContextMap.get(context.task.topologyID).remove(context);
+
+                        MeasurementManager.fireEvent(MeasurementManager.TASK_FINISHED + "-" + context.task.name + "-" + context.task.taskIndex);
+
                         context.close();
                     }
                     break;
@@ -495,11 +499,13 @@ public final class TaskManager implements WM2TMProtocol {
         int dataPort = -1;
         int controlPort = -1;
         String zkServer = null;
-        if (args.length == 3) {
+        String measurementPath = null;
+        if (args.length == 4) {
             try {
                 zkServer = args[0];
                 dataPort = Integer.parseInt(args[1]);
                 controlPort = Integer.parseInt(args[2]);
+                measurementPath = args[3];
             } catch (NumberFormatException e) {
                 System.err.println("Argument" + " must be an integer");
                 System.exit(1);
@@ -508,6 +514,8 @@ public final class TaskManager implements WM2TMProtocol {
             System.err.println("only two numeric arguments allowed: dataPort, controlPort");
             System.exit(1);
         }
+
+        MeasurementManager.setRoot(measurementPath);
 
         long start = System.nanoTime();
         new TaskManager(zkServer, dataPort, controlPort);

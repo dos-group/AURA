@@ -1,10 +1,13 @@
 package de.tuberlin.aura.demo.client;
 
 import de.tuberlin.aura.client.api.AuraClient;
+import de.tuberlin.aura.client.executors.LocalClusterExecutor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import de.tuberlin.aura.core.statistic.MeasurementType;
+import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import de.tuberlin.aura.core.task.common.BenchmarkRecord.SanityBenchmarkRecord;
 import de.tuberlin.aura.core.task.common.Record;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
@@ -71,7 +74,8 @@ public final class SanityClient {
 //                }
             }
 
-            LOG.info("SOURCE|" + Integer.toString(send));
+            this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
+//            LOG.info("SOURCE|" + Integer.toString(send));
 
             final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
             for (int index = 0; index < outputs.size(); ++index) {
@@ -135,8 +139,10 @@ public final class SanityClient {
                 checkIfSuspended();
             }
 
-            LOG.error("Buffers: " + Integer.toString(bufferCount));
-            LOG.error("Correct buffers: " + Integer.toString(correct));
+            this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
+            this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
+//            LOG.error("Buffers: " + Integer.toString(bufferCount));
+//            LOG.error("Correct buffers: " + Integer.toString(correct));
 
             closeGate(0);
         }
@@ -176,7 +182,8 @@ public final class SanityClient {
                 checkIfSuspended();
             }
 
-            LOG.info("SINK|" + Integer.toString(receivedRecords));
+            this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SINK", receivedRecords));
+            // LOG.info("SINK|" + Integer.toString(receivedRecords));
 
             closeGate(0);
         }
@@ -194,9 +201,10 @@ public final class SanityClient {
         LOG.addAppender(consoleAppender);
         LOG.setLevel(Level.INFO);
 
-        final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
-        // final String zookeeperAddress = "localhost:2181";
-        // final LocalClusterExecutor lce = new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6);
+        final String measurementPath = "/home/teots/Desktop/measurements";
+        //final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
+        final String zookeeperAddress = "localhost:2181";
+        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6, measurementPath);
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
@@ -208,7 +216,7 @@ public final class SanityClient {
 
         AuraTopology at;
 
-        for (int i = 1; i <= 10; ++i) {
+        for (int i = 1; i <= 1; ++i) {
             at = atb1.build("Job " + Integer.toString(i), EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
             ac.submitTopology(at, null);
 
@@ -225,6 +233,6 @@ public final class SanityClient {
             e.printStackTrace();
         }
 
-        //lce.shutdown();
+        lce.shutdown();
     }
 }

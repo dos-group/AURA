@@ -1,9 +1,5 @@
 package de.tuberlin.aura.core.task.common;
 
-import java.util.*;
-
-import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -15,10 +11,14 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.TaskStateTransitionEvent;
 import de.tuberlin.aura.core.iosystem.QueueManager;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.gates.InputGate;
 import de.tuberlin.aura.core.task.gates.OutputGate;
+import org.apache.log4j.Logger;
+
+import java.util.*;
 
 /**
  *
@@ -60,7 +60,10 @@ public final class TaskRuntimeContext {
 
         this.invokeableClass = invokeableClass;
 
-        this.queueManager = QueueManager.newInstance(this, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>());
+        this.measurementManager = MeasurementManager.getInstance("/tm/" + this.task.name + "_" + this.task.taskIndex, "Task");
+        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + this.task.name + "-" + this.task.taskIndex, this.measurementManager);
+
+        this.queueManager = QueueManager.newInstance(this, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), this.measurementManager);
 
         if (taskBinding.inputGateBindings.size() > 0) {
             this.inputGates = new ArrayList<InputGate>(taskBinding.inputGateBindings.size());
@@ -138,6 +141,8 @@ public final class TaskRuntimeContext {
 
     public final QueueManager<IOEvents.DataIOEvent> queueManager;
 
+    public final MeasurementManager measurementManager;
+
     private TaskState state;
 
     private TaskInvokeable invokeable;
@@ -214,10 +219,10 @@ public final class TaskRuntimeContext {
     @Override
     public String toString() {
         return (new StringBuilder()).append("TaskRuntimeContext = {")
-                                    .append(" task = " + task + ", ")
-                                    .append(" taskBinding = " + taskBinding + ", ")
-                                    .append(" state = " + state.toString() + ", ")
-                                    .append(" }")
-                                    .toString();
+                .append(" task = " + task + ", ")
+                .append(" taskBinding = " + taskBinding + ", ")
+                .append(" state = " + state.toString() + ", ")
+                .append(" }")
+                .toString();
     }
 }

@@ -8,6 +8,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents.MonitoringEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZkHelper;
 import org.apache.log4j.ConsoleAppender;
@@ -148,11 +149,13 @@ public class WorkloadManager implements ClientWMProtocol {
         int dataPort = -1;
         int controlPort = -1;
         String zkServer = null;
-        if (args.length == 3) {
+        String measurementPath = null;
+        if (args.length == 4) {
             try {
                 zkServer = args[0];
                 dataPort = Integer.parseInt(args[1]);
                 controlPort = Integer.parseInt(args[2]);
+                measurementPath = args[3];
             } catch (NumberFormatException e) {
                 System.err.println("Argument" + " must be an integer");
                 System.exit(1);
@@ -161,6 +164,8 @@ public class WorkloadManager implements ClientWMProtocol {
             System.err.println("only two numeric arguments allowed: dataPort, controlPort");
             System.exit(1);
         }
+
+        MeasurementManager.setRoot(measurementPath);
 
         long start = System.nanoTime();
         new WorkloadManager(zkServer, dataPort, controlPort);
