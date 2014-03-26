@@ -1,5 +1,7 @@
 package de.tuberlin.aura.workloadmanager;
 
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
@@ -13,7 +15,6 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyState;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
-import org.apache.log4j.Logger;
 
 public class TopologyController extends EventDispatcher {
 
@@ -61,39 +62,36 @@ public class TopologyController extends EventDispatcher {
         this.assemblyPipeline = new AssemblyPipeline(this.topologyFSM);
 
         this.assemblyPipeline.addPhase(new TopologyParallelizer())
-                .addPhase(new TopologyScheduler(context.infrastructureManager))
-                .addPhase(new TopologyDeployer(context.rpcManager));
+                             .addPhase(new TopologyScheduler(context.infrastructureManager))
+                             .addPhase(new TopologyDeployer(context.rpcManager));
 
-        this.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE,
-                new IEventHandler() {
+        this.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
 
-                    private int finalStateCnt = 0;
+            private int finalStateCnt = 0;
 
-                    @Override
-                    public void handleEvent(Event e) {
-                        final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
-                        final AuraDirectedGraph.ExecutionNode en = topology.executionNodeMap.get(event.getTaskID());
+            @Override
+            public void handleEvent(Event e) {
+                final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
+                final AuraDirectedGraph.ExecutionNode en = topology.executionNodeMap.get(event.getTaskID());
 
-                        // sanity check.
-                        if (en == null)
-                            throw new IllegalStateException();
+                // sanity check.
+                if (en == null)
+                    throw new IllegalStateException();
 
-                        en.setState((TaskStates.TaskState) event.getPayload());
+                en.setState((TaskStates.TaskState) event.getPayload());
 
-                        // It is at the moment a bit clumsy to detect the processing end.
-                        // We should introduce a dedicated "processing end" event...
-                        if (en.getState() == TaskStates.TaskState.TASK_STATE_FINISHED ||
-                                en.getState() == TaskStates.TaskState.TASK_STATE_CANCELED ||
-                                en.getState() == TaskStates.TaskState.TASK_STATE_FAILURE)
-                            ++finalStateCnt;
+                // It is at the moment a bit clumsy to detect the processing end.
+                // We should introduce a dedicated "processing end" event...
+                if (en.getState() == TaskStates.TaskState.TASK_STATE_FINISHED || en.getState() == TaskStates.TaskState.TASK_STATE_CANCELED
+                        || en.getState() == TaskStates.TaskState.TASK_STATE_FAILURE)
+                    ++finalStateCnt;
 
-                        if (finalStateCnt == topology.executionNodeMap.size()) {
-                            context.workloadManager.unregisterTopology(topology.topologyID);
-                            TopologyController.this.removeAllEventListener();
-                        }
-                    }
+                if (finalStateCnt == topology.executionNodeMap.size()) {
+                    context.workloadManager.unregisterTopology(topology.topologyID);
+                    TopologyController.this.removeAllEventListener();
                 }
-        );
+            }
+        });
     }
 
     // ---------------------------------------------------
@@ -168,119 +166,115 @@ public class TopologyController extends EventDispatcher {
                     }
                 };
 
-        final StateMachine.FiniteStateMachineBuilder<TopologyState, TopologyTransition> topologyFSMBuilder
-                = new StateMachine.FiniteStateMachineBuilder<>(TopologyState.class, TopologyTransition.class, TopologyState.ERROR);
+        final StateMachine.FiniteStateMachineBuilder<TopologyState, TopologyTransition> topologyFSMBuilder =
+                new StateMachine.FiniteStateMachineBuilder<>(TopologyState.class, TopologyTransition.class, TopologyState.ERROR);
 
-        final StateMachine.FiniteStateMachine<TopologyState, TopologyTransition> topologyFSM = topologyFSMBuilder
-                .defineState(TopologyState.TOPOLOGY_STATE_CREATED)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE, TopologyState.TOPOLOGY_STATE_PARALLELIZED)
-                .defineState(TopologyState.TOPOLOGY_STATE_PARALLELIZED)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, TopologyState.TOPOLOGY_STATE_SCHEDULED)
-                .defineState(TopologyState.TOPOLOGY_STATE_SCHEDULED)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, TopologyState.TOPOLOGY_STATE_DEPLOYED)
-                .defineState(TopologyState.TOPOLOGY_STATE_DEPLOYED)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN, TopologyState.TOPOLOGY_STATE_RUNNING, runTransitionConstraint)
-                .defineState(TopologyState.TOPOLOGY_STATE_RUNNING)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FINISH, TopologyState.TOPOLOGY_STATE_FINISHED, finishTransitionConstraint)
-                .and().addTransition(TopologyTransition.TOPOLOGY_TRANSITION_CANCEL, TopologyState.TOPOLOGY_STATE_CANCELED, cancelTransitionConstraint)
-                .and().addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FAIL, TopologyState.TOPOLOGY_STATE_FAILURE, failureTransitionConstraint)
-                .defineState(TopologyState.TOPOLOGY_STATE_FINISHED)
-                .noTransition()
-                .defineState(TopologyState.TOPOLOGY_STATE_CANCELED)
-                .noTransition()
-                .defineState(TopologyState.TOPOLOGY_STATE_FAILURE)
-                .noTransition()
-                .defineState(TopologyState.ERROR)
-                .noTransition()
-                .setInitialState(TopologyState.TOPOLOGY_STATE_CREATED)
-                .build();
+        final StateMachine.FiniteStateMachine<TopologyState, TopologyTransition> topologyFSM =
+                topologyFSMBuilder.defineState(TopologyState.TOPOLOGY_STATE_CREATED)
+                                  .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE, TopologyState.TOPOLOGY_STATE_PARALLELIZED)
+                                  .defineState(TopologyState.TOPOLOGY_STATE_PARALLELIZED)
+                                  .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, TopologyState.TOPOLOGY_STATE_SCHEDULED)
+                                  .defineState(TopologyState.TOPOLOGY_STATE_SCHEDULED)
+                                  .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, TopologyState.TOPOLOGY_STATE_DEPLOYED)
+                                  .defineState(TopologyState.TOPOLOGY_STATE_DEPLOYED)
+                                  .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN,
+                                          TopologyState.TOPOLOGY_STATE_RUNNING,
+                                          runTransitionConstraint)
+                                  .defineState(TopologyState.TOPOLOGY_STATE_RUNNING)
+                                  .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FINISH,
+                                          TopologyState.TOPOLOGY_STATE_FINISHED,
+                                          finishTransitionConstraint)
+                                  .and()
+                                  .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_CANCEL,
+                                          TopologyState.TOPOLOGY_STATE_CANCELED,
+                                          cancelTransitionConstraint)
+                                  .and()
+                                  .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FAIL,
+                                          TopologyState.TOPOLOGY_STATE_FAILURE,
+                                          failureTransitionConstraint)
+                                  .defineState(TopologyState.TOPOLOGY_STATE_FINISHED)
+                                  .noTransition()
+                                  .defineState(TopologyState.TOPOLOGY_STATE_CANCELED)
+                                  .noTransition()
+                                  .defineState(TopologyState.TOPOLOGY_STATE_FAILURE)
+                                  .noTransition()
+                                  .defineState(TopologyState.ERROR)
+                                  .noTransition()
+                                  .setInitialState(TopologyState.TOPOLOGY_STATE_CREATED)
+                                  .build();
 
-        topologyFSM.addGlobalStateListener(
-                new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+        topologyFSM.addGlobalStateListener(new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
 
-                    @Override
-                    public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                        LOG.info("CHANGE STATE OF TOPOLOGY '" + topology.name
-                                + "' [" + topology.topologyID + "] FROM "
-                                + previousState + " TO " + state
-                                + "  [" + transition.toString() + "]");
-                    }
-                }
-        );
+            @Override
+            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
+                LOG.info("CHANGE STATE OF TOPOLOGY '" + topology.name + "' [" + topology.topologyID + "] FROM " + previousState + " TO " + state
+                        + "  [" + transition.toString() + "]");
+            }
+        });
 
-        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_RUNNING,
-                new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_RUNNING, new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
 
-                    @Override
-                    public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
+            @Override
+            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
 
-                        AuraDirectedGraph.TopologyBreadthFirstTraverser.traverse(topology,
-                                new AuraDirectedGraph.Visitor<AuraDirectedGraph.Node>() {
-
-                                    @Override
-                                    public void visit(final AuraDirectedGraph.Node element) {
-
-                                        for (final AuraDirectedGraph.ExecutionNode en : element.getExecutionNodes()) {
-
-                                            final IOEvents.TaskControlIOEvent transitionUpdate =
-                                                    new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
-
-                                            transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_RUN));
-                                            transitionUpdate.setTaskID(en.getTaskDescriptor().taskID);
-                                            transitionUpdate.setTopologyID(en.getTaskDescriptor().topologyID);
-
-                                            ioManager.sendEvent(en.getTaskDescriptor().getMachineDescriptor(), transitionUpdate);
-                                        }
-                                    }
-                                }
-                        );
-                    }
-                }
-        );
-
-        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_FAILURE,
-                new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+                AuraDirectedGraph.TopologyBreadthFirstTraverser.traverse(topology, new AuraDirectedGraph.Visitor<AuraDirectedGraph.Node>() {
 
                     @Override
-                    public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
+                    public void visit(final AuraDirectedGraph.Node element) {
 
-                        ioManager.sendEvent(topology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE));
+                        for (final AuraDirectedGraph.ExecutionNode en : element.getExecutionNodes()) {
 
-                        AuraDirectedGraph.TopologyBreadthFirstTraverser.traverse(topology,
-                                new AuraDirectedGraph.Visitor<AuraDirectedGraph.Node>() {
+                            final IOEvents.TaskControlIOEvent transitionUpdate =
+                                    new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
 
-                                    @Override
-                                    public void visit(final AuraDirectedGraph.Node element) {
-                                        for (final AuraDirectedGraph.ExecutionNode en : element.getExecutionNodes()) {
+                            transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_RUN));
+                            transitionUpdate.setTaskID(en.getTaskDescriptor().taskID);
+                            transitionUpdate.setTopologyID(en.getTaskDescriptor().topologyID);
 
-                                            final IOEvents.TaskControlIOEvent transitionUpdate =
-                                                    new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
-
-                                            transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_CANCEL));
-                                            transitionUpdate.setTaskID(en.getTaskDescriptor().taskID);
-                                            transitionUpdate.setTopologyID(en.getTaskDescriptor().topologyID);
-
-                                            if (en.getState().equals(TaskStates.TaskState.TASK_STATE_RUNNING)) {
-                                                ioManager.sendEvent(en.getTaskDescriptor().getMachineDescriptor(), transitionUpdate);
-                                            }
-                                        }
-                                    }
-                                }
-                        );
+                            ioManager.sendEvent(en.getTaskDescriptor().getMachineDescriptor(), transitionUpdate);
+                        }
                     }
-                }
-        );
+                });
+            }
+        });
 
-        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_FINISHED,
-                new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_FAILURE, new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+
+            @Override
+            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
+
+                ioManager.sendEvent(topology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE));
+
+                AuraDirectedGraph.TopologyBreadthFirstTraverser.traverse(topology, new AuraDirectedGraph.Visitor<AuraDirectedGraph.Node>() {
 
                     @Override
-                    public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                        // Send to the client the finish notification...
-                        ioManager.sendEvent(topology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED));
+                    public void visit(final AuraDirectedGraph.Node element) {
+                        for (final AuraDirectedGraph.ExecutionNode en : element.getExecutionNodes()) {
+
+                            final IOEvents.TaskControlIOEvent transitionUpdate =
+                                    new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
+
+                            transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_CANCEL));
+                            transitionUpdate.setTaskID(en.getTaskDescriptor().taskID);
+                            transitionUpdate.setTopologyID(en.getTaskDescriptor().topologyID);
+
+                            if (en.getState().equals(TaskStates.TaskState.TASK_STATE_RUNNING)) {
+                                ioManager.sendEvent(en.getTaskDescriptor().getMachineDescriptor(), transitionUpdate);
+                            }
+                        }
                     }
-                }
-        );
+                });
+            }
+        });
+
+        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_FINISHED, new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+
+            @Override
+            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
+                // Send to the client the finish notification...
+                ioManager.sendEvent(topology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED));
+            }
+        });
 
         return topologyFSM;
     }

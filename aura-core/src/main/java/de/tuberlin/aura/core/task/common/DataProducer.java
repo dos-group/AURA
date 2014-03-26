@@ -1,10 +1,10 @@
 package de.tuberlin.aura.core.task.common;
 
 
+import java.util.UUID;
+
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryManager;
-
-import java.util.UUID;
 
 public interface DataProducer {
 

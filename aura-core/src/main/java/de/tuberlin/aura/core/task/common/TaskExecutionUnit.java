@@ -1,13 +1,14 @@
 package de.tuberlin.aura.core.task.common;
 
-import de.tuberlin.aura.core.common.statemachine.StateMachine;
-import de.tuberlin.aura.core.memory.MemoryManager;
-import org.apache.log4j.Logger;
-
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.log4j.Logger;
+
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.memory.MemoryManager;
 
 public final class TaskExecutionUnit {
 
@@ -141,12 +142,8 @@ public final class TaskExecutionUnit {
      * @param taskDriverCtx
      */
     private void unregisterTask(final TaskDriverContext taskDriverCtx) {
-        executionManager.dispatchEvent(
-                new TaskExecutionManager.TaskExecutionEvent(
-                        TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
-                        taskDriverCtx
-                )
-        );
+        executionManager.dispatchEvent(new TaskExecutionManager.TaskExecutionEvent(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
+                                                                                   taskDriverCtx));
     }
 
     /**
@@ -178,48 +175,53 @@ public final class TaskExecutionUnit {
                 final TaskDriverContext taskDriverCtx = currentTaskCtx;
 
                 currentTaskCtx.taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
-                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState, TaskStates.TaskTransition transition, TaskStates.TaskState state) {
-                                executeLatch.countDown();
-                            }
-                        }
-                );
+                                                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+
+                                                            @Override
+                                                            public void stateAction(TaskStates.TaskState previousState,
+                                                                                    TaskStates.TaskTransition transition,
+                                                                                    TaskStates.TaskState state) {
+                                                                executeLatch.countDown();
+                                                            }
+                                                        });
 
                 currentTaskCtx.taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
-                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState, TaskStates.TaskTransition transition, TaskStates.TaskState state) {
-                                taskDriverCtx.taskDriver.teardownDriver(true);
-                                unregisterTask(taskDriverCtx);
-                            }
-                        }
-                );
+                                                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+
+                                                            @Override
+                                                            public void stateAction(TaskStates.TaskState previousState,
+                                                                                    TaskStates.TaskTransition transition,
+                                                                                    TaskStates.TaskState state) {
+                                                                taskDriverCtx.taskDriver.teardownDriver(true);
+                                                                unregisterTask(taskDriverCtx);
+                                                            }
+                                                        });
 
                 currentTaskCtx.taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_CANCELED,
-                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState, TaskStates.TaskTransition transition, TaskStates.TaskState state) {
-                                taskDriverCtx.taskDriver.teardownDriver(false);
-                                unregisterTask(taskDriverCtx);
-                            }
-                        }
-                );
+                                                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+
+                                                            @Override
+                                                            public void stateAction(TaskStates.TaskState previousState,
+                                                                                    TaskStates.TaskTransition transition,
+                                                                                    TaskStates.TaskState state) {
+                                                                taskDriverCtx.taskDriver.teardownDriver(false);
+                                                                unregisterTask(taskDriverCtx);
+                                                            }
+                                                        });
 
                 currentTaskCtx.taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_FAILURE,
-                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState, TaskStates.TaskTransition transition, TaskStates.TaskState state) {
-                                taskDriverCtx.taskDriver.teardownDriver(false);
-                                unregisterTask(taskDriverCtx);
-                            }
-                        }
-                );
+                                                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
-                currentTaskCtx.taskDriver.startupDriver(
-                        inputAllocator,
-                        outputAllocator
-                );
+                                                            @Override
+                                                            public void stateAction(TaskStates.TaskState previousState,
+                                                                                    TaskStates.TaskTransition transition,
+                                                                                    TaskStates.TaskState state) {
+                                                                taskDriverCtx.taskDriver.teardownDriver(false);
+                                                                unregisterTask(taskDriverCtx);
+                                                            }
+                                                        });
+
+                currentTaskCtx.taskDriver.startupDriver(inputAllocator, outputAllocator);
 
                 try {
                     executeLatch.await();

@@ -1,6 +1,12 @@
 package de.tuberlin.aura.core.zookeeper;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.io.*;
+
 import net.jcip.annotations.NotThreadSafe;
+
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -9,11 +15,6 @@ import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
-
 /**
  * This class wraps helper methods for interacting with ZooKeeper.
  */
@@ -21,8 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ZookeeperHelper {
 
     // Disallow instantiation.
-    private ZookeeperHelper() {
-    }
+    private ZookeeperHelper() {}
 
     // ---------------------------------------------------
     // Zookeeper Event Constants.
@@ -69,7 +69,7 @@ public class ZookeeperHelper {
 
     /**
      * Initialize the directory structure in ZooKeeper.
-     *
+     * 
      * @throws KeeperException
      * @throws InterruptedException
      */
@@ -89,7 +89,7 @@ public class ZookeeperHelper {
 
     /**
      * Check whether the format of the ZooKeeper connection string is valid.
-     *
+     * 
      * @param zkServers The connection string.
      */
     public static void checkConnectionString(String zkServers) {
@@ -98,11 +98,11 @@ public class ZookeeperHelper {
         for (String token : tokens) {
             final String[] parts = token.split(":");
             try {
-                //InetAddress.getByName(parts[0]);
+                // InetAddress.getByName(parts[0]);
                 final int port = Integer.parseInt(parts[1]);
                 checkArgument(port > 1024 && port < 65535, "Port {} is invalid", port);
-                //} catch (UnknownHostException e) {
-                //    LOG.error("Could not find the ZooKeeper host: {}", parts[0]);
+                // } catch (UnknownHostException e) {
+                // LOG.error("Could not find the ZooKeeper host: {}", parts[0]);
             } catch (NumberFormatException e) {
                 LOG.error("Could not parse the port {}", parts[1]);
             }

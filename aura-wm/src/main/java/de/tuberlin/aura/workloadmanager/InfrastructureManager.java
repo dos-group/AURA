@@ -1,12 +1,11 @@
 package de.tuberlin.aura.workloadmanager;
 
-import de.tuberlin.aura.core.common.eventsystem.Event;
-import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
-import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
-import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
+
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -14,11 +13,13 @@ import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import de.tuberlin.aura.core.common.eventsystem.Event;
+import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
+import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
+import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 
 /**
  *
@@ -59,7 +60,7 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
 
     /**
      * Constructor.
-     *
+     * 
      * @param zkServers This string must contain the connection to the ZooKeeper-cluster.
      */
     private InfrastructureManager(final String zkServers, final MachineDescriptor wmMachine) {
@@ -119,7 +120,7 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
 
     /**
      * Get an instance of the infrastructure manager.
-     *
+     * 
      * @param zkServers This string must contain the connection to the ZooKeeper-cluster.
      */
     public static InfrastructureManager getInstance(final String zkServers, final MachineDescriptor wmMachine) {

@@ -1,10 +1,10 @@
 package de.tuberlin.aura.core.iosystem;
 
-import org.slf4j.Logger;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import org.slf4j.Logger;
 
 public class QueueManager<T> {
 

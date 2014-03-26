@@ -1,9 +1,9 @@
 package de.tuberlin.aura.core.task.common;
 
 
-import de.tuberlin.aura.core.iosystem.IOEvents;
-
 import java.util.UUID;
+
+import de.tuberlin.aura.core.iosystem.IOEvents;
 
 public interface DataConsumer {
 

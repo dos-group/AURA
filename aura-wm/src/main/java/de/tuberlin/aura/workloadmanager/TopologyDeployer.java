@@ -1,5 +1,7 @@
 package de.tuberlin.aura.workloadmanager;
 
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
@@ -7,7 +9,6 @@ import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
-import org.apache.log4j.Logger;
 
 public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> {
 
@@ -65,9 +66,9 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                 for (final ExecutionNode en : element.getExecutionNodes()) {
                     final TaskDeploymentDescriptor tdd =
                             new TaskDeploymentDescriptor(en.getTaskDescriptor(),
-                                    en.getTaskBindingDescriptor(),
-                                    en.logicalNode.dataPersistenceType,
-                                    en.logicalNode.executionType);
+                                                         en.getTaskBindingDescriptor(),
+                                                         en.logicalNode.dataPersistenceType,
+                                                         en.logicalNode.executionType);
                     final WM2TMProtocol tmProtocol =
                             rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
                     tmProtocol.installTask(tdd);

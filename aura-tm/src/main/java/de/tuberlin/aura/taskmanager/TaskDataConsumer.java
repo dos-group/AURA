@@ -1,5 +1,10 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
@@ -12,14 +17,10 @@ import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.gates.InputGate;
-import org.apache.log4j.Logger;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * The TaskDataConsumer is responsible for receiving data from connected TaskDataProducers
- * and provide this data (in form of buffers) to the task.
+ * The TaskDataConsumer is responsible for receiving data from connected TaskDataProducers and
+ * provide this data (in form of buffers) to the task.
  */
 public final class TaskDataConsumer implements DataConsumer {
 
@@ -53,8 +54,7 @@ public final class TaskDataConsumer implements DataConsumer {
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataConsumer(final TaskDriverContext driverContext,
-                            final MemoryManager.Allocator allocator) {
+    public TaskDataConsumer(final TaskDriverContext driverContext, final MemoryManager.Allocator allocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
@@ -165,8 +165,8 @@ public final class TaskDataConsumer implements DataConsumer {
      *
      */
     public void shutdownConsumer() {
-        //taskIDToGateIndex.clear();
-        //channelIndexToTaskID.clear();
+        // taskIDToGateIndex.clear();
+        // channelIndexToTaskID.clear();
     }
 
     /**
@@ -209,7 +209,7 @@ public final class TaskDataConsumer implements DataConsumer {
 
     /**
      * Return the gate index for the corresponding task ID.
-     *
+     * 
      * @param taskID The unique ID of a connected task.
      * @return The gate index or null if no suitable mapping exists.
      */
@@ -230,18 +230,14 @@ public final class TaskDataConsumer implements DataConsumer {
 
     /**
      * Create the output gates from the binding descriptor.
-     *
+     * 
      * @return The list of output gates or null if no the task has no outputs.
      */
     private List<InputGate> createInputGates() {
 
         if (driverContext.taskBindingDescriptor.inputGateBindings.size() <= 0) {
 
-            driverContext.taskFSM.dispatchEvent(
-                    new StateMachine.FSMTransitionEvent<>(
-                            TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED
-                    )
-            );
+            driverContext.taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
 
             return null;
         }
@@ -276,8 +272,8 @@ public final class TaskDataConsumer implements DataConsumer {
     }
 
     /**
-     * Create the mapping between task ID and corresponding gate index and
-     * the between channel index and the corresponding task ID.
+     * Create the mapping between task ID and corresponding gate index and the between channel index
+     * and the corresponding task ID.
      */
     private void createInputMappings() {
         int channelIndex = 0;
@@ -323,15 +319,17 @@ public final class TaskDataConsumer implements DataConsumer {
                         inputGates.get(gateIndex).setChannelReader(channelReader);
 
                         LOG.info("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
-                                + driverContext.taskDescriptor.name + " ["
-                                + driverContext.taskDescriptor.taskID + "] IS ESTABLISHED");
+                                + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID + "] IS ESTABLISHED");
 
                         connectingToCorrectTask |= true;
                     }
 
                     boolean connected = false;
                     if (inputGates.get(gateIndex).getChannelReader() != null) {
-                        connected = inputGates.get(gateIndex).getChannelReader().isConnected(driverContext.taskDescriptor.taskID, gateIndex, channelIndex);
+                        connected =
+                                inputGates.get(gateIndex)
+                                          .getChannelReader()
+                                          .isConnected(driverContext.taskDescriptor.taskID, gateIndex, channelIndex);
                     }
 
                     // all data inputs are connected...
@@ -349,101 +347,76 @@ public final class TaskDataConsumer implements DataConsumer {
             }
 
             if (allInputGatesConnected) {
-                driverContext.taskFSM.dispatchEvent(
-                        new StateMachine.FSMTransitionEvent<>(
-                                TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED
-                        )
-                );
+                driverContext.taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
             }
         }
     }
 }
 
-//----------------------------------------------------
+// ----------------------------------------------------
 
-//private boolean initialAbsorbCall = true;
+// private boolean initialAbsorbCall = true;
 
-//private IOEvents.DataIOEvent eventLookUp = null;
+// private IOEvents.DataIOEvent eventLookUp = null;
 
 /**
- *
+ * 
  * @param gateIndex
  * @return
  * @throws InterruptedException
  */
-    /*public IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException {
-
-        final IOEvents.DataIOEvent event;
-
-        if (initialAbsorbCall) {
-
-            event = inputGates.get(gateIndex).getInputQueue().take();
-
-            // TODO: What happens if DATA_EVENT_SOURCE_EXHAUSTED occurs in the first call ?
-
-            initialAbsorbCall = false;
-
-        } else {
-            event = eventLookUp;
-        }
-
-        boolean retrieve = true;
-
-        while (retrieve) {
-
-            eventLookUp = inputGates.get(gateIndex).getInputQueue().take();
-
-            switch (eventLookUp.type) {
-
-                case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED: {
-                    final Set<UUID> activeChannelSet = activeGates.get(gateIndex);
-
-                    if (!activeChannelSet.remove(event.srcTaskID))
-                        throw new IllegalStateException();
-
-                    if (activeChannelSet.isEmpty()) {
-                        retrieve = false;
-                        eventLookUp = null;
-                    }
-
-                    // check if all gates are exhausted
-                    boolean isExhausted = true;
-                    for (final Set<UUID> acs : activeGates) {
-                        isExhausted &= acs.isEmpty();
-                    }
-                    areInputsGatesExhausted = isExhausted;
-
-                } break;
-
-                case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK: {
-                    final Map<UUID, Boolean> closedChannels = closedGates.get(gateIndex);
-
-                    if (!closedChannels.containsKey(event.srcTaskID))
-                        throw new IllegalStateException();
-
-                    closedChannels.put(event.srcTaskID, true);
-
-                    boolean allClosed = true;
-                    for (boolean closed : closedChannels.values()) {
-                        allClosed &= closed;
-                    }
-
-                    if (allClosed) {
-                        gateCloseFinished.get(gateIndex).set(true);
-                        retrieve = false;
-                        eventLookUp = null;
-
-                        areInputsGatesExhausted = true; // TODO: Should we block here?
-                    }
-
-                } break;
-
-                // data event -> absorb
-                default:
-                    retrieve = false;
-                break;
-            }
-        }
-
-        return (IOEvents.TransferBufferEvent) event;
-    }*/
+/*
+ * public IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException {
+ * 
+ * final IOEvents.DataIOEvent event;
+ * 
+ * if (initialAbsorbCall) {
+ * 
+ * event = inputGates.get(gateIndex).getInputQueue().take();
+ * 
+ * // TODO: What happens if DATA_EVENT_SOURCE_EXHAUSTED occurs in the first call ?
+ * 
+ * initialAbsorbCall = false;
+ * 
+ * } else { event = eventLookUp; }
+ * 
+ * boolean retrieve = true;
+ * 
+ * while (retrieve) {
+ * 
+ * eventLookUp = inputGates.get(gateIndex).getInputQueue().take();
+ * 
+ * switch (eventLookUp.type) {
+ * 
+ * case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED: { final Set<UUID> activeChannelSet =
+ * activeGates.get(gateIndex);
+ * 
+ * if (!activeChannelSet.remove(event.srcTaskID)) throw new IllegalStateException();
+ * 
+ * if (activeChannelSet.isEmpty()) { retrieve = false; eventLookUp = null; }
+ * 
+ * // check if all gates are exhausted boolean isExhausted = true; for (final Set<UUID> acs :
+ * activeGates) { isExhausted &= acs.isEmpty(); } areInputsGatesExhausted = isExhausted;
+ * 
+ * } break;
+ * 
+ * case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK: { final Map<UUID, Boolean>
+ * closedChannels = closedGates.get(gateIndex);
+ * 
+ * if (!closedChannels.containsKey(event.srcTaskID)) throw new IllegalStateException();
+ * 
+ * closedChannels.put(event.srcTaskID, true);
+ * 
+ * boolean allClosed = true; for (boolean closed : closedChannels.values()) { allClosed &= closed; }
+ * 
+ * if (allClosed) { gateCloseFinished.get(gateIndex).set(true); retrieve = false; eventLookUp =
+ * null;
+ * 
+ * areInputsGatesExhausted = true; // TODO: Should we block here? }
+ * 
+ * } break;
+ * 
+ * // data event -> absorb default: retrieve = false; break; } }
+ * 
+ * return (IOEvents.TransferBufferEvent) event; }
+ */

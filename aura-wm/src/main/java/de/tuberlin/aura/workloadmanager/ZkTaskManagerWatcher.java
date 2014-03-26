@@ -1,8 +1,12 @@
 package de.tuberlin.aura.workloadmanager;
 
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
-import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.util.HashSet;
+import java.util.List;
+import java.util.UUID;
+
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -10,12 +14,9 @@ import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.util.HashSet;
-import java.util.List;
-import java.util.UUID;
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
+import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
 /**
  * TODO: Put all watchers in one class like the descriptors?
@@ -100,7 +101,8 @@ public class ZkTaskManagerWatcher implements Watcher {
                             }
                         }
 
-                        zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_REMOVED, UUID.fromString(nodeName));
+                        zkEvent =
+                                new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_REMOVED, UUID.fromString(nodeName));
                     }
 
                     // Forward the event.

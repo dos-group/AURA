@@ -1,8 +1,5 @@
 package de.tuberlin.aura.core.descriptors;
 
-import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -10,11 +7,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.task.usercode.UserCode;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+
 public final class Descriptors {
 
     // Disallow instantiation.
-    private Descriptors() {
-    }
+    private Descriptors() {}
 
     /**
      *
@@ -89,15 +88,15 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("MachineDescriptor = {")
-                    .append(" uid = " + uid.toString())
-                    .append(", ")
-                    .append(" netAddress = " + dataAddress)
-                    .append(", ")
-                    .append(" controlAddress = " + controlAddress)
-                    .append(", ")
-                    .append(hardware)
-                    .append(" }")
-                    .toString();
+                                        .append(" uid = " + uid.toString())
+                                        .append(", ")
+                                        .append(" netAddress = " + dataAddress)
+                                        .append(", ")
+                                        .append(" controlAddress = " + controlAddress)
+                                        .append(", ")
+                                        .append(hardware)
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -154,15 +153,15 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("HardwareDescriptor = {")
-                    .append(" uid = " + uid.toString())
-                    .append(", ")
-                    .append(" cpuCores = " + cpuCores)
-                    .append(", ")
-                    .append(" sizeOfRAM = " + sizeOfRAM)
-                    .append(", ")
-                    .append(hdd)
-                    .append(" }")
-                    .toString();
+                                        .append(" uid = " + uid.toString())
+                                        .append(", ")
+                                        .append(" cpuCores = " + cpuCores)
+                                        .append(", ")
+                                        .append(" sizeOfRAM = " + sizeOfRAM)
+                                        .append(", ")
+                                        .append(hdd)
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -209,11 +208,11 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("HDDDescriptor = {")
-                    .append(" uid = " + uid.toString())
-                    .append(", ")
-                    .append(" sizeOfHDD = " + sizeOfHDD)
-                    .append(" }")
-                    .toString();
+                                        .append(" uid = " + uid.toString())
+                                        .append(", ")
+                                        .append(" sizeOfHDD = " + sizeOfHDD)
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -295,11 +294,11 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("TaskDescriptor = {")
-                    .append(" machine = " + machine.toString() + ", ")
-                    .append(" uid = " + taskID.toString() + ", ")
-                    .append(" name = " + name)
-                    .append(" }")
-                    .toString();
+                                        .append(" machine = " + machine.toString() + ", ")
+                                        .append(" uid = " + taskID.toString() + ", ")
+                                        .append(" name = " + name)
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -355,11 +354,11 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("TaskBindingDescriptor = {")
-                    // .append( " task = " + task.toString() + ", " )
-                    .append(" inputGates = " + inputGateBindings.toString() + ", ")
-                    .append(" outputGates = " + outputGateBindings.toString())
-                    .append(" }")
-                    .toString();
+            // .append( " task = " + task.toString() + ", " )
+                                        .append(" inputGates = " + inputGateBindings.toString() + ", ")
+                                        .append(" outputGates = " + outputGateBindings.toString())
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -421,10 +420,10 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("TaskDeploymentDescriptor = {")
-                    .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-                    .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
-                    .append(" }")
-                    .toString();
+                                        .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
+                                        .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
+                                        .append(" }")
+                                        .toString();
         }
     }
 }

@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 /**
  * The base class for all dispatched events.
- *
+ * 
  * @author Tobias Herb
  */
 public class Event implements Serializable {

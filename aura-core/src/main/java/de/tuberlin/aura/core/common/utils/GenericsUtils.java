@@ -6,8 +6,7 @@ package de.tuberlin.aura.core.common.utils;
 public final class GenericsUtils {
 
     // Disallow instantiation.
-    private GenericsUtils() {
-    }
+    private GenericsUtils() {}
 
     /**
      * @param obj

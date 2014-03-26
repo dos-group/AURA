@@ -38,6 +38,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * completed.
  * </ul>
  * <p/>
+ * 
  * <pre>
  * class Driver { // ...
  *   void main() throws InterruptedException {
@@ -81,6 +82,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * through await. (When threads must repeatedly count down in this way, instead use a
  * {@link CyclicBarrier}.)
  * <p/>
+ * 
  * <pre>
  * class Driver2 { // ...
  *   void main() throws InterruptedException {
@@ -117,7 +119,7 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * MemoryView consistency effects: Actions in a thread prior to calling {@code countDown()} <a
  * href="package-summary.html#MemoryVisibility"><i>happen-before</i></a> actions following a
  * successful return from a corresponding {@code await()} in another thread.
- *
+ * 
  * @author Doug Lea
  * @since 1.5
  */
@@ -147,7 +149,7 @@ public class ResettableCountDownLatch {
 
         public boolean tryReleaseShared(int releases) {
             // Decrement count; signal when transition to zero
-            for (; ; ) {
+            for (;;) {
                 int c = getState();
                 if (c == 0)
                     return false;
@@ -166,9 +168,9 @@ public class ResettableCountDownLatch {
 
     /**
      * Constructs a {@code CountDownLatch} initialized with the given count.
-     *
+     * 
      * @param count the number of times {@link #countDown} must be invoked before threads can pass
-     *              through {@link #await}
+     *        through {@link #await}
      * @throws IllegalArgumentException if {@code count} is negative
      */
     public ResettableCountDownLatch(int count) {
@@ -200,7 +202,7 @@ public class ResettableCountDownLatch {
      * </ul>
      * then {@link InterruptedException} is thrown and the current thread's interrupted status is
      * cleared.
-     *
+     * 
      * @throws InterruptedException if the current thread is interrupted while waiting
      */
     public void await() throws InterruptedException {
@@ -242,11 +244,11 @@ public class ResettableCountDownLatch {
      * <p/>
      * If the specified waiting time elapses then the value {@code false} is returned. If the time
      * is less than or equal to zero, the method will not wait at all.
-     *
+     * 
      * @param timeout the maximum time to wait
-     * @param unit    the time unit of the {@code timeout} argument
+     * @param unit the time unit of the {@code timeout} argument
      * @return {@code true} if the count reached zero and {@code false} if the waiting time elapsed
-     * before the count reached zero
+     *         before the count reached zero
      * @throws InterruptedException if the current thread is interrupted while waiting
      */
     public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
@@ -272,7 +274,7 @@ public class ResettableCountDownLatch {
      * <p/>
      * <p/>
      * This method is typically used for debugging and testing purposes.
-     *
+     * 
      * @return the current count
      */
     public long getCount() {
@@ -282,7 +284,7 @@ public class ResettableCountDownLatch {
     /**
      * Returns a string identifying this latch, as well as its state. The state, in brackets,
      * includes the String {@code "Count ="} followed by the current count.
-     *
+     * 
      * @return a string identifying this latch, as well as its state
      */
     public String toString() {
