@@ -1,13 +1,14 @@
 package de.tuberlin.aura.core.iosystem;
 
-import de.tuberlin.aura.core.statistic.AccumulatedLatencyMeasurement;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
-import de.tuberlin.aura.core.statistic.MeasurementType;
-import org.apache.log4j.Logger;
-
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+
+import org.apache.log4j.Logger;
+
+import de.tuberlin.aura.core.statistic.AccumulatedLatencyMeasurement;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
+import de.tuberlin.aura.core.statistic.MeasurementType;
 
 public class BlockingBufferQueue<T> implements BufferQueue<T> {
 
@@ -29,7 +30,7 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         this.name = name;
         this.measurementManager = measurementManager;
         this.backingQueue = new LinkedBlockingQueue<>();
-        //this.backingQueue = new ArrayBlockingQueue<>(1024, true);
+        // this.backingQueue = new ArrayBlockingQueue<>(1024, true);
     }
 
     @Override
@@ -41,11 +42,14 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         ++this.counter;
 
         if (this.counter == 1000) {
-            AccumulatedLatencyMeasurement m = new AccumulatedLatencyMeasurement(MeasurementType.LATENCY, "Queue: " + this.name, -1, -1, (double) this.sumLatency / (double) this.counter, -1);
+            AccumulatedLatencyMeasurement m =
+                    new AccumulatedLatencyMeasurement(MeasurementType.LATENCY, "Queue: " + this.name, -1, -1, (double) this.sumLatency
+                            / (double) this.counter, -1);
             this.measurementManager.add(m);
 
-//            LOG.info(this.name + ": TIME_IN_QUEUE|" + Double.toString((double) this.sumLatency / (double) this.counter) + "|" +
-//                    Double.toString((double) this.sumQueueSize / (double) this.counter));
+            // LOG.info(this.name + ": TIME_IN_QUEUE|" + Double.toString((double) this.sumLatency /
+            // (double) this.counter) + "|" +
+            // Double.toString((double) this.sumQueueSize / (double) this.counter));
 
             this.counter = 0;
             this.sumLatency = 0;
@@ -58,7 +62,7 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     @Override
     public void offer(T value) {
 
-//      LOG.debug("PUT_QUEUE:" + Integer.toString(this.backingQueue.size()));
+        // LOG.debug("PUT_QUEUE:" + Integer.toString(this.backingQueue.size()));
         DataHolder<T> holder = new DataHolder<>();
         holder.time = System.currentTimeMillis();
         holder.data = value;
@@ -82,6 +86,7 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     }
 
     public class DataHolder<T> {
+
         public long time;
 
         public T data;

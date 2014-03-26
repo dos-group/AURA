@@ -1,10 +1,11 @@
 package de.tuberlin.aura.workloadmanager;
 
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
 import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
-import org.apache.log4j.Logger;
 
 public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology> {
 

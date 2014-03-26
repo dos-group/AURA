@@ -1,5 +1,13 @@
 package de.tuberlin.aura.core.iosystem;
 
+import java.net.SocketAddress;
+import java.util.UUID;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -7,13 +15,6 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.serialization.ObjectEncoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.SocketAddress;
-import java.util.UUID;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
 // TODO: let the buffer size be configurable
@@ -106,13 +107,13 @@ public class DataWriter {
                         pollResult = pollThreadExecutor.submit(pollThread);
 
                         future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                srcID,
-                                dstID));
+                                                                                srcID,
+                                                                                dstID));
                         final IOEvents.GenericIOEvent event =
                                 new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                        ChannelWriter.this,
-                                        srcID,
-                                        dstID);
+                                                            ChannelWriter.this,
+                                                            srcID,
+                                                            dstID);
                         event.setChannel(future.channel());
                         dispatcher.dispatchEvent(event);
 
@@ -294,12 +295,12 @@ public class DataWriter {
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup).channel(LocalChannel.class)
-                    // the mark the outbound buffer has to reach in order to change the writable state of a
-                    // channel true
-                    .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-                            // the mark the outbound buffer has to reach in order to change the writable state of
-                            // a channel false
-                    .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
+            // the mark the outbound buffer has to reach in order to change the writable state of a
+            // channel true
+              .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
+              // the mark the outbound buffer has to reach in order to change the writable state of
+              // a channel false
+              .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
             // dummy allocator here, as we do not invoke the allocator in the event loop
             // .option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
             // set the channelWritable spin lock
@@ -331,20 +332,20 @@ public class DataWriter {
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             Bootstrap bs = new Bootstrap();
             bs.group(eventLoopGroup).channel(NioSocketChannel.class)
-                    // true, periodically heartbeats from tcp
-                    .option(ChannelOption.SO_KEEPALIVE, true)
-                            // false, means that messages get only sent if the size of the data reached a relevant
-                            // amount.
-                    .option(ChannelOption.TCP_NODELAY, false)
-                            // size of the system lvl send buffer PER SOCKET
-                            // -> buffer size, as we always have only 1 channel per socket in the client case
-                    .option(ChannelOption.SO_SNDBUF, bufferSize)
-                            // the mark the outbound buffer has to reach in order to change the writable state of
-                            // a channel true
-                    .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-                            // the mark the outbound buffer has to reach in order to change the writable state of
-                            // a channel false
-                    .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
+            // true, periodically heartbeats from tcp
+              .option(ChannelOption.SO_KEEPALIVE, true)
+              // false, means that messages get only sent if the size of the data reached a relevant
+              // amount.
+              .option(ChannelOption.TCP_NODELAY, false)
+              // size of the system lvl send buffer PER SOCKET
+              // -> buffer size, as we always have only 1 channel per socket in the client case
+              .option(ChannelOption.SO_SNDBUF, bufferSize)
+              // the mark the outbound buffer has to reach in order to change the writable state of
+              // a channel true
+              .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
+              // the mark the outbound buffer has to reach in order to change the writable state of
+              // a channel false
+              .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
             // dummy allocator here, as we do not invoke the allocator in the event loop
             // .option(ChannelOption.ALLOCATOR, new FlipBufferAllocator(bufferSize, 1, true))
             // set the channelWritable spin lock

@@ -1,15 +1,17 @@
 package de.tuberlin.aura.core.statistic;
 
-import com.google.common.collect.ConcurrentHashMultiset;
-import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import net.jcip.annotations.ThreadSafe;
-import org.apache.log4j.Logger;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+
+import net.jcip.annotations.ThreadSafe;
+
+import org.apache.log4j.Logger;
+
+import com.google.common.collect.ConcurrentHashMultiset;
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 
 /**
  * @author Christian Wuertz, Asterios Katsifodimos
@@ -46,10 +48,11 @@ public class MeasurementManager extends EventHandler {
     }
 
     /**
-     * Initialize the config of this class. This should be done by either the WorkloadManager or the TaskManager.
+     * Initialize the config of this class. This should be done by either the WorkloadManager or the
+     * TaskManager.
      * <p/>
      * TODO: This should be done by the configuration framework in the future.
-     *
+     * 
      * @param root
      */
     public static void setRoot(String root) {
@@ -68,10 +71,11 @@ public class MeasurementManager extends EventHandler {
     }
 
     /**
-     * Warning: DO NOT FIRE EVENTS WHEN YOU'RE NOT 100 % SURE THAT NOTHING WRITES INTO THE MEASUREMENT MANAGERS ANYMORE!
+     * Warning: DO NOT FIRE EVENTS WHEN YOU'RE NOT 100 % SURE THAT NOTHING WRITES INTO THE
+     * MEASUREMENT MANAGERS ANYMORE!
      * <p/>
      * There is no synchronization to keep the performance penalty as low as possible.
-     *
+     * 
      * @param event
      */
     public static void fireEvent(String event) {
@@ -107,7 +111,8 @@ public class MeasurementManager extends EventHandler {
                     file.getParentFile().mkdirs();
                     file.createNewFile();
 
-                    // BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(new File(path)))));
+                    // BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new
+                    // GZIPOutputStream(new FileOutputStream(new File(path)))));
                     BufferedWriter out = new BufferedWriter(new FileWriter(file));
 
                     out.write(MeasurementManager.this.name);
@@ -121,6 +126,7 @@ public class MeasurementManager extends EventHandler {
 
                         boolean first = true;
                         SortedSet<Measurement> sortedSet = new TreeSet<>(new Comparator<Measurement>() {
+
                             @Override
                             public int compare(Measurement o1, Measurement o2) {
                                 if (o1.timestamp == o2.timestamp) {

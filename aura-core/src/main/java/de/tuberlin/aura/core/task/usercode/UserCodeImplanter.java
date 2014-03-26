@@ -1,9 +1,9 @@
 package de.tuberlin.aura.core.task.usercode;
 
-import de.tuberlin.aura.core.common.utils.Compression;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import de.tuberlin.aura.core.common.utils.Compression;
 
 public final class UserCodeImplanter {
 

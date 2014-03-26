@@ -10,11 +10,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.bcel.Repository;
-import org.apache.bcel.classfile.ConstantClass;
-import org.apache.bcel.classfile.ConstantPool;
-import org.apache.bcel.classfile.DescendingVisitor;
-import org.apache.bcel.classfile.EmptyVisitor;
-import org.apache.bcel.classfile.JavaClass;
+import org.apache.bcel.classfile.*;
 
 import de.tuberlin.aura.core.common.utils.Compression;
 

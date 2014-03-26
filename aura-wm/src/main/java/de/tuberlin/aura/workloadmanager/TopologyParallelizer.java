@@ -1,5 +1,7 @@
 package de.tuberlin.aura.workloadmanager;
 
+import java.util.*;
+
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
@@ -8,8 +10,6 @@ import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
 import de.tuberlin.aura.core.topology.TopologyEvents.TopologyStateTransitionEvent;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
-
-import java.util.*;
 
 public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopology> {
 
@@ -95,7 +95,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                        break;
+                            break;
 
                         case POINT_TO_POINT: {
 
@@ -167,7 +167,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                        break;
+                            break;
                     }
                 }
 
@@ -199,7 +199,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                        break;
+                            break;
 
                         case POINT_TO_POINT: {
 
@@ -271,7 +271,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                        break;
+                            break;
                     }
                 }
 

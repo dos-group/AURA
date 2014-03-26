@@ -1,5 +1,9 @@
 package de.tuberlin.aura.core.task.common;
 
+import java.util.*;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -16,9 +20,6 @@ import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.task.gates.InputGate;
 import de.tuberlin.aura.core.task.gates.OutputGate;
-import org.apache.log4j.Logger;
-
-import java.util.*;
 
 /**
  *
@@ -61,7 +62,8 @@ public final class TaskRuntimeContext {
         this.invokeableClass = invokeableClass;
 
         this.measurementManager = MeasurementManager.getInstance("/tm/" + this.task.name + "_" + this.task.taskIndex, "Task");
-        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + this.task.name + "-" + this.task.taskIndex, this.measurementManager);
+        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + this.task.name + "-" + this.task.taskIndex,
+                                            this.measurementManager);
 
         this.queueManager = QueueManager.newInstance(this, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), this.measurementManager);
 
@@ -219,10 +221,10 @@ public final class TaskRuntimeContext {
     @Override
     public String toString() {
         return (new StringBuilder()).append("TaskRuntimeContext = {")
-                .append(" task = " + task + ", ")
-                .append(" taskBinding = " + taskBinding + ", ")
-                .append(" state = " + state.toString() + ", ")
-                .append(" }")
-                .toString();
+                                    .append(" task = " + task + ", ")
+                                    .append(" taskBinding = " + taskBinding + ", ")
+                                    .append(" state = " + state.toString() + ", ")
+                                    .append(" }")
+                                    .toString();
     }
 }

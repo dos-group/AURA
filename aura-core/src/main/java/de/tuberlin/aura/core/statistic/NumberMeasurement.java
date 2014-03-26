@@ -21,9 +21,12 @@ public class NumberMeasurement extends Measurement {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == null) return false;
-        if (this == obj) return true;
-        if (!(obj instanceof NumberMeasurement)) return false;
+        if (obj == null)
+            return false;
+        if (this == obj)
+            return true;
+        if (!(obj instanceof NumberMeasurement))
+            return false;
 
         NumberMeasurement other = (NumberMeasurement) obj;
         if (this.timestamp == other.timestamp && this.type == other.type && this.description.equals(other.description) && this.number == other.number)

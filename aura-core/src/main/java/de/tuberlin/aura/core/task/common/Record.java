@@ -1,11 +1,11 @@
 package de.tuberlin.aura.core.task.common;
 
+import java.util.UUID;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import de.tuberlin.aura.core.iosystem.UUIDSerializer;
-
-import java.util.UUID;
 
 public class Record<T> {
 
@@ -40,4 +40,3 @@ public class Record<T> {
         output.close();
     }
 }
-

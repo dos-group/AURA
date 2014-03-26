@@ -1,11 +1,12 @@
 package de.tuberlin.aura.core.iosystem;
 
-import de.tuberlin.aura.core.statistic.MeasurementManager;
-import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
-import org.slf4j.Logger;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.slf4j.Logger;
+
+import de.tuberlin.aura.core.statistic.MeasurementManager;
+import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
 
 public class QueueManager<T> {
 
@@ -39,7 +40,9 @@ public class QueueManager<T> {
     }
 
 
-    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext, BufferQueueFactory<F> queueFactory, MeasurementManager measurementManager) {
+    public static <F> QueueManager<F> newInstance(TaskRuntimeContext taskContext,
+                                                  BufferQueueFactory<F> queueFactory,
+                                                  MeasurementManager measurementManager) {
         QueueManager<F> instance = new QueueManager<>(queueFactory, measurementManager);
         BINDINGS.put(taskContext, instance);
         return instance;

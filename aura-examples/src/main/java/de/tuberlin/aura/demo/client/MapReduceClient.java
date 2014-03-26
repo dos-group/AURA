@@ -1,5 +1,18 @@
 package de.tuberlin.aura.demo.client;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
@@ -10,26 +23,13 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
 
 public final class MapReduceClient {
 
     private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
-    private MapReduceClient() {
-    }
+    private MapReduceClient() {}
 
     /**
      *
@@ -62,11 +62,11 @@ public final class MapReduceClient {
                     LOG.info("Emit at: " + record.getData().time);
                 }
 
-//                try {
-//                    Thread.sleep(100);
-//                } catch (InterruptedException e) {
-//                    LOG.error(e);
-//                }
+                // try {
+                // Thread.sleep(100);
+                // } catch (InterruptedException e) {
+                // LOG.error(e);
+                // }
             }
 
             final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
@@ -218,8 +218,8 @@ public final class MapReduceClient {
             double avgLatency = (double) latencySum / (double) latencies.size();
             long medianLatency = MedianHelper.findMedian(latencies);
 
-            LOG.info("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) + "|"
-                    + Long.toString(maxLatency) + "|" + Long.toString(medianLatency));
+            LOG.info("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) + "|" + Long.toString(maxLatency) + "|"
+                    + Long.toString(medianLatency));
 
             closeGate(0);
         }
@@ -238,15 +238,17 @@ public final class MapReduceClient {
         LOG.setLevel(Level.INFO);
 
         final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
-        //final LocalClusterExecutor lce = new LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+        // final LocalClusterExecutor lce = new
+        // LocalClusterExecutor(LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true,
+        // zookeeperAddress, 4);
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
         atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Source.class)
-                .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
-                .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task4Exe.class);
+            .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
+            .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
+            .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+            .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task4Exe.class);
 
 
         final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));

@@ -1,5 +1,8 @@
 package de.tuberlin.aura.core.iosystem;
 
+import java.io.Serializable;
+import java.util.UUID;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
 import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskState;
@@ -7,9 +10,6 @@ import de.tuberlin.aura.core.task.common.TaskStateMachine.TaskTransition;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyState;
 import de.tuberlin.aura.core.topology.TopologyStateMachine.TopologyTransition;
 import io.netty.channel.Channel;
-
-import java.io.Serializable;
-import java.util.UUID;
 
 public final class IOEvents {
 

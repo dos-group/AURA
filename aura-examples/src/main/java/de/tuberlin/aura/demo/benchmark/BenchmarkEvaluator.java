@@ -1,15 +1,16 @@
 package de.tuberlin.aura.demo.benchmark;
 
-import de.tuberlin.aura.core.task.common.MedianHelper;
-
 import java.io.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+
+import de.tuberlin.aura.core.task.common.MedianHelper;
 
 /**
  * Created by teots on 2/27/14.
  */
 public class BenchmarkEvaluator {
+
     private String path;
 
     public BenchmarkEvaluator(String path) {

@@ -1,11 +1,11 @@
 package de.tuberlin.aura.demo.benchmark;
 
+import java.util.UUID;
+
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.task.common.BenchmarkRecord;
 import de.tuberlin.aura.core.task.common.Record;
 import de.tuberlin.aura.core.task.common.RecordWriter;
-
-import java.util.UUID;
 
 /**
  * Created by teots on 3/5/14.

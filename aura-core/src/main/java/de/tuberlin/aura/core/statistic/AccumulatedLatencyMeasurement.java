@@ -46,13 +46,16 @@ public class AccumulatedLatencyMeasurement extends Measurement {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == null) return false;
-        if (this == obj) return true;
-        if (!(obj instanceof TimeMeasurement)) return false;
+        if (obj == null)
+            return false;
+        if (this == obj)
+            return true;
+        if (!(obj instanceof TimeMeasurement))
+            return false;
 
         AccumulatedLatencyMeasurement other = (AccumulatedLatencyMeasurement) obj;
-        if (this.timestamp == other.timestamp && this.type == other.type && this.description.equals(other.description) && this.minTime == other.minTime
-                && this.maxTime == other.maxTime && this.avgTime == other.avgTime && this.mdnTime == other.mdnTime)
+        if (this.timestamp == other.timestamp && this.type == other.type && this.description.equals(other.description)
+                && this.minTime == other.minTime && this.maxTime == other.maxTime && this.avgTime == other.avgTime && this.mdnTime == other.mdnTime)
             return true;
 
         return false;

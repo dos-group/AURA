@@ -1,12 +1,12 @@
 package de.tuberlin.aura.core.topology;
 
-import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.task.common.TaskStateMachine;
-
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.task.common.TaskStateMachine;
 
 /**
  * TODO: We need a clean and safe PAXOS implementation! This here is something like a two-phase

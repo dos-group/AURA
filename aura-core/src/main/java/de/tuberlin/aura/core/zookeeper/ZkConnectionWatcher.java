@@ -4,11 +4,10 @@ import net.jcip.annotations.ThreadSafe;
 
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 
 /**
  * TODO: Put all watchers in one class like the descriptors?

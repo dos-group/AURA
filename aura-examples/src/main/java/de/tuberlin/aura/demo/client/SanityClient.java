@@ -1,5 +1,17 @@
 package de.tuberlin.aura.demo.client;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterExecutor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
@@ -16,25 +28,13 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.UUID;
 
 public final class SanityClient {
 
     private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
-    private SanityClient() {
-    }
+    private SanityClient() {}
 
     /**
      *
@@ -67,15 +67,15 @@ public final class SanityClient {
                     ++send;
                 }
 
-//                try {
-//                    Thread.sleep(100);
-//                } catch (InterruptedException e) {
-//                    LOG.error(e);
-//                }
+                // try {
+                // Thread.sleep(100);
+                // } catch (InterruptedException e) {
+                // LOG.error(e);
+                // }
             }
 
             this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
-//            LOG.info("SOURCE|" + Integer.toString(send));
+            // LOG.info("SOURCE|" + Integer.toString(send));
 
             final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
             for (int index = 0; index < outputs.size(); ++index) {
@@ -119,8 +119,8 @@ public final class SanityClient {
                         final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new byte[BUFFER_SIZE]);
 
                         if (!record.getData().nextTask.equals(getTaskID())) {
-                            LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString()
-                                    + " but found " + getTaskID() + " Task: " + getTaskName());
+                            LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found " + getTaskID() + " Task: "
+                                    + getTaskName());
                         } else {
                             ++correct;
                         }
@@ -141,8 +141,8 @@ public final class SanityClient {
 
             this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
             this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
-//            LOG.error("Buffers: " + Integer.toString(bufferCount));
-//            LOG.error("Correct buffers: " + Integer.toString(correct));
+            // LOG.error("Buffers: " + Integer.toString(bufferCount));
+            // LOG.error("Correct buffers: " + Integer.toString(correct));
 
             closeGate(0);
         }
@@ -172,8 +172,8 @@ public final class SanityClient {
 
                 if (record != null) {
                     if (!record.getData().nextTask.equals(getTaskID())) {
-                        LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString()
-                                + " but found " + getTaskID() + " Task: " + getTaskName());
+                        LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found " + getTaskID() + " Task: "
+                                + getTaskName());
                     }
 
                     ++receivedRecords;
@@ -202,17 +202,22 @@ public final class SanityClient {
         LOG.setLevel(Level.INFO);
 
         final String measurementPath = "/home/teots/Desktop/measurements";
-        //final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
+        // final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
         final String zookeeperAddress = "localhost:2181";
-        final LocalClusterExecutor lce = new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 6, measurementPath);
+        final LocalClusterExecutor lce =
+                new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+                                         true,
+                                         zookeeperAddress,
+                                         6,
+                                         measurementPath);
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
         atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Source.class)
-                .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
-                .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class);
+            .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
+            .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
+            .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+            .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class);
 
         AuraTopology at;
 

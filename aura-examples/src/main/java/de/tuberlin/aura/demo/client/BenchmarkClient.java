@@ -1,5 +1,18 @@
 package de.tuberlin.aura.demo.client;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.EnumSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
@@ -12,26 +25,13 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.EnumSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.UUID;
 
 public final class BenchmarkClient {
 
     private static final Logger LOG = Logger.getRootLogger();
 
     // Disallow Instantiation.
-    private BenchmarkClient() {
-    }
+    private BenchmarkClient() {}
 
     /**
      *
@@ -68,11 +68,11 @@ public final class BenchmarkClient {
                     LOG.debug("Emit at: " + record.getData().time);
                 }
 
-//                try {
-//                    Thread.sleep(100);
-//                } catch (InterruptedException e) {
-//                    LOG.error(e);
-//                }
+                // try {
+                // Thread.sleep(100);
+                // } catch (InterruptedException e) {
+                // LOG.error(e);
+                // }
             }
 
             LOG.info("Emit time: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
@@ -226,8 +226,8 @@ public final class BenchmarkClient {
             double avgLatency = (double) latencySum / (double) latencies.size();
             long medianLatency = MedianHelper.findMedian(latencies);
 
-            LOG.info("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) + "|"
-                    + Long.toString(maxLatency) + "|" + Long.toString(medianLatency));
+            LOG.info("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) + "|" + Long.toString(maxLatency) + "|"
+                    + Long.toString(medianLatency));
 
             closeGate(0);
         }
@@ -246,25 +246,27 @@ public final class BenchmarkClient {
         LOG.setLevel(Level.INFO);
 
         final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
-        //final String zookeeperAddress = "localhost:2181";
-        //final LocalClusterExecutor lce = new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 5);
+        // final String zookeeperAddress = "localhost:2181";
+        // final LocalClusterExecutor lce = new
+        // LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+        // true, zookeeperAddress, 5);
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
         atb1.addNode(new Node(UUID.randomUUID(), "Task1", 1, 1), Task1Exe.class)
-                .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
-                .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task4Exe.class);
+            .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
+            .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
+            .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+            .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task4Exe.class);
 
         final AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
         atb2.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Task1Exe.class)
-                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task5", 2, 1), Task1Exe.class)
-                .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
-                .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
-                .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
+            .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
+            .addNode(new Node(UUID.randomUUID(), "Task5", 2, 1), Task1Exe.class)
+            .connectTo("Task3", Edge.TransferType.ALL_TO_ALL)
+            .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class)
+            .connectTo("Task4", Edge.TransferType.POINT_TO_POINT)
+            .addNode(new Node(UUID.randomUUID(), "Task4", 2, 1), Task4Exe.class);
 
         final AuraTopology at1 = atb1.build("Job 1", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
         final AuraTopology at2 = atb2.build("Job 2", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
@@ -298,7 +300,7 @@ public final class BenchmarkClient {
             }
         }
 
-        //ac.submitTopology(at2, null);
+        // ac.submitTopology(at2, null);
 
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();
@@ -306,6 +308,6 @@ public final class BenchmarkClient {
             e.printStackTrace();
         }
 
-//        lce.shutdown();
+        // lce.shutdown();
     }
 }

@@ -12,7 +12,8 @@ import java.util.*;
  */
 public class Measurements {
 
-    private static final EnumMap<MeasurementType, List<Measurement>> measurements = new EnumMap<MeasurementType, List<Measurement>>(MeasurementType.class);
+    private static final EnumMap<MeasurementType, List<Measurement>> measurements =
+            new EnumMap<MeasurementType, List<Measurement>>(MeasurementType.class);
 
     private static final Object modificationLock = new Object();
 
@@ -131,7 +132,7 @@ public class Measurements {
 
         Arrays.sort(propertiesToPrint);
 
-        //Create the header of the file:
+        // Create the header of the file:
         out.write("MEASUREMENT_TYPE\tMEASUREMENT_VALUE\tMEASUREMENT_TIME");
         for (MeasurementProperty p : propertiesToPrint) {
             out.write("\t" + p.toString());
@@ -149,7 +150,10 @@ public class Measurements {
         out.flush();
     }
 
-    public synchronized static void export(MeasurementType type, MeasurementProperty propertiesToPrint[], OutputStream output, boolean mergeAndExportTotal) throws IOException {
+    public synchronized static void export(MeasurementType type,
+                                           MeasurementProperty propertiesToPrint[],
+                                           OutputStream output,
+                                           boolean mergeAndExportTotal) throws IOException {
 
         if (mergeAndExportTotal) {
             /* Merge rewriting time measurements */
@@ -168,64 +172,83 @@ public class Measurements {
     }
 
     public synchronized static void exportAdaptiveViews() throws IOException {
-//        OutputStream out = new FileOutputStream("logs" + File.separator + NodeInformation.localPID + "-statistics-" + ++exportCount + ".txt");
-//
-//
-//        Measurements.export(MeasurementType.VIEW_SELECTION_SELECTED_VIEW, new MeasurementProperty[]{MeasurementProperty.VIEW_NAME, MeasurementProperty.VIEW_DEFINITION, MeasurementProperty.VIEW_SIZE}, out);
-//
-//        Measurements.export(MeasurementType.QUERY_EXECUTION_TIME, new MeasurementProperty[]{MeasurementProperty.QUERY_NAME, MeasurementProperty.LOGICAL_PLAN, MeasurementProperty.QUERY_DEFINITION}, out);
-//        Measurements.export(MeasurementType.QUERY_EXECUTION_TIME_TO_FIRST_RESULT, new MeasurementProperty[]{MeasurementProperty.QUERY_NAME}, out);
-//        Measurements.export(MeasurementType.QUERY_EXECUTION_RESULTS_NUMBER, new MeasurementProperty[]{MeasurementProperty.QUERY_NAME}, out);
-//
-//        Measurements.export(MeasurementType.VIEW_MATERIALIZATION_TIME, new MeasurementProperty[]{MeasurementProperty.DOCUMENT_NAME}, out, true);
-//
-//        Measurements.export(MeasurementType.VIEW_SELECTION_CANDIDATE_VIEWS_ENUMERATION_EXECUTION_TIME, new MeasurementProperty[]{}, out);
-//        Measurements.export(MeasurementType.VIEW_SELECTION_NUMBER_OF_CANDIDATE_VIEWS, new MeasurementProperty[]{}, out);
-//
-//        Measurements.export(MeasurementType.VIEW_SELECTION_ALGORITHM_EXECUTION_TIME, new MeasurementProperty[]{}, out, false);
-//        Measurements.export(MeasurementType.REWRITING_TIME, new MeasurementProperty[]{}, out, true);
-//        Measurements.export(MeasurementType.VIEW_SELECTION_CANDIDATE_VIEW_SIZE_ESTIMATION_TIME, new MeasurementProperty[]{}, out, false);
-//
-//        Measurements.export(MeasurementType.VIEW_SELECTION_ALGORITHM, new MeasurementProperty[]{MeasurementProperty.ALGORITHM_NAME}, out);
-//
-//        Measurements.export(MeasurementType.VIEW_SELECTION_ESTIMATED_WORKLOAD_SIZE, new MeasurementProperty[]{}, out);
-//
-//        Measurements.export(MeasurementType.VIEW_SELECTION_SPACE_BUDGET, new MeasurementProperty[]{}, out);
-//        Measurements.export(MeasurementType.VIEW_SELECTION_SPACE_OCCUPATION, new MeasurementProperty[]{}, out);
-//
-//        Measurements.export(MeasurementType.VIEW_SELECTION_NUMBER_OF_SELECTED_VIEWS, new MeasurementProperty[]{}, out);
-//
-//        out.flush();
-//        out.close();
-//        Parameters.logger.info("Printed statistics in logs/*statistics.txt");
-//
-//        Measurements.clear();
+        // OutputStream out = new FileOutputStream("logs" + File.separator +
+        // NodeInformation.localPID + "-statistics-" + ++exportCount + ".txt");
+        //
+        //
+        // Measurements.export(MeasurementType.VIEW_SELECTION_SELECTED_VIEW, new
+        // MeasurementProperty[]{MeasurementProperty.VIEW_NAME, MeasurementProperty.VIEW_DEFINITION,
+        // MeasurementProperty.VIEW_SIZE}, out);
+        //
+        // Measurements.export(MeasurementType.QUERY_EXECUTION_TIME, new
+        // MeasurementProperty[]{MeasurementProperty.QUERY_NAME, MeasurementProperty.LOGICAL_PLAN,
+        // MeasurementProperty.QUERY_DEFINITION}, out);
+        // Measurements.export(MeasurementType.QUERY_EXECUTION_TIME_TO_FIRST_RESULT, new
+        // MeasurementProperty[]{MeasurementProperty.QUERY_NAME}, out);
+        // Measurements.export(MeasurementType.QUERY_EXECUTION_RESULTS_NUMBER, new
+        // MeasurementProperty[]{MeasurementProperty.QUERY_NAME}, out);
+        //
+        // Measurements.export(MeasurementType.VIEW_MATERIALIZATION_TIME, new
+        // MeasurementProperty[]{MeasurementProperty.DOCUMENT_NAME}, out, true);
+        //
+        // Measurements.export(MeasurementType.VIEW_SELECTION_CANDIDATE_VIEWS_ENUMERATION_EXECUTION_TIME,
+        // new MeasurementProperty[]{}, out);
+        // Measurements.export(MeasurementType.VIEW_SELECTION_NUMBER_OF_CANDIDATE_VIEWS, new
+        // MeasurementProperty[]{}, out);
+        //
+        // Measurements.export(MeasurementType.VIEW_SELECTION_ALGORITHM_EXECUTION_TIME, new
+        // MeasurementProperty[]{}, out, false);
+        // Measurements.export(MeasurementType.REWRITING_TIME, new MeasurementProperty[]{}, out,
+        // true);
+        // Measurements.export(MeasurementType.VIEW_SELECTION_CANDIDATE_VIEW_SIZE_ESTIMATION_TIME,
+        // new MeasurementProperty[]{}, out, false);
+        //
+        // Measurements.export(MeasurementType.VIEW_SELECTION_ALGORITHM, new
+        // MeasurementProperty[]{MeasurementProperty.ALGORITHM_NAME}, out);
+        //
+        // Measurements.export(MeasurementType.VIEW_SELECTION_ESTIMATED_WORKLOAD_SIZE, new
+        // MeasurementProperty[]{}, out);
+        //
+        // Measurements.export(MeasurementType.VIEW_SELECTION_SPACE_BUDGET, new
+        // MeasurementProperty[]{}, out);
+        // Measurements.export(MeasurementType.VIEW_SELECTION_SPACE_OCCUPATION, new
+        // MeasurementProperty[]{}, out);
+        //
+        // Measurements.export(MeasurementType.VIEW_SELECTION_NUMBER_OF_SELECTED_VIEWS, new
+        // MeasurementProperty[]{}, out);
+        //
+        // out.flush();
+        // out.close();
+        // Parameters.logger.info("Printed statistics in logs/*statistics.txt");
+        //
+        // Measurements.clear();
     }
 
     public synchronized static void export() throws IOException {
-//        OutputStream out = new FileOutputStream("logs" + File.separator + NodeInformation.localPID + "-statistics-" + ++exportCount + ".txt");
-//
-//        for (Entry<MeasurementType, List<Measurement>> type : measurements.entrySet()) {
-//            if (type.getValue().isEmpty())
-//                continue;
-//
-//            Set<MeasurementProperty> props = type.getValue().get(0).getProperties().keySet();
-//            MeasurementProperty types[] = new MeasurementProperty[props.size()];
-//
-//            int i = 0;
-//            for (MeasurementProperty p : props) {
-//                types[i] = p;
-//                i++;
-//            }
-//
-//            Measurements.export(type.getKey(), types, out);
-//        }
-//
-//
-//        out.flush();
-//        out.close();
-//        Parameters.logger.info("Printed statistics in logs/*statistics.txt");
-//
-//        Measurements.clear();
+        // OutputStream out = new FileOutputStream("logs" + File.separator +
+        // NodeInformation.localPID + "-statistics-" + ++exportCount + ".txt");
+        //
+        // for (Entry<MeasurementType, List<Measurement>> type : measurements.entrySet()) {
+        // if (type.getValue().isEmpty())
+        // continue;
+        //
+        // Set<MeasurementProperty> props = type.getValue().get(0).getProperties().keySet();
+        // MeasurementProperty types[] = new MeasurementProperty[props.size()];
+        //
+        // int i = 0;
+        // for (MeasurementProperty p : props) {
+        // types[i] = p;
+        // i++;
+        // }
+        //
+        // Measurements.export(type.getKey(), types, out);
+        // }
+        //
+        //
+        // out.flush();
+        // out.close();
+        // Parameters.logger.info("Printed statistics in logs/*statistics.txt");
+        //
+        // Measurements.clear();
     }
 }

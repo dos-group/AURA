@@ -6,6 +6,7 @@ import java.io.*;
  * Created by teots on 2/27/14.
  */
 public class SanityEvaluator {
+
     private String path;
 
     public SanityEvaluator(String path) {

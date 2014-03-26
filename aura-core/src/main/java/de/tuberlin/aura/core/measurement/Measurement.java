@@ -25,7 +25,7 @@ public class Measurement implements Comparable<Measurement> {
     public Measurement(MeasurementType type) {
         this(type, 0d, true);
 
-        //new org.apache.commons.net.ntp.
+        // new org.apache.commons.net.ntp.
     }
 
     public Measurement(MeasurementType type, double value) {
