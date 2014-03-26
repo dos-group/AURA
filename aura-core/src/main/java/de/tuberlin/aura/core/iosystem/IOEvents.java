@@ -1,25 +1,23 @@
 package de.tuberlin.aura.core.iosystem;
 
+import java.util.UUID;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import io.netty.channel.Channel;
 
-import java.util.UUID;
-
 public final class IOEvents {
 
     // Disallow instantiation.
-    private IOEvents() {
-    }
+    private IOEvents() {}
 
     /**
      *
      */
     public static final class DataEventType {
 
-        private DataEventType() {
-        }
+        private DataEventType() {}
 
         public static final String DATA_EVENT_INPUT_CHANNEL_CONNECTED = "DATA_EVENT_INPUT_CHANNEL_CONNECTED";
 
@@ -41,8 +39,7 @@ public final class IOEvents {
      */
     public static final class ControlEventType {
 
-        private ControlEventType() {
-        }
+        private ControlEventType() {}
 
         public static final String CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED = "CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED";
 
@@ -100,10 +97,10 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("GenericIOEvent = {")
-                    .append(" type = " + type + ", ")
-                    .append(" payload = " + payload.toString() + ", ")
-                    .append(" }")
-                    .toString();
+                                        .append(" type = " + type + ", ")
+                                        .append(" payload = " + payload.toString() + ", ")
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -134,11 +131,11 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("DataIOEvent = {")
-                    .append(" type = " + type + ", ")
-                    .append(" srcTaskID = " + srcTaskID.toString() + ", ")
-                    .append(" dstTaskID = " + dstTaskID.toString())
-                    .append(" }")
-                    .toString();
+                                        .append(" type = " + type + ", ")
+                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
+                                        .append(" dstTaskID = " + dstTaskID.toString())
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -151,7 +148,7 @@ public final class IOEvents {
 
         public final UUID messageID;
 
-        //public final byte[] data;
+        // public final byte[] data;
 
         public final MemoryManager.MemoryView buffer;
 
@@ -177,11 +174,11 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("TransferBufferEvent = {")
-                    .append(" messageID = " + messageID.toString() + ", ")
-                    .append(" srcTaskID = " + srcTaskID.toString() + ", ")
-                    .append(" dstTaskID = " + dstTaskID.toString() + ", ")
-                    .append(" }")
-                    .toString();
+                                        .append(" messageID = " + messageID.toString() + ", ")
+                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
+                                        .append(" dstTaskID = " + dstTaskID.toString() + ", ")
+                                        .append(" }")
+                                        .toString();
         }
     }
 
@@ -240,11 +237,11 @@ public final class IOEvents {
         @Override
         public String toString() {
             return (new StringBuilder()).append("ControlIOEvent = {")
-                    .append(" type = " + type + ", ")
-                    .append(" srcMachineID = " + srcMachineID + ", ")
-                    .append(" dstMachineID = " + dstMachineID)
-                    .append(" }")
-                    .toString();
+                                        .append(" type = " + type + ", ")
+                                        .append(" srcMachineID = " + srcMachineID + ", ")
+                                        .append(" dstMachineID = " + dstMachineID)
+                                        .append(" }")
+                                        .toString();
         }
     }
 

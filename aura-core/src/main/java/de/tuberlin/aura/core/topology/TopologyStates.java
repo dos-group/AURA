@@ -3,8 +3,7 @@ package de.tuberlin.aura.core.topology;
 public class TopologyStates {
 
     // Disallow instantiation.
-    private TopologyStates() {
-    }
+    private TopologyStates() {}
 
     // ---------------------------------------------------
     // Topology States & Topology Transitions.

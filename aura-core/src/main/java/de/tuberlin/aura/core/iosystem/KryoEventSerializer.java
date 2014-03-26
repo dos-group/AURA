@@ -1,10 +1,13 @@
 package de.tuberlin.aura.core.iosystem;
 
 
+import java.util.UUID;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.buffer.ByteBuf;
@@ -16,8 +19,6 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
-import java.util.UUID;
-
 // TODO: set unique id for serializer!
 // TODO: What for a unique id?
 
@@ -27,8 +28,7 @@ import java.util.UUID;
 public final class KryoEventSerializer {
 
     // Disallow instantiation.
-    private KryoEventSerializer() {
-    }
+    private KryoEventSerializer() {}
 
     // ---------------------------------------------------
     // Netty specific stuff.
@@ -44,12 +44,11 @@ public final class KryoEventSerializer {
 
     public static final class KryoInboundHandler extends ChannelInboundHandlerAdapter {
 
-        /*private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
-            @Override
-            protected Kryo initialValue() {
-                return new Kryo();
-            }
-        };*/
+        /*
+         * private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
+         * 
+         * @Override protected Kryo initialValue() { return new Kryo(); } };
+         */
 
         private Kryo kryo;
 
@@ -70,12 +69,11 @@ public final class KryoEventSerializer {
 
     public static final class KryoOutboundHandler extends ChannelOutboundHandlerAdapter {
 
-        /*private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
-            @Override
-            protected Kryo initialValue() {
-                return new Kryo();
-            }
-        };*/
+        /*
+         * private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
+         * 
+         * @Override protected Kryo initialValue() { return new Kryo(); } };
+         */
 
         private Kryo kryo;
 
@@ -116,8 +114,7 @@ public final class KryoEventSerializer {
 
     public static class DataIOEventSerializer extends Serializer<IOEvents.DataIOEvent> {
 
-        public DataIOEventSerializer() {
-        }
+        public DataIOEventSerializer() {}
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.DataIOEvent dataIOEvent) {
@@ -145,8 +142,7 @@ public final class KryoEventSerializer {
         private TaskExecutionManager executionManager;
 
 
-        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator,
-                                             final TaskExecutionManager executionManager) {
+        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator, final TaskExecutionManager executionManager) {
             this.allocator = allocator;
             this.executionManager = executionManager;
         }

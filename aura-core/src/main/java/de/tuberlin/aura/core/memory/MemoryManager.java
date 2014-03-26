@@ -1,12 +1,13 @@
 package de.tuberlin.aura.core.memory;
 
-import de.tuberlin.aura.core.descriptors.Descriptors;
-import org.apache.log4j.Logger;
-
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.log4j.Logger;
+
+import de.tuberlin.aura.core.descriptors.Descriptors;
 
 /**
  *
@@ -16,8 +17,7 @@ public final class MemoryManager {
     private static final Logger LOG = Logger.getLogger(MemoryManager.class);
 
     // Disallow instantiation.
-    private MemoryManager() {
-    }
+    private MemoryManager() {}
 
     /**
      *
@@ -115,7 +115,7 @@ public final class MemoryManager {
 
         private final int globalBufferCount;
 
-        //private final ThreadLocal<BufferAllocatorGroup> threadBufferAllocator;
+        // private final ThreadLocal<BufferAllocatorGroup> threadBufferAllocator;
 
         private final List<BufferAllocatorGroup> allocatorGroups;
 
@@ -146,22 +146,22 @@ public final class MemoryManager {
 
             final int buffersPerAllocator = (perExecutionUnitBuffers / groupsPerExecutionUnit) / NUM_OF_ALLOCATORS_PER_GROUP;
 
-            this.allocatorGroups = setupBufferAllocatorGroups(
-                    numOfExecutionUnits * groupsPerExecutionUnit,
-                    NUM_OF_ALLOCATORS_PER_GROUP,
-                    buffersPerAllocator,
-                    BufferAllocator._64K
-            );
+            this.allocatorGroups =
+                    setupBufferAllocatorGroups(numOfExecutionUnits * groupsPerExecutionUnit,
+                                               NUM_OF_ALLOCATORS_PER_GROUP,
+                                               buffersPerAllocator,
+                                               BufferAllocator._64K);
 
             this.allocatorIndex = new AtomicInteger(0);
 
-            //this.threadBufferAllocator = new ThreadLocal<BufferAllocatorGroup>() {
+            // this.threadBufferAllocator = new ThreadLocal<BufferAllocatorGroup>() {
 
-            //    @Override
-            //    protected BufferAllocatorGroup initialValue() {
-            //        return allocatorGroups.get(allocatorIndex.getAndIncrement() % allocatorGroups.size());
-            //    }
-            //};
+            // @Override
+            // protected BufferAllocatorGroup initialValue() {
+            // return allocatorGroups.get(allocatorIndex.getAndIncrement() %
+            // allocatorGroups.size());
+            // }
+            // };
         }
 
         // ---------------------------------------------------
@@ -427,6 +427,7 @@ public final class MemoryManager {
 
     public static void main(String[] arg) {
 
-        //final BufferMemoryManager mm = new BufferMemoryManager(DescriptorFactory.createMachineDescriptor(14124, 12232));
+        // final BufferMemoryManager mm = new
+        // BufferMemoryManager(DescriptorFactory.createMachineDescriptor(14124, 12232));
     }
 }

@@ -1,13 +1,13 @@
 package de.tuberlin.aura.core.common.utils;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Enumeration;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class InetHelper {
 

@@ -1,5 +1,9 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.util.*;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
@@ -12,9 +16,6 @@ import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.gates.OutputGate;
-import org.apache.log4j.Logger;
-
-import java.util.*;
 
 /**
  *
@@ -44,8 +45,7 @@ public final class TaskDataProducer implements DataProducer {
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataProducer(final TaskDriverContext driverContext,
-                            final MemoryManager.Allocator allocator) {
+    public TaskDataProducer(final TaskDriverContext driverContext, final MemoryManager.Allocator allocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
@@ -95,11 +95,7 @@ public final class TaskDataProducer implements DataProducer {
             final UUID outputTaskID = driverContext.taskBindingDescriptor.outputGateBindings.get(0).get(index).taskID;
 
             final IOEvents.DataIOEvent exhaustedEvent =
-                    new IOEvents.DataIOEvent(
-                            IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED,
-                            driverContext.taskDescriptor.taskID,
-                            outputTaskID
-                    );
+                    new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, driverContext.taskDescriptor.taskID, outputTaskID);
 
             emit(0, index, exhaustedEvent);
         }
@@ -118,9 +114,9 @@ public final class TaskDataProducer implements DataProducer {
             }
         }
 
-        //taskIDToGateIndex.clear();
-        //channelIndexToTaskID.clear();
-        //dispatcher.removeAllEventListener(); // TODO:
+        // taskIDToGateIndex.clear();
+        // channelIndexToTaskID.clear();
+        // dispatcher.removeAllEventListener(); // TODO:
     }
 
     /**
@@ -133,7 +129,7 @@ public final class TaskDataProducer implements DataProducer {
 
     /**
      * Return the gate index for the corresponding task ID.
-     *
+     * 
      * @param taskID The unique ID of a connected task.
      * @return The gate index or null if no suitable mapping exists.
      */
@@ -162,12 +158,10 @@ public final class TaskDataProducer implements DataProducer {
             for (final List<Descriptors.TaskDescriptor> outputGate : driverContext.taskBindingDescriptor.outputGateBindings) {
                 for (final Descriptors.TaskDescriptor outputTask : outputGate) {
 
-                    driverContext.managerContext.ioManager.connectDataChannel(
-                            driverContext.taskDescriptor.taskID,
-                            outputTask.taskID,
-                            outputTask.getMachineDescriptor(),
-                            allocator
-                    );
+                    driverContext.managerContext.ioManager.connectDataChannel(driverContext.taskDescriptor.taskID,
+                                                                              outputTask.taskID,
+                                                                              outputTask.getMachineDescriptor(),
+                                                                              allocator);
                 }
             }
         }
@@ -175,18 +169,14 @@ public final class TaskDataProducer implements DataProducer {
 
     /**
      * Create the output gates from the binding descriptor.
-     *
+     * 
      * @return The list of output gates or null if no the task has no outputs.
      */
     private List<OutputGate> createOutputGates() {
 
         if (driverContext.taskBindingDescriptor.outputGateBindings.size() <= 0) {
 
-            driverContext.taskFSM.dispatchEvent(
-                    new StateMachine.FSMTransitionEvent<>(
-                            TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED
-                    )
-            );
+            driverContext.taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
 
             return null;
         }
@@ -200,8 +190,8 @@ public final class TaskDataProducer implements DataProducer {
     }
 
     /**
-     * Create the mapping between task ID and corresponding gate index and
-     * between the channel index and the corresponding task ID.
+     * Create the mapping between task ID and corresponding gate index and between the channel index
+     * and the corresponding task ID.
      */
     private void createOutputMappings() {
         int channelIndex = 0;
@@ -240,11 +230,11 @@ public final class TaskDataProducer implements DataProducer {
                         channelWriter.setOutputQueue(queue);
 
                         final OutputGate og = outputGates.get(gateIndex);
-                        og.setChannelWriter(channelIndex, channelWriter);   // TODO: Sometimes NullPointerException.
+                        og.setChannelWriter(channelIndex, channelWriter); // TODO: Sometimes
+                                                                          // NullPointerException.
 
-                        LOG.info("OUTPUT CONNECTION FROM " + driverContext.taskDescriptor.name + " [" +
-                                driverContext.taskDescriptor.taskID + "] TO TASK " + outputTask.name + " ["
-                                + outputTask.taskID + "] IS ESTABLISHED");
+                        LOG.info("OUTPUT CONNECTION FROM " + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID
+                                + "] TO TASK " + outputTask.name + " [" + outputTask.taskID + "] IS ESTABLISHED");
                     }
 
                     // all data outputs are connected...
@@ -256,11 +246,7 @@ public final class TaskDataProducer implements DataProducer {
             }
 
             if (allOutputGatesConnected) {
-                driverContext.taskFSM.dispatchEvent(
-                        new StateMachine.FSMTransitionEvent<>(
-                                TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED
-                        )
-                );
+                driverContext.taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
             }
         }
     }

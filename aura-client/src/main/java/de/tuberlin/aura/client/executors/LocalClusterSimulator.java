@@ -1,14 +1,5 @@
 package de.tuberlin.aura.client.executors;
 
-import de.tuberlin.aura.core.common.utils.ProcessExecutor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
-import de.tuberlin.aura.taskmanager.TaskManager;
-import de.tuberlin.aura.workloadmanager.WorkloadManager;
-import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.server.NIOServerCnxnFactory;
-import org.apache.zookeeper.server.ZooKeeperServer;
-
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -17,6 +8,16 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.server.NIOServerCnxnFactory;
+import org.apache.zookeeper.server.ZooKeeperServer;
+
+import de.tuberlin.aura.core.common.utils.ProcessExecutor;
+import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import de.tuberlin.aura.taskmanager.TaskManager;
+import de.tuberlin.aura.workloadmanager.WorkloadManager;
 
 public final class LocalClusterSimulator {
 
@@ -124,25 +125,25 @@ public final class LocalClusterSimulator {
                     tmList.add(new TaskManager(zkServer, getFreePort(), getFreePort()));
                 }
             }
-            break;
+                break;
 
             case EXECUTION_MODE_MULTIPLE_PROCESSES: {
                 try {
                     peList.add(new ProcessExecutor(WorkloadManager.class).execute(zkServer,
-                            Integer.toString(getFreePort()),
-                            Integer.toString(getFreePort())));
+                                                                                  Integer.toString(getFreePort()),
+                                                                                  Integer.toString(getFreePort())));
                     Thread.sleep(1000);
                     for (int i = 0; i < numNodes; ++i) {
                         peList.add(new ProcessExecutor(TaskManager.class).execute(zkServer,
-                                Integer.toString(getFreePort()),
-                                Integer.toString(getFreePort())));
+                                                                                  Integer.toString(getFreePort()),
+                                                                                  Integer.toString(getFreePort())));
                         Thread.sleep(1000);
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-            break;
+                break;
 
             default:
                 throw new IllegalStateException("execution mode not known");

@@ -1,5 +1,8 @@
 package de.tuberlin.aura.core.topology;
 
+import java.io.Serializable;
+import java.util.*;
+
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
@@ -8,14 +11,10 @@ import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology.DeploymentType;
 
-import java.io.Serializable;
-import java.util.*;
-
 public class AuraDirectedGraph {
 
     // Disallow instantiation.
-    private AuraDirectedGraph() {
-    }
+    private AuraDirectedGraph() {}
 
     /**
      *
@@ -309,16 +308,16 @@ public class AuraDirectedGraph {
             final UUID topologyID = UUID.randomUUID();
 
             return new AuraTopology(machineID,
-                    name,
-                    topologyID,
-                    nodeMap,
-                    sourceMap,
-                    sinkMap,
-                    edges,
-                    userCodeMap,
-                    uidNodeMap,
-                    deploymentType,
-                    monitoringProperties);
+                                    name,
+                                    topologyID,
+                                    nodeMap,
+                                    sourceMap,
+                                    sinkMap,
+                                    edges,
+                                    userCodeMap,
+                                    uidNodeMap,
+                                    deploymentType,
+                                    monitoringProperties);
         }
 
         private boolean validateBackCouplingEdge(final Set<Node> visitedNodes, final Node currentNode, final Node destNode) {
@@ -386,10 +385,10 @@ public class AuraDirectedGraph {
 
             public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType) {
                 return connectTo(dstNodeName,
-                        transferType,
-                        Edge.EdgeType.FORWARD_EDGE,
-                        Node.DataPersistenceType.EPHEMERAL,
-                        Node.ExecutionType.PIPELINED);
+                                 transferType,
+                                 Edge.EdgeType.FORWARD_EDGE,
+                                 Node.DataPersistenceType.EPHEMERAL,
+                                 Node.ExecutionType.PIPELINED);
             }
 
             public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType) {
@@ -662,11 +661,11 @@ public class AuraDirectedGraph {
         @Override
         public String toString() {
             return (new StringBuilder()).append("ExecutionNode = {")
-                    .append(" uid = " + uid.toString() + ", ")
-                    .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-                    .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
-                    .append(" }")
-                    .toString();
+                                        .append(" uid = " + uid.toString() + ", ")
+                                        .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
+                                        .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
+                                        .append(" }")
+                                        .toString();
         }
 
         public void accept(final Visitor<ExecutionNode> visitor) {
@@ -754,12 +753,12 @@ public class AuraDirectedGraph {
         @Override
         public String toString() {
             return (new StringBuilder()).append("Edge = {")
-                    .append(" srcNode = " + srcNode.toString() + ", ")
-                    .append(" dstNode = " + dstNode.toString() + ", ")
-                    .append(" transferType = " + transferType.toString() + ", ")
-                    .append(" edgeType = " + edgeType.toString() + ", ")
-                    .append(" }")
-                    .toString();
+                                        .append(" srcNode = " + srcNode.toString() + ", ")
+                                        .append(" dstNode = " + dstNode.toString() + ", ")
+                                        .append(" transferType = " + transferType.toString() + ", ")
+                                        .append(" edgeType = " + edgeType.toString() + ", ")
+                                        .append(" }")
+                                        .toString();
         }
     }
 

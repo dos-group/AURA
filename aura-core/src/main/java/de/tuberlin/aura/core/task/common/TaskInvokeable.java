@@ -1,8 +1,8 @@
 package de.tuberlin.aura.core.task.common;
 
-import org.apache.log4j.Logger;
-
 import java.util.UUID;
+
+import org.apache.log4j.Logger;
 
 public abstract class TaskInvokeable implements TaskLifecycle {
 
@@ -24,10 +24,7 @@ public abstract class TaskInvokeable implements TaskLifecycle {
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskInvokeable(final TaskDriverContext driverContext,
-                          final DataProducer producer,
-                          final DataConsumer consumer,
-                          final Logger LOG) {
+    public TaskInvokeable(final TaskDriverContext driverContext, final DataProducer producer, final DataConsumer consumer, final Logger LOG) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
@@ -53,17 +50,13 @@ public abstract class TaskInvokeable implements TaskLifecycle {
     // Public Methods.
     // ---------------------------------------------------
 
-    public void create() throws Throwable {
-    }
+    public void create() throws Throwable {}
 
-    public void open() throws Throwable {
-    }
+    public void open() throws Throwable {}
 
-    public void close() throws Throwable {
-    }
+    public void close() throws Throwable {}
 
-    public void release() throws Throwable {
-    }
+    public void release() throws Throwable {}
 
     public UUID getTaskID(int gateIndex, int channelIndex) {
         return driverContext.taskBindingDescriptor.outputGateBindings.get(gateIndex).get(channelIndex).taskID;

@@ -1,14 +1,15 @@
 package de.tuberlin.aura.core.task.gates;
 
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.UUID;
 
 public final class InputGate extends AbstractGate {
 
@@ -43,12 +44,7 @@ public final class InputGate extends AbstractGate {
         for (int i = 0; i < numChannels; ++i) {
             final UUID srcID = context.taskBindingDescriptor.inputGateBindings.get(gateIndex).get(i).taskID;
 
-            final DataIOEvent event =
-                    new DataIOEvent(
-                            IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN,
-                            srcID,
-                            context.taskDescriptor.taskID
-                    );
+            final DataIOEvent event = new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, context.taskDescriptor.taskID);
 
             channelReader.write(context.taskDescriptor.taskID, gateIndex, i, event);
         }
@@ -61,12 +57,7 @@ public final class InputGate extends AbstractGate {
         for (int i = 0; i < numChannels; ++i) {
             final UUID srcID = context.taskBindingDescriptor.inputGateBindings.get(gateIndex).get(i).taskID;
 
-            final DataIOEvent event =
-                    new DataIOEvent(
-                            IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE,
-                            srcID,
-                            context.taskDescriptor.taskID
-                    );
+            final DataIOEvent event = new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, context.taskDescriptor.taskID);
 
             channelReader.write(context.taskDescriptor.taskID, gateIndex, i, event);
         }

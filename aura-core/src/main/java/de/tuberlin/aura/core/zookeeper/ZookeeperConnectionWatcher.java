@@ -1,11 +1,13 @@
 package de.tuberlin.aura.core.zookeeper;
 
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import net.jcip.annotations.ThreadSafe;
+
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 
 /**
  * TODO: Put all watchers in one class like the descriptors?
@@ -33,9 +35,9 @@ public class ZookeeperConnectionWatcher implements Watcher {
 
     /**
      * Constructor.
-     *
+     * 
      * @param handler Forward all events that are received by this class to this event handler for
-     *                further processing.
+     *        further processing.
      */
     public ZookeeperConnectionWatcher(IEventHandler handler) {
         this.handler = handler;

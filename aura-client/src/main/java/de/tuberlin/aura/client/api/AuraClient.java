@@ -1,5 +1,13 @@
 package de.tuberlin.aura.client.api;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.ZooKeeper;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -15,13 +23,6 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.ZooKeeper;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 public final class AuraClient {
 
@@ -70,9 +71,9 @@ public final class AuraClient {
         this.codeExtractor = new UserCodeExtractor(false);
 
         this.codeExtractor.addStandardDependency("java")
-                .addStandardDependency("org/apache/log4j")
-                .addStandardDependency("io/netty")
-                .addStandardDependency("de/tuberlin/aura/core");
+                          .addStandardDependency("org/apache/log4j")
+                          .addStandardDependency("io/netty")
+                          .addStandardDependency("de/tuberlin/aura/core");
 
         final ZooKeeper zookeeper;
 
@@ -81,8 +82,7 @@ public final class AuraClient {
             zookeeper = new ZooKeeper(zkServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(new IEventHandler() {
 
                 @Override
-                public void handleEvent(Event event) {
-                }
+                public void handleEvent(Event event) {}
             }));
 
             wmMachineDescriptor = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);

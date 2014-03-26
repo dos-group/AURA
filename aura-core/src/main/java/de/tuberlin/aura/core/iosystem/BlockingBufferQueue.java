@@ -1,15 +1,15 @@
 package de.tuberlin.aura.core.iosystem;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Simple wrapper for a {@link java.util.concurrent.LinkedBlockingQueue}.
- *
+ * 
  * @param <T>
  */
 public class BlockingBufferQueue<T> implements BufferQueue<T> {
