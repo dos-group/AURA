@@ -1,5 +1,13 @@
 package de.tuberlin.aura.core.iosystem;
 
+import java.net.SocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
@@ -9,13 +17,6 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.SocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 public class DataReader {
 
@@ -65,7 +66,7 @@ public class DataReader {
 
     /**
      * Creates a new Data Reader. There should only be one Data Reader per task manager.
-     *
+     * 
      * @param dispatcher the dispatcher to which events should be published.
      */
     public DataReader(IEventDispatcher dispatcher, final TaskExecutionManager executionManager) {
@@ -94,15 +95,13 @@ public class DataReader {
      * <p/>
      * Notice: the reader does not shut down the worker group. This is in the callers
      * responsibility.
-     *
-     * @param type        the connection type of the channel to bind.
-     * @param address     the remote address the channel should be connected to.
+     * 
+     * @param type the connection type of the channel to bind.
+     * @param address the remote address the channel should be connected to.
      * @param workerGroup the event loop the channel should be associated with.
-     * @param <T>         the type of channel this connection uses.
+     * @param <T> the type of channel this connection uses.
      */
-    public <T extends Channel> void bind(final ConnectionType<T> type,
-                                         final SocketAddress address,
-                                         final EventLoopGroup workerGroup) {
+    public <T extends Channel> void bind(final ConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
 
         ServerBootstrap bootstrap = type.bootStrap(workerGroup);
         bootstrap.childHandler(new ChannelInitializer<T>() {
@@ -110,11 +109,11 @@ public class DataReader {
             @Override
             public void initChannel(T ch) throws Exception {
                 ch.pipeline()
-                        .addLast(KryoEventSerializer.getLengthDecoder())
-                        .addLast(new KryoEventSerializer.KryoOutboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(null, executionManager)))
-                        .addLast(new KryoEventSerializer.KryoInboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(null, executionManager)))
-                        .addLast(new DataHandler())
-                        .addLast(new EventHandler());
+                  .addLast(KryoEventSerializer.getLengthDecoder())
+                  .addLast(new KryoEventSerializer.KryoOutboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(null, executionManager)))
+                  .addLast(new KryoEventSerializer.KryoInboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(null, executionManager)))
+                  .addLast(new DataHandler())
+                  .addLast(new EventHandler());
             }
         });
 
@@ -143,8 +142,8 @@ public class DataReader {
 
     /**
      * Returns the queue which is assigned to the gate of the task.
-     *
-     * @param taskID    the task id which the gate belongs to.
+     * 
+     * @param taskID the task id which the gate belongs to.
      * @param gateIndex the gate index.
      * @return the queue assigned to the gate, or null if no queue is assigned.
      */
@@ -227,9 +226,9 @@ public class DataReader {
 
                     IOEvents.GenericIOEvent connected =
                             new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                    DataReader.this,
-                                    event.srcTaskID,
-                                    event.dstTaskID);
+                                                        DataReader.this,
+                                                        event.srcTaskID,
+                                                        event.dstTaskID);
                     connected.setChannel(ctx.channel());
                     dispatcher.dispatchEvent(connected);
                     break;
@@ -295,12 +294,12 @@ public class DataReader {
             // TODO: check if its better to use a dedicated boss and worker group instead of one for
             // both
             b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
-                    // sets the max. number of pending, not yet fully connected (handshake) channels
-                    .option(ChannelOption.SO_BACKLOG, 128)
+            // sets the max. number of pending, not yet fully connected (handshake) channels
+             .option(ChannelOption.SO_BACKLOG, 128)
 
-                    .option(ChannelOption.SO_RCVBUF, bufferSize)
-                            // set keep alive, so idle connections are persistent
-                    .childOption(ChannelOption.SO_KEEPALIVE, true);
+             .option(ChannelOption.SO_RCVBUF, bufferSize)
+             // set keep alive, so idle connections are persistent
+             .childOption(ChannelOption.SO_KEEPALIVE, true);
 
             return b;
         }

@@ -1,7 +1,5 @@
 package de.tuberlin.aura.core.common.eventsystem;
 
-import org.apache.log4j.Logger;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -10,10 +8,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.log4j.Logger;
+
 /**
  * The EventDispatcher is responsible for adding and removing listeners and for dispatching event to
  * this listeners.
- *
+ * 
  * @author Tobias Herb
  */
 public class EventDispatcher implements IEventDispatcher {
@@ -84,8 +84,8 @@ public class EventDispatcher implements IEventDispatcher {
 
     /**
      * Add a listener for a specific event.
-     *
-     * @param type     The event type.
+     * 
+     * @param type The event type.
      * @param listener The handler for this event.
      */
     @Override
@@ -122,8 +122,8 @@ public class EventDispatcher implements IEventDispatcher {
 
     /**
      * Remove a listener for a specific event.
-     *
-     * @param type     The event type.
+     * 
+     * @param type The event type.
      * @param listener The handler for this event.
      */
     @Override
@@ -160,7 +160,7 @@ public class EventDispatcher implements IEventDispatcher {
 
     /**
      * Dispatch a event.
-     *
+     * 
      * @param event The event to dispatch.
      */
     @Override
@@ -175,9 +175,9 @@ public class EventDispatcher implements IEventDispatcher {
             // Use this place for debugging if you not know where
             // in the code the event gets dispatched.
 
-            //if(event.type.equals("CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE")) {
-            //    LOG.info("");
-            //}
+            // if(event.type.equals("CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE")) {
+            // LOG.info("");
+            // }
 
         } else {
             dispatch(event);
@@ -186,7 +186,7 @@ public class EventDispatcher implements IEventDispatcher {
 
     /**
      * Checks if listeners are installed for that event type.
-     *
+     * 
      * @param type The event type.
      * @return True if a listener is installed, else false.
      */

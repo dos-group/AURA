@@ -1,9 +1,5 @@
 package de.tuberlin.aura.core.task.usercode;
 
-import de.tuberlin.aura.core.common.utils.Compression;
-import org.apache.bcel.Repository;
-import org.apache.bcel.classfile.*;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -12,6 +8,11 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
+
+import org.apache.bcel.Repository;
+import org.apache.bcel.classfile.*;
+
+import de.tuberlin.aura.core.common.utils.Compression;
 
 public final class UserCodeExtractor {
 

@@ -1,17 +1,16 @@
 package de.tuberlin.aura.core.common.statemachine;
 
+import java.util.*;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 
-import java.util.*;
-
 public final class StateMachine {
 
     // Disallow instantiation.
-    private StateMachine() {
-    }
+    private StateMachine() {}
 
     /**
      * @param <S>
@@ -153,14 +152,13 @@ public final class StateMachine {
             if (initialState == null)
                 throw new IllegalStateException("initialState == null");
 
-            return new FiniteStateMachine<>(
-                    Collections.unmodifiableMap(stateTransitionMtx),
-                    initialState,
-                    errorState,
-                    Collections.unmodifiableSet(finalStates),
-                    Collections.unmodifiableMap(nestedFSMs),
-                    transitionClazz,
-                    Collections.unmodifiableMap(transitionConstraintMap));
+            return new FiniteStateMachine<>(Collections.unmodifiableMap(stateTransitionMtx),
+                                            initialState,
+                                            errorState,
+                                            Collections.unmodifiableSet(finalStates),
+                                            Collections.unmodifiableMap(nestedFSMs),
+                                            transitionClazz,
+                                            Collections.unmodifiableMap(transitionConstraintMap));
         }
 
         // ---------------------------------------------------
@@ -391,16 +389,15 @@ public final class StateMachine {
          * @param stateMachine
          */
         public void defineTransitionConstraint(final T hostTransition, final FiniteStateMachine<S, T> stateMachine) {
-            stateMachine.addEventListener(FSMTransitionEvent.FSMTransition + domainTransition.toString(),
-                    new IEventHandler() {
-                        @Override
-                        public void handleEvent(Event event) {
-                            if (eval((FSMTransitionEvent<? extends Enum<?>>) event)) {
-                                stateMachine.dispatchEvent(new FSMTransitionEvent<>(hostTransition));
-                            }
-                        }
+            stateMachine.addEventListener(FSMTransitionEvent.FSMTransition + domainTransition.toString(), new IEventHandler() {
+
+                @Override
+                public void handleEvent(Event event) {
+                    if (eval((FSMTransitionEvent<? extends Enum<?>>) event)) {
+                        stateMachine.dispatchEvent(new FSMTransitionEvent<>(hostTransition));
                     }
-            );
+                }
+            });
         }
     }
 
@@ -486,15 +483,13 @@ public final class StateMachine {
             this.transitionConstraintMap = transitionConstraintMap;
 
             for (final T transition : transitionClazz.getEnumConstants()) {
-                this.addEventListener(FSMTransitionEvent.FSMTransition + transition.toString(),
-                        new IEventHandler() {
+                this.addEventListener(FSMTransitionEvent.FSMTransition + transition.toString(), new IEventHandler() {
 
-                            @Override
-                            public void handleEvent(Event event) {
-                                doTransition(event.getPayload());
-                            }
-                        }
-                );
+                    @Override
+                    public void handleEvent(Event event) {
+                        doTransition(event.getPayload());
+                    }
+                });
             }
 
             for (List<FiniteStateMachine<? extends Enum<?>, ? extends Enum<?>>> nestedFSMList : nestedFSMs.values()) {
@@ -529,44 +524,32 @@ public final class StateMachine {
             if (state == null)
                 throw new IllegalArgumentException("state == null");
 
-            this.addEventListener(FSMStateEvent.FSM_STATE_EVENT_PREFIX + state.toString(),
-                    new IEventHandler() {
+            this.addEventListener(FSMStateEvent.FSM_STATE_EVENT_PREFIX + state.toString(), new IEventHandler() {
 
-                        @Override
-                        public void handleEvent(Event e) {
+                @Override
+                public void handleEvent(Event e) {
 
-                            final FSMStateEvent<S, T> event = (FSMStateEvent<S, T>) e;
+                    final FSMStateEvent<S, T> event = (FSMStateEvent<S, T>) e;
 
-                            stateAction.stateAction(
-                                    event.previousState,
-                                    event.transition,
-                                    event.state
-                            );
-                        }
-                    }
-            );
+                    stateAction.stateAction(event.previousState, event.transition, event.state);
+                }
+            });
         }
 
         /**
          * @param stateAction
          */
         public void addGlobalStateListener(final FSMStateAction<S, T> stateAction) {
-            this.addEventListener(FSMStateEvent.FSM_STATE_CHANGE,
-                    new IEventHandler() {
+            this.addEventListener(FSMStateEvent.FSM_STATE_CHANGE, new IEventHandler() {
 
-                        @Override
-                        public void handleEvent(Event e) {
-                            @SuppressWarnings("unchecked")
-                            final FSMStateEvent<S, T> event = (FSMStateEvent<S, T>) e;
+                @Override
+                public void handleEvent(Event e) {
+                    @SuppressWarnings("unchecked")
+                    final FSMStateEvent<S, T> event = (FSMStateEvent<S, T>) e;
 
-                            stateAction.stateAction(
-                                    event.previousState,
-                                    event.transition,
-                                    event.state
-                            );
-                        }
-                    }
-            );
+                    stateAction.stateAction(event.previousState, event.transition, event.state);
+                }
+            });
         }
 
         /**
@@ -591,7 +574,8 @@ public final class StateMachine {
 
             if (finalStates.contains(currentState)) {
                 return;
-                //throw new IllegalStateException(currentState + " is a final state, no transition allowed");
+                // throw new IllegalStateException(currentState +
+                // " is a final state, no transition allowed");
             }
 
             final Map<T, S> transitionSpace = stateTransitionMtx.get(currentState);
@@ -616,297 +600,275 @@ public final class StateMachine {
     // Topology State Machine.
     // ---------------------------------------------------
 
-    /*public static enum TopologyState {
-
-        TOPOLOGY_STATE_CREATED,
-
-        TOPOLOGY_STATE_PARALLELIZED,
-
-        TOPOLOGY_STATE_SCHEDULED,
-
-        TOPOLOGY_STATE_DEPLOYED,
-
-        TOPOLOGY_STATE_RUNNING,
-
-        TOPOLOGY_STATE_FINISHED,
-
-        TOPOLOGY_STATE_CANCELED,
-
-        TOPOLOGY_STATE_FAILURE,
-
-        ERROR
-    }
-
-    public static enum TopologyTransition {
-
-        TOPOLOGY_TRANSITION_PARALLELIZE,
-
-        TOPOLOGY_TRANSITION_SCHEDULE,
-
-        TOPOLOGY_TRANSITION_DEPLOY,
-
-        TOPOLOGY_TRANSITION_RUN,
-
-        TOPOLOGY_TRANSITION_FINISH,
-
-        TOPOLOGY_TRANSITION_CANCEL,
-
-        TOPOLOGY_TRANSITION_FAIL
-    }
-
-    // ---------------------------------------------------
-    // Task State Machine.
-    // ---------------------------------------------------
-
-    public enum TaskState {
-
-        TASK_STATE_CREATED,
-
-        TASK_STATE_OUTPUTS_CONNECTED,
-
-        TASK_STATE_INPUTS_CONNECTED,
-
-        TASK_STATE_READY,
-
-        TASK_STATE_RUNNING,
-
-        TASK_STATE_PAUSED,
-
-        TASK_STATE_FINISHED,
-
-        TASK_STATE_CANCELED,
-
-        TASK_STATE_FAILURE,
-
-        TASK_STATE_RECOVER,
-
-        ERROR
-    }
-
-    public enum TaskTransition {
-
-        TASK_TRANSITION_INVALID,
-
-        TASK_TRANSITION_INPUTS_CONNECTED,
-
-        TASK_TRANSITION_OUTPUTS_CONNECTED,
-
-        TASK_TRANSITION_RUN,
-
-        TASK_TRANSITION_SUSPEND,
-
-        TASK_TRANSITION_RESUME,
-
-        TASK_TRANSITION_FINISH,
-
-        TASK_TRANSITION_CANCEL,
-
-        TASK_TRANSITION_FAIL
-    }
-
-    // ---------------------------------------------------
-    // Operator State Machine.
-    // ---------------------------------------------------
-
-    public static enum OperatorState {
-
-        OPERATOR_STATE_CREATED,
-
-        OPERATOR_STATE_OPENED,
-
-        OPERATOR_STATE_RUNNING,
-
-        OPERATOR_STATE_CLOSED,
-
-        OPERATOR_STATE_RELEASED,
-
-        ERROR
-    }
-
-    public static enum OperatorTransition {
-
-        OPERATOR_TRANSITION_OPEN,
-
-        OPERATOR_TRANSITION_RUN,
-
-        OPERATOR_TRANSITION_CLOSE,
-
-        OPERATOR_TRANSITION_RESET,
-
-        OPERATOR_TRANSITION_RELEASE
-    }
-
-    // ---------------------------------------------------
-    // Entry Point.
-    // ---------------------------------------------------
-
-    public static void main(final String[] args) {
-
-        // ---------------------------------------------------
-
-        final FSMStateAction<OperatorState, OperatorTransition> operatorAction = new FSMStateAction<OperatorState, OperatorTransition>() {
-            @Override
-            public void stateAction(OperatorState previousState, OperatorTransition transition, OperatorState state) {
-                System.out.println("previousState = " + previousState
-                        + " - transition = " + transition
-                        + " - state = " + state);
-            }
-        };
-
-        final FiniteStateMachineBuilder<OperatorState, OperatorTransition> operatorFSMBuilder
-                = new FiniteStateMachineBuilder<>(OperatorState.class, OperatorTransition.class, OperatorState.ERROR);
-
-        final FiniteStateMachine<OperatorState, OperatorTransition> operatorFSM = operatorFSMBuilder
-                .defineState(OperatorState.OPERATOR_STATE_CREATED)
-                .addTransition(OperatorTransition.OPERATOR_TRANSITION_OPEN, OperatorState.OPERATOR_STATE_OPENED)
-                .defineState(OperatorState.OPERATOR_STATE_OPENED)
-                .addTransition(OperatorTransition.OPERATOR_TRANSITION_RUN, OperatorState.OPERATOR_STATE_RUNNING)
-                .defineState(OperatorState.OPERATOR_STATE_RUNNING)
-                .addTransition(OperatorTransition.OPERATOR_TRANSITION_CLOSE, OperatorState.OPERATOR_STATE_CLOSED)
-                .defineState(OperatorState.OPERATOR_STATE_CLOSED)
-                .addTransition(OperatorTransition.OPERATOR_TRANSITION_RELEASE, OperatorState.OPERATOR_STATE_RELEASED)
-                .and().addTransition(OperatorTransition.OPERATOR_TRANSITION_RESET, OperatorState.OPERATOR_STATE_OPENED)
-                .defineState(OperatorState.OPERATOR_STATE_RELEASED)
-                .noTransition()
-                .setInitialState(OperatorState.OPERATOR_STATE_CREATED)
-                .build();
-
-        // ---------------------------------------------------
-
-        final FSMStateAction<TaskState, TaskTransition> taskAction = new FSMStateAction<TaskState, TaskTransition>() {
-            @Override
-            public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
-                System.out.println("previousState = " + previousState
-                        + " - transition = " + transition
-                        + " - state = " + state);
-            }
-        };
-        final FiniteStateMachineBuilder<TaskState, TaskTransition> taskFSMBuilder
-                = new FiniteStateMachineBuilder<>(TaskState.class, TaskTransition.class, TaskState.ERROR);
-
-        taskFSMBuilder
-                .defineState(TaskState.TASK_STATE_CREATED)
-                .addTransition(TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, TaskState.TASK_STATE_INPUTS_CONNECTED)
-                .and().addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, TaskState.TASK_STATE_OUTPUTS_CONNECTED)
-                .defineState(TaskState.TASK_STATE_INPUTS_CONNECTED)
-                .addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, TaskState.TASK_STATE_READY)
-                .defineState(TaskState.TASK_STATE_OUTPUTS_CONNECTED)
-                .addTransition(TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, TaskState.TASK_STATE_READY)
-                .defineState(TaskState.TASK_STATE_READY)
-                .addTransition(TaskTransition.TASK_TRANSITION_RUN, TaskState.TASK_STATE_RUNNING)
-                .defineState(TaskState.TASK_STATE_RUNNING)
-                .addTransition(TaskTransition.TASK_TRANSITION_FINISH, TaskState.TASK_STATE_FINISHED)
-                .and().addTransition(TaskTransition.TASK_TRANSITION_CANCEL, TaskState.TASK_STATE_CANCELED)
-                .and().addTransition(TaskTransition.TASK_TRANSITION_FAIL, TaskState.TASK_STATE_FAILURE)
-                .and().addTransition(TaskTransition.TASK_TRANSITION_SUSPEND, TaskState.TASK_STATE_PAUSED)
-                //.nestFSM(TaskState.TASK_STATE_RUNNING, operatorFSM)
-                .defineState(TaskState.TASK_STATE_FINISHED)
-                .noTransition()
-                .defineState(TaskState.TASK_STATE_CANCELED)
-                .noTransition()
-                .defineState(TaskState.TASK_STATE_FAILURE)
-                .noTransition()
-                .defineState(TaskState.TASK_STATE_PAUSED)
-                .addTransition(TaskTransition.TASK_TRANSITION_RESUME, TaskState.TASK_STATE_RUNNING)
-                .setInitialState(TaskState.TASK_STATE_CREATED);
-
-        // ---------------------------------------------------
-
-        final FSMStateAction<TopologyState, TopologyTransition> topologyAction = new FSMStateAction<TopologyState, TopologyTransition>() {
-            @Override
-            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                System.out.println("previousState = " + previousState
-                        + " - transition = " + transition
-                        + " - state = " + state);
-            }
-        };
-
-        final FSMTransitionConstraint2<TopologyState, TopologyTransition> runTransitionConstraint =
-                new FSMTransitionConstraint2<TopologyState, TopologyTransition>(TaskTransition.TASK_TRANSITION_RUN) {
-
-                    int counter = 5;
-
-                    @Override
-                    public boolean eval(FSMTransitionEvent<? extends Enum<?>> event) {
-                        return (--counter) == 0;
-                    }
-                };
-
-        final FiniteStateMachineBuilder<TopologyState, TopologyTransition> topologyFSMBuilder
-                = new FiniteStateMachineBuilder<>(TopologyState.class, TopologyTransition.class, TopologyState.ERROR);
-
-        final FiniteStateMachine<TopologyState, TopologyTransition> topologyFSM = topologyFSMBuilder
-                .defineState(TopologyState.TOPOLOGY_STATE_CREATED)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE, TopologyState.TOPOLOGY_STATE_PARALLELIZED)
-                .defineState(TopologyState.TOPOLOGY_STATE_PARALLELIZED)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE, TopologyState.TOPOLOGY_STATE_SCHEDULED)
-                .defineState(TopologyState.TOPOLOGY_STATE_SCHEDULED)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, TopologyState.TOPOLOGY_STATE_DEPLOYED)
-                .defineState(TopologyState.TOPOLOGY_STATE_DEPLOYED)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN, TopologyState.TOPOLOGY_STATE_RUNNING, runTransitionConstraint)
-                .defineState(TopologyState.TOPOLOGY_STATE_RUNNING)
-                .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FINISH, TopologyState.TOPOLOGY_STATE_FINISHED)
-                .and().addTransition(TopologyTransition.TOPOLOGY_TRANSITION_CANCEL, TopologyState.TOPOLOGY_STATE_CANCELED)
-                .and().addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FAIL, TopologyState.TOPOLOGY_STATE_FAILURE)
-                .defineState(TopologyState.TOPOLOGY_STATE_FINISHED)
-                .noTransition()
-                .defineState(TopologyState.TOPOLOGY_STATE_CANCELED)
-                .noTransition()
-                .defineState(TopologyState.TOPOLOGY_STATE_FAILURE)
-                .noTransition()
-                .defineState(TopologyState.ERROR)
-                .noTransition()
-                .setInitialState(TopologyState.TOPOLOGY_STATE_CREATED)
-                .build();
-
-        // ---------------------------------------------------
-
-        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_RUNNING, new FSMStateAction<TopologyState, TopologyTransition>() {
-
-            @Override
-            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                System.out.println("RUNNING STATE LISTENER");
-            }
-        });
-
-        topologyFSM.addStateListener(TopologyState.ERROR, new FSMStateAction<TopologyState, TopologyTransition>() {
-
-            @Override
-            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                System.out.println("ERROR STATE LISTENER");
-            }
-        });
-
-        topologyFSM.addGlobalStateListener(new FSMStateAction<TopologyState, TopologyTransition>() {
-
-            @Override
-            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                System.out.println("GLOBAL LISTENER");
-            }
-        });
-
-        topologyFSM.start();
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE));
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE));
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY));
-
-
-        //topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_RUN));
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
-
-
-        topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_FINISH));
-    }*/
+    /*
+     * public static enum TopologyState {
+     * 
+     * TOPOLOGY_STATE_CREATED,
+     * 
+     * TOPOLOGY_STATE_PARALLELIZED,
+     * 
+     * TOPOLOGY_STATE_SCHEDULED,
+     * 
+     * TOPOLOGY_STATE_DEPLOYED,
+     * 
+     * TOPOLOGY_STATE_RUNNING,
+     * 
+     * TOPOLOGY_STATE_FINISHED,
+     * 
+     * TOPOLOGY_STATE_CANCELED,
+     * 
+     * TOPOLOGY_STATE_FAILURE,
+     * 
+     * ERROR }
+     * 
+     * public static enum TopologyTransition {
+     * 
+     * TOPOLOGY_TRANSITION_PARALLELIZE,
+     * 
+     * TOPOLOGY_TRANSITION_SCHEDULE,
+     * 
+     * TOPOLOGY_TRANSITION_DEPLOY,
+     * 
+     * TOPOLOGY_TRANSITION_RUN,
+     * 
+     * TOPOLOGY_TRANSITION_FINISH,
+     * 
+     * TOPOLOGY_TRANSITION_CANCEL,
+     * 
+     * TOPOLOGY_TRANSITION_FAIL }
+     * 
+     * // --------------------------------------------------- // Task State Machine. //
+     * ---------------------------------------------------
+     * 
+     * public enum TaskState {
+     * 
+     * TASK_STATE_CREATED,
+     * 
+     * TASK_STATE_OUTPUTS_CONNECTED,
+     * 
+     * TASK_STATE_INPUTS_CONNECTED,
+     * 
+     * TASK_STATE_READY,
+     * 
+     * TASK_STATE_RUNNING,
+     * 
+     * TASK_STATE_PAUSED,
+     * 
+     * TASK_STATE_FINISHED,
+     * 
+     * TASK_STATE_CANCELED,
+     * 
+     * TASK_STATE_FAILURE,
+     * 
+     * TASK_STATE_RECOVER,
+     * 
+     * ERROR }
+     * 
+     * public enum TaskTransition {
+     * 
+     * TASK_TRANSITION_INVALID,
+     * 
+     * TASK_TRANSITION_INPUTS_CONNECTED,
+     * 
+     * TASK_TRANSITION_OUTPUTS_CONNECTED,
+     * 
+     * TASK_TRANSITION_RUN,
+     * 
+     * TASK_TRANSITION_SUSPEND,
+     * 
+     * TASK_TRANSITION_RESUME,
+     * 
+     * TASK_TRANSITION_FINISH,
+     * 
+     * TASK_TRANSITION_CANCEL,
+     * 
+     * TASK_TRANSITION_FAIL }
+     * 
+     * // --------------------------------------------------- // Operator State Machine. //
+     * ---------------------------------------------------
+     * 
+     * public static enum OperatorState {
+     * 
+     * OPERATOR_STATE_CREATED,
+     * 
+     * OPERATOR_STATE_OPENED,
+     * 
+     * OPERATOR_STATE_RUNNING,
+     * 
+     * OPERATOR_STATE_CLOSED,
+     * 
+     * OPERATOR_STATE_RELEASED,
+     * 
+     * ERROR }
+     * 
+     * public static enum OperatorTransition {
+     * 
+     * OPERATOR_TRANSITION_OPEN,
+     * 
+     * OPERATOR_TRANSITION_RUN,
+     * 
+     * OPERATOR_TRANSITION_CLOSE,
+     * 
+     * OPERATOR_TRANSITION_RESET,
+     * 
+     * OPERATOR_TRANSITION_RELEASE }
+     * 
+     * // --------------------------------------------------- // Entry Point. //
+     * ---------------------------------------------------
+     * 
+     * public static void main(final String[] args) {
+     * 
+     * // ---------------------------------------------------
+     * 
+     * final FSMStateAction<OperatorState, OperatorTransition> operatorAction = new
+     * FSMStateAction<OperatorState, OperatorTransition>() {
+     * 
+     * @Override public void stateAction(OperatorState previousState, OperatorTransition transition,
+     * OperatorState state) { System.out.println("previousState = " + previousState +
+     * " - transition = " + transition + " - state = " + state); } };
+     * 
+     * final FiniteStateMachineBuilder<OperatorState, OperatorTransition> operatorFSMBuilder = new
+     * FiniteStateMachineBuilder<>(OperatorState.class, OperatorTransition.class,
+     * OperatorState.ERROR);
+     * 
+     * final FiniteStateMachine<OperatorState, OperatorTransition> operatorFSM = operatorFSMBuilder
+     * .defineState(OperatorState.OPERATOR_STATE_CREATED)
+     * .addTransition(OperatorTransition.OPERATOR_TRANSITION_OPEN,
+     * OperatorState.OPERATOR_STATE_OPENED) .defineState(OperatorState.OPERATOR_STATE_OPENED)
+     * .addTransition(OperatorTransition.OPERATOR_TRANSITION_RUN,
+     * OperatorState.OPERATOR_STATE_RUNNING) .defineState(OperatorState.OPERATOR_STATE_RUNNING)
+     * .addTransition(OperatorTransition.OPERATOR_TRANSITION_CLOSE,
+     * OperatorState.OPERATOR_STATE_CLOSED) .defineState(OperatorState.OPERATOR_STATE_CLOSED)
+     * .addTransition(OperatorTransition.OPERATOR_TRANSITION_RELEASE,
+     * OperatorState.OPERATOR_STATE_RELEASED)
+     * .and().addTransition(OperatorTransition.OPERATOR_TRANSITION_RESET,
+     * OperatorState.OPERATOR_STATE_OPENED) .defineState(OperatorState.OPERATOR_STATE_RELEASED)
+     * .noTransition() .setInitialState(OperatorState.OPERATOR_STATE_CREATED) .build();
+     * 
+     * // ---------------------------------------------------
+     * 
+     * final FSMStateAction<TaskState, TaskTransition> taskAction = new FSMStateAction<TaskState,
+     * TaskTransition>() {
+     * 
+     * @Override public void stateAction(TaskState previousState, TaskTransition transition,
+     * TaskState state) { System.out.println("previousState = " + previousState + " - transition = "
+     * + transition + " - state = " + state); } }; final FiniteStateMachineBuilder<TaskState,
+     * TaskTransition> taskFSMBuilder = new FiniteStateMachineBuilder<>(TaskState.class,
+     * TaskTransition.class, TaskState.ERROR);
+     * 
+     * taskFSMBuilder .defineState(TaskState.TASK_STATE_CREATED)
+     * .addTransition(TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED,
+     * TaskState.TASK_STATE_INPUTS_CONNECTED)
+     * .and().addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED,
+     * TaskState.TASK_STATE_OUTPUTS_CONNECTED) .defineState(TaskState.TASK_STATE_INPUTS_CONNECTED)
+     * .addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, TaskState.TASK_STATE_READY)
+     * .defineState(TaskState.TASK_STATE_OUTPUTS_CONNECTED)
+     * .addTransition(TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, TaskState.TASK_STATE_READY)
+     * .defineState(TaskState.TASK_STATE_READY) .addTransition(TaskTransition.TASK_TRANSITION_RUN,
+     * TaskState.TASK_STATE_RUNNING) .defineState(TaskState.TASK_STATE_RUNNING)
+     * .addTransition(TaskTransition.TASK_TRANSITION_FINISH, TaskState.TASK_STATE_FINISHED)
+     * .and().addTransition(TaskTransition.TASK_TRANSITION_CANCEL, TaskState.TASK_STATE_CANCELED)
+     * .and().addTransition(TaskTransition.TASK_TRANSITION_FAIL, TaskState.TASK_STATE_FAILURE)
+     * .and().addTransition(TaskTransition.TASK_TRANSITION_SUSPEND, TaskState.TASK_STATE_PAUSED)
+     * //.nestFSM(TaskState.TASK_STATE_RUNNING, operatorFSM)
+     * .defineState(TaskState.TASK_STATE_FINISHED) .noTransition()
+     * .defineState(TaskState.TASK_STATE_CANCELED) .noTransition()
+     * .defineState(TaskState.TASK_STATE_FAILURE) .noTransition()
+     * .defineState(TaskState.TASK_STATE_PAUSED)
+     * .addTransition(TaskTransition.TASK_TRANSITION_RESUME, TaskState.TASK_STATE_RUNNING)
+     * .setInitialState(TaskState.TASK_STATE_CREATED);
+     * 
+     * // ---------------------------------------------------
+     * 
+     * final FSMStateAction<TopologyState, TopologyTransition> topologyAction = new
+     * FSMStateAction<TopologyState, TopologyTransition>() {
+     * 
+     * @Override public void stateAction(TopologyState previousState, TopologyTransition transition,
+     * TopologyState state) { System.out.println("previousState = " + previousState +
+     * " - transition = " + transition + " - state = " + state); } };
+     * 
+     * final FSMTransitionConstraint2<TopologyState, TopologyTransition> runTransitionConstraint =
+     * new FSMTransitionConstraint2<TopologyState,
+     * TopologyTransition>(TaskTransition.TASK_TRANSITION_RUN) {
+     * 
+     * int counter = 5;
+     * 
+     * @Override public boolean eval(FSMTransitionEvent<? extends Enum<?>> event) { return
+     * (--counter) == 0; } };
+     * 
+     * final FiniteStateMachineBuilder<TopologyState, TopologyTransition> topologyFSMBuilder = new
+     * FiniteStateMachineBuilder<>(TopologyState.class, TopologyTransition.class,
+     * TopologyState.ERROR);
+     * 
+     * final FiniteStateMachine<TopologyState, TopologyTransition> topologyFSM = topologyFSMBuilder
+     * .defineState(TopologyState.TOPOLOGY_STATE_CREATED)
+     * .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE,
+     * TopologyState.TOPOLOGY_STATE_PARALLELIZED)
+     * .defineState(TopologyState.TOPOLOGY_STATE_PARALLELIZED)
+     * .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE,
+     * TopologyState.TOPOLOGY_STATE_SCHEDULED) .defineState(TopologyState.TOPOLOGY_STATE_SCHEDULED)
+     * .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY,
+     * TopologyState.TOPOLOGY_STATE_DEPLOYED) .defineState(TopologyState.TOPOLOGY_STATE_DEPLOYED)
+     * .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN,
+     * TopologyState.TOPOLOGY_STATE_RUNNING, runTransitionConstraint)
+     * .defineState(TopologyState.TOPOLOGY_STATE_RUNNING)
+     * .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FINISH,
+     * TopologyState.TOPOLOGY_STATE_FINISHED)
+     * .and().addTransition(TopologyTransition.TOPOLOGY_TRANSITION_CANCEL,
+     * TopologyState.TOPOLOGY_STATE_CANCELED)
+     * .and().addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FAIL,
+     * TopologyState.TOPOLOGY_STATE_FAILURE) .defineState(TopologyState.TOPOLOGY_STATE_FINISHED)
+     * .noTransition() .defineState(TopologyState.TOPOLOGY_STATE_CANCELED) .noTransition()
+     * .defineState(TopologyState.TOPOLOGY_STATE_FAILURE) .noTransition()
+     * .defineState(TopologyState.ERROR) .noTransition()
+     * .setInitialState(TopologyState.TOPOLOGY_STATE_CREATED) .build();
+     * 
+     * // ---------------------------------------------------
+     * 
+     * topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_RUNNING, new
+     * FSMStateAction<TopologyState, TopologyTransition>() {
+     * 
+     * @Override public void stateAction(TopologyState previousState, TopologyTransition transition,
+     * TopologyState state) { System.out.println("RUNNING STATE LISTENER"); } });
+     * 
+     * topologyFSM.addStateListener(TopologyState.ERROR, new FSMStateAction<TopologyState,
+     * TopologyTransition>() {
+     * 
+     * @Override public void stateAction(TopologyState previousState, TopologyTransition transition,
+     * TopologyState state) { System.out.println("ERROR STATE LISTENER"); } });
+     * 
+     * topologyFSM.addGlobalStateListener(new FSMStateAction<TopologyState, TopologyTransition>() {
+     * 
+     * @Override public void stateAction(TopologyState previousState, TopologyTransition transition,
+     * TopologyState state) { System.out.println("GLOBAL LISTENER"); } });
+     * 
+     * topologyFSM.start();
+     * 
+     * topologyFSM.dispatchEvent(new
+     * FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_PARALLELIZE));
+     * 
+     * topologyFSM.dispatchEvent(new
+     * FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE));
+     * 
+     * topologyFSM.dispatchEvent(new
+     * FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY));
+     * 
+     * 
+     * //topologyFSM.dispatchEvent(new
+     * FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_RUN));
+     * 
+     * topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
+     * 
+     * topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
+     * 
+     * topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
+     * 
+     * topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
+     * 
+     * topologyFSM.dispatchEvent(new FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
+     * 
+     * 
+     * topologyFSM.dispatchEvent(new
+     * FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_FINISH)); }
+     */
 }

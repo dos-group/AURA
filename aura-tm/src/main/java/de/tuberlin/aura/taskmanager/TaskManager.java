@@ -1,5 +1,12 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.io.IOException;
+import java.util.*;
+
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -19,12 +26,6 @@ import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import de.tuberlin.aura.core.task.common.TaskManagerContext;
 import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
-
-import java.io.IOException;
-import java.util.*;
 
 public final class TaskManager implements WM2TMProtocol {
 
@@ -84,14 +85,13 @@ public final class TaskManager implements WM2TMProtocol {
         // Setup execution manager.
         this.executionManager = new TaskExecutionManager(ownMachine, this.bufferMemoryManager);
 
-        this.executionManager.addEventListener(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
-                new IEventHandler() {
+        this.executionManager.addEventListener(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK, new IEventHandler() {
 
-                    @Override
-                    public void handleEvent(Event e) {
-                        unregisterTask((TaskDriverContext) e.getPayload());
-                    }
-                });
+            @Override
+            public void handleEvent(Event e) {
+                unregisterTask((TaskDriverContext) e.getPayload());
+            }
+        });
 
         // setup IO.
         this.ioManager = setupIOManager(machine, executionManager);
@@ -114,7 +114,8 @@ public final class TaskManager implements WM2TMProtocol {
         // setup zookeeper.
         this.zookeeper = setupZookeeper(zookeeperServer);
 
-        this.workloadManagerMachine = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(this.zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
+        this.workloadManagerMachine =
+                (MachineDescriptor) ZookeeperHelper.readFromZookeeper(this.zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
 
         // check postcondition.
         if (workloadManagerMachine == null)
@@ -126,14 +127,7 @@ public final class TaskManager implements WM2TMProtocol {
         ioManager.connectMessageChannelBlocking(workloadManagerMachine);
 
         // setup task manager context.
-        this.managerContext =
-                new TaskManagerContext(
-                        ioManager,
-                        rpcManager,
-                        executionManager,
-                        workloadManagerMachine,
-                        ownMachine
-                );
+        this.managerContext = new TaskManagerContext(ioManager, rpcManager, executionManager, workloadManagerMachine, ownMachine);
     }
 
     // ---------------------------------------------------
@@ -159,21 +153,17 @@ public final class TaskManager implements WM2TMProtocol {
 
     /**
      * Get a connection to ZooKeeper and initialize the directories in ZooKeeper.
-     *
+     * 
      * @return Zookeeper instance.
      */
     private ZooKeeper setupZookeeper(final String zookeeperServer) {
         try {
-            final ZooKeeper zookeeper = new ZooKeeper(zookeeperServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT,
-                    new ZookeeperConnectionWatcher(
-                            new IEventHandler() {
+            final ZooKeeper zookeeper =
+                    new ZooKeeper(zookeeperServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(new IEventHandler() {
 
-                                @Override
-                                public void handleEvent(Event event) {
-                                }
-                            }
-                    )
-            );
+                        @Override
+                        public void handleEvent(Event event) {}
+                    }));
 
             ZookeeperHelper.initDirectories(zookeeper);
             final String zkTaskManagerDir = ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + ownMachine.uid.toString();
@@ -190,8 +180,7 @@ public final class TaskManager implements WM2TMProtocol {
      * @param machineDescriptor
      * @return
      */
-    private IOManager setupIOManager(final MachineDescriptor machineDescriptor,
-                                     final TaskExecutionManager executionManager) {
+    private IOManager setupIOManager(final MachineDescriptor machineDescriptor, final TaskExecutionManager executionManager) {
         final IOManager ioManager = new IOManager(machineDescriptor, executionManager);
         return ioManager;
     }
@@ -259,7 +248,7 @@ public final class TaskManager implements WM2TMProtocol {
 
         final List<TaskDriverContext> ctxList = deployedTopologyTasks.get(event.getTopologyID());
         if (ctxList == null) {
-            //throw new IllegalArgumentException("ctxList == null");
+            // throw new IllegalArgumentException("ctxList == null");
             LOG.info("Task driver context for topology [" + event.getTopologyID() + "] is removed");
         } else {
             for (final TaskDriverContext ctx : ctxList) {

@@ -1,5 +1,11 @@
 package de.tuberlin.aura.workloadmanager;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
@@ -10,11 +16,6 @@ import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
-import org.apache.log4j.Logger;
-
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 // TODO: introduce the concept of a session, that allows to submit multiple queries...
@@ -65,34 +66,25 @@ public class WorkloadManager implements ClientWMProtocol {
 
         rpcManager.registerRPCProtocolImpl(this, ClientWMProtocol.class);
 
-        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE,
-                new IEventHandler() {
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
 
-                    @Override
-                    public void handleEvent(Event e) {
-                        final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
-                        registeredTopologies.get(event.getTopologyID()).dispatchEvent(event);
-                    }
-                }
-        );
+            @Override
+            public void handleEvent(Event e) {
+                final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
+                registeredTopologies.get(event.getTopologyID()).dispatchEvent(event);
+            }
+        });
 
-        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION,
-                new IEventHandler() {
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, new IEventHandler() {
 
-                    @Override
-                    public void handleEvent(Event e) {
-                        final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
-                        registeredTopologies.get(event.getTopologyID()).getTopologyFSMDispatcher().dispatchEvent((Event) event.getPayload());
-                    }
-                }
-        );
+            @Override
+            public void handleEvent(Event e) {
+                final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
+                registeredTopologies.get(event.getTopologyID()).getTopologyFSMDispatcher().dispatchEvent((Event) event.getPayload());
+            }
+        });
 
-        this.managerContext = new WorkloadManagerContext(
-                this,
-                ioManager,
-                rpcManager,
-                infrastructureManager
-        );
+        this.managerContext = new WorkloadManagerContext(this, ioManager, rpcManager, infrastructureManager);
     }
 
     // ---------------------------------------------------

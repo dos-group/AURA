@@ -1,7 +1,5 @@
 package de.tuberlin.aura.core.common.eventsystem;
 
-import org.apache.log4j.Logger;
-
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.InvocationTargetException;
@@ -9,6 +7,8 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+
+import org.apache.log4j.Logger;
 
 public abstract class EventHandler implements IEventHandler {
 
@@ -111,8 +111,8 @@ public abstract class EventHandler implements IEventHandler {
                     final Handle handle = m.getAnnotation(Handle.class);
                     if ("".equals(handle.type())) {
 
-                        //if (eventHandlerMap.containsKey(handle.type()))
-                        //    throw new IllegalStateException("event already registered");
+                        // if (eventHandlerMap.containsKey(handle.type()))
+                        // throw new IllegalStateException("event already registered");
 
                         eventHandlerMap.put(handle.event(), m);
 

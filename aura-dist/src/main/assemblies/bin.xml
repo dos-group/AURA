@@ -1,155 +1,155 @@
 <assembly
-		xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
-		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
-	<id>bin</id>
-	<formats>
-		<format>dir</format>
-	</formats>
+        xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+    <id>bin</id>
+    <formats>
+        <format>dir</format>
+    </formats>
 
-	<includeBaseDirectory>true</includeBaseDirectory>
-	<baseDirectory>aura-${project.version}</baseDirectory>
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>aura-${project.version}</baseDirectory>
 
-	<!-- copy all jar files and their dependencies -->
-	<dependencySets>
-		<dependencySet>
-			<outputDirectory>lib</outputDirectory>
-			<unpack>false</unpack>
-			<useTransitiveDependencies>true</useTransitiveDependencies>
-			<useProjectArtifact>false</useProjectArtifact>
-			<useProjectAttachments>false</useProjectAttachments>
-			<useTransitiveFiltering>true</useTransitiveFiltering>
+    <!-- copy all jar files and their dependencies -->
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>lib</outputDirectory>
+            <unpack>false</unpack>
+            <useTransitiveDependencies>true</useTransitiveDependencies>
+            <useProjectArtifact>false</useProjectArtifact>
+            <useProjectAttachments>false</useProjectAttachments>
+            <useTransitiveFiltering>true</useTransitiveFiltering>
 
-			<excludes>
-				<exclude>de.tuberlin.aura:aura-examples</exclude>
-			</excludes>
-		</dependencySet>
+            <excludes>
+                <exclude>de.tuberlin.aura:aura-examples</exclude>
+            </excludes>
+        </dependencySet>
 
-		<dependencySet>
-			<outputDirectory>lib_clients</outputDirectory>
-			<unpack>false</unpack>
-			<useTransitiveDependencies>true</useTransitiveDependencies>
-			<useProjectArtifact>false</useProjectArtifact>
-			<useProjectAttachments>false</useProjectAttachments>
-			<useTransitiveFiltering>true</useTransitiveFiltering>
+        <dependencySet>
+            <outputDirectory>lib_clients</outputDirectory>
+            <unpack>false</unpack>
+            <useTransitiveDependencies>true</useTransitiveDependencies>
+            <useProjectArtifact>false</useProjectArtifact>
+            <useProjectAttachments>false</useProjectAttachments>
+            <useTransitiveFiltering>true</useTransitiveFiltering>
 
-			<includes>
-				<include>de.tuberlin.aura:aura-clients:**</include>
-			</includes>
+            <includes>
+                <include>de.tuberlin.aura:aura-clients:**</include>
+            </includes>
 
-			<!--
-			<excludes>
-				<exclude>**/*examples*.jar</exclude>
-				<exclude>**/*javadoc*</exclude>
-				<exclude>**/*sources*</exclude>
-			</excludes>
-			-->
-		</dependencySet>
-	</dependencySets>
+            <!--
+            <excludes>
+                <exclude>**/*examples*.jar</exclude>
+                <exclude>**/*javadoc*</exclude>
+                <exclude>**/*sources*</exclude>
+            </excludes>
+            -->
+        </dependencySet>
+    </dependencySets>
 
-	<fileSets>
+    <fileSets>
 
-		<fileSet>
-			<!-- copy start scripts -->
-			<directory>src/main/aura-bin/bin</directory>
-			<outputDirectory>bin</outputDirectory>
-			<fileMode>0755</fileMode>
-		</fileSet>
+        <fileSet>
+            <!-- copy start scripts -->
+            <directory>src/main/aura-bin/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <fileMode>0755</fileMode>
+        </fileSet>
 
-		<fileSet>
-			<!-- copy default configuration -->
-			<directory>src/main/aura-bin/conf</directory>
-			<outputDirectory>conf</outputDirectory>
-			<fileMode>0644</fileMode>
-		</fileSet>
+        <fileSet>
+            <!-- copy default configuration -->
+            <directory>src/main/aura-bin/conf</directory>
+            <outputDirectory>conf</outputDirectory>
+            <fileMode>0644</fileMode>
+        </fileSet>
 
-		<fileSet>
-			<!-- create an empty log directory -->
-			<directory>src/main/aura-bin/</directory>
-			<outputDirectory>log</outputDirectory>
-			<fileMode>0644</fileMode>
-			<excludes>
-				<exclude>**/*</exclude>
-			</excludes>
-		</fileSet>
+        <fileSet>
+            <!-- create an empty log directory -->
+            <directory>src/main/aura-bin/</directory>
+            <outputDirectory>log</outputDirectory>
+            <fileMode>0644</fileMode>
+            <excludes>
+                <exclude>**/*</exclude>
+            </excludes>
+        </fileSet>
 
-		<fileSet>
-			<!-- copy *.txt files -->
-			<directory>src/main/aura-bin/</directory>
-			<outputDirectory></outputDirectory>
-			<fileMode>0644</fileMode>
-			<includes>
-				<include>*.txt</include>
-				<include>*.properties</include>
-			</includes>
-		</fileSet>
+        <fileSet>
+            <!-- copy *.txt files -->
+            <directory>src/main/aura-bin/</directory>
+            <outputDirectory></outputDirectory>
+            <fileMode>0644</fileMode>
+            <includes>
+                <include>*.txt</include>
+                <include>*.properties</include>
+            </includes>
+        </fileSet>
 
-		<fileSet>
-			<!-- copy JavaDocs -->
-			<!-- <directory>../target/apidocs</directory -->
-			<directory>../target</directory>
-			<includes>
-				<include>aura-*-javadoc.jar</include>
-			</includes>
-			<outputDirectory>docs/javadoc</outputDirectory>
-			<fileMode>0644</fileMode>
-		</fileSet>
+        <fileSet>
+            <!-- copy JavaDocs -->
+            <!-- <directory>../target/apidocs</directory -->
+            <directory>../target</directory>
+            <includes>
+                <include>aura-*-javadoc.jar</include>
+            </includes>
+            <outputDirectory>docs/javadoc</outputDirectory>
+            <fileMode>0644</fileMode>
+        </fileSet>
 
-		<fileSet>
-			<!-- copy files for compiler web frontend -->
-			<directory>../aura-clients/resources</directory>
-			<outputDirectory>resources</outputDirectory>
-			<fileMode>0644</fileMode>
-			<excludes>
-				<exclude>*etc/users</exclude>
-			</excludes>
-		</fileSet>
+        <fileSet>
+            <!-- copy files for compiler web frontend -->
+            <directory>../aura-clients/resources</directory>
+            <outputDirectory>resources</outputDirectory>
+            <fileMode>0644</fileMode>
+            <excludes>
+                <exclude>*etc/users</exclude>
+            </excludes>
+        </fileSet>
 
-		<fileSet>
-			<!-- copy files for Workmanager web frontend -->
-			<directory>../aura-runtime/resources</directory>
-			<outputDirectory>resources</outputDirectory>
-			<fileMode>0644</fileMode>
-			<excludes>
-				<exclude>*etc/users</exclude>
-			</excludes>
-		</fileSet>
+        <fileSet>
+            <!-- copy files for Workmanager web frontend -->
+            <directory>../aura-runtime/resources</directory>
+            <outputDirectory>resources</outputDirectory>
+            <fileMode>0644</fileMode>
+            <excludes>
+                <exclude>*etc/users</exclude>
+            </excludes>
+        </fileSet>
 
-		<!-- copy the tools -->
-		<fileSet>
-			<directory>src/main/aura-bin/tools</directory>
-			<outputDirectory>tools</outputDirectory>
-			<fileMode>0644</fileMode>
-		</fileSet>
+        <!-- copy the tools -->
+        <fileSet>
+            <directory>src/main/aura-bin/tools</directory>
+            <outputDirectory>tools</outputDirectory>
+            <fileMode>0644</fileMode>
+        </fileSet>
 
-		<fileSet>
-			<!-- copy jar files of java examples -->
-			<directory>../aura-examples/aura-java-examples/target</directory>
-			<outputDirectory>examples</outputDirectory>
-			<fileMode>0644</fileMode>
-			<includes>
-				<include>*.jar</include>
-			</includes>
-			<excludes>
-				<exclude>aura-java-examples-${project.version}.jar</exclude>
-				<exclude>aura-java-examples-${project.version}-sources.jar</exclude>
-			</excludes>
-		</fileSet>
+        <fileSet>
+            <!-- copy jar files of java examples -->
+            <directory>../aura-examples/aura-java-examples/target</directory>
+            <outputDirectory>examples</outputDirectory>
+            <fileMode>0644</fileMode>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+            <excludes>
+                <exclude>aura-java-examples-${project.version}.jar</exclude>
+                <exclude>aura-java-examples-${project.version}-sources.jar</exclude>
+            </excludes>
+        </fileSet>
 
-		<fileSet>
-			<!-- copy jar files of examples -->
-			<directory>../aura-examples/aura-scala-examples/target</directory>
-			<outputDirectory>examples</outputDirectory>
-			<fileMode>0644</fileMode>
-			<includes>
-				<include>*.jar</include>
-			</includes>
-			<excludes>
-				<exclude>aura-scala-examples-${project.version}.jar</exclude>
-				<exclude>aura-scala-examples-${project.version}-sources.jar</exclude>
-			</excludes>
-		</fileSet>
+        <fileSet>
+            <!-- copy jar files of examples -->
+            <directory>../aura-examples/aura-scala-examples/target</directory>
+            <outputDirectory>examples</outputDirectory>
+            <fileMode>0644</fileMode>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+            <excludes>
+                <exclude>aura-scala-examples-${project.version}.jar</exclude>
+                <exclude>aura-scala-examples-${project.version}-sources.jar</exclude>
+            </excludes>
+        </fileSet>
 
-	</fileSets>
+    </fileSets>
 
 </assembly>

@@ -1,13 +1,5 @@
 package de.tuberlin.aura.core.iosystem;
 
-import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
-import de.tuberlin.aura.core.iosystem.IOEvents.RPCCalleeResponseEvent;
-import de.tuberlin.aura.core.iosystem.IOEvents.RPCCallerRequestEvent;
-import org.apache.log4j.Logger;
-
 import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -17,6 +9,15 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.log4j.Logger;
+
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
+import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
+import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
+import de.tuberlin.aura.core.iosystem.IOEvents.RPCCalleeResponseEvent;
+import de.tuberlin.aura.core.iosystem.IOEvents.RPCCallerRequestEvent;
 
 public final class RPCManager {
 
@@ -183,7 +184,7 @@ public final class RPCManager {
         public static <T> T createProtocolProxy(final UUID dstMachineID, final Class<T> protocolInterface, final IOManager ioManager) {
 
             final ProtocolCallerProxy pc = new ProtocolCallerProxy(dstMachineID, ioManager);
-            return (T) Proxy.newProxyInstance(protocolInterface.getClassLoader(), new Class[]{protocolInterface}, pc);
+            return (T) Proxy.newProxyInstance(protocolInterface.getClassLoader(), new Class[] {protocolInterface}, pc);
         }
 
         @Override
@@ -200,10 +201,10 @@ public final class RPCManager {
 
             final MethodSignature methodInfo =
                     new MethodSignature(method.getDeclaringClass().getSimpleName(),
-                            method.getName(),
-                            method.getParameterTypes(),
-                            methodArguments,
-                            method.getReturnType());
+                                        method.getName(),
+                                        method.getParameterTypes(),
+                                        methodArguments,
+                                        method.getReturnType());
 
             // every remote call is identified by a unique id. The id is used to
             // resolve the associated response from remote site.
@@ -279,7 +280,8 @@ public final class RPCManager {
                 return new RPCCalleeResponseEvent(callUID, new IllegalStateException("found no protocol implementation"));
             }
 
-            synchronized (protocolImplementation) { // TODO: Synchronization on local variable 'protocolImplementation'
+            synchronized (protocolImplementation) { // TODO: Synchronization on local variable
+                                                    // 'protocolImplementation'
                 // TODO: Maybe we could do some caching of method signatures
                 // on the callee site for frequent repeated calls...
 
@@ -306,8 +308,8 @@ public final class RPCManager {
                 @Override
                 public void run() {
                     final RPCCalleeResponseEvent calleeMsg =
-                            // RPCManager.ProtocolCalleeProxy.callMethod(event.callUID,
-                            // event.methodSignature);
+                    // RPCManager.ProtocolCalleeProxy.callMethod(event.callUID,
+                    // event.methodSignature);
                             calleeProxy.callMethod(event.callUID, event.methodSignature);
 
                     ioManager.sendEvent(event.getSrcMachineID(), calleeMsg);

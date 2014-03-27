@@ -1,17 +1,18 @@
 package de.tuberlin.aura.core.iosystem.netty;
 
 
+import java.nio.channels.spi.SelectorProvider;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.log4j.Logger;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.EventExecutor;
-import org.apache.log4j.Logger;
-
-import java.nio.channels.spi.SelectorProvider;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ExecutionUnitNioEventLoopGroup extends NioEventLoopGroup {
 
@@ -41,8 +42,7 @@ public class ExecutionUnitNioEventLoopGroup extends NioEventLoopGroup {
         this(nThreads, threadFactory, SelectorProvider.provider());
     }
 
-    public ExecutionUnitNioEventLoopGroup(
-            int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
+    public ExecutionUnitNioEventLoopGroup(int nThreads, ThreadFactory threadFactory, final SelectorProvider selectorProvider) {
         super(nThreads, threadFactory, selectorProvider);
 
         final EventExecutor[] children = new EventExecutor[executorCount()];

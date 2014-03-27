@@ -3,8 +3,7 @@ package de.tuberlin.aura.core.task.common;
 public final class TaskStates {
 
     // Disallow instantiation.
-    private TaskStates() {
-    }
+    private TaskStates() {}
 
     // ---------------------------------------------------
     // Task States & Task Transitions.
