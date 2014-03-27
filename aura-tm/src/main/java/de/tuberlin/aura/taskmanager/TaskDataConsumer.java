@@ -109,6 +109,15 @@ public final class TaskDataConsumer implements DataConsumer {
 
             event = inputGates.get(gateIndex).getInputQueue().take();
 
+            // DEBUGGING!
+            /*event = inputGates.get(gateIndex).getInputQueue().poll(20, TimeUnit.SECONDS);
+            if(event == null) {
+                LOG.info("TIMEOUT");
+                LOG.info("GATE 0: size = " + inputGates.get(0).getInputQueue().size());
+                LOG.info("GATE 1: size = " + inputGates.get(1).getInputQueue().size());
+            }*/
+
+
             switch (event.type) {
 
                 case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
@@ -307,7 +316,7 @@ public final class TaskDataConsumer implements DataConsumer {
                 int channelIndex = 0;
                 boolean allInputChannelsPerGateConnected = true;
 
-                for (Descriptors.TaskDescriptor inputTask : inputGate) {
+                for (final Descriptors.TaskDescriptor inputTask : inputGate) {
 
                     // get the right input gate for src the event comes from.
                     if (inputTask.taskID.equals(event.srcTaskID)) {
@@ -317,7 +326,7 @@ public final class TaskDataConsumer implements DataConsumer {
 
                         // create queue, if there is none yet as we can have multiple channels
                         // insert in one queue (aka multiple channels per gate)
-                        BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getInputQueue(gateIndex);
+                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getInputQueue(gateIndex);
                         channelReader.bindQueue(driverContext.taskDescriptor.taskID, event.getChannel(), gateIndex, channelIndex, queue);
 
                         inputGates.get(gateIndex).setChannelReader(channelReader);

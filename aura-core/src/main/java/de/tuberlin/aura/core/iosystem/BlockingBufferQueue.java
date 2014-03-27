@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Simple wrapper for a {@link java.util.concurrent.LinkedBlockingQueue}.
@@ -50,6 +51,16 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     @Override
     public String toString() {
         return backingQueue.toString();
+    }
+
+    @Override
+    public T poll(final long timeout, final TimeUnit timeUnit) throws InterruptedException {
+        return backingQueue.poll(timeout, timeUnit);
+    }
+
+    @Override
+    public int size() {
+        return backingQueue.size();
     }
 
     public static class Factory<F> implements FACTORY<F> {

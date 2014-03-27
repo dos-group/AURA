@@ -31,8 +31,6 @@ public final class TaskExecutionManager extends EventDispatcher {
     // Fields.
     // ---------------------------------------------------
 
-    //private static TaskExecutionManager instance = null;
-
     private static final Logger LOG = Logger.getLogger(TaskExecutionManager.class);
 
     private final Descriptors.MachineDescriptor machineDescriptor;
@@ -42,26 +40,6 @@ public final class TaskExecutionManager extends EventDispatcher {
     private final TaskExecutionUnit[] executionUnit;
 
     private final MemoryManager.BufferMemoryManager bufferMemoryManager;
-
-    // ---------------------------------------------------
-    // Static Methods.
-    // ---------------------------------------------------
-
-    /*public static TaskExecutionManager createInstance(final Descriptors.MachineDescriptor machineDescriptor,
-                                                      final MemoryManager.BufferMemoryManager bufferMemoryManager) {
-        if(instance == null) {
-            instance = new TaskExecutionManager(machineDescriptor, bufferMemoryManager);
-            return instance;
-        } else
-            throw new IllegalStateException("instance != null");
-    }
-
-    public static TaskExecutionManager getInstance() {
-        if(instance != null) {
-            return instance;
-        } else
-            throw new IllegalStateException("instance == null");
-    }*/
 
     // ---------------------------------------------------
     // Constructors.

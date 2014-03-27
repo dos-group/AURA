@@ -3,7 +3,9 @@ package de.tuberlin.aura.core.memory;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import org.apache.log4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,6 +38,8 @@ public final class MemoryManager {
 
         public final int size;
 
+        //private final AtomicInteger refCount;
+
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
@@ -62,6 +66,8 @@ public final class MemoryManager {
             this.baseOffset = baseOffset;
 
             this.size = size;
+
+            //this.refCount = new AtomicInteger(0);
         }
 
         // ---------------------------------------------------
@@ -86,6 +92,24 @@ public final class MemoryManager {
         public void free() {
             allocator.free(this);
         }
+
+
+        /*public MemoryView weakCopy() {
+            acquire();
+            return this;
+        }
+
+        public void acquire() {
+            refCount.getAndIncrement();
+        }
+
+        public void release() {
+            refCount.getAndDecrement();
+        }
+
+        public int getRefCount() {
+            return refCount.get();
+        }*/
     }
 
     /**
@@ -282,6 +306,16 @@ public final class MemoryManager {
             return notUsedAllocator;
         }
 
+        public Allocator getAllocator(final int index) {
+            // sanity check.
+            if (index < 0)
+                throw new IndexOutOfBoundsException("index < 0");
+            if (index >= assignedAllocators.size())
+                throw new IndexOutOfBoundsException("index < 0");
+
+            return assignedAllocators.get(index);
+        }
+
         // ---------------------------------------------------
         // Public Methods: Allocator Interface.
         // ---------------------------------------------------
@@ -346,7 +380,7 @@ public final class MemoryManager {
 
         private final BlockingQueue<MemoryView> freeList;
 
-        private final Set<MemoryView> usedSet;
+        //private final Set<MemoryView> usedSet;
 
         // ---------------------------------------------------
         // Constructor.
@@ -370,7 +404,7 @@ public final class MemoryManager {
 
             this.freeList = new LinkedBlockingQueue<>();
 
-            this.usedSet = new HashSet<>();
+            //this.usedSet = new HashSet<>();
 
             for (int i = 0; i < bufferCount; ++i) {
                 this.freeList.add(new MemoryView(this, memoryArena, i * bufferSize, bufferSize));
@@ -385,7 +419,8 @@ public final class MemoryManager {
         public MemoryView alloc() {
             try {
                 final MemoryView memory = freeList.take();
-                usedSet.add(memory);
+                //memory.acquire();
+                //usedSet.add(memory);
                 return memory;
             } catch (InterruptedException ie) {
                 return null;
@@ -397,8 +432,12 @@ public final class MemoryManager {
             // sanity check.
             if (memory == null)
                 throw new IllegalArgumentException("memory == null");
+
+            //memory.release();
+            //if(memory.getRefCount() == 0) {
             freeList.add(memory);
-            usedSet.remove(memory);
+            //usedSet.remove(memory);
+            //}
         }
 
         @Override
@@ -413,14 +452,8 @@ public final class MemoryManager {
 
         @Override
         public boolean isNotUsed() {
-            return usedSet.isEmpty();
+            return false;//usedSet.isEmpty();
         }
-
-
-        public int freeBuffer() {
-            return freeList.size();
-        }
-
     }
 
     // --------------------- TESTING ---------------------

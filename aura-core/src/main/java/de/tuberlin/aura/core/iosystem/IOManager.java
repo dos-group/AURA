@@ -143,7 +143,9 @@ public final class IOManager extends EventDispatcher {
      * @param dstTaskID
      * @param dstMachine
      */
-    public void disconnectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
+    public void disconnectDataChannel(final UUID srcTaskID,
+                                      final UUID dstTaskID,
+                                      final MachineDescriptor dstMachine) {
         // sanity check.
         if (srcTaskID == null)
             throw new IllegalArgumentException("srcTask == null");

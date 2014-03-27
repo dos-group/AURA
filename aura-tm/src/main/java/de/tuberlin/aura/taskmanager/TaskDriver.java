@@ -107,7 +107,11 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         dataConsumer = new TaskDataConsumer(driverContext, inputAllocator);
 
+        driverContext.setDataConsumer(dataConsumer);
+
         dataProducer = new TaskDataProducer(driverContext, outputAllocator);
+
+        driverContext.setDataProducer(dataProducer);
 
         invokeableClazz = implantInvokeableCode(taskDescriptor.userCode);
 

@@ -21,7 +21,30 @@ public final class Descriptors {
      */
     public static final class MachineDescriptor implements Serializable {
 
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
         private static final long serialVersionUID = -1L;
+
+        public final UUID uid;
+
+        public final int dataPort;
+
+        public final int controlPort;
+
+        public final InetAddress address;
+
+        // TODO: redundant...
+        public final InetSocketAddress dataAddress;
+
+        public final InetSocketAddress controlAddress;
+
+        public final HardwareDescriptor hardware;
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
 
         public MachineDescriptor(InetAddress address, int dataPort, int controlPort, HardwareDescriptor hardware) {
             this(UUID.randomUUID(), address, dataPort, controlPort, hardware);
@@ -55,20 +78,9 @@ public final class Descriptors {
             this.hardware = hardware;
         }
 
-        public final UUID uid;
-
-        public final int dataPort;
-
-        public final int controlPort;
-
-        public final InetAddress address;
-
-        // TODO: redundant...
-        public final InetSocketAddress dataAddress;
-
-        public final InetSocketAddress controlAddress;
-
-        public final HardwareDescriptor hardware;
+        // ---------------------------------------------------
+        // Public Methods.
+        // ---------------------------------------------------
 
         @Override
         public boolean equals(Object other) {
@@ -101,12 +113,29 @@ public final class Descriptors {
         }
     }
 
+    /**
+     *
+     */
     public static final class HardwareDescriptor implements Serializable {
 
-        /**
-         *
-         */
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
         private static final long serialVersionUID = -1L;
+
+        public final UUID uid;
+
+        public final int cpuCores;
+
+        public final long sizeOfRAM;
+
+        public final HDDDescriptor hdd;
+
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
 
         public HardwareDescriptor(int cpuCores, long sizeOfRAM, HDDDescriptor hdd) {
             this(UUID.randomUUID(), cpuCores, sizeOfRAM, hdd);
@@ -129,13 +158,9 @@ public final class Descriptors {
             this.hdd = hdd;
         }
 
-        public final UUID uid;
-
-        public final int cpuCores;
-
-        public final long sizeOfRAM;
-
-        public final HDDDescriptor hdd;
+        // ---------------------------------------------------
+        // Public Methods.
+        // ---------------------------------------------------
 
         @Override
         public boolean equals(Object other) {
@@ -166,16 +191,28 @@ public final class Descriptors {
         }
     }
 
+    /**
+     *
+     */
     public static final class HDDDescriptor implements Serializable {
 
-        /**
-         *
-         */
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
         private static final long serialVersionUID = -1L;
+
+        public final UUID uid;
+
+        public final long sizeOfHDD;
 
         public HDDDescriptor(long sizeOfHDD) {
             this(UUID.randomUUID(), sizeOfHDD);
         }
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
 
         public HDDDescriptor(UUID uid, long sizeOfHDD) {
             // sanity check.
@@ -188,9 +225,9 @@ public final class Descriptors {
             this.sizeOfHDD = sizeOfHDD;
         }
 
-        public final UUID uid;
-
-        public final long sizeOfHDD;
+        // ---------------------------------------------------
+        // Public Methods.
+        // ---------------------------------------------------
 
         @Override
         public boolean equals(Object other) {
@@ -222,7 +259,27 @@ public final class Descriptors {
      */
     public static final class TaskDescriptor implements Serializable {
 
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
         private static final long serialVersionUID = -1L;
+
+        public final UUID topologyID;
+
+        public final UUID taskID;
+
+        public final int taskIndex;
+
+        public final String name;
+
+        public final UserCode userCode;
+
+        private MachineDescriptor machine;
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
 
         public TaskDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final UserCode userCode) {
             // sanity check.
@@ -248,17 +305,9 @@ public final class Descriptors {
             this.userCode = userCode;
         }
 
-        public final UUID topologyID;
-
-        public final UUID taskID;
-
-        public final int taskIndex;
-
-        public final String name;
-
-        public final UserCode userCode;
-
-        private MachineDescriptor machine;
+        // ---------------------------------------------------
+        // Public Methods.
+        // ---------------------------------------------------
 
         public void setMachineDescriptor(final MachineDescriptor machine) {
             // sanity check.
@@ -308,7 +357,21 @@ public final class Descriptors {
      */
     public static final class TaskBindingDescriptor implements Serializable {
 
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
         private static final long serialVersionUID = -1L;
+
+        public final TaskDescriptor task;
+
+        public final List<List<TaskDescriptor>> inputGateBindings;
+
+        public final List<List<TaskDescriptor>> outputGateBindings;
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
 
         public TaskBindingDescriptor(final TaskDescriptor task,
                                      final List<List<TaskDescriptor>> inputGateBindings,
@@ -328,11 +391,9 @@ public final class Descriptors {
             this.outputGateBindings = Collections.unmodifiableList(outputGateBindings);
         }
 
-        public final TaskDescriptor task;
-
-        public final List<List<TaskDescriptor>> inputGateBindings;
-
-        public final List<List<TaskDescriptor>> outputGateBindings;
+        // ---------------------------------------------------
+        // Public Methods.
+        // ---------------------------------------------------
 
         @Override
         public boolean equals(Object other) {
@@ -368,7 +429,23 @@ public final class Descriptors {
      */
     public static final class TaskDeploymentDescriptor implements Serializable {
 
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
         private static final long serialVersionUID = -1L;
+
+        public final TaskDescriptor taskDescriptor;
+
+        public final TaskBindingDescriptor taskBindingDescriptor;
+
+        public final Node.DataPersistenceType dataPersistenceType;
+
+        public final Node.ExecutionType executionType;
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
 
         public TaskDeploymentDescriptor(final TaskDescriptor taskDescriptor,
                                         final TaskBindingDescriptor taskBindingDescriptor,
@@ -394,13 +471,9 @@ public final class Descriptors {
             this.executionType = executionType;
         }
 
-        public final TaskDescriptor taskDescriptor;
-
-        public final TaskBindingDescriptor taskBindingDescriptor;
-
-        public final Node.DataPersistenceType dataPersistenceType;
-
-        public final Node.ExecutionType executionType;
+        // ---------------------------------------------------
+        // Public Methods.
+        // ---------------------------------------------------
 
         @Override
         public boolean equals(Object other) {
