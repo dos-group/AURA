@@ -43,7 +43,7 @@ public final class Client {
             final UUID taskID = driverContext.taskDescriptor.taskID;
 
             int i = 0;
-            while (i++ < 500 && isInvokeableRunning()) {
+            while (i++ < 150000 && isInvokeableRunning()) {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
@@ -76,7 +76,7 @@ public final class Client {
             final UUID taskID = driverContext.taskDescriptor.taskID;
 
             int i = 0;
-            while (i++ < 1000 && isInvokeableRunning()) {
+            while (i++ < 100000 && isInvokeableRunning()) {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
@@ -118,11 +118,12 @@ public final class Client {
                 final IOEvents.TransferBufferEvent right = consumer.absorb(1);
 
                 if (left != null) {
-                    LOG.info("input left received data message from task " + left.srcTaskID);
+                    //LOG.info("input left received data message from task " + left.srcTaskID);
                     left.buffer.free();
                 }
+
                 if (right != null) {
-                    LOG.info("input right: received data message from task " + right.srcTaskID);
+                    //LOG.info("input right: received data message from task " + right.srcTaskID);
                     right.buffer.free();
                 }
 
@@ -164,7 +165,7 @@ public final class Client {
         public void run() throws Throwable {
             while (!consumer.isExhausted() && isInvokeableRunning()) {
                 final IOEvents.TransferBufferEvent buffer = consumer.absorb(0);
-                LOG.info("received: " + buffer);
+                //LOG.info("received: " + buffer);
                 if (buffer != null)
                     buffer.buffer.free();
             }

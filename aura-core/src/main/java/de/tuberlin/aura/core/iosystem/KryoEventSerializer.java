@@ -1,15 +1,15 @@
 package de.tuberlin.aura.core.iosystem;
 
 
-import java.util.UUID;
-
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-
 import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.task.common.DataConsumer;
+import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
+import de.tuberlin.aura.core.task.common.TaskExecutionUnit;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
@@ -18,6 +18,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+
+import java.util.Arrays;
+import java.util.UUID;
 
 // TODO: set unique id for serializer!
 // TODO: What for a unique id?
@@ -28,7 +31,8 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 public final class KryoEventSerializer {
 
     // Disallow instantiation.
-    private KryoEventSerializer() {}
+    private KryoEventSerializer() {
+    }
 
     // ---------------------------------------------------
     // Netty specific stuff.
@@ -44,11 +48,12 @@ public final class KryoEventSerializer {
 
     public static final class KryoInboundHandler extends ChannelInboundHandlerAdapter {
 
-        /*
-         * private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
-         * 
-         * @Override protected Kryo initialValue() { return new Kryo(); } };
-         */
+        /*private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
+            @Override
+            protected Kryo initialValue() {
+                return new Kryo();
+            }
+        };*/
 
         private Kryo kryo;
 
@@ -69,11 +74,12 @@ public final class KryoEventSerializer {
 
     public static final class KryoOutboundHandler extends ChannelOutboundHandlerAdapter {
 
-        /*
-         * private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
-         * 
-         * @Override protected Kryo initialValue() { return new Kryo(); } };
-         */
+        /*private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
+            @Override
+            protected Kryo initialValue() {
+                return new Kryo();
+            }
+        };*/
 
         private Kryo kryo;
 
@@ -114,7 +120,8 @@ public final class KryoEventSerializer {
 
     public static class DataIOEventSerializer extends Serializer<IOEvents.DataIOEvent> {
 
-        public DataIOEventSerializer() {}
+        public DataIOEventSerializer() {
+        }
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.DataIOEvent dataIOEvent) {
@@ -142,7 +149,8 @@ public final class KryoEventSerializer {
         private TaskExecutionManager executionManager;
 
 
-        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator, final TaskExecutionManager executionManager) {
+        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator,
+                                             final TaskExecutionManager executionManager) {
             this.allocator = allocator;
             this.executionManager = executionManager;
         }
@@ -168,7 +176,29 @@ public final class KryoEventSerializer {
 
             if (allocator == null) {
                 final TaskExecutionManager tem = executionManager;
-                allocator = tem.findTaskExecutionUnitByTaskID(dst).getInputAllocator();
+                final TaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
+                final TaskDriverContext taskDriverContext = executionUnit.getCurrentTaskDriverContext();
+                final DataConsumer dataConsumer = taskDriverContext.getDataConsumer();
+                final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
+                MemoryManager.BufferAllocatorGroup allocatorGroup = executionUnit.getInputAllocator();
+
+                // -------------------- STUPID HOT FIX --------------------
+
+                if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 1) {
+                    allocator = allocatorGroup;
+                } else {
+                    if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
+                        if (gateIndex == 0) {
+                            allocator = new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(), Arrays.asList(allocatorGroup.getAllocator(0), allocatorGroup.getAllocator(1)));
+                        } else {
+                            allocator = new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(), Arrays.asList(allocatorGroup.getAllocator(2), allocatorGroup.getAllocator(3)));
+                        }
+                    } else {
+                        throw new IllegalStateException("Not supported more than two input gates.");
+                    }
+                }
+
+                // -------------------- STUPID HOT FIX --------------------
             }
 
             final MemoryManager.MemoryView buffer = allocator.alloc();

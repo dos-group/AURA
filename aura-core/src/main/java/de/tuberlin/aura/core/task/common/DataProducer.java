@@ -18,6 +18,5 @@ public interface DataProducer {
 
     public abstract int getOutputGateIndexFromTaskID(final UUID taskID);
 
-
     public abstract MemoryManager.MemoryView alloc();
 }

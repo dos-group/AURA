@@ -1,14 +1,13 @@
 package de.tuberlin.aura.core.task.common;
 
 
-import java.util.UUID;
-
-import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.MemoryManager;
+import org.apache.log4j.Logger;
+
+import java.util.UUID;
 
 public final class TaskExecutionManager extends EventDispatcher {
 
@@ -32,8 +31,6 @@ public final class TaskExecutionManager extends EventDispatcher {
     // Fields.
     // ---------------------------------------------------
 
-    // private static TaskExecutionManager instance = null;
-
     private static final Logger LOG = Logger.getLogger(TaskExecutionManager.class);
 
     private final Descriptors.MachineDescriptor machineDescriptor;
@@ -45,20 +42,6 @@ public final class TaskExecutionManager extends EventDispatcher {
     private final MemoryManager.BufferMemoryManager bufferMemoryManager;
 
     // ---------------------------------------------------
-    // Static Methods.
-    // ---------------------------------------------------
-
-    /*
-     * public static TaskExecutionManager createInstance(final Descriptors.MachineDescriptor
-     * machineDescriptor, final MemoryManager.BufferMemoryManager bufferMemoryManager) { if(instance
-     * == null) { instance = new TaskExecutionManager(machineDescriptor, bufferMemoryManager);
-     * return instance; } else throw new IllegalStateException("instance != null"); }
-     * 
-     * public static TaskExecutionManager getInstance() { if(instance != null) { return instance; }
-     * else throw new IllegalStateException("instance == null"); }
-     */
-
-    // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
@@ -66,7 +49,8 @@ public final class TaskExecutionManager extends EventDispatcher {
      * @param machineDescriptor
      * @param bufferMemoryManager
      */
-    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor, final MemoryManager.BufferMemoryManager bufferMemoryManager) {
+    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor,
+                                final MemoryManager.BufferMemoryManager bufferMemoryManager) {
         super(false);
 
         // sanity check.
@@ -113,7 +97,8 @@ public final class TaskExecutionManager extends EventDispatcher {
         driverContext.setAssignedExecutionUnitIndex(selectedEU);
         executionUnit[selectedEU].enqueueTask(driverContext);
 
-        LOG.info("EXECUTE TASK " + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID + "]" + " ON EXECUTION UNIT ("
+        LOG.info("EXECUTE TASK " + driverContext.taskDescriptor.name + " ["
+                + driverContext.taskDescriptor.taskID + "]" + " ON EXECUTION UNIT ("
                 + executionUnit[selectedEU].getExecutionUnitID() + ") ON MACHINE [" + machineDescriptor.uid + "]");
     }
 

@@ -59,4 +59,27 @@ public final class TaskDriverContext {
     public int getAssignedExecutionUnitIndex() {
         return this.assignedExecutionUnitIndex;
     }
+
+    // ------------ Producer/Consumer assignment -------------
+
+    private DataConsumer dataConsumer;
+
+    private DataProducer dataProducer;
+
+    public void setDataProducer(final DataProducer dataProducer) {
+        this.dataProducer = dataProducer;
+    }
+
+    public DataProducer getDataProducer() {
+        return dataProducer;
+    }
+
+    public void setDataConsumer(final DataConsumer dataConsumer) {
+        this.dataConsumer = dataConsumer;
+    }
+
+    public DataConsumer getDataConsumer() {
+        return dataConsumer;
+    }
+
 }
