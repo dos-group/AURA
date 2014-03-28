@@ -182,9 +182,10 @@ public final class Client {
         // LOG.addAppender(consoleAppender);
         // LOG.setLevel(Level.DEBUG);
 
+        final String measurementPath = "/home/teots/Desktop/measurements";
         final String zookeeperAddress = "localhost:2181";
         final LocalClusterSimulator lce =
-                new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+                new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4, measurementPath);
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
         final AuraDirectedGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();

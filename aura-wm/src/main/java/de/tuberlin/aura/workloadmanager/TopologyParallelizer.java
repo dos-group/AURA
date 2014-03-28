@@ -89,6 +89,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                     executionNodeInputs.put(n.uid, inputDescriptors);
                                 }
 
+                                // Assignment of channels
                                 for (final ExecutionNode srcEN : n.getExecutionNodes())
                                     inputDescriptors.add(srcEN.getTaskDescriptor());
                             }

@@ -15,6 +15,7 @@ import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 
 import de.tuberlin.aura.core.common.utils.ProcessExecutor;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.taskmanager.TaskManager;
 import de.tuberlin.aura.workloadmanager.WorkloadManager;
@@ -58,8 +59,8 @@ public final class LocalClusterSimulator {
      * @param zkServer
      * @param numNodes
      */
-    public LocalClusterSimulator(final ExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes) {
-        this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000);
+    public LocalClusterSimulator(final ExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes, String measurementPath) {
+        this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000, measurementPath);
     }
 
     /**
@@ -70,6 +71,7 @@ public final class LocalClusterSimulator {
      * @param zkClientPort
      * @param numConnections
      * @param tickTime
+     * @param measurementPath
      */
     public LocalClusterSimulator(final ExecutionMode mode,
                                  boolean startupZookeeper,
@@ -77,7 +79,8 @@ public final class LocalClusterSimulator {
                                  int numNodes,
                                  int zkClientPort,
                                  int numConnections,
-                                 int tickTime) {
+                                 int tickTime,
+                                 String measurementPath) {
         // sanity check.
         ZookeeperHelper.checkConnectionString(zkServer);
         if (numNodes < 1)
@@ -121,6 +124,9 @@ public final class LocalClusterSimulator {
 
             case EXECUTION_MODE_SINGLE_PROCESS: {
                 new WorkloadManager(zkServer, getFreePort(), getFreePort());
+
+                MeasurementManager.setRoot(measurementPath);
+
                 for (int i = 0; i < numNodes; ++i) {
                     tmList.add(new TaskManager(zkServer, getFreePort(), getFreePort()));
                 }

@@ -149,6 +149,7 @@ public final class KryoEventSerializer {
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.TransferBufferEvent transferBufferEvent) {
+            // TODO: Use UUIDSerializer
             output.writeLong(transferBufferEvent.srcTaskID.getMostSignificantBits());
             output.writeLong(transferBufferEvent.srcTaskID.getLeastSignificantBits());
             output.writeLong(transferBufferEvent.dstTaskID.getMostSignificantBits());

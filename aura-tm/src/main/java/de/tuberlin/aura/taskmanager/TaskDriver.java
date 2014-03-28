@@ -12,6 +12,7 @@ import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.*;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskTransition;
@@ -70,9 +71,15 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         this.taskFSM = createTaskFSM();
 
-        this.queueManager = QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>());
+        MeasurementManager measurementManager = MeasurementManager.getInstance("/tm/" + taskDescriptor.name + "_" + taskDescriptor.taskIndex, "Task");
+        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + taskDescriptor.name + "-" + taskDescriptor.taskIndex,
+                                            measurementManager);
 
-        this.driverContext = new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM);
+        this.queueManager =
+                QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), measurementManager);
+
+        this.driverContext =
+                new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM, measurementManager);
     }
 
     // ---------------------------------------------------
@@ -128,7 +135,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         } catch (final Throwable t) {
 
-            LOG.error(t.getLocalizedMessage());
+            LOG.error(t.getLocalizedMessage(), t);
 
             taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FAIL));
 

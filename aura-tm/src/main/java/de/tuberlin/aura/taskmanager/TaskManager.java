@@ -3,7 +3,10 @@ package de.tuberlin.aura.taskmanager;
 import java.io.IOException;
 import java.util.*;
 
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 
@@ -21,6 +24,7 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import de.tuberlin.aura.core.task.common.TaskManagerContext;
@@ -300,14 +304,23 @@ public final class TaskManager implements WM2TMProtocol {
 
     public static void main(final String[] args) {
 
+        final Logger rootLOG = Logger.getRootLogger();
+
+        final PatternLayout layout = new PatternLayout("%d %p - %m%n");
+        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        rootLOG.addAppender(consoleAppender);
+        rootLOG.setLevel(Level.INFO);
+
         int dataPort = -1;
         int controlPort = -1;
         String zkServer = null;
-        if (args.length == 3) {
+        String measurementPath = null;
+        if (args.length == 4) {
             try {
                 zkServer = args[0];
                 dataPort = Integer.parseInt(args[1]);
                 controlPort = Integer.parseInt(args[2]);
+                measurementPath = args[3];
             } catch (NumberFormatException e) {
                 System.err.println("Argument" + " must be an integer");
                 System.exit(1);
@@ -317,6 +330,9 @@ public final class TaskManager implements WM2TMProtocol {
             System.exit(1);
         }
 
+        MeasurementManager.setRoot(measurementPath);
+
+        long start = System.nanoTime();
         new TaskManager(zkServer, dataPort, controlPort);
     }
 }

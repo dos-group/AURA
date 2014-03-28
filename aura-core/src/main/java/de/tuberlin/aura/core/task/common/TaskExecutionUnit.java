@@ -9,6 +9,7 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 
 public final class TaskExecutionUnit {
 
@@ -194,6 +195,9 @@ public final class TaskExecutionUnit {
                                                                                     TaskStates.TaskState state) {
                                                                 taskDriverCtx.taskDriver.teardownDriver(true);
                                                                 unregisterTask(taskDriverCtx);
+                                                                MeasurementManager.fireEvent(MeasurementManager.TASK_FINISHED + "-"
+                                                                        + currentTaskCtx.taskDescriptor.name + "-"
+                                                                        + currentTaskCtx.taskDescriptor.taskIndex);
                                                             }
                                                         });
 

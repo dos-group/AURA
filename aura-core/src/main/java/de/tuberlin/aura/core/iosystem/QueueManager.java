@@ -6,6 +6,8 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 
+import de.tuberlin.aura.core.statistic.MeasurementManager;
+
 public class QueueManager<T> {
 
     // ---------------------------------------------------
@@ -22,10 +24,17 @@ public class QueueManager<T> {
 
     private final BufferQueue.FACTORY<T> queueFactory;
 
-    private QueueManager(BufferQueue.FACTORY<T> factory) {
+    private final MeasurementManager measurementManager;
+
+    private int inputQueuesCounter;
+
+    private int outputQueuesCounter;
+
+    private QueueManager(BufferQueue.FACTORY<T> factory, MeasurementManager measurementManager) {
         this.inputQueues = new HashMap<>();
         this.outputQueues = new HashMap<>();
         this.queueFactory = factory;
+        this.measurementManager = measurementManager;
     }
 
     // ---------------------------------------------------
@@ -38,8 +47,8 @@ public class QueueManager<T> {
      * @param <F>
      * @return
      */
-    public static <F> QueueManager<F> newInstance(UUID taskID, BufferQueue.FACTORY<F> queueFactory) {
-        QueueManager<F> instance = new QueueManager<>(queueFactory);
+    public static <F> QueueManager<F> newInstance(UUID taskID, BufferQueue.FACTORY<F> queueFactory, MeasurementManager measurementManager) {
+        QueueManager<F> instance = new QueueManager<>(queueFactory, measurementManager);
         BINDINGS.put(taskID, instance);
         return instance;
     }
@@ -54,8 +63,10 @@ public class QueueManager<T> {
             return inputQueues.get(gateIndex);
         }
 
-        final BufferQueue<T> queue = queueFactory.newInstance();
+        final BufferQueue<T> queue = queueFactory.newInstance("InputQueue " + Integer.toString(inputQueuesCounter), this.measurementManager);
         inputQueues.put(gateIndex, queue);
+        ++this.inputQueuesCounter;
+
         return queue;
     }
 
@@ -71,8 +82,10 @@ public class QueueManager<T> {
             return outputQueues.get(key);
         }
 
-        final BufferQueue<T> queue = queueFactory.newInstance();
+        final BufferQueue<T> queue = queueFactory.newInstance("OutputQueue " + Integer.toString(outputQueuesCounter), this.measurementManager);
         outputQueues.put(key, queue);
+        ++this.outputQueuesCounter;
+
         return queue;
     }
 

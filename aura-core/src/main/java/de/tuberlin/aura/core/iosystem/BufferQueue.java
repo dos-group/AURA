@@ -1,5 +1,7 @@
 package de.tuberlin.aura.core.iosystem;
 
+import de.tuberlin.aura.core.statistic.MeasurementManager;
+
 public interface BufferQueue<T> extends Iterable<T> {
 
     T take() throws InterruptedException;
@@ -12,6 +14,6 @@ public interface BufferQueue<T> extends Iterable<T> {
 
     public interface FACTORY<T> {
 
-        BufferQueue<T> newInstance();
+        BufferQueue<T> newInstance(String name, MeasurementManager measurementManager);
     }
 }

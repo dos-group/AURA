@@ -1,8 +1,8 @@
 #!/bin/sh
-USER="andreas.kunft"
+USER="chwuertz"
 URL="cit.tu-berlin.de"
 
-LOCAL_AURA_PATH="/home/akunft/dev/AURA"
+LOCAL_AURA_PATH="/home/teots/workspace/aura"
 HOME_PATH="/home/$USER"
 AURA_PATH="$HOME_PATH/aura"
 DATA_PATH="/data/$USER"
@@ -100,8 +100,10 @@ SSHEND
 mkdir -p $AURA_DATA_PATH/
 mkdir -p $AURA_DATA_PATH/logs
 mkdir -p $AURA_DATA_PATH/data
-mkdir -p $BENCHMARK_PATH
 mkdir -p $DATA_PATH/zookeeper/data
+mkdir -p $BENCHMARK_PATH
+cd $AURA_PATH/
+mvn clean install
 exit
 SSHEND
 		done		
@@ -168,8 +170,8 @@ SSHEND
 			ADDRESS="wally`printf "%03d" $i`.$URL"
 			printf "Get benchmarks from $ADDRESS ... "
 			
-			mkdir -p /home/akunft/logs/$ADDRESS
-			scp -r $USER@$ADDRESS:$AURA_DATA_PATH/logs/* /home/akunft/logs/$ADDRESS > /dev/null
+			mkdir -p /home/teots/Desktop/logs/$ADDRESS
+			scp -r $USER@$ADDRESS:$AURA_DATA_PATH/logs/* /home/teots/Desktop/logs/$ADDRESS > /dev/null
 			
 			printf "done\n"
 		done
