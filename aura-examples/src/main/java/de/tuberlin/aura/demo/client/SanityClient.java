@@ -1,255 +1,232 @@
-// package de.tuberlin.aura.demo.client;
-//
-// import java.io.BufferedReader;
-// import java.io.IOException;
-// import java.io.InputStreamReader;
-// import java.util.EnumSet;
-// import java.util.List;
-// import java.util.UUID;
-//
-// import org.apache.log4j.ConsoleAppender;
-// import org.apache.log4j.Level;
-// import org.apache.log4j.Logger;
-// import org.apache.log4j.SimpleLayout;
-//
-// import de.tuberlin.aura.client.api.AuraClient;
-// import de.tuberlin.aura.client.executors.LocalClusterExecutor;
-// import de.tuberlin.aura.core.descriptors.Descriptors;
-// import de.tuberlin.aura.core.iosystem.IOEvents.DataBufferEvent;
-// import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
-// import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-// import de.tuberlin.aura.core.statistic.MeasurementType;
-// import de.tuberlin.aura.core.statistic.NumberMeasurement;
-// import de.tuberlin.aura.core.task.common.BenchmarkRecord.SanityBenchmarkRecord;
-// import de.tuberlin.aura.core.task.common.Record;
-// import de.tuberlin.aura.core.task.common.TaskInvokeable;
-// import de.tuberlin.aura.core.task.common.TaskRuntimeContext;
-// import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-// import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
-// import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-// import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
-//
-// public final class SanityClient {
-//
-// private static final Logger LOG = Logger.getRootLogger();
-//
-// // Disallow Instantiation.
-// private SanityClient() {}
-//
-// /**
-// *
-// */
-// public static class Source extends TaskInvokeable {
-//
-// private static final int BUFFER_SIZE = 64000;
-//
-// private static final int RECORDS = 10000;
-//
-// public Source(final TaskRuntimeContext context, final Logger LOG) {
-// super(context, LOG);
-// }
-//
-// @Override
-// public void execute() throws Exception {
-//
-// final UUID taskID = getTaskID();
-//
-// int send = 0;
-// for (int i = 0; i < RECORDS; ++i) {
-//
-// final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
-// for (int index = 0; index < outputs.size(); ++index) {
-// final UUID outputTaskID = getOutputTaskID(0, index);
-// final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new
-// byte[BUFFER_SIZE]);
-// final Record<SanityBenchmarkRecord> record = new Record<>(new
-// SanityBenchmarkRecord(outputTaskID));
-//
-// emit(0, index, record, outputBuffer);
-// ++send;
-// }
-//
-// // try {
-// // Thread.sleep(100);
-// // } catch (InterruptedException e) {
-// // LOG.error(e);
-// // }
-// }
-//
-// this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE",
-// send));
-// // LOG.info("SOURCE|" + Integer.toString(send));
-//
-// final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
-// for (int index = 0; index < outputs.size(); ++index) {
-// final UUID outputTaskID = getOutputTaskID(0, index);
-// final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED,
-// taskID, outputTaskID);
-// emit(0, index, exhaustedEvent);
-// }
-// }
-// }
-//
-// /**
-// *
-// */
-// public static class Task2Exe extends TaskInvokeable {
-//
-// private static final int BUFFER_SIZE = 64000;
-//
-// public Task2Exe(final TaskRuntimeContext context, final Logger LOG) {
-// super(context, LOG);
-// }
-//
-// @Override
-// public void execute() throws Exception {
-//
-// final UUID taskID = getTaskID();
-//
-// openGate(0);
-//
-// int correct = 0;
-// int bufferCount = 0;
-//
-// while (isTaskRunning()) {
-// final List<Descriptors.TaskDescriptor> outputs = context.taskBinding.outputGateBindings.get(0);
-// final Record<SanityBenchmarkRecord> record = absorb(0);
-// if (record != null) {
-//
-// ++bufferCount;
-//
-// for (int index = 0; index < outputs.size(); ++index) {
-// final UUID outputTaskID = getOutputTaskID(0, index);
-// final DataBufferEvent outputBuffer = new DataBufferEvent(taskID, outputTaskID, new
-// byte[BUFFER_SIZE]);
-//
-// if (!record.getData().nextTask.equals(getTaskID())) {
-// LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found " +
-// getTaskID() + " Task: "
-// + getTaskName());
-// } else {
-// ++correct;
-// }
-//
-// record.getData().nextTask = outputTaskID;
-// emit(0, index, record, outputBuffer);
-// }
-// } else {
-// for (int index = 0; index < outputs.size(); ++index) {
-// final UUID outputTaskID = getOutputTaskID(0, index);
-// final DataIOEvent exhaustedEvent = new DataIOEvent(DataEventType.DATA_EVENT_SOURCE_EXHAUSTED,
-// taskID, outputTaskID);
-// emit(0, index, exhaustedEvent);
-// }
-// }
-//
-// checkIfSuspended();
-// }
-//
-// this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS",
-// bufferCount));
-// this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER,
-// "CORRECT_BUFFERS", correct));
-// // LOG.error("Buffers: " + Integer.toString(bufferCount));
-// // LOG.error("Correct buffers: " + Integer.toString(correct));
-//
-// closeGate(0);
-// }
-// }
-//
-// /**
-// *
-// */
-// public static class Task3Exe extends TaskInvokeable {
-//
-// private static final int BUFFER_SIZE = 64000;
-//
-// public Task3Exe(final TaskRuntimeContext context, final Logger LOG) {
-// super(context, LOG);
-// }
-//
-// @Override
-// public void execute() throws Exception {
-//
-// openGate(0);
-//
-// int receivedRecords = 0;
-//
-// while (isTaskRunning()) {
-//
-// final Record<SanityBenchmarkRecord> record = absorb(0);
-//
-// if (record != null) {
-// if (!record.getData().nextTask.equals(getTaskID())) {
-// LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found " +
-// getTaskID() + " Task: "
-// + getTaskName());
-// }
-//
-// ++receivedRecords;
-// }
-//
-// checkIfSuspended();
-// }
-//
-// this.context.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SINK",
-// receivedRecords));
-// // LOG.info("SINK|" + Integer.toString(receivedRecords));
-//
-// closeGate(0);
-// }
-// }
-//
-//
-// // ---------------------------------------------------
-// // Main.
-// // ---------------------------------------------------
-//
-// public static void main(String[] args) {
-//
-// final SimpleLayout layout = new SimpleLayout();
-// final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-// LOG.addAppender(consoleAppender);
-// LOG.setLevel(Level.INFO);
-//
-// final String measurementPath = "/home/teots/Desktop/measurements";
-// // final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
-// final String zookeeperAddress = "localhost:2181";
-// final LocalClusterExecutor lce =
-// new LocalClusterExecutor(LocalClusterExecutor.LocalExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
-// true,
-// zookeeperAddress,
-// 6,
-// measurementPath);
-// final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
-//
-// final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-// atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Source.class)
-// .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
-// .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
-// .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
-// .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class);
-//
-// AuraTopology at;
-//
-// for (int i = 1; i <= 1; ++i) {
-// at = atb1.build("Job " + Integer.toString(i),
-// EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
-// ac.submitTopology(at, null);
-//
-// try {
-// Thread.sleep(30000);
-// } catch (InterruptedException e) {
-// LOG.error(e);
-// }
-// }
-//
-// try {
-// new BufferedReader(new InputStreamReader(System.in)).readLine();
-// } catch (IOException e) {
-// e.printStackTrace();
-// }
-//
-// lce.shutdown();
-// }
-// }
+package de.tuberlin.aura.demo.client;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.UUID;
+
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.SimpleLayout;
+
+import de.tuberlin.aura.client.api.AuraClient;
+import de.tuberlin.aura.client.executors.LocalClusterSimulator;
+import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.statistic.MeasurementType;
+import de.tuberlin.aura.core.statistic.NumberMeasurement;
+import de.tuberlin.aura.core.task.common.*;
+import de.tuberlin.aura.core.task.common.BenchmarkRecord.SanityBenchmarkRecord;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+
+public final class SanityClient {
+
+    private static final Logger LOG = Logger.getRootLogger();
+
+    // Disallow Instantiation.
+    private SanityClient() {}
+
+    /**
+*
+*/
+    public static class Source extends TaskInvokeable {
+
+        private static final int RECORDS = 10000;
+
+        public Source(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
+            super(context, producer, consumer, LOG);
+        }
+
+        @Override
+        public void run() throws Throwable {
+            final UUID taskID = driverContext.taskDescriptor.taskID;
+
+            long send = 0l;
+
+            int i = 0;
+            while (i++ < RECORDS && isInvokeableRunning()) {
+
+                final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
+                for (int index = 0; index < outputs.size(); ++index) {
+                    final UUID outputTaskID = getTaskID(0, index);
+
+                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
+
+                    final Record<SanityBenchmarkRecord> record = new Record<>(new SanityBenchmarkRecord(outputTaskID));
+
+                    driverContext.recordWriter.writeRecord(record, outputBuffer);
+                    producer.emit(0, index, outputBuffer);
+
+                    ++send;
+                }
+            }
+
+            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
+            // LOG.info("SOURCE|" + Integer.toString(send));
+        }
+
+        @Override
+        public void close() throws Throwable {
+            producer.done();
+        }
+    }
+
+    /**
+*
+*/
+    public static class Task2Exe extends TaskInvokeable {
+
+        public Task2Exe(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
+            super(context, producer, consumer, LOG);
+        }
+
+        @Override
+        public void open() throws Throwable {
+            consumer.openGate(0);
+        }
+
+        @Override
+        public void run() throws Throwable {
+            final UUID taskID = driverContext.taskDescriptor.taskID;
+            long bufferCount = 0l;
+            long correct = 0l;
+
+            while (!consumer.isExhausted() && isInvokeableRunning()) {
+                final IOEvents.TransferBufferEvent buffer = consumer.absorb(0);
+                if (buffer != null) {
+                    final Record<SanityBenchmarkRecord> record = driverContext.recordReader.readRecord(buffer);
+                    final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
+                    ++bufferCount;
+
+                    for (int index = 0; index < outputs.size(); ++index) {
+                        final UUID outputTaskID = getTaskID(0, index);
+
+                        final MemoryManager.MemoryView sendBuffer = producer.alloc();
+                        final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
+
+                        if (!record.getData().nextTask.equals(driverContext.taskDescriptor.taskID)) {
+                            LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found "
+                                    + driverContext.taskDescriptor.taskID + " Task: " + driverContext.taskDescriptor.name);
+                        } else {
+                            ++correct;
+                        }
+
+                        record.getData().nextTask = outputTaskID;
+
+                        driverContext.recordWriter.writeRecord(record, outputBuffer);
+                        producer.emit(0, index, outputBuffer);
+                    }
+
+                    buffer.buffer.free();
+                }
+            }
+
+            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
+            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
+        }
+
+        @Override
+        public void close() throws Throwable {
+            producer.done();
+        }
+    }
+
+    /**
+     *
+     */
+    public static class Task3Exe extends TaskInvokeable {
+
+        public Task3Exe(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
+            super(context, producer, consumer, LOG);
+        }
+
+        @Override
+        public void open() throws Throwable {
+            consumer.openGate(0);
+        }
+
+        @Override
+        public void run() throws Throwable {
+            final UUID taskID = driverContext.taskDescriptor.taskID;
+            long receivedRecords = 0l;
+
+            while (!consumer.isExhausted() && isInvokeableRunning()) {
+                final IOEvents.TransferBufferEvent buffer = consumer.absorb(0);
+
+                if (buffer != null) {
+                    final Record<SanityBenchmarkRecord> record = driverContext.recordReader.readRecord(buffer);
+                    if (!record.getData().nextTask.equals(driverContext.taskDescriptor.taskID)) {
+                        LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found "
+                                + driverContext.taskDescriptor.taskID + " Task: " + driverContext.taskDescriptor.name);
+                    }
+
+                    ++receivedRecords;
+                    buffer.buffer.free();
+                }
+            }
+
+            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SINK", receivedRecords));
+            // LOG.info("SINK|" + Integer.toString(receivedRecords));
+        }
+    }
+
+
+    // ---------------------------------------------------
+    // Main.
+    // ---------------------------------------------------
+
+    public static void main(String[] args) {
+
+        final SimpleLayout layout = new SimpleLayout();
+        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        LOG.addAppender(consoleAppender);
+        LOG.setLevel(Level.INFO);
+
+        final String measurementPath = "/home/teots/Desktop/measurements";
+        // final String zookeeperAddress = "wally033.cit.tu-berlin.de:2181";
+        final String zookeeperAddress = "localhost:2181";
+        final LocalClusterSimulator lce =
+                new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+                                          true,
+                                          zookeeperAddress,
+                                          6,
+                                          measurementPath);
+        final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
+
+        final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        atb1.addNode(new Node(UUID.randomUUID(), "Task1", 2, 1), Source.class)
+            .connectTo("Task2", Edge.TransferType.ALL_TO_ALL)
+            .addNode(new Node(UUID.randomUUID(), "Task2", 2, 1), Task2Exe.class)
+            .connectTo("Task3", Edge.TransferType.POINT_TO_POINT)
+            .addNode(new Node(UUID.randomUUID(), "Task3", 2, 1), Task3Exe.class);
+
+        AuraTopology at;
+
+        for (int i = 1; i <= 1; ++i) {
+            at = atb1.build("Job " + Integer.toString(i), EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
+            ac.submitTopology(at, null);
+
+            try {
+                Thread.sleep(30000);
+            } catch (InterruptedException e) {
+                LOG.error(e);
+            }
+        }
+
+        try {
+            new BufferedReader(new InputStreamReader(System.in)).readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        lce.shutdown();
+    }
+}

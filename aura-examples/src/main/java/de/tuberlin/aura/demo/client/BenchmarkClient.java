@@ -35,7 +35,7 @@ public final class BenchmarkClient {
      */
     public static class Task1Exe extends TaskInvokeable {
 
-        private static final int RECORDS = 1000;
+        private static final int RECORDS = 10000;
 
         public Task1Exe(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
@@ -62,6 +62,7 @@ public final class BenchmarkClient {
                     producer.emit(0, index, outputBuffer);
 
                     // LOG.debug("Emit at: " + record.getData().time + " " + outputBuffer);
+                    buffer.free();
                 }
             }
 
@@ -112,9 +113,9 @@ public final class BenchmarkClient {
                         producer.emit(0, index, outputBuffer);
 
                         // LOG.debug("Emit at: " + record.getData().time);
-
-                        buffer.buffer.free();
                     }
+
+                    buffer.buffer.free();
                 }
             }
         }
@@ -149,18 +150,13 @@ public final class BenchmarkClient {
                 final IOEvents.TransferBufferEvent left = consumer.absorb(0);
                 final IOEvents.TransferBufferEvent right = consumer.absorb(1);
 
-                if (left != null) {
-                    // LOG.info("input left received data message from task " + left.srcTaskID);
-                    left.buffer.free();
-                }
-                if (right != null) {
-                    // LOG.info("input right: received data message from task " + right.srcTaskID);
-                    right.buffer.free();
-                }
-
                 if (left != null || right != null) {
                     final Record<BenchmarkRecord> leftRecord = driverContext.recordReader.readRecord(left);
                     final Record<BenchmarkRecord> rightRecord = driverContext.recordReader.readRecord(right);
+
+                    left.buffer.free();
+                    right.buffer.free();
+
                     final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
 
                     for (int index = 0; index < outputs.size(); ++index) {
@@ -213,13 +209,15 @@ public final class BenchmarkClient {
             while (!consumer.isExhausted() && isInvokeableRunning()) {
                 final IOEvents.TransferBufferEvent buffer = consumer.absorb(0);
 
-                LOG.debug("received: " + buffer);
+                // LOG.debug("received: " + buffer);
 
                 if (buffer != null) {
                     final Record<BenchmarkRecord> record = driverContext.recordReader.readRecord(buffer);
 
                     long latency = System.currentTimeMillis() - record.getData().time;
                     latencies.add(latency);
+
+                    buffer.buffer.free();
                 }
             }
 

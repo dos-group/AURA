@@ -175,6 +175,9 @@ public final class TaskExecutionUnit {
 
                 final TaskDriverContext taskDriverCtx = currentTaskCtx;
 
+                executorThread.setName(taskDriverCtx.taskDescriptor.name + "-Execution-Unit-Thread");
+
+
                 currentTaskCtx.taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
                                                         new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 

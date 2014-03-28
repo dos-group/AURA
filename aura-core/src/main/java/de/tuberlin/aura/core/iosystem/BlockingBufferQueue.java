@@ -3,6 +3,7 @@ package de.tuberlin.aura.core.iosystem;
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -97,6 +98,16 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     @Override
     public String toString() {
         return backingQueue.toString();
+    }
+
+    @Override
+    public T poll(final long timeout, final TimeUnit timeUnit) throws InterruptedException {
+        return backingQueue.poll(timeout, timeUnit).data;
+    }
+
+    @Override
+    public int size() {
+        return backingQueue.size();
     }
 
     public static class Factory<F> implements FACTORY<F> {
