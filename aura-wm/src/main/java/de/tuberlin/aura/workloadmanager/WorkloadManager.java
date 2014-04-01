@@ -1,11 +1,5 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.log4j.Logger;
-
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
@@ -17,6 +11,13 @@ import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import org.apache.log4j.Logger;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 // TODO: introduce the concept of a session, that allows to submit multiple queries...
@@ -39,16 +40,28 @@ public class WorkloadManager implements ClientWMProtocol {
 
     private final Map<UUID, TopologyController> registeredTopologies;
 
+    private final Map<UUID, Set<UUID>> registeredSessions;
+
     private final WorkloadManagerContext managerContext;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
+    /**
+     * @param zkServer
+     * @param dataPort
+     * @param controlPort
+     */
     public WorkloadManager(final String zkServer, int dataPort, int controlPort) {
         this(zkServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
     }
 
+    /**
+     *
+     * @param zkServer
+     * @param machineDescriptor
+     */
     public WorkloadManager(final String zkServer, final MachineDescriptor machineDescriptor) {
         // sanity check.
         ZookeeperHelper.checkConnectionString(zkServer);
@@ -63,7 +76,9 @@ public class WorkloadManager implements ClientWMProtocol {
 
         this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machineDescriptor);
 
-        this.registeredTopologies = new ConcurrentHashMap<UUID, TopologyController>();
+        this.registeredTopologies = new ConcurrentHashMap<>();
+
+        this.registeredSessions = new ConcurrentHashMap<>();
 
         rpcManager.registerRPCProtocolImpl(this, ClientWMProtocol.class);
 
@@ -92,8 +107,30 @@ public class WorkloadManager implements ClientWMProtocol {
     // Public.
     // ---------------------------------------------------
 
+    /**
+     *
+     * @param sessionID
+     */
     @Override
-    public void submitTopology(final AuraTopology topology) {
+    public void openSession(final UUID sessionID) {
+        // sanity check.
+        if (sessionID == null)
+            throw new IllegalArgumentException("sessionID == null");
+
+        if (registeredSessions.containsKey(sessionID))
+            throw new IllegalStateException("session with this ID [" + sessionID.toString() + "] already exists");
+
+        // register a new session for a client.
+        registeredSessions.put(sessionID, new HashSet<UUID>());
+        LOG.info("OPENED SESSION [" + sessionID + "]");
+    }
+
+    /**
+     * @param sessionID
+     * @param topology
+     */
+    @Override
+    public void submitTopology(final UUID sessionID, final AuraTopology topology) {
         // sanity check.
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
@@ -102,10 +139,40 @@ public class WorkloadManager implements ClientWMProtocol {
             throw new IllegalStateException("topology already submitted");
 
         LOG.info("TOPOLOGY '" + topology.name + "' SUBMITTED");
-        registerTopology(topology).assembleTopology();
+        registerTopology(sessionID, topology).assembleTopology();
     }
 
-    public TopologyController registerTopology(final AuraTopology topology) {
+    /**
+     *
+     * @param sessionID
+     */
+    @Override
+    public void closeSession(final UUID sessionID) {
+        // sanity check.
+        if (sessionID == null)
+            throw new IllegalArgumentException("sessionID == null");
+
+        if (!registeredSessions.containsKey(sessionID))
+            throw new IllegalStateException("session with this ID [" + sessionID.toString() + "] does not exist");
+
+        // register a new session for a client.
+        final Set<UUID> assignedTopologies = registeredSessions.get(sessionID);
+
+        for (final UUID topologyID : assignedTopologies) {
+            final TopologyController topologyController = registeredTopologies.get(topologyID);
+            //topologyController.cancelTopology(); // TODO: Not implemented yet!
+            //unregisterTopology(topologyID);
+        }
+
+        LOG.info("CLOSED SESSION [" + sessionID + "]");
+    }
+
+    /**
+     * @param sessionID
+     * @param topology
+     * @return
+     */
+    public TopologyController registerTopology(final UUID sessionID, final AuraTopology topology) {
         // sanity check.
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
@@ -115,6 +182,10 @@ public class WorkloadManager implements ClientWMProtocol {
         return topologyController;
     }
 
+    /**
+     *
+     * @param topologyID
+     */
     public void unregisterTopology(final UUID topologyID) {
         // sanity check.
         if (topologyID == null)
@@ -122,12 +193,21 @@ public class WorkloadManager implements ClientWMProtocol {
 
         if (registeredTopologies.remove(topologyID) == null)
             throw new IllegalStateException("topologyID not found");
+
+        for(final Set<UUID> assignedTopologies : registeredSessions.values()) {
+            if (assignedTopologies.contains(topologyID))
+                assignedTopologies.remove(topologyID);
+        }
     }
 
     // ---------------------------------------------------
     // Entry Point.
     // ---------------------------------------------------
 
+    /**
+     *
+     * @param args
+     */
     public static void main(final String[] args) {
 
         // final Logger rootLOG = Logger.getRootLogger();

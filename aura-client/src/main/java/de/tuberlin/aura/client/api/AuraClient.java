@@ -48,6 +48,8 @@ public final class AuraClient {
 
     public final IORedispatcher ioHandler;
 
+    public final UUID clientSessionID;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -105,6 +107,10 @@ public final class AuraClient {
 
         this.registeredTopologyMonitors = new HashMap<>();
 
+        // create client session.
+        this.clientSessionID = UUID.randomUUID();
+
+        clientProtocol.openSession(clientSessionID);
         LOG.info("CLIENT IS READY");
     }
 
@@ -131,7 +137,14 @@ public final class AuraClient {
         if (handler != null) {
             registeredTopologyMonitors.put(topology.topologyID, handler);
         }
-        clientProtocol.submitTopology(topology);
+        clientProtocol.submitTopology(clientSessionID, topology);
+    }
+
+    /**
+     *
+     */
+    public void closeSession() {
+        clientProtocol.closeSession(clientSessionID);
     }
 
     // ---------------------------------------------------
