@@ -7,6 +7,8 @@ import java.io.*;
  */
 public class SanityEvaluator {
 
+    private static final int EXECUTION_UNITS = 8;
+
     private String path;
 
     public SanityEvaluator(String path) {
@@ -19,42 +21,74 @@ public class SanityEvaluator {
         int sumSinks = 0;
 
         File rootFolder = new File(this.path);
-        for (File folder : rootFolder.listFiles()) {
-            for (File file : folder.listFiles()) {
+        for (File nodeFolder : rootFolder.listFiles()) {
+            for (File file : nodeFolder.listFiles()) {
+                // Read logs.
+                if (file.isFile()) {
+                    checkForExceptions(file);
+                } else {
+                    // Read the content of folders
+                    for (File measurementFile : file.listFiles()) {
+                        try {
+                            BufferedReader br = new BufferedReader(new FileReader(measurementFile));
+                            String line = null;
+                            while ((line = br.readLine()) != null) {
+                                if (line.contains("SOURCE")) {
+                                    String[] tokens = line.split("\\t");
+                                    sumSources += Integer.parseInt(tokens[2]);
+                                } else if (line.contains("SINK")) {
+                                    String[] tokens = line.split("\\t");
+                                    sumSinks += Integer.parseInt(tokens[2]);
+                                }
+                            }
 
-                System.out.println(folder.getName());
-
-                try {
-                    BufferedReader br = new BufferedReader(new FileReader(file));
-                    String line = null;
-                    while ((line = br.readLine()) != null) {
-                        if (line.contains("SOURCE")) {
-                            String[] tokens = line.split("\\|");
-                            sumSources += Integer.parseInt(tokens[1]);
-                            System.out.println(line);
-                        } else if (line.contains("SINK")) {
-                            String[] tokens = line.split("\\|");
-                            sumSinks += Integer.parseInt(tokens[1]);
-                            System.out.println(line);
-                        } else if (line.toLowerCase().contains("error")) {
-                            System.out.println(line);
-                        } else if (line.toLowerCase().contains("exception")) {
-                            System.out.println(line);
+                            br.close();
+                        } catch (FileNotFoundException e) {
+                            e.printStackTrace();
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
+
                     }
-
-                    br.close();
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
                 }
-
-                System.out.println();
             }
         }
 
         System.out.println("Buffer Diff: " + Integer.toString(sumSources - sumSinks));
+    }
+
+    private void checkForExceptions(File file) {
+
+        int running = 0;
+        int finished = 0;
+
+        int sink = 0;
+
+        try {
+            BufferedReader br = new BufferedReader(new FileReader(file));
+            String line = null;
+            while ((line = br.readLine()) != null) {
+                if (line.toLowerCase().contains("exception") || line.toLowerCase().contains("error")) {
+                    System.out.print(file.getPath() + " -> ");
+                    System.out.println(line);
+                } else if (line.contains("TASK_STATE_RUNNING")) {
+                    ++running;
+                } else if (line.contains("TASK_FINISHED")) {
+                    ++finished;
+                }
+            }
+
+            br.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (finished != 0) { // if (EXECUTION_UNITS != running || running != finished) {
+            System.out.println(file);
+            System.out.println("Running: " + Integer.toString(running) + " Finished: " + Integer.toString(finished));
+        }
     }
 
     public static void main(String[] args) {

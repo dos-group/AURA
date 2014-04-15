@@ -1,13 +1,14 @@
 package de.tuberlin.aura.core.task.common;
 
 
+import java.util.UUID;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.MemoryManager;
-import org.apache.log4j.Logger;
-
-import java.util.UUID;
 
 public final class TaskExecutionManager extends EventDispatcher {
 
@@ -49,9 +50,9 @@ public final class TaskExecutionManager extends EventDispatcher {
      * @param machineDescriptor
      * @param bufferMemoryManager
      */
-    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor,
-                                final MemoryManager.BufferMemoryManager bufferMemoryManager) {
-        super(false);
+    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor, final MemoryManager.BufferMemoryManager bufferMemoryManager) {
+        // TODO: Cleanup
+        super(true, "TaskExecutionManagerEventDispatcher");
 
         // sanity check.
         if (machineDescriptor == null)
@@ -97,8 +98,7 @@ public final class TaskExecutionManager extends EventDispatcher {
         driverContext.setAssignedExecutionUnitIndex(selectedEU);
         executionUnit[selectedEU].enqueueTask(driverContext);
 
-        LOG.info("EXECUTE TASK " + driverContext.taskDescriptor.name + " ["
-                + driverContext.taskDescriptor.taskID + "]" + " ON EXECUTION UNIT ("
+        LOG.info("EXECUTE TASK " + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID + "]" + " ON EXECUTION UNIT ("
                 + executionUnit[selectedEU].getExecutionUnitID() + ") ON MACHINE [" + machineDescriptor.uid + "]");
     }
 
@@ -118,6 +118,7 @@ public final class TaskExecutionManager extends EventDispatcher {
                 return eu;
             }
         }
+
         return null;
     }
 
@@ -132,6 +133,12 @@ public final class TaskExecutionManager extends EventDispatcher {
         for (int i = 0; i < numberOfCores; ++i) {
             final MemoryManager.BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
             final MemoryManager.BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
+
+            if (inputBuffer == outputBuffer) {
+                LOG.error("SAME ALLOCATOR GROUP USED");
+                throw new RuntimeException("SAME ALLOCATOR GROUP USED");
+            }
+
             this.executionUnit[i] = new TaskExecutionUnit(this, i, inputBuffer, outputBuffer);
             this.executionUnit[i].start();
         }

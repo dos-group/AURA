@@ -3,10 +3,7 @@ package de.tuberlin.aura.taskmanager;
 import java.io.IOException;
 import java.util.*;
 
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.log4j.PatternLayout;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 
@@ -238,6 +235,10 @@ public final class TaskManager implements WM2TMProtocol {
 
         if (taskList.size() == 0)
             deployedTopologyTasks.remove(taskDriverCtx.taskDescriptor.topologyID);
+
+        LOG.debug("Shutdown event dispatchers");
+        taskDriverCtx.driverDispatcher.shutdown();
+        // taskDriverCtx.taskFSM.shutdown();
     }
 
     /**
@@ -304,12 +305,12 @@ public final class TaskManager implements WM2TMProtocol {
 
     public static void main(final String[] args) {
 
-        final Logger rootLOG = Logger.getRootLogger();
-
-        final PatternLayout layout = new PatternLayout("%d %p - %m%n");
-        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-        rootLOG.addAppender(consoleAppender);
-        rootLOG.setLevel(Level.INFO);
+        // final Logger rootLOG = Logger.getRootLogger();
+        //
+        // final PatternLayout layout = new PatternLayout("%d %p - %m%n");
+        // final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        // rootLOG.addAppender(consoleAppender);
+        // rootLOG.setLevel(Level.INFO);
 
         int dataPort = -1;
         int controlPort = -1;
@@ -322,11 +323,18 @@ public final class TaskManager implements WM2TMProtocol {
                 controlPort = Integer.parseInt(args[2]);
                 measurementPath = args[3];
             } catch (NumberFormatException e) {
-                System.err.println("Argument" + " must be an integer");
+                LOG.error("Argument" + " must be an integer", e);
                 System.exit(1);
             }
         } else {
-            System.err.println("only two numeric arguments allowed: dataPort, controlPort");
+            StringBuilder builder = new StringBuilder();
+            builder.append("Args: ");
+            for (int i = 0; i < args.length; i++) {
+                builder.append(args[i]);
+                builder.append("|");
+            }
+
+            LOG.error(builder.toString());
             System.exit(1);
         }
 

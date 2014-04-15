@@ -43,7 +43,7 @@ public class TopologyController extends EventDispatcher {
      * @param topology
      */
     public TopologyController(final WorkloadManagerContext context, final AuraTopology topology) {
-        super(true);
+        super(true, "TopologyControllerEventDispatcher");
 
         // sanity check.
         if (context == null)
@@ -65,6 +65,7 @@ public class TopologyController extends EventDispatcher {
                              .addPhase(new TopologyScheduler(context.infrastructureManager))
                              .addPhase(new TopologyDeployer(context.rpcManager));
 
+        // TODO: No TASK_STATE_FINISHED events arrive here!
         this.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
 
             private int finalStateCnt = 0;
@@ -178,20 +179,20 @@ public class TopologyController extends EventDispatcher {
                                   .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY, TopologyState.TOPOLOGY_STATE_DEPLOYED)
                                   .defineState(TopologyState.TOPOLOGY_STATE_DEPLOYED)
                                   .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_RUN,
-                                          TopologyState.TOPOLOGY_STATE_RUNNING,
-                                          runTransitionConstraint)
+                                                 TopologyState.TOPOLOGY_STATE_RUNNING,
+                                                 runTransitionConstraint)
                                   .defineState(TopologyState.TOPOLOGY_STATE_RUNNING)
                                   .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FINISH,
-                                          TopologyState.TOPOLOGY_STATE_FINISHED,
-                                          finishTransitionConstraint)
+                                                 TopologyState.TOPOLOGY_STATE_FINISHED,
+                                                 finishTransitionConstraint)
                                   .and()
                                   .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_CANCEL,
-                                          TopologyState.TOPOLOGY_STATE_CANCELED,
-                                          cancelTransitionConstraint)
+                                                 TopologyState.TOPOLOGY_STATE_CANCELED,
+                                                 cancelTransitionConstraint)
                                   .and()
                                   .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FAIL,
-                                          TopologyState.TOPOLOGY_STATE_FAILURE,
-                                          failureTransitionConstraint)
+                                                 TopologyState.TOPOLOGY_STATE_FAILURE,
+                                                 failureTransitionConstraint)
                                   .defineState(TopologyState.TOPOLOGY_STATE_FINISHED)
                                   .noTransition()
                                   .defineState(TopologyState.TOPOLOGY_STATE_CANCELED)
@@ -272,7 +273,10 @@ public class TopologyController extends EventDispatcher {
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
                 // Send to the client the finish notification...
-                ioManager.sendEvent(topology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED));
+                IOEvents.ControlIOEvent event = new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED);
+                event.setPayload(TopologyController.this.topology.name);
+
+                ioManager.sendEvent(topology.machineID, event);
             }
         });
 

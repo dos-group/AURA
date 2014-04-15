@@ -48,10 +48,18 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         ++this.counter;
 
         if (this.counter == 1000) {
-            AccumulatedLatencyMeasurement m =
-                    new AccumulatedLatencyMeasurement(MeasurementType.LATENCY, "Queue: " + this.name, -1, -1, (double) this.sumLatency
-                            / (double) this.counter, -1);
-            this.measurementManager.add(m);
+            this.measurementManager.add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
+                                                                          "Queue Latency -> " + this.name,
+                                                                          -1,
+                                                                          -1,
+                                                                          (double) this.sumLatency / (double) this.counter,
+                                                                          -1));
+            this.measurementManager.add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
+                                                                          "Queue Size -> " + this.name,
+                                                                          -1,
+                                                                          -1,
+                                                                          (double) this.sumQueueSize / (double) this.counter,
+                                                                          -1));
 
             // LOG.info(this.name + ": TIME_IN_QUEUE|" + Double.toString((double) this.sumLatency /
             // (double) this.counter) + "|" +
@@ -108,6 +116,16 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     @Override
     public int size() {
         return backingQueue.size();
+    }
+
+    @Override
+    public MeasurementManager getMeasurementManager() {
+        return this.measurementManager;
+    }
+
+    @Override
+    public String getName() {
+        return this.name;
     }
 
     public static class Factory<F> implements FACTORY<F> {

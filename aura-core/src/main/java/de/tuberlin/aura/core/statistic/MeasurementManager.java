@@ -8,7 +8,8 @@ import java.util.*;
 
 import net.jcip.annotations.ThreadSafe;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ConcurrentHashMultiset;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
@@ -19,7 +20,10 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 @ThreadSafe
 public class MeasurementManager extends EventHandler {
 
-    private static final Logger LOG = Logger.getLogger(MeasurementManager.class);
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(MeasurementManager.class);
 
     private static String ROOT = null;
 
@@ -80,8 +84,15 @@ public class MeasurementManager extends EventHandler {
      */
     public static void fireEvent(String event) {
         LOG.info("FireEvent: " + event);
-        for (MeasurementManager manager : exportListeners.get(event)) {
-            manager.export();
+        List<MeasurementManager> managers = exportListeners.get(event);
+        if (managers != null) {
+            for (MeasurementManager manager : managers) {
+                manager.export();
+            }
+
+            exportListeners.remove(event);
+        } else {
+            LOG.error("The same event ({}) was fired twice. Probably the same job was executed twice and the first didn't finished yet", event);
         }
     }
 
@@ -113,8 +124,9 @@ public class MeasurementManager extends EventHandler {
 
                     // BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new
                     // GZIPOutputStream(new FileOutputStream(new File(path)))));
-                    BufferedWriter out = new BufferedWriter(new FileWriter(file));
+                    BufferedWriter out = new BufferedWriter(new FileWriter(file, true));
 
+                    out.write("JOB EXECUTION\n");
                     out.write(MeasurementManager.this.name);
                     out.write("\n");
 
@@ -130,7 +142,7 @@ public class MeasurementManager extends EventHandler {
                             @Override
                             public int compare(Measurement o1, Measurement o2) {
                                 if (o1.timestamp == o2.timestamp) {
-                                    return 0;
+                                    return Math.abs(o1.hashCode() - o2.hashCode());
                                 } else if (o1.timestamp < o2.timestamp) {
                                     return -1;
                                 }
@@ -151,7 +163,6 @@ public class MeasurementManager extends EventHandler {
                             out.write("\n");
                         }
                     }
-
 
                     out.close();
                 } catch (IOException e) {

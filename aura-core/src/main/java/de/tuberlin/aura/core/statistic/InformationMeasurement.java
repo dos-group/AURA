@@ -3,18 +3,18 @@ package de.tuberlin.aura.core.statistic;
 /**
  * Created by teots on 3/12/14.
  */
-public class TimeMeasurement extends Measurement {
+public class InformationMeasurement extends Measurement {
 
-    private long time = 0;
+    public String info;
 
-    public TimeMeasurement(MeasurementType type, String description, long time) {
+    public InformationMeasurement(MeasurementType type, String description, String info) {
         super(type, description);
-        this.time = time;
+        this.info = info;
     }
 
     @Override
     public String getHeader() {
-        return "TIMESTAMP\tDESCRIPTION\tTIME";
+        return "TIMESTAMP\tDESCRIPTION\tINFORMATION";
     }
 
     @Override
@@ -23,11 +23,12 @@ public class TimeMeasurement extends Measurement {
             return false;
         if (this == obj)
             return true;
-        if (!(obj instanceof TimeMeasurement))
+        if (!(obj instanceof InformationMeasurement))
             return false;
 
-        TimeMeasurement other = (TimeMeasurement) obj;
-        if (this.timestamp == other.timestamp && this.type == other.type && this.description.equals(other.description) && this.time == other.time)
+        InformationMeasurement other = (InformationMeasurement) obj;
+        if (this.timestamp == other.timestamp && this.type == other.type && this.description.equals(other.description)
+                && this.info.equals(other.info))
             return true;
 
         return false;
@@ -40,7 +41,7 @@ public class TimeMeasurement extends Measurement {
         result = prime * result + (int) (this.timestamp);
         result = prime * result + (this.type.hashCode());
         result = prime * result + (this.description.hashCode());
-        result = prime * result + (int) (this.time);
+        result = prime * result + this.info.hashCode();
 
         return result;
     }
@@ -52,7 +53,7 @@ public class TimeMeasurement extends Measurement {
         builder.append("\t");
         builder.append(this.description);
         builder.append("\t");
-        builder.append(this.time);
+        builder.append(this.info);
 
         return builder.toString();
     }

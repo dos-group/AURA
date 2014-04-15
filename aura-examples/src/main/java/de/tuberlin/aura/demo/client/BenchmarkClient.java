@@ -8,7 +8,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
@@ -25,7 +26,10 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
 
 public final class BenchmarkClient {
 
-    private static final Logger LOG = Logger.getRootLogger();
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(BenchmarkClient.class);
 
     // Disallow Instantiation.
     private BenchmarkClient() {}
@@ -300,7 +304,7 @@ public final class BenchmarkClient {
             try {
                 Thread.sleep(30000);
             } catch (InterruptedException e) {
-                LOG.error(e);
+                LOG.error("Sleep interrupted", e);
             }
         }
 

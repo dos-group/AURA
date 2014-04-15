@@ -5,11 +5,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.memory.MemoryManager;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 
 public final class TaskExecutionUnit {
 
@@ -17,7 +17,7 @@ public final class TaskExecutionUnit {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TaskExecutionUnit.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TaskExecutionUnit.class);
 
     private final int executionUnitID;
 
@@ -143,8 +143,10 @@ public final class TaskExecutionUnit {
      * @param taskDriverCtx
      */
     private void unregisterTask(final TaskDriverContext taskDriverCtx) {
-        executionManager.dispatchEvent(new TaskExecutionManager.TaskExecutionEvent(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
-                                                                                   taskDriverCtx));
+        LOG.debug("unregister task {} {}", taskDriverCtx.taskDescriptor.name, taskDriverCtx.taskDescriptor.taskIndex);
+        // executionManager.dispatchEvent(new
+        // TaskExecutionManager.TaskExecutionEvent(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
+        // taskDriverCtx));
     }
 
     /**
@@ -196,11 +198,25 @@ public final class TaskExecutionUnit {
                                                             public void stateAction(TaskStates.TaskState previousState,
                                                                                     TaskStates.TaskTransition transition,
                                                                                     TaskStates.TaskState state) {
-                                                                taskDriverCtx.taskDriver.teardownDriver(true);
-                                                                unregisterTask(taskDriverCtx);
-                                                                MeasurementManager.fireEvent(MeasurementManager.TASK_FINISHED + "-"
-                                                                        + currentTaskCtx.taskDescriptor.name + "-"
-                                                                        + currentTaskCtx.taskDescriptor.taskIndex);
+
+                                                                // TODO [Christian -> Deadlock
+                                                                // test]: Remove this!
+                                                                try {
+                                                                    LOG.debug("Task State Finished Received in TaskExecutionUnit");
+
+                                                                    taskDriverCtx.taskDriver.teardownDriver(true);
+                                                                    unregisterTask(taskDriverCtx);
+                                                                } catch (Throwable e) {
+                                                                    LOG.error(e.getLocalizedMessage(), e);
+                                                                    throw e;
+                                                                }
+                                                            }
+
+                                                            @Override
+                                                            public String toString() {
+                                                                return "TaskStateFinished Listener (TaskExecutionUnit -> "
+                                                                        + taskDriverCtx.taskDescriptor.name + " "
+                                                                        + taskDriverCtx.taskDescriptor.taskIndex + ")";
                                                             }
                                                         });
 
@@ -233,7 +249,7 @@ public final class TaskExecutionUnit {
                 try {
                     executeLatch.await();
                 } catch (InterruptedException e) {
-                    LOG.error(e);
+                    LOG.error(e.getLocalizedMessage(), e);
                 }
 
                 currentTaskCtx.taskDriver.executeDriver();

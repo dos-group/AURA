@@ -2,10 +2,14 @@ package de.tuberlin.aura.core.common.statemachine;
 
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.task.common.TaskStates;
 
 public final class StateMachine {
 
@@ -21,6 +25,11 @@ public final class StateMachine {
         // ---------------------------------------------------
         // Fields.
         // ---------------------------------------------------
+
+        /**
+         * Logger.
+         */
+        private static final Logger LOG = LoggerFactory.getLogger(FiniteStateMachine.class);
 
         private S initialState;
 
@@ -411,6 +420,11 @@ public final class StateMachine {
         // Fields.
         // ---------------------------------------------------
 
+        /**
+         * Logger.
+         */
+        private static final Logger LOG = LoggerFactory.getLogger(FiniteStateMachine.class);
+
         private S currentState;
 
         private final Map<S, Map<T, S>> stateTransitionMtx;
@@ -533,6 +547,11 @@ public final class StateMachine {
 
                     stateAction.stateAction(event.previousState, event.transition, event.state);
                 }
+
+                @Override
+                public String toString() {
+                    return stateAction.toString();
+                }
             });
         }
 
@@ -581,9 +600,21 @@ public final class StateMachine {
             final Map<T, S> transitionSpace = stateTransitionMtx.get(currentState);
             final S nextState = transitionSpace.get(transition);
 
-            dispatchEvent(new FSMStateEvent<>(currentState, transition, nextState));
+            try {
+                dispatchEvent(new FSMStateEvent<>(currentState, transition, nextState));
 
-            dispatchEvent(new FSMStateEvent<>(FSMStateEvent.FSM_STATE_CHANGE, currentState, transition, nextState));
+                if (transition.toString().equals(TaskStates.TaskTransition.TASK_TRANSITION_FINISH.toString())) {
+                    LOG.debug("Dispatch to global listener");
+                }
+
+                dispatchEvent(new FSMStateEvent<>(FSMStateEvent.FSM_STATE_CHANGE, currentState, transition, nextState));
+                if (transition.toString().equals(TaskStates.TaskTransition.TASK_TRANSITION_FINISH.toString())) {
+                    LOG.debug("Dispatch to global listener -> done");
+                }
+            } catch (Throwable e) {
+                LOG.error(e.getLocalizedMessage(), e);
+                throw e;
+            }
 
             for (final FiniteStateMachine<? extends Enum<?>, ? extends Enum<?>> nestedFSM : nestedFSMs.get(nextState)) {
                 nestedFSM.start();

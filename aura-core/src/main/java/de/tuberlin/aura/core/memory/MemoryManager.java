@@ -1,25 +1,27 @@
 package de.tuberlin.aura.core.memory;
 
-import de.tuberlin.aura.core.descriptors.Descriptors;
-import org.apache.log4j.Logger;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import de.tuberlin.aura.core.descriptors.Descriptors;
 
 /**
  *
  */
 public final class MemoryManager {
 
-    private static final Logger LOG = Logger.getLogger(MemoryManager.class);
+    private static final Logger LOG = LoggerFactory.getLogger(MemoryManager.class);
 
     // Disallow instantiation.
-    private MemoryManager() {
-    }
+    private MemoryManager() {}
 
     /**
      *
@@ -38,7 +40,7 @@ public final class MemoryManager {
 
         public final int size;
 
-        //private final AtomicInteger refCount;
+        // private final AtomicInteger refCount;
 
         // ---------------------------------------------------
         // Constructors.
@@ -67,7 +69,7 @@ public final class MemoryManager {
 
             this.size = size;
 
-            //this.refCount = new AtomicInteger(0);
+            // this.refCount = new AtomicInteger(0);
         }
 
         // ---------------------------------------------------
@@ -94,22 +96,15 @@ public final class MemoryManager {
         }
 
 
-        /*public MemoryView weakCopy() {
-            acquire();
-            return this;
-        }
-
-        public void acquire() {
-            refCount.getAndIncrement();
-        }
-
-        public void release() {
-            refCount.getAndDecrement();
-        }
-
-        public int getRefCount() {
-            return refCount.get();
-        }*/
+        /*
+         * public MemoryView weakCopy() { acquire(); return this; }
+         * 
+         * public void acquire() { refCount.getAndIncrement(); }
+         * 
+         * public void release() { refCount.getAndDecrement(); }
+         * 
+         * public int getRefCount() { return refCount.get(); }
+         */
     }
 
     /**
@@ -125,7 +120,8 @@ public final class MemoryManager {
 
         public static final double BUFFER_LOAD_FACTOR = 0.1;
 
-        public static final int NUM_OF_ALLOCATORS_PER_GROUP = 4;
+        // TODO: Change back to 4
+        public static final int NUM_OF_ALLOCATORS_PER_GROUP = 1;
 
         // ---------------------------------------------------
         // Fields.
@@ -139,7 +135,7 @@ public final class MemoryManager {
 
         private final int globalBufferCount;
 
-        //private final ThreadLocal<BufferAllocatorGroup> threadBufferAllocator;
+        // private final ThreadLocal<BufferAllocatorGroup> threadBufferAllocator;
 
         private final List<BufferAllocatorGroup> allocatorGroups;
 
@@ -170,22 +166,29 @@ public final class MemoryManager {
 
             final int buffersPerAllocator = (perExecutionUnitBuffers / groupsPerExecutionUnit) / NUM_OF_ALLOCATORS_PER_GROUP;
 
-            this.allocatorGroups = setupBufferAllocatorGroups(
-                    numOfExecutionUnits * groupsPerExecutionUnit,
-                    NUM_OF_ALLOCATORS_PER_GROUP,
-                    buffersPerAllocator,
-                    BufferAllocator._64K
-            );
+            this.allocatorGroups =
+                    setupBufferAllocatorGroups(numOfExecutionUnits * groupsPerExecutionUnit,
+                                               NUM_OF_ALLOCATORS_PER_GROUP,
+                                               buffersPerAllocator,
+                                               BufferAllocator._64K);
 
             this.allocatorIndex = new AtomicInteger(0);
 
-            //this.threadBufferAllocator = new ThreadLocal<BufferAllocatorGroup>() {
+            LOG.debug("Execution Units: {}", numOfExecutionUnits);
+            LOG.debug("Max Memory: {}", maxMemory);
+            LOG.debug("Buffer Count: {}", globalBufferCount);
+            LOG.debug("Allocator Groups: {} with {} allocators each", allocatorGroups.size(), NUM_OF_ALLOCATORS_PER_GROUP);
+            LOG.debug("Groups per Execution Unit: {}", groupsPerExecutionUnit);
+            LOG.debug("Buffers Per Allocator: {}", buffersPerAllocator);
 
-            //    @Override
-            //    protected BufferAllocatorGroup initialValue() {
-            //        return allocatorGroups.get(allocatorIndex.getAndIncrement() % allocatorGroups.size());
-            //    }
-            //};
+            // this.threadBufferAllocator = new ThreadLocal<BufferAllocatorGroup>() {
+
+            // @Override
+            // protected BufferAllocatorGroup initialValue() {
+            // return allocatorGroups.get(allocatorIndex.getAndIncrement() %
+            // allocatorGroups.size());
+            // }
+            // };
         }
 
         // ---------------------------------------------------
@@ -322,12 +325,25 @@ public final class MemoryManager {
 
         @Override
         public MemoryView alloc() {
-            for (final Allocator allocator : assignedAllocators) {
-                if (allocator.hasFree()) {
-                    return allocator.alloc();
+            try {
+                for (final Allocator allocator : assignedAllocators) {
+                    if (allocator.hasFree()) {
+                        return allocator.alloc();
+                    }
                 }
+
+                LOG.debug("no buffers available anymore");
+
+                MemoryView memory = assignedAllocators.get(0).alloc();
+                if (memory == null) {
+                    throw new Exception("Memory blocked...");
+                }
+
+                return memory;
+            } catch (Throwable e) {
+                LOG.error(e.getLocalizedMessage(), e);
+                return alloc();
             }
-            return assignedAllocators.get(0).alloc();
         }
 
         @Override
@@ -380,7 +396,7 @@ public final class MemoryManager {
 
         private final BlockingQueue<MemoryView> freeList;
 
-        //private final Set<MemoryView> usedSet;
+        // private final Set<MemoryView> usedSet;
 
         // ---------------------------------------------------
         // Constructor.
@@ -404,7 +420,7 @@ public final class MemoryManager {
 
             this.freeList = new LinkedBlockingQueue<>();
 
-            //this.usedSet = new HashSet<>();
+            // this.usedSet = new HashSet<>();
 
             for (int i = 0; i < bufferCount; ++i) {
                 this.freeList.add(new MemoryView(this, memoryArena, i * bufferSize, bufferSize));
@@ -418,9 +434,12 @@ public final class MemoryManager {
         @Override
         public MemoryView alloc() {
             try {
-                final MemoryView memory = freeList.take();
-                //memory.acquire();
-                //usedSet.add(memory);
+                // TODO [Christian -> Deadlock test]: Remove this!
+                // final MemoryView memory = freeList.take();
+                final MemoryView memory = freeList.poll(10, TimeUnit.SECONDS);
+
+                // memory.acquire();
+                // usedSet.add(memory);
                 return memory;
             } catch (InterruptedException ie) {
                 return null;
@@ -433,11 +452,11 @@ public final class MemoryManager {
             if (memory == null)
                 throw new IllegalArgumentException("memory == null");
 
-            //memory.release();
-            //if(memory.getRefCount() == 0) {
+            // memory.release();
+            // if(memory.getRefCount() == 0) {
             freeList.add(memory);
-            //usedSet.remove(memory);
-            //}
+            // usedSet.remove(memory);
+            // }
         }
 
         @Override
@@ -452,7 +471,7 @@ public final class MemoryManager {
 
         @Override
         public boolean isNotUsed() {
-            return false;//usedSet.isEmpty();
+            return false;// usedSet.isEmpty();
         }
     }
 
@@ -460,6 +479,7 @@ public final class MemoryManager {
 
     public static void main(String[] arg) {
 
-        //final BufferMemoryManager mm = new BufferMemoryManager(DescriptorFactory.createMachineDescriptor(14124, 12232));
+        // final BufferMemoryManager mm = new
+        // BufferMemoryManager(DescriptorFactory.createMachineDescriptor(14124, 12232));
     }
 }

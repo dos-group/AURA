@@ -72,7 +72,8 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                     final WM2TMProtocol tmProtocol =
                             rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
                     tmProtocol.installTask(tdd);
-                    LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString());
+                    // LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: "
+                    // + tdd.toString());
                 }
             }
         });

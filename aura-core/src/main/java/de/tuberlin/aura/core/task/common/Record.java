@@ -16,6 +16,15 @@ public class Record<T> {
 
     private static final Logger LOG = LoggerFactory.getLogger(Record.class);
 
+    // TODO: Using one Kryo object for all Records, causes IndexOutOfBoundsExceptions... figure out
+    // why
+    // private static final Kryo KRYO;
+    //
+    // static {
+    // KRYO = new Kryo();
+    // KRYO.addDefaultSerializer(UUID.class, new UUIDSerializer());
+    // }
+
     private T data;
 
     private Kryo kryo;
@@ -27,30 +36,13 @@ public class Record<T> {
     }
 
     public Record(MemoryManager.MemoryView view) {
-        this.kryo = new Kryo();
-        this.kryo.addDefaultSerializer(UUID.class, new UUIDSerializer());
-
         Input input = new Input(view.memory);
         input.skip(view.baseOffset);
 
-        // Registration reg = this.kryo.readClass(input);
-        // if (reg == null) {
-        // try {
-        // LOG.error(Integer.toString(input.available()));
-        // } catch (IOException e) {
-        // e.printStackTrace();
-        // }
-        // }
-        //
-        // Class<T> clazz = (Class<T>) reg.getType();
+        this.kryo = new Kryo();
+        this.kryo.addDefaultSerializer(UUID.class, new UUIDSerializer());
 
-        this.data = (T) this.kryo.readClassAndObject(input);
-        // LOG.debug("Read: " + Integer.toString(input.position()) + "/" +
-        // Integer.toString(buffer.length));
-        // if (input.position() != 58) {
-        // LOG.error("" + this.data);
-        // }
-        // this.data = this.kryo.readObject(input, clazz);
+        this.data = (T) kryo.readClassAndObject(input);
     }
 
     public T getData() {
@@ -63,11 +55,6 @@ public class Record<T> {
         output.setPosition(view.baseOffset);
 
         this.kryo.writeClassAndObject(output, this.data);
-        // LOG.debug("Written: " + Integer.toString(output.position()) + "/" +
-        // Integer.toString(buffer.length));
-        // if (output.position() != 58) {
-        // LOG.error(this.data.toString());
-        // }
 
         output.close();
     }

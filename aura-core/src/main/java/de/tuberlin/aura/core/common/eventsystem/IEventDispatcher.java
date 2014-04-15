@@ -41,4 +41,9 @@ public interface IEventDispatcher {
      * @return True if a listener is installed, else false.
      */
     public boolean hasEventListener(String type);
+
+    /**
+     * Shutdown the event dispatcher cleanly.
+     */
+    public void shutdown();
 }

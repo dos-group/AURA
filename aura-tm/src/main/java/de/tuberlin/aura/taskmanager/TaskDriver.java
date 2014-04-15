@@ -3,7 +3,8 @@ package de.tuberlin.aura.taskmanager;
 
 import java.lang.reflect.Constructor;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
@@ -28,7 +29,10 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TaskDriver.class);
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(TaskDriver.class);
 
     private final TaskManagerContext managerContext;
 
@@ -55,7 +59,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
     // ---------------------------------------------------
 
     public TaskDriver(final TaskManagerContext managerContext, final Descriptors.TaskDeploymentDescriptor deploymentDescriptor) {
-        super(true);
+        super(true, "TaskDriverEventDispatcher");
 
         // sanity check.
         if (managerContext == null)
@@ -70,10 +74,12 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
         this.taskBindingDescriptor = deploymentDescriptor.taskBindingDescriptor;
 
         this.taskFSM = createTaskFSM();
+        this.taskFSM.setName("FSM-" + taskDescriptor.name + "-" + taskDescriptor.taskIndex + "-EventDispatcher");
+
 
         MeasurementManager measurementManager = MeasurementManager.getInstance("/tm/" + taskDescriptor.name + "_" + taskDescriptor.taskIndex, "Task");
-        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + taskDescriptor.name + "-" + taskDescriptor.taskIndex,
-                                            measurementManager);
+        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + taskDescriptor.taskID + "-" + taskDescriptor.name + "-"
+                + taskDescriptor.taskIndex, measurementManager);
 
         this.queueManager =
                 QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), measurementManager);
@@ -146,9 +152,12 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
             return;
         }
 
-        // TODO: Wait until all gates are closed?
+        // TODO: Wait until all gates are closed? -> invokeable.close() emits all
+        // DATA_EVENT_SOURCE_EXHAUSTED events
 
+        LOG.debug("Dispatch task transition for {} {} -> FINISH", driverContext.taskDescriptor.name, driverContext.taskDescriptor.taskIndex);
         taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
+        LOG.debug("FINISH event dispatched");
     }
 
     /**
@@ -253,17 +262,27 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
 
-                final IOEvents.TaskControlIOEvent stateUpdate =
-                        new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE);
+                try {
+                    LOG.info("CHANGE STATE OF TASK " + taskDescriptor.name + " [" + taskDescriptor.taskID + "] FROM " + previousState + " TO "
+                            + state + "  [" + transition.toString() + "]");
 
-                stateUpdate.setPayload(state);
-                stateUpdate.setTaskID(taskDescriptor.taskID);
-                stateUpdate.setTopologyID(taskDescriptor.topologyID);
+                    final IOEvents.TaskControlIOEvent stateUpdate =
+                            new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE);
 
-                managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, stateUpdate);
+                    stateUpdate.setPayload(state);
+                    stateUpdate.setTaskID(taskDescriptor.taskID);
+                    stateUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                LOG.info("CHANGE STATE OF TASK " + taskDescriptor.name + " [" + taskDescriptor.taskID + "] FROM " + previousState + " TO " + state
-                        + "  [" + transition.toString() + "]");
+                    managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, stateUpdate);
+                } catch (Throwable e) {
+                    LOG.error(e.getLocalizedMessage(), e);
+                    throw e;
+                }
+            }
+
+            @Override
+            public String toString() {
+                return "GLOBAL Task_State_Finished Listener";
             }
         });
 
@@ -310,7 +329,20 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 transitionUpdate.setTaskID(taskDescriptor.taskID);
                 transitionUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
+                // TODO [Christian -> Deadlock test]: Remove the try-catch and logging!
+                try {
+                    LOG.debug("Handle task transition finish event");
+                    managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
+                    LOG.debug("Handle task transition finish event -> done");
+                } catch (Exception e) {
+                    LOG.error(e.getLocalizedMessage(), e);
+                    throw e;
+                }
+            }
+
+            @Override
+            public String toString() {
+                return "Task_State_Finished Listener";
             }
         });
 

@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
 import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.statistic.MeasurementType;
+import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.local.LocalChannel;
@@ -208,6 +210,10 @@ public class DataWriter {
                     }
                 }
 
+                long notWritable = 0l;
+                long writes = 0l;
+                long writeDuration = 0l;
+
                 while (!shutdown) {
                     try {
                         if (channelWritable.get()) {
@@ -219,12 +225,16 @@ public class DataWriter {
                                 shutdown = true;
                             }
 
+                            long start = System.nanoTime();
                             channel.writeAndFlush(dataIOEvent).syncUninterruptibly();
-
+                            writeDuration += Math.abs(System.nanoTime() - start);
+                            ++writes;
                         } else {
+                            ++notWritable;
                             LOG.trace("Channel not writable.");
                         }
                     } catch (InterruptedException e) {
+                        LOG.debug("Interrupted");
                         // interrupted during take command, 2. scenarios
                         // 1. interrupt while transferQueue was empty -> event == null,
                         // transferQueue == empty
@@ -236,6 +246,13 @@ public class DataWriter {
                         // == false
                     }
                 }
+
+                transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER,
+                                                                                transferQueue.getName() + " -> Avg. write",
+                                                                                (long) ((double) writeDuration / (double) writes)));
+                transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER,
+                                                                                transferQueue.getName() + " -> Not writable",
+                                                                                notWritable));
 
                 LOG.debug("Polling Thread is closing.");
 

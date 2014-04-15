@@ -2,11 +2,16 @@
 USER="chwuertz"
 URL="cit.tu-berlin.de"
 
-LOCAL_AURA_PATH="/home/teots/workspace/aura"
+LOCAL_AURA_PATH="/home/teots/IdeaProjects/AURA"
+LOCAL_AURA_LOGS_DESTINATION="/home/teots/Desktop/logs"
 HOME_PATH="/home/$USER"
 AURA_PATH="$HOME_PATH/aura"
 DATA_PATH="/data/$USER"
 AURA_DATA_PATH="$DATA_PATH/aura"
+
+LOCAL_AURA_INPUT="/home/teots/Desktop/text"
+AURA_INPUT_PATH="$AURA_DATA_PATH/input"
+
 BENCHMARK_PATH="$DATA_PATH/benchmarks"
 ZOOKEEPER_PATH="$HOME_PATH/zookeeper/zookeeper-3.4.5"
 
@@ -100,13 +105,17 @@ SSHEND
 mkdir -p $AURA_DATA_PATH/
 mkdir -p $AURA_DATA_PATH/logs
 mkdir -p $AURA_DATA_PATH/data
+rm -rf $AURA_INPUT_PATH/
+mkdir -p $AURA_INPUT_PATH
 mkdir -p $DATA_PATH/zookeeper/data
 mkdir -p $BENCHMARK_PATH
-cd $AURA_PATH/
-mvn clean install
 exit
 SSHEND
+		
+			scp -r $LOCAL_AURA_INPUT/* $USER@$ADDRESS:$AURA_INPUT_PATH/ > /dev/null
+
 		done		
+
 	;;
 	# Setup
 	setup)
@@ -142,13 +151,16 @@ exit
 SSHEND
 			fi	
 		done		
+
+# -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011
 	
 		for i in $(seq $2 $3); do
 			ADDRESS="wally`printf "%03d" $i`.$URL"
 			if [ $i -eq $2 ]; then
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 cd aura/aura-wm/
-nohup mvn exec:java -Dexec.mainClass="de.tuberlin.aura.workloadmanager.WorkloadManager" -Dexec.args="$ZOOKEEPER_SERVERS3 10000 11111" > $AURA_DATA_PATH/logs/log 2>&1 &
+export MAVEN_OPTS="-Xms4G -Xmx8G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011"
+nohup mvn exec:java -Dexec.mainClass="de.tuberlin.aura.workloadmanager.WorkloadManager" -Dexec.args="$ZOOKEEPER_SERVERS3 10000 11111 $AURA_DATA_PATH/logs" > $AURA_DATA_PATH/logs/log 2>&1 &
 echo \$! > $AURA_DATA_PATH/data/wm_pid
 exit
 SSHEND
@@ -156,12 +168,14 @@ SSHEND
 			else
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 cd aura/aura-tm/
-nohup mvn exec:java -Dexec.mainClass="de.tuberlin.aura.taskmanager.TaskManager" -Dexec.args="$ZOOKEEPER_SERVERS3 10000 11111" > $AURA_DATA_PATH/logs/log 2>&1 &
+export MAVEN_OPTS="-Xms4G -Xmx8G -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011"
+nohup mvn exec:java -Dexec.mainClass="de.tuberlin.aura.taskmanager.TaskManager" -Dexec.args="$ZOOKEEPER_SERVERS3 10000 11111 $AURA_DATA_PATH/logs" > $AURA_DATA_PATH/logs/log 2>&1 &
 echo \$! > $AURA_DATA_PATH/data/tm_pid
 exit
 SSHEND
 			fi
-		printf "done\n"
+			sleep 1
+			printf "done\n"
 		done
 	;;
 	# Get the benchmarks
@@ -170,8 +184,8 @@ SSHEND
 			ADDRESS="wally`printf "%03d" $i`.$URL"
 			printf "Get benchmarks from $ADDRESS ... "
 			
-			mkdir -p /home/teots/Desktop/logs/$ADDRESS
-			scp -r $USER@$ADDRESS:$AURA_DATA_PATH/logs/* /home/teots/Desktop/logs/$ADDRESS > /dev/null
+			mkdir -p $LOCAL_AURA_LOGS_DESTINATION/$ADDRESS
+			scp -r $USER@$ADDRESS:$AURA_DATA_PATH/logs/* $LOCAL_AURA_LOGS_DESTINATION/$ADDRESS > /dev/null
 			
 			printf "done\n"
 		done
