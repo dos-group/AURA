@@ -122,8 +122,6 @@ public class DataReader {
 
             @Override
             public void initChannel(T ch) throws Exception {
-
-
                 ch.pipeline()
                   .addLast(getLengthDecoder())
                   .addLast(new KryoOutboundHandler(new TransferBufferEventSerializer(null, executionManager)))
@@ -256,12 +254,15 @@ public class DataReader {
                     case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
                         // TODO: ensure that queue is bound before first data buffer event arrives
 
-                        IOEvents.GenericIOEvent connected =
-                                new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                            DataReader.this,
-                                                            event.srcTaskID,
-                                                            event.dstTaskID);
+                        // Disable the auto read functionality of the channel. You must not forget
+                        // to enable it again!
+                        ctx.channel().config().setAutoRead(true);
+
+                        IOEvents.DataIOEvent connected =
+                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, event.srcTaskID, event.dstTaskID);
+                        connected.setPayload(DataReader.this);
                         connected.setChannel(ctx.channel());
+
                         dispatcher.dispatchEvent(connected);
                         break;
 
@@ -281,6 +282,11 @@ public class DataReader {
             }
 
             // ctx.fireChannelRead(event);
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+
         }
     }
 

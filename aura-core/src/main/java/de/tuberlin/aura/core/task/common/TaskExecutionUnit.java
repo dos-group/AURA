@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.memory.MemoryManager;
+import io.netty.channel.local.LocalEventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
 
 public final class TaskExecutionUnit {
 
@@ -31,10 +33,11 @@ public final class TaskExecutionUnit {
 
     private TaskDriverContext currentTaskCtx;
 
-
     private final MemoryManager.BufferAllocatorGroup inputAllocator;
 
     private final MemoryManager.BufferAllocatorGroup outputAllocator;
+
+    protected final DataFlowEventLoops dataFlowEventLoops;
 
     // ---------------------------------------------------
     // Constructors.
@@ -61,6 +64,9 @@ public final class TaskExecutionUnit {
         this.inputAllocator = inputAllocator;
 
         this.outputAllocator = outputAllocator;
+
+        // TODO: Make this configurable
+        this.dataFlowEventLoops = new DataFlowEventLoops(2, 2);
 
         this.executorThread = new Thread(new ExecutionUnitRunner());
 
@@ -254,6 +260,18 @@ public final class TaskExecutionUnit {
 
                 currentTaskCtx.taskDriver.executeDriver();
             }
+        }
+    }
+
+    protected class DataFlowEventLoops {
+
+        public final NioEventLoopGroup networkInputEventLoopGroup;
+
+        public final LocalEventLoopGroup localInputEventLoopGroup;
+
+        public DataFlowEventLoops(int networkInputThreads, int localInputThreads) {
+            this.networkInputEventLoopGroup = new NioEventLoopGroup(networkInputThreads);
+            this.localInputEventLoopGroup = new LocalEventLoopGroup(localInputThreads);
         }
     }
 }

@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -325,25 +324,16 @@ public final class MemoryManager {
 
         @Override
         public MemoryView alloc() {
-            try {
-                for (final Allocator allocator : assignedAllocators) {
-                    if (allocator.hasFree()) {
-                        return allocator.alloc();
-                    }
+            for (final Allocator allocator : assignedAllocators) {
+                if (allocator.hasFree()) {
+                    return allocator.alloc();
                 }
-
-                LOG.debug("no buffers available anymore");
-
-                MemoryView memory = assignedAllocators.get(0).alloc();
-                if (memory == null) {
-                    throw new Exception("Memory blocked...");
-                }
-
-                return memory;
-            } catch (Throwable e) {
-                LOG.error(e.getLocalizedMessage(), e);
-                return alloc();
             }
+
+            LOG.trace("No buffers available anymore -> blocking wait");
+            MemoryView memory = assignedAllocators.get(0).alloc();
+
+            return memory;
         }
 
         @Override
@@ -434,9 +424,7 @@ public final class MemoryManager {
         @Override
         public MemoryView alloc() {
             try {
-                // TODO [Christian -> Deadlock test]: Remove this!
-                // final MemoryView memory = freeList.take();
-                final MemoryView memory = freeList.poll(10, TimeUnit.SECONDS);
+                final MemoryView memory = freeList.take();
 
                 // memory.acquire();
                 // usedSet.add(memory);

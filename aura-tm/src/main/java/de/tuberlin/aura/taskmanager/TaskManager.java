@@ -56,7 +56,6 @@ public final class TaskManager implements WM2TMProtocol {
 
     private final Map<UUID, List<TaskDriverContext>> deployedTopologyTasks;
 
-
     private final MemoryManager.BufferMemoryManager bufferMemoryManager;
 
     // ---------------------------------------------------
@@ -96,6 +95,7 @@ public final class TaskManager implements WM2TMProtocol {
 
         // setup IO.
         this.ioManager = setupIOManager(machine, executionManager);
+        this.executionManager.setIOManager(this.ioManager);
 
         this.rpcManager = new RPCManager(ioManager);
 
@@ -236,9 +236,9 @@ public final class TaskManager implements WM2TMProtocol {
         if (taskList.size() == 0)
             deployedTopologyTasks.remove(taskDriverCtx.taskDescriptor.topologyID);
 
-        LOG.debug("Shutdown event dispatchers");
+        LOG.trace("Shutdown event dispatchers");
         taskDriverCtx.driverDispatcher.shutdown();
-        // taskDriverCtx.taskFSM.shutdown();
+        taskDriverCtx.taskFSM.shutdown();
     }
 
     /**

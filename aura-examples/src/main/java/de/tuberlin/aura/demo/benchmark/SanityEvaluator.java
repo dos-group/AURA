@@ -71,9 +71,9 @@ public class SanityEvaluator {
                 if (line.toLowerCase().contains("exception") || line.toLowerCase().contains("error")) {
                     System.out.print(file.getPath() + " -> ");
                     System.out.println(line);
-                } else if (line.contains("TASK_STATE_RUNNING")) {
+                } else if (line.contains("TASK_STATE_RUNNING  [TASK_TRANSITION_RUN]")) {
                     ++running;
-                } else if (line.contains("TASK_FINISHED")) {
+                } else if (line.contains("TASK_STATE_FINISHED  [TASK_TRANSITION_FINISH]")) {
                     ++finished;
                 }
             }
@@ -85,7 +85,7 @@ public class SanityEvaluator {
             e.printStackTrace();
         }
 
-        if (finished != 0) { // if (EXECUTION_UNITS != running || running != finished) {
+        if (running != finished) {
             System.out.println(file);
             System.out.println("Running: " + Integer.toString(running) + " Finished: " + Integer.toString(finished));
         }

@@ -38,7 +38,7 @@ public final class SanityClient {
 */
     public static class Source extends TaskInvokeable {
 
-        private static final int RECORDS = 10;
+        private static final int RECORDS = 100;
 
         public Source(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
@@ -65,15 +65,10 @@ public final class SanityClient {
                     driverContext.recordWriter.writeRecord(record, event);
                     producer.emit(0, index, event);
 
-                    LOG.debug("Source {} emit {}/{}", driverContext.taskDescriptor.taskIndex, index, outputs.size());
-
                     ++send;
                 }
-
-                LOG.debug("Source {}: {}/{}", driverContext.taskDescriptor.taskIndex, i, RECORDS);
             }
 
-            LOG.debug("Emit completed");
             driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
         }
 
@@ -106,12 +101,8 @@ public final class SanityClient {
             long bufferCount = 0l;
             long correct = 0l;
 
-            LOG.debug("Output size: {}", outputs.size());
-
             while (!consumer.isExhausted() && isInvokeableRunning()) {
                 final IOEvents.TransferBufferEvent event = consumer.absorb(0);
-
-                LOG.debug("middle absorb");
 
                 if (event != null) {
                     final Record<SanityBenchmarkRecord> record = driverContext.recordReader.readRecord(event);
@@ -134,15 +125,11 @@ public final class SanityClient {
 
                         driverContext.recordWriter.writeRecord(record, outputBuffer);
                         producer.emit(0, index, outputBuffer);
-
-                        LOG.debug("middle emit");
                     }
 
                     event.buffer.free();
                 }
             }
-
-            LOG.debug("middle emit completed");
 
             driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
             driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
@@ -176,8 +163,6 @@ public final class SanityClient {
 
             while (!consumer.isExhausted() && isInvokeableRunning()) {
                 final IOEvents.TransferBufferEvent event = consumer.absorb(0);
-
-                LOG.debug("Sink {}: absorb {}", driverContext.taskDescriptor.taskIndex, receivedRecords);
 
                 if (event != null) {
                     final Record<SanityBenchmarkRecord> record = driverContext.recordReader.readRecord(event);
@@ -224,14 +209,14 @@ public final class SanityClient {
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-        atb1.addNode(new Node(UUID.randomUUID(), "Source", 264, 1), Source.class)
+        atb1.addNode(new Node(UUID.randomUUID(), "Source", 530, 1), Source.class)
             .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Middle", 264, 1), Task2Exe.class)
+            .addNode(new Node(UUID.randomUUID(), "Middle", 530, 1), Task2Exe.class)
             .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Sink", 264, 1), Task3Exe.class);
-//        atb1.addNode(new Node(UUID.randomUUID(), "Source", 396, 1), Source.class)
-//            .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
-//            .addNode(new Node(UUID.randomUUID(), "Sink", 396, 1), Task3Exe.class);
+            .addNode(new Node(UUID.randomUUID(), "Sink", 530, 1), Task3Exe.class);
+        // atb1.addNode(new Node(UUID.randomUUID(), "Source", 396, 1), Source.class)
+        // .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+        // .addNode(new Node(UUID.randomUUID(), "Sink", 396, 1), Task3Exe.class);
 
         AuraTopology at;
 

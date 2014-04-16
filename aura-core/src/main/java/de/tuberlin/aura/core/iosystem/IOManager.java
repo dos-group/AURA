@@ -19,13 +19,13 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNioEventLoopGroup;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -63,7 +63,9 @@ public final class IOManager extends EventDispatcher {
     // Event Loops for Netty
     private final NioEventLoopGroup controlPlaneEventLoopGroup;
 
-    private final NioEventLoopGroup inputEventLoopGroup;
+    private final NioEventLoopGroup networkConnectionListenerEventLoopGroup;
+
+    private final LocalEventLoopGroup localConnectionListenerEventLoopGroup;
 
     private final NioEventLoopGroup outputEventLoopGroup;
 
@@ -93,11 +95,14 @@ public final class IOManager extends EventDispatcher {
 
         this.outputEventLoopGroup = new NioEventLoopGroup();
 
-        this.inputEventLoopGroup = new ExecutionUnitNioEventLoopGroup();
+        // TODO: Make the number of thread configurable
+        this.networkConnectionListenerEventLoopGroup = new NioEventLoopGroup(4);
 
-        startNetworkDataMessageServer(this.machine, inputEventLoopGroup);
+        this.localConnectionListenerEventLoopGroup = new LocalEventLoopGroup(4);
 
-        startLocalDataMessageServer(inputEventLoopGroup);
+        startNetworkConnectionSetupServer(this.machine, networkConnectionListenerEventLoopGroup);
+
+        startLocalDataConnectionSetupServer(localConnectionListenerEventLoopGroup);
 
 
         // Configure the control plane.
@@ -262,9 +267,7 @@ public final class IOManager extends EventDispatcher {
         event.setDstMachineID(dstMachineID);
 
         try {
-            LOG.debug("Write control event");
             channel.writeAndFlush(event).sync();
-            LOG.debug("Write control event completed");
         } catch (InterruptedException e) {
             LOG.error("Write interrupted", e);
         }
@@ -278,7 +281,7 @@ public final class IOManager extends EventDispatcher {
      * @param machine
      * @param nelg
      */
-    private void startNetworkDataMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
+    private void startNetworkConnectionSetupServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
 
         // TODO: Test if one event loop is enough or if we should use one loop to as acceptor and
         // one for the read/write
@@ -288,7 +291,7 @@ public final class IOManager extends EventDispatcher {
     /**
      * @param nelg
      */
-    private void startLocalDataMessageServer(final NioEventLoopGroup nelg) {
+    private void startLocalDataConnectionSetupServer(final LocalEventLoopGroup nelg) {
 
         dataReader.bind(new DataReader.LocalConnection(), localAddress, nelg);
     }

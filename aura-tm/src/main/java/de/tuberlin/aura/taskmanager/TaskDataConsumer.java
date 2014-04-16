@@ -1,7 +1,6 @@
 package de.tuberlin.aura.taskmanager;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
@@ -107,19 +106,7 @@ public final class TaskDataConsumer implements DataConsumer {
         IOEvents.DataIOEvent event = null;
 
         while (retrieve) {
-
-            try {
-                // event = inputGates.get(gateIndex).getInputQueue().take();
-                event = inputGates.get(gateIndex).getInputQueue().poll(10, TimeUnit.SECONDS);
-                if (event == null) {
-                    throw new Exception();
-                }
-            } catch (Throwable e) {
-                LOG.error(driverContext.taskDescriptor.name + " " + driverContext.taskDescriptor.taskIndex + " cannot take from queue "
-                        + Integer.toString(inputGates.get(gateIndex).getInputQueue().size()));
-                LOG.error(e.getLocalizedMessage(), e);
-                return absorb(gateIndex);
-            }
+            event = inputGates.get(gateIndex).getInputQueue().take();
 
             // DEBUGGING!
             /*
@@ -128,7 +115,6 @@ public final class TaskDataConsumer implements DataConsumer {
              * inputGates.get(0).getInputQueue().size()); LOG.info("GATE 1: size = " +
              * inputGates.get(1).getInputQueue().size()); }
              */
-
 
             switch (event.type) {
 

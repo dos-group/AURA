@@ -9,7 +9,6 @@ import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.task.common.TaskStates;
 
 public final class StateMachine {
 
@@ -600,21 +599,9 @@ public final class StateMachine {
             final Map<T, S> transitionSpace = stateTransitionMtx.get(currentState);
             final S nextState = transitionSpace.get(transition);
 
-            try {
-                dispatchEvent(new FSMStateEvent<>(currentState, transition, nextState));
+            dispatchEvent(new FSMStateEvent<>(currentState, transition, nextState));
 
-                if (transition.toString().equals(TaskStates.TaskTransition.TASK_TRANSITION_FINISH.toString())) {
-                    LOG.debug("Dispatch to global listener");
-                }
-
-                dispatchEvent(new FSMStateEvent<>(FSMStateEvent.FSM_STATE_CHANGE, currentState, transition, nextState));
-                if (transition.toString().equals(TaskStates.TaskTransition.TASK_TRANSITION_FINISH.toString())) {
-                    LOG.debug("Dispatch to global listener -> done");
-                }
-            } catch (Throwable e) {
-                LOG.error(e.getLocalizedMessage(), e);
-                throw e;
-            }
+            dispatchEvent(new FSMStateEvent<>(FSMStateEvent.FSM_STATE_CHANGE, currentState, transition, nextState));
 
             for (final FiniteStateMachine<? extends Enum<?>, ? extends Enum<?>> nestedFSM : nestedFSMs.get(nextState)) {
                 nestedFSM.start();

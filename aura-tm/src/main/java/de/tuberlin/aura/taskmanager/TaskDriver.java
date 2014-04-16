@@ -154,10 +154,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         // TODO: Wait until all gates are closed? -> invokeable.close() emits all
         // DATA_EVENT_SOURCE_EXHAUSTED events
-
-        LOG.debug("Dispatch task transition for {} {} -> FINISH", driverContext.taskDescriptor.name, driverContext.taskDescriptor.taskIndex);
         taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
-        LOG.debug("FINISH event dispatched");
     }
 
     /**
@@ -279,11 +276,6 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                     throw e;
                 }
             }
-
-            @Override
-            public String toString() {
-                return "GLOBAL Task_State_Finished Listener";
-            }
         });
 
         // error state listener.
@@ -329,20 +321,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 transitionUpdate.setTaskID(taskDescriptor.taskID);
                 transitionUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                // TODO [Christian -> Deadlock test]: Remove the try-catch and logging!
-                try {
-                    LOG.debug("Handle task transition finish event");
-                    managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
-                    LOG.debug("Handle task transition finish event -> done");
-                } catch (Exception e) {
-                    LOG.error(e.getLocalizedMessage(), e);
-                    throw e;
-                }
-            }
-
-            @Override
-            public String toString() {
-                return "Task_State_Finished Listener";
+                managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
             }
         });
 
