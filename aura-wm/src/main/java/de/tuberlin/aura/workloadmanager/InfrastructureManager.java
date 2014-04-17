@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import net.jcip.annotations.NotThreadSafe;
+
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -24,6 +26,7 @@ import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 /**
  *
  */
+@NotThreadSafe
 public class InfrastructureManager extends EventDispatcher implements IInfrastructureManager {
 
     // ---------------------------------------------------
@@ -98,6 +101,7 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
             // Store the workload manager machine descriptor.
             ZookeeperHelper.storeInZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
 
+            // Get all available nodes.
             final ZkTaskManagerWatcher watcher = new ZkTaskManagerWatcher();
             synchronized (watcher) { // TODO: Synchronization on local variable 'watcher'
                 final List<String> nodes = this.zookeeper.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, watcher);

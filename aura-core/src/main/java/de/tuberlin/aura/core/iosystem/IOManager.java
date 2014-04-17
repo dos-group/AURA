@@ -8,7 +8,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
@@ -18,13 +19,13 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNioEventLoopGroup;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -39,7 +40,10 @@ public final class IOManager extends EventDispatcher {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(IOManager.class);
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(IOManager.class);
 
     public final MachineDescriptor machine;
 
@@ -59,7 +63,9 @@ public final class IOManager extends EventDispatcher {
     // Event Loops for Netty
     private final NioEventLoopGroup controlPlaneEventLoopGroup;
 
-    private final NioEventLoopGroup inputEventLoopGroup;
+    private final NioEventLoopGroup networkConnectionListenerEventLoopGroup;
+
+    private final LocalEventLoopGroup localConnectionListenerEventLoopGroup;
 
     private final NioEventLoopGroup outputEventLoopGroup;
 
@@ -69,7 +75,8 @@ public final class IOManager extends EventDispatcher {
 
     public IOManager(final MachineDescriptor machine, final TaskExecutionManager executionManager) {
 
-        super(false);
+        // Event dispatcher doesn't use an own thread.
+        super();
 
         // sanity check.
         if (machine == null)
@@ -86,14 +93,16 @@ public final class IOManager extends EventDispatcher {
 
         this.dataWriter = new DataWriter(IOManager.this);
 
-
         this.outputEventLoopGroup = new NioEventLoopGroup();
 
-        this.inputEventLoopGroup = new ExecutionUnitNioEventLoopGroup();
+        // TODO: Make the number of thread configurable
+        this.networkConnectionListenerEventLoopGroup = new NioEventLoopGroup(4);
 
-        startNetworkDataMessageServer(this.machine, inputEventLoopGroup);
+        this.localConnectionListenerEventLoopGroup = new LocalEventLoopGroup(4);
 
-        startLocalDataMessageServer(inputEventLoopGroup);
+        startNetworkConnectionSetupServer(this.machine, networkConnectionListenerEventLoopGroup);
+
+        startLocalDataConnectionSetupServer(localConnectionListenerEventLoopGroup);
 
 
         // Configure the control plane.
@@ -144,9 +153,7 @@ public final class IOManager extends EventDispatcher {
      * @param dstTaskID
      * @param dstMachine
      */
-    public void disconnectDataChannel(final UUID srcTaskID,
-                                      final UUID dstTaskID,
-                                      final MachineDescriptor dstMachine) {
+    public void disconnectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
         // sanity check.
         if (srcTaskID == null)
             throw new IllegalArgumentException("srcTask == null");
@@ -206,7 +213,7 @@ public final class IOManager extends EventDispatcher {
         try {
             condition.await();
         } catch (InterruptedException e) {
-            LOG.info(e);
+            LOG.info("Condition interrupted", e);
         } finally {
             threadLock.unlock();
         }
@@ -262,7 +269,7 @@ public final class IOManager extends EventDispatcher {
         try {
             channel.writeAndFlush(event).sync();
         } catch (InterruptedException e) {
-            LOG.error(e);
+            LOG.error("Write interrupted", e);
         }
     }
 
@@ -274,7 +281,7 @@ public final class IOManager extends EventDispatcher {
      * @param machine
      * @param nelg
      */
-    private void startNetworkDataMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
+    private void startNetworkConnectionSetupServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
 
         // TODO: Test if one event loop is enough or if we should use one loop to as acceptor and
         // one for the read/write
@@ -284,7 +291,7 @@ public final class IOManager extends EventDispatcher {
     /**
      * @param nelg
      */
-    private void startLocalDataMessageServer(final NioEventLoopGroup nelg) {
+    private void startLocalDataConnectionSetupServer(final LocalEventLoopGroup nelg) {
 
         dataReader.bind(new DataReader.LocalConnection(), localAddress, nelg);
     }
@@ -323,7 +330,7 @@ public final class IOManager extends EventDispatcher {
         try {
             cf.sync();
         } catch (InterruptedException e) {
-            LOG.error(e);
+            LOG.error("Waiting for netty bound was interrupted", e);
         }
     }
 

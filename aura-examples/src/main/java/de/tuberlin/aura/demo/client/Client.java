@@ -7,7 +7,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
@@ -22,7 +23,10 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 
 public final class Client {
 
-    private static final Logger LOG = Logger.getRootLogger();
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(Client.class);
 
     // Disallow Instantiation.
     private Client() {}
@@ -118,12 +122,12 @@ public final class Client {
                 final IOEvents.TransferBufferEvent right = consumer.absorb(1);
 
                 if (left != null) {
-                    //LOG.info("input left received data message from task " + left.srcTaskID);
+                    // LOG.info("input left received data message from task " + left.srcTaskID);
                     left.buffer.free();
                 }
 
                 if (right != null) {
-                    //LOG.info("input right: received data message from task " + right.srcTaskID);
+                    // LOG.info("input right: received data message from task " + right.srcTaskID);
                     right.buffer.free();
                 }
 
@@ -165,7 +169,7 @@ public final class Client {
         public void run() throws Throwable {
             while (!consumer.isExhausted() && isInvokeableRunning()) {
                 final IOEvents.TransferBufferEvent buffer = consumer.absorb(0);
-                //LOG.info("received: " + buffer);
+                // LOG.info("received: " + buffer);
                 if (buffer != null)
                     buffer.buffer.free();
             }
@@ -183,9 +187,14 @@ public final class Client {
         // LOG.addAppender(consoleAppender);
         // LOG.setLevel(Level.DEBUG);
 
+        final String measurementPath = "/home/teots/Desktop/measurements";
         final String zookeeperAddress = "localhost:2181";
         final LocalClusterSimulator lce =
-                new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+                new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+                                          true,
+                                          zookeeperAddress,
+                                          4,
+                                          measurementPath);
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
         final AuraDirectedGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();

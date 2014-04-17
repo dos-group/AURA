@@ -2,7 +2,8 @@ package de.tuberlin.aura.taskmanager;
 
 import java.util.*;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -26,7 +27,10 @@ public final class TaskDataProducer implements DataProducer {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TaskDataProducer.class);
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(TaskDataProducer.class);
 
     private final TaskDriverContext driverContext;
 
@@ -37,7 +41,6 @@ public final class TaskDataProducer implements DataProducer {
     private final Map<Integer, UUID> channelIndexToTaskID;
 
     private final IEventHandler producerEventHandler;
-
 
     private final MemoryManager.Allocator allocator;
 
@@ -67,9 +70,9 @@ public final class TaskDataProducer implements DataProducer {
 
         createOutputMappings();
 
-        connectOutputDataChannels();
-
         this.outputGates = createOutputGates();
+
+        connectOutputDataChannels();
     }
 
     // ---------------------------------------------------
@@ -215,12 +218,10 @@ public final class TaskDataProducer implements DataProducer {
             int gateIndex = 0;
             boolean allOutputGatesConnected = true;
             for (final List<Descriptors.TaskDescriptor> outputGate : driverContext.taskBindingDescriptor.outputGateBindings) {
-
                 int channelIndex = 0;
                 boolean allOutputChannelsPerGateConnected = true;
 
                 for (final Descriptors.TaskDescriptor outputTask : outputGate) {
-
                     // Set the channel on right position.
                     if (outputTask.taskID.equals(event.dstTaskID)) {
                         // get the right queue manager for task context
@@ -230,8 +231,7 @@ public final class TaskDataProducer implements DataProducer {
                         channelWriter.setOutputQueue(queue);
 
                         final OutputGate og = outputGates.get(gateIndex);
-                        og.setChannelWriter(channelIndex, channelWriter); // TODO: Sometimes
-                                                                          // NullPointerException.
+                        og.setChannelWriter(channelIndex, channelWriter);
 
                         LOG.info("OUTPUT CONNECTION FROM " + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID
                                 + "] TO TASK " + outputTask.name + " [" + outputTask.taskID + "] IS ESTABLISHED");
@@ -246,6 +246,7 @@ public final class TaskDataProducer implements DataProducer {
             }
 
             if (allOutputGatesConnected) {
+                LOG.debug("All output gates connected");
                 driverContext.taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED));
             }
         }

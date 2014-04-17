@@ -15,9 +15,21 @@ public final class IOEvents {
     /**
      *
      */
+    public static final class InternalEventType {
+
+        private InternalEventType() {}
+
+        public static final String POISON_PILL_TERMINATION = "POISON_PILL_TERMINATION";
+    }
+
+    /**
+     *
+     */
     public static final class DataEventType {
 
         private DataEventType() {}
+
+        public static final String DATA_EVENT_INPUT_CHANNEL_SETUP = "DATA_EVENT_INPUT_CHANNEL_SETUP";
 
         public static final String DATA_EVENT_INPUT_CHANNEL_CONNECTED = "DATA_EVENT_INPUT_CHANNEL_CONNECTED";
 

@@ -2,6 +2,9 @@ package de.tuberlin.aura.core.common.statemachine;
 
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -21,6 +24,11 @@ public final class StateMachine {
         // ---------------------------------------------------
         // Fields.
         // ---------------------------------------------------
+
+        /**
+         * Logger.
+         */
+        private static final Logger LOG = LoggerFactory.getLogger(FiniteStateMachine.class);
 
         private S initialState;
 
@@ -411,6 +419,11 @@ public final class StateMachine {
         // Fields.
         // ---------------------------------------------------
 
+        /**
+         * Logger.
+         */
+        private static final Logger LOG = LoggerFactory.getLogger(FiniteStateMachine.class);
+
         private S currentState;
 
         private final Map<S, Map<T, S>> stateTransitionMtx;
@@ -532,6 +545,11 @@ public final class StateMachine {
                     final FSMStateEvent<S, T> event = (FSMStateEvent<S, T>) e;
 
                     stateAction.stateAction(event.previousState, event.transition, event.state);
+                }
+
+                @Override
+                public String toString() {
+                    return stateAction.toString();
                 }
             });
         }

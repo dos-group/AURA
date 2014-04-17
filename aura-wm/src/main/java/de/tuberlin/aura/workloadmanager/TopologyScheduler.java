@@ -1,5 +1,8 @@
 package de.tuberlin.aura.workloadmanager;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
@@ -10,6 +13,11 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
+
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(TopologyScheduler.class);
 
     private InfrastructureManager infrastructureManager;
 
@@ -62,6 +70,9 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
             public void visit(final Node element) {
                 for (final ExecutionNode en : element.getExecutionNodes()) {
                     en.getTaskDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
+
+                    LOG.info(en.getTaskDescriptor().getMachineDescriptor().address.toString() + " -> " + en.getTaskDescriptor().name + "_"
+                            + en.getTaskDescriptor().taskIndex);
                 }
             }
         });

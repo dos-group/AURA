@@ -106,17 +106,15 @@ public final class TaskDataConsumer implements DataConsumer {
         IOEvents.DataIOEvent event = null;
 
         while (retrieve) {
-
             event = inputGates.get(gateIndex).getInputQueue().take();
 
             // DEBUGGING!
-            /*event = inputGates.get(gateIndex).getInputQueue().poll(20, TimeUnit.SECONDS);
-            if(event == null) {
-                LOG.info("TIMEOUT");
-                LOG.info("GATE 0: size = " + inputGates.get(0).getInputQueue().size());
-                LOG.info("GATE 1: size = " + inputGates.get(1).getInputQueue().size());
-            }*/
-
+            /*
+             * event = inputGates.get(gateIndex).getInputQueue().poll(20, TimeUnit.SECONDS);
+             * if(event == null) { LOG.info("TIMEOUT"); LOG.info("GATE 0: size = " +
+             * inputGates.get(0).getInputQueue().size()); LOG.info("GATE 1: size = " +
+             * inputGates.get(1).getInputQueue().size()); }
+             */
 
             switch (event.type) {
 

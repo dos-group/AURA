@@ -5,6 +5,7 @@ import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 
 /**
  *
@@ -25,13 +26,20 @@ public final class TaskDriverContext {
 
     public final StateMachine.FiniteStateMachine<TaskStates.TaskState, TaskStates.TaskTransition> taskFSM;
 
+    public final MeasurementManager measurementManager;
+
+    public final RecordReader recordReader;
+
+    public final RecordWriter recordWriter;
+
     public TaskDriverContext(final TaskDriverLifecycle taskDriver,
                              final TaskManagerContext managerContext,
                              final Descriptors.TaskDescriptor taskDescriptor,
                              final Descriptors.TaskBindingDescriptor taskBindingDescriptor,
                              final IEventDispatcher driverDispatcher,
                              final QueueManager<IOEvents.DataIOEvent> queueManager,
-                             final StateMachine.FiniteStateMachine<TaskStates.TaskState, TaskStates.TaskTransition> taskFSM) {
+                             final StateMachine.FiniteStateMachine<TaskStates.TaskState, TaskStates.TaskTransition> taskFSM,
+                             MeasurementManager measurementManager) {
 
         this.taskDriver = taskDriver;
 
@@ -42,6 +50,12 @@ public final class TaskDriverContext {
         this.taskBindingDescriptor = taskBindingDescriptor;
 
         this.driverDispatcher = driverDispatcher;
+
+        this.measurementManager = measurementManager;
+
+        this.recordReader = new RecordReader();
+
+        this.recordWriter = new RecordWriter();
 
         this.queueManager = queueManager;
 

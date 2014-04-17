@@ -8,7 +8,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import de.tuberlin.aura.core.iosystem.IOEvents;
 
 /**
  * The EventDispatcher is responsible for adding and removing listeners and for dispatching event to
@@ -22,13 +25,16 @@ public class EventDispatcher implements IEventDispatcher {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(EventDispatcher.class);
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(EventDispatcher.class);
 
     private final Map<String, List<IEventHandler>> listenerMap;
 
     private final boolean useDispatchThread;
 
-    private final Runnable dispatcherThread;
+    private final Thread dispatcherThread;
 
     private final AtomicBoolean isRunning;
 
@@ -42,13 +48,20 @@ public class EventDispatcher implements IEventDispatcher {
      *
      */
     public EventDispatcher() {
-        this(false);
+        this(false, null);
+    }
+
+    /**
+     *
+     */
+    public EventDispatcher(boolean useDispatchThread) {
+        this(useDispatchThread, null);
     }
 
     /**
      * @param useDispatchThread
      */
-    public EventDispatcher(boolean useDispatchThread) {
+    public EventDispatcher(boolean useDispatchThread, String name) {
 
         this.listenerMap = new ConcurrentHashMap<>();
 
@@ -58,23 +71,40 @@ public class EventDispatcher implements IEventDispatcher {
 
         this.eventQueue = useDispatchThread ? new LinkedBlockingQueue<Event>() : null;
 
-        this.dispatcherThread = useDispatchThread ? new Runnable() {
-
-            @Override
-            public void run() {
-                while (isRunning.get()) {
-                    try {
-                        final Event event = eventQueue.take();
-                        dispatch(event);
-                    } catch (InterruptedException e) {
-                        LOG.error(e);
-                    }
-                }
-            }
-        } : null;
-
         if (useDispatchThread) {
-            new Thread(dispatcherThread).start();
+            Runnable runnable = new Runnable() {
+
+                @Override
+                public void run() {
+                    while (isRunning.get()) {
+                        try {
+                            final Event event = eventQueue.take();
+                            LOG.trace("Process event {} - events left in queue: {}", event.type, eventQueue.size());
+
+                            // Stop dispatching thread, if a poison pill was received.
+                            if (event.type != IOEvents.InternalEventType.POISON_PILL_TERMINATION) {
+                                dispatch(event);
+                            } else {
+                                LOG.trace("Poison pill received");
+                            }
+                        } catch (InterruptedException e) {
+                            LOG.error(e.getLocalizedMessage(), e);
+                        }
+                    }
+
+                    LOG.trace("Event dispatcher thread stopped.");
+                }
+            };
+
+            if (name != null) {
+                this.dispatcherThread = new Thread(runnable, name);
+            } else {
+                this.dispatcherThread = new Thread(runnable);
+            }
+
+            this.dispatcherThread.start();
+        } else {
+            this.dispatcherThread = null;
         }
     }
 
@@ -200,10 +230,17 @@ public class EventDispatcher implements IEventDispatcher {
     }
 
     /**
-     *
+     * TODO: Can be remove -> see shutdown method
      */
+    @Deprecated
     public void shutdownEventQueue() {
         isRunning.set(false);
+    }
+
+    public void setName(String name) {
+        if (useDispatchThread) {
+            this.dispatcherThread.setName(name);
+        }
     }
 
     // ---------------------------------------------------
@@ -217,10 +254,27 @@ public class EventDispatcher implements IEventDispatcher {
         final List<IEventHandler> listeners = listenerMap.get(event.type);
         if (listeners != null) {
             for (final IEventHandler el : listeners) {
-                el.handleEvent(event);
+                try {
+                    el.handleEvent(event);
+                } catch (Throwable t) {
+                    LOG.error(t.getLocalizedMessage(), t);
+                    throw t;
+                }
             }
         } else { // listeners == null
             LOG.info("no listener registered for event " + event.type);
+        }
+    }
+
+    @Override
+    public void shutdown() {
+        if (useDispatchThread) {
+            LOG.trace("Shutdown event dispatcher");
+
+            isRunning.set(false);
+
+            // Feed the poison pill to the event dispatcher thread to terminate it.
+            eventQueue.add(new Event(IOEvents.InternalEventType.POISON_PILL_TERMINATION));
         }
     }
 }

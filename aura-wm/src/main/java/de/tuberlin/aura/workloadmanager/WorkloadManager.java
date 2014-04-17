@@ -14,6 +14,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
@@ -129,24 +130,43 @@ public class WorkloadManager implements ClientWMProtocol {
 
     public static void main(final String[] args) {
 
+        // final Logger rootLOG = Logger.getRootLogger();
+        //
+        // final PatternLayout layout = new PatternLayout("%d %p - %m%n");
+        // final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        // rootLOG.addAppender(consoleAppender);
+        // rootLOG.setLevel(Level.INFO);
+
         int dataPort = -1;
         int controlPort = -1;
         String zkServer = null;
-
-        if (args.length == 3) {
+        String measurementPath = null;
+        if (args.length == 4) {
             try {
                 zkServer = args[0];
                 dataPort = Integer.parseInt(args[1]);
                 controlPort = Integer.parseInt(args[2]);
+                measurementPath = args[3];
             } catch (NumberFormatException e) {
-                System.err.println("Argument" + " must be an integer");
+                LOG.error("Argument" + " must be an integer", e);
                 System.exit(1);
             }
         } else {
-            System.err.println("only two numeric arguments allowed: dataPort, controlPort");
+            StringBuilder builder = new StringBuilder();
+            builder.append("Args: ");
+            for (int i = 0; i < args.length; i++) {
+                builder.append(args[i]);
+                builder.append("|");
+            }
+
+            LOG.error(builder.toString());
             System.exit(1);
         }
 
+        MeasurementManager.setRoot(measurementPath);
+
+        long start = System.nanoTime();
         new WorkloadManager(zkServer, dataPort, controlPort);
+        LOG.info("WM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
     }
 }

@@ -3,7 +3,8 @@ package de.tuberlin.aura.taskmanager;
 
 import java.lang.reflect.Constructor;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
@@ -12,6 +13,7 @@ import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.*;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskTransition;
@@ -27,7 +29,10 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TaskDriver.class);
+    /**
+     * Logger.
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(TaskDriver.class);
 
     private final TaskManagerContext managerContext;
 
@@ -54,7 +59,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
     // ---------------------------------------------------
 
     public TaskDriver(final TaskManagerContext managerContext, final Descriptors.TaskDeploymentDescriptor deploymentDescriptor) {
-        super(true);
+        super(true, "TaskDriverEventDispatcher");
 
         // sanity check.
         if (managerContext == null)
@@ -69,10 +74,18 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
         this.taskBindingDescriptor = deploymentDescriptor.taskBindingDescriptor;
 
         this.taskFSM = createTaskFSM();
+        this.taskFSM.setName("FSM-" + taskDescriptor.name + "-" + taskDescriptor.taskIndex + "-EventDispatcher");
 
-        this.queueManager = QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>());
 
-        this.driverContext = new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM);
+        MeasurementManager measurementManager = MeasurementManager.getInstance("/tm/" + taskDescriptor.name + "_" + taskDescriptor.taskIndex, "Task");
+        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + taskDescriptor.taskID + "-" + taskDescriptor.name + "-"
+                + taskDescriptor.taskIndex, measurementManager);
+
+        this.queueManager =
+                QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), measurementManager);
+
+        this.driverContext =
+                new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM, measurementManager);
     }
 
     // ---------------------------------------------------
@@ -132,15 +145,15 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         } catch (final Throwable t) {
 
-            LOG.error(t.getLocalizedMessage());
+            LOG.error(t.getLocalizedMessage(), t);
 
             taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FAIL));
 
             return;
         }
 
-        // TODO: Wait until all gates are closed?
-
+        // TODO: Wait until all gates are closed? -> invokeable.close() emits all
+        // DATA_EVENT_SOURCE_EXHAUSTED events
         taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
     }
 
@@ -246,17 +259,22 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
 
-                final IOEvents.TaskControlIOEvent stateUpdate =
-                        new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE);
+                try {
+                    LOG.info("CHANGE STATE OF TASK " + taskDescriptor.name + " [" + taskDescriptor.taskID + "] FROM " + previousState + " TO "
+                            + state + "  [" + transition.toString() + "]");
 
-                stateUpdate.setPayload(state);
-                stateUpdate.setTaskID(taskDescriptor.taskID);
-                stateUpdate.setTopologyID(taskDescriptor.topologyID);
+                    final IOEvents.TaskControlIOEvent stateUpdate =
+                            new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE);
 
-                managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, stateUpdate);
+                    stateUpdate.setPayload(state);
+                    stateUpdate.setTaskID(taskDescriptor.taskID);
+                    stateUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                LOG.info("CHANGE STATE OF TASK " + taskDescriptor.name + " [" + taskDescriptor.taskID + "] FROM " + previousState + " TO " + state
-                        + "  [" + transition.toString() + "]");
+                    managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, stateUpdate);
+                } catch (Throwable e) {
+                    LOG.error(e.getLocalizedMessage(), e);
+                    throw e;
+                }
             }
         });
 

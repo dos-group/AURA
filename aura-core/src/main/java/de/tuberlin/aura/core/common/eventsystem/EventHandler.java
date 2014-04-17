@@ -76,6 +76,7 @@ public abstract class EventHandler implements IEventHandler {
                 try {
                     m.invoke(this, event);
                 } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+                    LOG.error(e);
                     throw new IllegalStateException(e);
                 }
             } else {
