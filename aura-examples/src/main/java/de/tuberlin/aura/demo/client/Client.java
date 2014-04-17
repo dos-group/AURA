@@ -47,7 +47,7 @@ public final class Client {
             final UUID taskID = driverContext.taskDescriptor.taskID;
 
             int i = 0;
-            while (i++ < 150000 && isInvokeableRunning()) {
+            while (i++ < 150 && isInvokeableRunning()) {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
@@ -80,7 +80,7 @@ public final class Client {
             final UUID taskID = driverContext.taskDescriptor.taskID;
 
             int i = 0;
-            while (i++ < 100000 && isInvokeableRunning()) {
+            while (i++ < 100 && isInvokeableRunning()) {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
@@ -187,7 +187,7 @@ public final class Client {
         // LOG.addAppender(consoleAppender);
         // LOG.setLevel(Level.DEBUG);
 
-        final String measurementPath = "/home/teots/Desktop/measurements";
+        final String measurementPath = "/home/akunft/aura_measurements";
         final String zookeeperAddress = "localhost:2181";
         final LocalClusterSimulator lce =
                 new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
