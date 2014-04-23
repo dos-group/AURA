@@ -59,7 +59,6 @@ public final class IOManager extends EventDispatcher {
 
     private final DataWriter dataWriter;
 
-
     // Event Loops for Netty
     private final NioEventLoopGroup controlPlaneEventLoopGroup;
 
@@ -67,7 +66,11 @@ public final class IOManager extends EventDispatcher {
 
     private final LocalEventLoopGroup localConnectionListenerEventLoopGroup;
 
-    private final NioEventLoopGroup outputEventLoopGroup;
+    private final NioEventLoopGroup networkConnectionSetupEventLoopGroup;
+
+    private final LocalEventLoopGroup localConnectionSetupEventLoopGroup;
+
+    // private final NioEventLoopGroup outputEventLoopGroup;
 
     // ---------------------------------------------------
     // Constructors.
@@ -82,7 +85,6 @@ public final class IOManager extends EventDispatcher {
         if (machine == null)
             throw new IllegalArgumentException("machine == null");
 
-
         this.machine = machine;
 
         this.controlIOConnections = new ConcurrentHashMap<>();
@@ -93,23 +95,21 @@ public final class IOManager extends EventDispatcher {
 
         this.dataWriter = new DataWriter(IOManager.this);
 
-        this.outputEventLoopGroup = new NioEventLoopGroup();
-
         // TODO: Make the number of thread configurable
         this.networkConnectionListenerEventLoopGroup = new NioEventLoopGroup(4);
-
         this.localConnectionListenerEventLoopGroup = new LocalEventLoopGroup(4);
+
+        this.networkConnectionSetupEventLoopGroup = new NioEventLoopGroup(4);
+        this.localConnectionSetupEventLoopGroup = new LocalEventLoopGroup(4);
 
         startNetworkConnectionSetupServer(this.machine, networkConnectionListenerEventLoopGroup);
 
         startLocalDataConnectionSetupServer(localConnectionListenerEventLoopGroup);
 
-
         // Configure the control plane.
         this.controlPlaneEventLoopGroup = new NioEventLoopGroup();
 
         startNetworkControlMessageServer(this.machine, controlPlaneEventLoopGroup);
-
 
         this.controlEventHandler = new ControlIOChannelEventHandler();
 
@@ -282,18 +282,14 @@ public final class IOManager extends EventDispatcher {
      * @param nelg
      */
     private void startNetworkConnectionSetupServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
-
-        // TODO: Test if one event loop is enough or if we should use one loop to as acceptor and
-        // one for the read/write
         dataReader.bind(new DataReader.NetworkConnection(), machine.dataAddress, nelg);
     }
 
     /**
-     * @param nelg
+     * @param lelg
      */
-    private void startLocalDataConnectionSetupServer(final LocalEventLoopGroup nelg) {
-
-        dataReader.bind(new DataReader.LocalConnection(), localAddress, nelg);
+    private void startLocalDataConnectionSetupServer(final LocalEventLoopGroup lelg) {
+        dataReader.bind(new DataReader.LocalConnection(), localAddress, lelg);
     }
 
     /**
@@ -384,7 +380,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, outputEventLoopGroup, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, networkConnectionSetupEventLoopGroup, allocator);
         }
 
         public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.Allocator allocator) {
@@ -396,7 +392,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, outputEventLoopGroup, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, localConnectionListenerEventLoopGroup, allocator);
         }
 
         public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress) {

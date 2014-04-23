@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitLocalInputEventLoopGroup;
+import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNetworkInputEventLoopGroup;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -66,7 +68,7 @@ public final class TaskExecutionUnit {
         this.outputAllocator = outputAllocator;
 
         // TODO: Make this configurable
-        this.dataFlowEventLoops = new DataFlowEventLoops(2, 2);
+        this.dataFlowEventLoops = new DataFlowEventLoops(2, 2, 2, 2);
 
         this.executorThread = new Thread(new ExecutionUnitRunner());
 
@@ -149,10 +151,9 @@ public final class TaskExecutionUnit {
      * @param taskDriverCtx
      */
     private void unregisterTask(final TaskDriverContext taskDriverCtx) {
-        LOG.debug("unregister task {} {}", taskDriverCtx.taskDescriptor.name, taskDriverCtx.taskDescriptor.taskIndex);
-        // executionManager.dispatchEvent(new
-        // TaskExecutionManager.TaskExecutionEvent(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
-        // taskDriverCtx));
+        LOG.trace("unregister task {} {}", taskDriverCtx.taskDescriptor.name, taskDriverCtx.taskDescriptor.taskIndex);
+        executionManager.dispatchEvent(new TaskExecutionManager.TaskExecutionEvent(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
+                                                                                   taskDriverCtx));
     }
 
     /**
@@ -175,6 +176,9 @@ public final class TaskExecutionUnit {
 
                 try {
                     currentTaskCtx = taskQueue.take();
+                    LOG.debug("Execution Unit {} prepares execution of task {}",
+                              TaskExecutionUnit.this.executionUnitID,
+                              currentTaskCtx.taskDescriptor.taskID);
                 } catch (InterruptedException e) {
                     throw new IllegalStateException(e);
                 }
@@ -183,8 +187,7 @@ public final class TaskExecutionUnit {
 
                 final TaskDriverContext taskDriverCtx = currentTaskCtx;
 
-                executorThread.setName(taskDriverCtx.taskDescriptor.name + "-Execution-Unit-Thread");
-
+                executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + taskDriverCtx.taskDescriptor.name);
 
                 currentTaskCtx.taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
                                                         new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
@@ -204,17 +207,12 @@ public final class TaskExecutionUnit {
                                                             public void stateAction(TaskStates.TaskState previousState,
                                                                                     TaskStates.TaskTransition transition,
                                                                                     TaskStates.TaskState state) {
-
-                                                                // TODO [Christian -> Deadlock
-                                                                // test]: Remove this!
                                                                 try {
-                                                                    LOG.debug("Task State Finished Received in TaskExecutionUnit");
-
                                                                     taskDriverCtx.taskDriver.teardownDriver(true);
                                                                     unregisterTask(taskDriverCtx);
-                                                                } catch (Throwable e) {
-                                                                    LOG.error(e.getLocalizedMessage(), e);
-                                                                    throw e;
+                                                                } catch (Throwable t) {
+                                                                    LOG.error(t.getLocalizedMessage(), t);
+                                                                    throw t;
                                                                 }
                                                             }
 
@@ -250,6 +248,7 @@ public final class TaskExecutionUnit {
                                                             }
                                                         });
 
+
                 currentTaskCtx.taskDriver.startupDriver(inputAllocator, outputAllocator);
 
                 try {
@@ -259,19 +258,34 @@ public final class TaskExecutionUnit {
                 }
 
                 currentTaskCtx.taskDriver.executeDriver();
+                LOG.debug("Execution Unit {} completed the execution of task {}",
+                          TaskExecutionUnit.this.executionUnitID,
+                          currentTaskCtx.taskDescriptor.taskID);
+
+                // TODO: This is necessary to indicate that this execution unit is free via the
+                // getNumberOfEnqueuedTasks()-method. This isn't thread safe in any way!
+                currentTaskCtx = null;
             }
+
+            LOG.debug("Terminate thread of execution unit {}", TaskExecutionUnit.this.executionUnitID);
         }
     }
 
     protected class DataFlowEventLoops {
 
-        public final NioEventLoopGroup networkInputEventLoopGroup;
+        public final ExecutionUnitNetworkInputEventLoopGroup networkInputEventLoopGroup;
 
-        public final LocalEventLoopGroup localInputEventLoopGroup;
+        public final ExecutionUnitLocalInputEventLoopGroup localInputEventLoopGroup;
 
-        public DataFlowEventLoops(int networkInputThreads, int localInputThreads) {
-            this.networkInputEventLoopGroup = new NioEventLoopGroup(networkInputThreads);
-            this.localInputEventLoopGroup = new LocalEventLoopGroup(localInputThreads);
+        public final NioEventLoopGroup networkOutputEventLoopGroup;
+
+        public final LocalEventLoopGroup localOutputEventLoopGroup;
+
+        public DataFlowEventLoops(int networkInputThreads, int localInputThreads, int networkOutputThreads, int localOutputThreads) {
+            this.networkInputEventLoopGroup = new ExecutionUnitNetworkInputEventLoopGroup(networkInputThreads);
+            this.localInputEventLoopGroup = new ExecutionUnitLocalInputEventLoopGroup(localInputThreads);
+            this.networkOutputEventLoopGroup = new NioEventLoopGroup(networkOutputThreads);
+            this.localOutputEventLoopGroup = new LocalEventLoopGroup(localOutputThreads);
         }
     }
 }

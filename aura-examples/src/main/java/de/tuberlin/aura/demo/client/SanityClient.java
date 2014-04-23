@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.client.api.AuraClient;
+import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryManager;
@@ -193,7 +194,7 @@ public final class SanityClient {
         // LOG.setLevel(Level.INFO);
 
         // Local
-        // final String measurementPath = "/home/teots/Desktop/measurements";
+        // final String measurementPath = "/home/teots/Desktop/logs";
         // final String zookeeperAddress = "localhost:2181";
         // final LocalClusterSimulator lce =
         // new
@@ -204,32 +205,58 @@ public final class SanityClient {
         // measurementPath);
 
         // Wally
-        final String zookeeperAddress = "wally001.cit.tu-berlin.de:2181";
+        final String zookeeperAddress = "wally101.cit.tu-berlin.de:2181";
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-        atb1.addNode(new Node(UUID.randomUUID(), "Source", 530, 1), Source.class)
+        atb1.addNode(new Node(UUID.randomUUID(), "Source", 264, 1), Source.class)
             .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Middle", 530, 1), Task2Exe.class)
+            .addNode(new Node(UUID.randomUUID(), "Middle", 264, 1), Task2Exe.class)
             .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Sink", 530, 1), Task3Exe.class);
+            .addNode(new Node(UUID.randomUUID(), "Sink", 264, 1), Task3Exe.class);
         // atb1.addNode(new Node(UUID.randomUUID(), "Source", 396, 1), Source.class)
         // .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
         // .addNode(new Node(UUID.randomUUID(), "Sink", 396, 1), Task3Exe.class);
 
-        AuraTopology at;
+        // Add the job resubmission handler.
+        ac.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, new EventHandler() {
 
-        for (int i = 1; i <= 1; ++i) {
-            at = atb1.build("Job " + Integer.toString(i), EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
-            ac.submitTopology(at, null);
+            private int runs = 1;
 
-            try {
-                Thread.sleep(30000);
-            } catch (InterruptedException e) {
-                LOG.error("Sleep interrupted", e);
+            private int jobCounter = 1;
+
+            @Handle(event = IOEvents.ControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
+            private void handleTopologyFinished(final IOEvents.ControlIOEvent event) {
+                String jobName = (String) event.getPayload();
+                LOG.info("Topology ({}) finished.", jobName);
+
+                if (jobCounter < runs) {
+                    Thread t = new Thread() {
+
+                        public void run() {
+                            // This break is only necessary to make it easier to distinguish jobs in
+                            // the log files.
+                            try {
+                                Thread.sleep(2000);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+
+                            AuraTopology at =
+                                    atb1.build("Job " + Integer.toString(++jobCounter), EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
+                            ac.submitTopology(at, null);
+                        }
+                    };
+
+                    t.start();
+                }
             }
-        }
+        });
+
+        // Submit the first job. Other runs of this jobs are scheduled on demand.
+        AuraTopology at = atb1.build("Job " + Integer.toString(1), EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
+        ac.submitTopology(at, null);
 
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();

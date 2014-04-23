@@ -13,6 +13,8 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
+import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitLocalInputEventLoopGroup;
+import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNetworkInputEventLoopGroup;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -81,8 +83,6 @@ public final class TaskExecutionManager extends EventDispatcher {
         this.executionUnit = new TaskExecutionUnit[numberOfCores];
 
         initializeExecutionUnits();
-
-
     }
 
     // ---------------------------------------------------
@@ -133,6 +133,7 @@ public final class TaskExecutionManager extends EventDispatcher {
             }
         }
 
+        LOG.warn("No task execution unit was found for this task ID: {}", taskID);
         return null;
     }
 
@@ -153,11 +154,6 @@ public final class TaskExecutionManager extends EventDispatcher {
         for (int i = 0; i < numberOfCores; ++i) {
             final MemoryManager.BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
             final MemoryManager.BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
-
-            if (inputBuffer == outputBuffer) {
-                LOG.error("SAME ALLOCATOR GROUP USED");
-                throw new RuntimeException("SAME ALLOCATOR GROUP USED");
-            }
 
             this.executionUnit[i] = new TaskExecutionUnit(this, i, inputBuffer, outputBuffer);
             this.executionUnit[i].start();
@@ -192,15 +188,16 @@ public final class TaskExecutionManager extends EventDispatcher {
                         public void operationComplete(ChannelFuture future) throws Exception {
                             try {
                                 Channel channel = future.channel();
-                                LOG.debug("Change event loop from {}", channel.eventLoop().parent());
+                                LOG.debug("Change event loop from {} to event loop of task {}", channel.eventLoop().parent(), event.dstTaskID);
 
                                 // Determine the execution unit the given channel is connected to.
                                 TaskExecutionUnit executionUnit = findTaskExecutionUnitByTaskID(event.dstTaskID);
-                                EventLoopGroup eventLoopGroup;
-                                if (channel instanceof LocalChannel) {
-                                    eventLoopGroup = executionUnit.dataFlowEventLoops.localInputEventLoopGroup;
 
-                                    // TODO: Dirty dirty hack...
+                                if (channel instanceof LocalChannel) {
+                                    ExecutionUnitLocalInputEventLoopGroup eventLoopGroup = executionUnit.dataFlowEventLoops.localInputEventLoopGroup;
+
+                                    // TODO: Dirty dirty hack... [will be fixed in Netty
+                                    // 4.0.19.Final]
                                     Class<?> clazz = channel.getClass();
                                     Field stateField = clazz.getDeclaredField("state");
                                     stateField.setAccessible(true);
@@ -214,20 +211,117 @@ public final class TaskExecutionManager extends EventDispatcher {
                                     connectPromiseField.setAccessible(true);
                                     connectPromiseField.set(peer, peer.unsafe().voidPromise());
 
-                                    // peerField.set(channel, null);
+                                    // Change event loop group.
+                                    eventLoopGroup.register(channel,
+                                                            event.srcTaskID,
+                                                            executionUnit.getCurrentTaskDriverContext().taskBindingDescriptor.inputGateBindings)
+                                                  .sync();
+                                } else {
+                                    ExecutionUnitNetworkInputEventLoopGroup eventLoopGroup =
+                                            executionUnit.dataFlowEventLoops.networkInputEventLoopGroup;
+
+                                    // Change event loop group.
+                                    eventLoopGroup.register(channel,
+                                                            event.srcTaskID,
+                                                            executionUnit.getCurrentTaskDriverContext().taskBindingDescriptor.inputGateBindings)
+                                                  .sync();
+                                }
+
+                                // Enable auto read again.
+                                channel.config().setAutoRead(true);
+
+                                LOG.debug("Changed event loop to {}", channel.eventLoop().parent());
+                            } catch (Throwable t) {
+                                LOG.error(t.getLocalizedMessage(), t);
+                                throw t;
+                            }
+                        }
+                    })
+                           .sync();
+                } catch (InterruptedException e) {
+                    LOG.error(e.getLocalizedMessage(), e);
+                } catch (Throwable e) {
+                    LOG.error(e.getLocalizedMessage(), e);
+                }
+
+                // Dispatch INPUT_CHANNEL_CONNECTED event.
+                IOEvents.GenericIOEvent connected =
+                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+                                                    event.getPayload(),
+                                                    event.srcTaskID,
+                                                    event.dstTaskID);
+                connected.setChannel(event.getChannel());
+                ioManager.dispatchEvent(connected);
+            }
+        });
+
+        this.ioManager.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, new EventHandler() {
+
+            @EventHandler.Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP)
+            private void handleOutputChannelSetup(final IOEvents.DataIOEvent event) {
+
+                try {
+                    // Add the channel to the according event loop group.
+                    Channel channel = event.getChannel();
+
+                    // TODO: Dirty dirty hack... set channel to state "closed" to avoid closing the
+                    // peer
+                    if (channel instanceof LocalChannel) {
+                        Class<?> clazz = channel.getClass();
+                        Field stateField = clazz.getDeclaredField("state");
+                        stateField.setAccessible(true);
+                        stateField.setInt(channel, 3);
+                    }
+
+                    channel.deregister().addListener(new ChannelFutureListener() {
+
+                        @Override
+                        public void operationComplete(ChannelFuture future) throws Exception {
+                            try {
+                                Channel channel = future.channel();
+                                LOG.debug("Change event loop from {} to event loop of task {}", channel.eventLoop().parent(), event.srcTaskID);
+
+                                // Determine the execution unit the given channel is connected to.
+                                TaskExecutionUnit executionUnit = findTaskExecutionUnitByTaskID(event.srcTaskID);
+
+                                EventLoopGroup eventLoopGroup;
+                                if (channel instanceof LocalChannel) {
+                                    eventLoopGroup = executionUnit.dataFlowEventLoops.localOutputEventLoopGroup;
+
+                                    // TODO: Dirty dirty hack... [will be fixed in Netty
+                                    // 4.0.19.Final]
+                                    Class<?> clazz = channel.getClass();
+                                    Field stateField = clazz.getDeclaredField("state");
+                                    stateField.setAccessible(true);
+                                    stateField.setInt(channel, 0);
+
+                                    Field peerField = clazz.getDeclaredField("peer");
+                                    peerField.setAccessible(true);
+                                    final LocalChannel peer = (LocalChannel) peerField.get(channel);
+
+                                    peerField.set(channel, null);
 
                                     // Change event loop group.
                                     eventLoopGroup.register(channel).sync();
 
-                                    // peerField.set(channel, peer);
+                                    // Activate the channels
+                                    stateField.setInt(channel, 2);
+                                    stateField.setInt(peer, 2);
+
+                                    peerField.set(channel, peer);
+                                    peer.eventLoop().execute(new Runnable() {
+
+                                        @Override
+                                        public void run() {
+                                            peer.pipeline().fireChannelActive();
+                                        }
+                                    });
                                 } else {
-                                    eventLoopGroup = executionUnit.dataFlowEventLoops.networkInputEventLoopGroup;
+                                    eventLoopGroup = executionUnit.dataFlowEventLoops.networkOutputEventLoopGroup;
 
                                     // Change event loop group.
                                     eventLoopGroup.register(channel).sync();
                                 }
-
-
 
                                 // Enable auto read again.
                                 channel.config().setAutoRead(true);
@@ -245,9 +339,9 @@ public final class TaskExecutionManager extends EventDispatcher {
                     LOG.error(e.getLocalizedMessage(), e);
                 }
 
-                // Dispatch INPUT_CHANNEL_CONNECTED event.
-                IOEvents.GenericIOEvent connected =
-                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+                // Dispatch OUTPUT_CHANNEL_CONNECTED event.
+                final IOEvents.GenericIOEvent connected =
+                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
                                                     event.getPayload(),
                                                     event.srcTaskID,
                                                     event.dstTaskID);

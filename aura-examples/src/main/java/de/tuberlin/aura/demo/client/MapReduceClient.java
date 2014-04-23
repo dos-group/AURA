@@ -221,14 +221,14 @@ public final class MapReduceClient {
         // measurementPath);
 
         // Wally
-        final String zookeeperAddress = "wally001.cit.tu-berlin.de:2181";
+        final String zookeeperAddress = "wally101.cit.tu-berlin.de:2181";
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-        atb1.addNode(new Node(UUID.randomUUID(), "Mapper", 99, 1), Mapper.class)
+        atb1.addNode(new Node(UUID.randomUUID(), "Mapper", 49, 1), Mapper.class)
             .connectTo("Reducer", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Reducer", 99, 1), Reducer.class);
+            .addNode(new Node(UUID.randomUUID(), "Reducer", 49, 1), Reducer.class);
 
         // Add the job resubmission handler.
         ac.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, new EventHandler() {

@@ -33,6 +33,8 @@ public final class IOEvents {
 
         public static final String DATA_EVENT_INPUT_CHANNEL_CONNECTED = "DATA_EVENT_INPUT_CHANNEL_CONNECTED";
 
+        public static final String DATA_EVENT_OUTPUT_CHANNEL_SETUP = "DATA_EVENT_OUTPUT_CHANNEL_SETUP";
+
         public static final String DATA_EVENT_OUTPUT_CHANNEL_CONNECTED = "DATA_EVENT_OUTPUT_CHANNEL_CONNECTED";
 
         public static final String DATA_EVENT_OUTPUT_GATE_OPEN = "DATA_EVENT_OUTPUT_GATE_OPEN";
