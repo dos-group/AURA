@@ -20,15 +20,15 @@ import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public final class Client {
+public final class SimpleClient {
 
     /**
      * Logger.
      */
-    private static final Logger LOG = LoggerFactory.getLogger(Client.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SimpleClient.class);
 
     // Disallow Instantiation.
-    private Client() {}
+    private SimpleClient() {}
 
     /**
      *
@@ -286,6 +286,8 @@ public final class Client {
             e.printStackTrace();
         }
 
-        // lce.shutdown();
+        ac.closeSession();
+
+        //lce.shutdown();
     }
 }

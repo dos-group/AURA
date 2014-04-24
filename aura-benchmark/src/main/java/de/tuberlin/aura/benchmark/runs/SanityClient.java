@@ -315,6 +315,7 @@ public final class SanityClient {
             e.printStackTrace();
         }
 
+        ac.closeSession();
         // lce.shutdown();
     }
 

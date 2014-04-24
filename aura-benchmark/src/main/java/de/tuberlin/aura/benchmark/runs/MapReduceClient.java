@@ -277,6 +277,7 @@ public final class MapReduceClient {
             e.printStackTrace();
         }
 
+        ac.closeSession();
         // lcs.shutdown();
     }
 }

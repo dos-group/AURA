@@ -311,14 +311,13 @@ public final class BenchmarkClient {
             }
         }
 
-        // ac.submitTopology(at2, null);
-
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        ac.closeSession();
         lce.shutdown();
     }
 }
