@@ -19,7 +19,6 @@ import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.local.LocalChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
@@ -46,7 +45,7 @@ public class DataWriter {
                                                      final UUID dstTaskID,
                                                      final OutgoingConnectionType<T> type,
                                                      final SocketAddress address,
-                                                     final NioEventLoopGroup eventLoopGroup,
+                                                     final EventLoopGroup eventLoopGroup,
                                                      final MemoryManager.Allocator allocator) {
 
         return new ChannelWriter<>(type, srcTaskID, dstTaskID, address, eventLoopGroup, allocator);
@@ -322,14 +321,16 @@ public class DataWriter {
                         future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
                                                                                 srcID,
                                                                                 dstID));
-                        final IOEvents.GenericIOEvent event =
-                                new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                                            ChannelWriter.this,
-                                                            srcID,
-                                                            dstID);
-                        event.setChannel(future.channel());
-                        dispatcher.dispatchEvent(event);
 
+                        // Disable the auto read functionality of the channel. You must not forget
+                        // to enable it again!
+                        future.channel().config().setAutoRead(true);
+
+                        IOEvents.DataIOEvent event = new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, srcID, dstID);
+                        event.setPayload(ChannelWriter.this);
+                        event.setChannel(future.channel());
+
+                        dispatcher.dispatchEvent(event);
                     } else if (future.cause() != null) {
                         LOG.error("Connection attempt failed: ", future.cause());
                         throw new IllegalStateException("connection attempt failed.", future.cause());

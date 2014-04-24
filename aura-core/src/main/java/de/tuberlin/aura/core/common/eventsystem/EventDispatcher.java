@@ -76,7 +76,7 @@ public class EventDispatcher implements IEventDispatcher {
 
                 @Override
                 public void run() {
-                    while (isRunning.get()) {
+                    while (isRunning.get() || eventQueue.size() != 0) {
                         try {
                             final Event event = eventQueue.take();
                             LOG.trace("Process event {} - events left in queue: {}", event.type, eventQueue.size());
