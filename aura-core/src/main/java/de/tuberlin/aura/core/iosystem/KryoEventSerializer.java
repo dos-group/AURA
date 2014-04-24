@@ -18,6 +18,8 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.UUID;
@@ -49,12 +51,6 @@ public final class KryoEventSerializer {
 
     public static final class KryoInboundHandler extends ChannelInboundHandlerAdapter {
 
-        /*
-         * private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
-         * 
-         * @Override protected Kryo initialValue() { return new Kryo(); } };
-         */
-
         private Kryo kryo;
 
         public KryoInboundHandler(final TransferBufferEventSerializer transferBufferEventSerializer) {
@@ -76,12 +72,6 @@ public final class KryoEventSerializer {
     }
 
     public static final class KryoOutboundHandler extends ChannelOutboundHandlerAdapter {
-
-        /*
-         * private final ThreadLocal<Kryo> kryo = new ThreadLocal<Kryo>() {
-         * 
-         * @Override protected Kryo initialValue() { return new Kryo(); } };
-         */
 
         private Kryo kryo;
 

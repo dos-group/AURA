@@ -9,7 +9,7 @@ import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -108,9 +108,17 @@ public class TestClient {
         // LOG.addAppender(consoleAppender);
         // LOG.setLevel(Level.DEBUG);
 
+        final String measurementPath = "/home/teots/Desktop/logs";
         final String zookeeperAddress = "localhost:2181";
         final LocalClusterSimulator lce =
-                new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+                new LocalClusterSimulator(
+                        LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+                        true,
+                        zookeeperAddress,
+                        4,
+                        measurementPath
+                );
+
         final AuraClient ac = new AuraClient(zookeeperAddress, 25340, 26340);
 
         final AuraDirectedGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
