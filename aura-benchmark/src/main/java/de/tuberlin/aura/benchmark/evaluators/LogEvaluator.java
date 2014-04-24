@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.benchmark;
+package de.tuberlin.aura.benchmark.evaluators;
 
 import java.io.*;
 import java.util.Collections;
@@ -6,15 +6,27 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Created by teots on 2/27/14.
+ *
  */
 public class LogEvaluator {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private String path;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     public LogEvaluator(String path) {
         this.path = path;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public void evaluate() {
         List<String> mappers = new LinkedList<>();
@@ -58,6 +70,10 @@ public class LogEvaluator {
         System.out.println("Reducers: " + Integer.toString(reducers.size()));
     }
 
+    // ---------------------------------------------------
+    // Private Methods.
+    // ---------------------------------------------------
+
     private void checkForExceptions(File file) {
         try {
             BufferedReader br = new BufferedReader(new FileReader(file));
@@ -76,6 +92,10 @@ public class LogEvaluator {
             e.printStackTrace();
         }
     }
+
+    // ---------------------------------------------------
+    // Main.
+    // ---------------------------------------------------
 
     public static void main(String[] args) {
         LogEvaluator evaluator = new LogEvaluator("/home/teots/Desktop/logs");

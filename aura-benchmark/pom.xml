@@ -12,9 +12,9 @@
         <artifactId>aura</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-    <artifactId>aura-examples</artifactId>
+    <artifactId>aura-benchmark</artifactId>
     <packaging>jar</packaging>
-    <name>aura-examples</name>
+    <name>aura-benchmark</name>
     <url>http://maven.apache.org</url>
 
     <!-- ================================= -->
@@ -40,13 +40,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${maven-jar-plugin.version}</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>de.tuberlin.aura.demo.examples.SimpleClient</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
             </plugin>
 
         </plugins>

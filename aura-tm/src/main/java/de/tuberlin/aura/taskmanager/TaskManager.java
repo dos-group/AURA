@@ -148,6 +148,21 @@ public final class TaskManager implements WM2TMProtocol {
         executionManager.scheduleTask(taskDriverCtx);
     }
 
+    /**
+     * @param deploymentDescriptors
+     */
+    @Override
+    public void installTasks(final List<TaskDeploymentDescriptor> deploymentDescriptors) {
+        // sanity check.
+        if (deploymentDescriptors == null)
+            throw new IllegalArgumentException("deploymentDescriptors == null");
+
+        for (final TaskDeploymentDescriptor tdd : deploymentDescriptors) {
+            final TaskDriverContext taskDriverCtx = registerTask(tdd);
+            executionManager.scheduleTask(taskDriverCtx);
+        }
+    }
+
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------
@@ -304,13 +319,6 @@ public final class TaskManager implements WM2TMProtocol {
     // ---------------------------------------------------
 
     public static void main(final String[] args) {
-
-        // final Logger rootLOG = Logger.getRootLogger();
-        //
-        // final PatternLayout layout = new PatternLayout("%d %p - %m%n");
-        // final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-        // rootLOG.addAppender(consoleAppender);
-        // rootLOG.setLevel(Level.INFO);
 
         int dataPort = -1;
         int controlPort = -1;

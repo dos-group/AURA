@@ -61,9 +61,11 @@ public class TopologyController extends EventDispatcher {
 
         this.assemblyPipeline = new AssemblyPipeline(this.topologyFSM);
 
-        this.assemblyPipeline.addPhase(new TopologyParallelizer())
-                             .addPhase(new TopologyScheduler(context.infrastructureManager))
-                             .addPhase(new TopologyDeployer(context.rpcManager));
+        assemblyPipeline.addPhase(new TopologyParallelizer());
+
+        assemblyPipeline.addPhase(new TopologyScheduler(context.infrastructureManager));
+
+        assemblyPipeline.addPhase(new TopologyDeployer(context.rpcManager));
 
         // TODO: No TASK_STATE_FINISHED events arrive here!
         this.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
@@ -272,7 +274,7 @@ public class TopologyController extends EventDispatcher {
 
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                // Send to the client the finish notification...
+                // Send to the examples the finish notification...
                 IOEvents.ControlIOEvent event = new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED);
                 event.setPayload(TopologyController.this.topology.name);
 

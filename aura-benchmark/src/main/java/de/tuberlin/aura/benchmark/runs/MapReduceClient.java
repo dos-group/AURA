@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.client;
+package de.tuberlin.aura.benchmark.runs;
 
 import java.io.*;
 import java.util.*;
@@ -12,8 +12,13 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.statistic.*;
-import de.tuberlin.aura.core.task.common.*;
-import de.tuberlin.aura.core.task.common.BenchmarkRecord.WordCountBenchmarkRecord;
+import de.tuberlin.aura.core.statistic.record.BenchmarkRecord;
+import de.tuberlin.aura.core.statistic.record.BenchmarkRecord.WordCountBenchmarkRecord;
+import de.tuberlin.aura.core.statistic.record.Record;
+import de.tuberlin.aura.core.task.common.DataConsumer;
+import de.tuberlin.aura.core.task.common.DataProducer;
+import de.tuberlin.aura.core.task.common.TaskDriverContext;
+import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
@@ -30,8 +35,8 @@ public final class MapReduceClient {
     private MapReduceClient() {}
 
     /**
-*
-*/
+     *
+     */
     public static class Mapper extends TaskInvokeable {
 
         private static final String DATA_PATH = "/data/chwuertz/aura/input/";
@@ -275,6 +280,7 @@ public final class MapReduceClient {
             e.printStackTrace();
         }
 
+        ac.closeSession();
         // lcs.shutdown();
     }
 }

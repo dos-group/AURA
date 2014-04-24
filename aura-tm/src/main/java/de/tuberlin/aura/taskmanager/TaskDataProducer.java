@@ -42,22 +42,23 @@ public final class TaskDataProducer implements DataProducer {
 
     private final IEventHandler producerEventHandler;
 
-    private final MemoryManager.Allocator allocator;
+
+    private final MemoryManager.Allocator outputAllocator;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataProducer(final TaskDriverContext driverContext, final MemoryManager.Allocator allocator) {
+    public TaskDataProducer(final TaskDriverContext driverContext, final MemoryManager.Allocator outputAllocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
-        if (allocator == null)
-            throw new IllegalArgumentException("allocator == null");
+        if (outputAllocator == null)
+            throw new IllegalArgumentException("outputAllocator == null");
 
         this.driverContext = driverContext;
 
-        this.allocator = allocator;
+        this.outputAllocator = outputAllocator;
 
         // event handling.
         this.producerEventHandler = new ProducerEventHandler();
@@ -145,7 +146,7 @@ public final class TaskDataProducer implements DataProducer {
      */
     @Override
     public MemoryManager.MemoryView alloc() {
-        return allocator.alloc();
+        return outputAllocator.alloc();
     }
 
     // ---------------------------------------------------
@@ -164,7 +165,7 @@ public final class TaskDataProducer implements DataProducer {
                     driverContext.managerContext.ioManager.connectDataChannel(driverContext.taskDescriptor.taskID,
                                                                               outputTask.taskID,
                                                                               outputTask.getMachineDescriptor(),
-                                                                              allocator);
+                                                                              outputAllocator);
                 }
             }
         }
@@ -218,10 +219,12 @@ public final class TaskDataProducer implements DataProducer {
             int gateIndex = 0;
             boolean allOutputGatesConnected = true;
             for (final List<Descriptors.TaskDescriptor> outputGate : driverContext.taskBindingDescriptor.outputGateBindings) {
+
                 int channelIndex = 0;
                 boolean allOutputChannelsPerGateConnected = true;
 
                 for (final Descriptors.TaskDescriptor outputTask : outputGate) {
+
                     // Set the channel on right position.
                     if (outputTask.taskID.equals(event.dstTaskID)) {
                         // get the right queue manager for task context
