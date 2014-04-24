@@ -1,17 +1,33 @@
 package de.tuberlin.aura.core.statistic;
 
 /**
- * Created by teots on 3/12/14.
+ *
  */
 public class DurationMeasurement extends Measurement {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private static final boolean MEASURE_TIME_IN_MILLISECONDS = true;
 
-    private long startTime, stopTime, totalTime = 0;
+    private long startTime = 0;
+
+    private long stopTime = 0;
+
+    private long totalTime = 0;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     public DurationMeasurement(MeasurementType type, String description) {
         super(type, description);
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public void startTimer() {
         this.startTime = time();
@@ -43,7 +59,6 @@ public class DurationMeasurement extends Measurement {
         builder.append(this.description);
         builder.append("\t");
         builder.append(this.totalTime);
-
         return builder.toString();
     }
 
@@ -72,7 +87,6 @@ public class DurationMeasurement extends Measurement {
         result = prime * result + (this.type.hashCode());
         result = prime * result + (this.description.hashCode());
         result = prime * result + (int) (this.totalTime);
-
         return result;
     }
 }

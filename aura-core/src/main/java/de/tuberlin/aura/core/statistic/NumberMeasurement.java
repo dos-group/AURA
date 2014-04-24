@@ -1,8 +1,5 @@
 package de.tuberlin.aura.core.statistic;
 
-/**
- * Created by teots on 3/12/14.
- */
 public class NumberMeasurement extends Measurement {
 
     private static final boolean MEASURE_TIME_IN_MILLISECONDS = true;

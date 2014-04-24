@@ -325,7 +325,7 @@ public final class TaskDataConsumer implements DataConsumer {
 
                         inputGates.get(gateIndex).setChannelReader(channelReader);
 
-                        LOG.info("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
+                        LOG.debug("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
                                 + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID + "] IS ESTABLISHED");
 
                         connectingToCorrectTask |= true;

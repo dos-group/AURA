@@ -82,6 +82,17 @@ public final class Descriptors {
         // ---------------------------------------------------
 
         @Override
+        public int hashCode() {
+            int result = uid.hashCode();
+            result = 31 * result + dataPort;
+            result = 31 * result + controlPort;
+            result = 31 * result + address.hashCode();
+            result = 31 * result + dataAddress.hashCode();
+            result = 31 * result + controlAddress.hashCode();
+            return result;
+        }
+
+        @Override
         public boolean equals(Object other) {
             if (this == other)
                 return true;

@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.client;
+package de.tuberlin.aura.demo.examples;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -21,15 +21,15 @@ import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 
-public final class Client {
+public final class SimpleClient {
 
     /**
      * Logger.
      */
-    private static final Logger LOG = LoggerFactory.getLogger(Client.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SimpleClient.class);
 
     // Disallow Instantiation.
-    private Client() {}
+    private SimpleClient() {}
 
     /**
      *
@@ -286,6 +286,8 @@ public final class Client {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        ac.closeSession();
 
         // lce.shutdown();
     }

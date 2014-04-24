@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.task.common;
+package de.tuberlin.aura.core.statistic.record;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

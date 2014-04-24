@@ -262,7 +262,7 @@ public class EventDispatcher implements IEventDispatcher {
                 }
             }
         } else { // listeners == null
-            LOG.info("no listener registered for event " + event.type);
+            LOG.debug("no listener registered for event " + event.type);
         }
     }
 

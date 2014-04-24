@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.client;
+package de.tuberlin.aura.benchmark.runs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,7 +18,13 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.statistic.AccumulatedLatencyMeasurement;
 import de.tuberlin.aura.core.statistic.MeasurementType;
-import de.tuberlin.aura.core.task.common.*;
+import de.tuberlin.aura.core.statistic.MedianHelper;
+import de.tuberlin.aura.core.statistic.record.BenchmarkRecord;
+import de.tuberlin.aura.core.statistic.record.Record;
+import de.tuberlin.aura.core.task.common.DataConsumer;
+import de.tuberlin.aura.core.task.common.DataProducer;
+import de.tuberlin.aura.core.task.common.TaskDriverContext;
+import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
@@ -308,14 +314,13 @@ public final class BenchmarkClient {
             }
         }
 
-        // ac.submitTopology(at2, null);
-
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        ac.closeSession();
         lce.shutdown();
     }
 }

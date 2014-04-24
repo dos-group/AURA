@@ -136,7 +136,7 @@ public final class OutputGate extends AbstractGate {
         @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN)
         private void handleOutputGateOpen(final DataIOEvent event) {
             openChannelList.set(producer.getOutputGateIndexFromTaskID(event.dstTaskID), true); // TODO:
-            LOG.info("GATE FOR TASK " + event.srcTaskID + " OPENED");
+            LOG.debug("GATE FOR TASK " + event.srcTaskID + " OPENED");
         }
 
         @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE)

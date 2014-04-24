@@ -166,7 +166,7 @@ public class DataWriter {
             } catch (InterruptedException e) {
                 LOG.error("Receiving future from poll thread failed. Interrupt.", e);
             } finally {
-                LOG.info("CLOSE CHANNEL " + channel);
+                LOG.debug("CLOSE CHANNEL " + channel);
                 channel.disconnect();
 
                 try {
@@ -267,7 +267,7 @@ public class DataWriter {
 
                 switch (gateEvent.type) {
                     case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN:
-                        LOG.info("RECEIVED GATE OPEN EVENT");
+                        LOG.debug("RECEIVED GATE OPEN EVENT");
 
                         gateOpen.set(true);
                         awaitGateOpenLatch.countDown();
@@ -279,7 +279,7 @@ public class DataWriter {
                         break;
 
                     case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE:
-                        LOG.info("RECEIVED GATE CLOSE EVENT");
+                        LOG.debug("RECEIVED GATE CLOSE EVENT");
 
 
                         awaitGateOpenLatch.reset();
@@ -428,7 +428,8 @@ public class DataWriter {
               // amount.
               .option(ChannelOption.TCP_NODELAY, false)
               // size of the system lvl send bufferQueue PER SOCKET
-              // -> bufferQueue size, as we always have only 1 channel per socket in the client case
+              // -> bufferQueue size, as we always have only 1 channel per socket in the examples
+              // case
               .option(ChannelOption.SO_SNDBUF, bufferSize)
               // the mark the outbound bufferQueue has to reach in order to change the writable
               // state of

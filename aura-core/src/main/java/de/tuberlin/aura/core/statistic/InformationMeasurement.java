@@ -1,16 +1,28 @@
 package de.tuberlin.aura.core.statistic;
 
 /**
- * Created by teots on 3/12/14.
+ *
  */
 public class InformationMeasurement extends Measurement {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     public String info;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     public InformationMeasurement(MeasurementType type, String description, String info) {
         super(type, description);
         this.info = info;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     @Override
     public String getHeader() {
