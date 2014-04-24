@@ -166,12 +166,25 @@ public class DataReader {
         return inputQueues.get(gateToQueueIndex.get(new Pair<UUID, Integer>(taskID, gateIndex)));
     }
 
-
-    public void bindQueue(final UUID srcTaskID,
-                          final Channel channel,
-                          final int gateIndex,
-                          final int channelIndex,
-                          final BufferQueue<IOEvents.DataIOEvent> queue) {
+    /**
+     * TODO: Is the "synchronized" annotation really necessary? Without this annotation access to
+     * the channelToQueueIndex rarely causes a NullPointerException. Maybe it is enough to use
+     * synchronized maps. However, the performance influence of each solution must be evaluated.
+     * 
+     * We could execute ~350 topologies one after the other without any problems while using a
+     * synchronized version of this method.
+     * 
+     * @param srcTaskID
+     * @param channel
+     * @param gateIndex
+     * @param channelIndex
+     * @param queue
+     */
+    public synchronized void bindQueue(final UUID srcTaskID,
+                                       final Channel channel,
+                                       final int gateIndex,
+                                       final int channelIndex,
+                                       final BufferQueue<IOEvents.DataIOEvent> queue) {
 
         Pair<UUID, Integer> index = new Pair<>(srcTaskID, gateIndex);
         final int queueIndex;
@@ -247,38 +260,47 @@ public class DataReader {
             final IOEvents.DataIOEvent event = (IOEvents.DataIOEvent) kryo.readClassAndObject(new Input(new ByteBufInputStream(buffer)));
             buffer.release();
 
-            if (event instanceof IOEvents.TransferBufferEvent) {
-                inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
-            } else {
-                switch (event.type) {
-                    case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
-                        // TODO: ensure that queue is bound before first data buffer event arrives
+            try {
+                if (event instanceof IOEvents.TransferBufferEvent) {
+                    inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                } else {
+                    switch (event.type) {
+                        case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
+                            // TODO: ensure that queue is bound before first data buffer event
+                            // arrives
 
-                        // Disable the auto read functionality of the channel. You must not forget
-                        // to enable it again!
-                        ctx.channel().config().setAutoRead(true);
+                            // Disable the auto read functionality of the channel. You must not
+                            // forget to enable it again!
+                            ctx.channel().config().setAutoRead(true);
 
-                        IOEvents.DataIOEvent connected =
-                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, event.srcTaskID, event.dstTaskID);
-                        connected.setPayload(DataReader.this);
-                        connected.setChannel(ctx.channel());
+                            IOEvents.DataIOEvent connected =
+                                    new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, event.srcTaskID, event.dstTaskID);
+                            connected.setPayload(DataReader.this);
+                            connected.setChannel(ctx.channel());
 
-                        dispatcher.dispatchEvent(connected);
-                        break;
+                            dispatcher.dispatchEvent(connected);
+                            break;
 
-                    case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
-                        inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
-                        break;
+                        case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
+                            inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                            break;
 
-                    case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK:
-                        inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
-                        break;
+                        case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK:
+                            inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                            break;
 
-                    default:
-                        event.setChannel(ctx.channel());
-                        dispatcher.dispatchEvent(event);
-                        break;
+                        default:
+                            event.setChannel(ctx.channel());
+                            dispatcher.dispatchEvent(event);
+                            break;
+                    }
                 }
+            } catch (Throwable t) {
+                LOG.error("Event: {}", event);
+                LOG.error("Channel: {}", ctx.channel());
+                LOG.error("Channel to queue index: {}", channelToQueueIndex.get(ctx.channel()));
+                LOG.error("Input queue: {}", inputQueues.get(channelToQueueIndex.get(ctx.channel())));
+                LOG.error(t.getLocalizedMessage(), t);
             }
 
             // ctx.fireChannelRead(event);

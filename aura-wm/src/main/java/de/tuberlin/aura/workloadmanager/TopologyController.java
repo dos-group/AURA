@@ -277,6 +277,10 @@ public class TopologyController extends EventDispatcher {
                 event.setPayload(TopologyController.this.topology.name);
 
                 ioManager.sendEvent(topology.machineID, event);
+
+                // Shutdown the event dispatcher threads used by this topology controller
+                shutdown();
+                topologyFSM.shutdown();
             }
         });
 

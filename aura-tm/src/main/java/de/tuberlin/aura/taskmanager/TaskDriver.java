@@ -59,7 +59,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
     // ---------------------------------------------------
 
     public TaskDriver(final TaskManagerContext managerContext, final Descriptors.TaskDeploymentDescriptor deploymentDescriptor) {
-        super(true, "TaskDriverEventDispatcher");
+        super(true, "TaskDriver-" + deploymentDescriptor.taskDescriptor.name + "-" + deploymentDescriptor.taskDescriptor.taskIndex
+                + "-EventDispatcher");
 
         // sanity check.
         if (managerContext == null)
@@ -271,9 +272,9 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                     stateUpdate.setTopologyID(taskDescriptor.topologyID);
 
                     managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, stateUpdate);
-                } catch (Throwable e) {
-                    LOG.error(e.getLocalizedMessage(), e);
-                    throw e;
+                } catch (Throwable t) {
+                    LOG.error(t.getLocalizedMessage(), t);
+                    throw t;
                 }
             }
         });

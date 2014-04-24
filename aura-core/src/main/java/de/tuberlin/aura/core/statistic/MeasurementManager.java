@@ -83,7 +83,7 @@ public class MeasurementManager extends EventHandler {
      * @param event
      */
     public static void fireEvent(String event) {
-        LOG.info("FireEvent: " + event);
+        LOG.trace("FireEvent: " + event);
         List<MeasurementManager> managers = exportListeners.get(event);
         if (managers != null) {
             for (MeasurementManager manager : managers) {
@@ -117,7 +117,7 @@ public class MeasurementManager extends EventHandler {
             @Override
             public void run() {
                 try {
-                    LOG.info("Create " + ROOT + path);
+                    LOG.trace("Create " + ROOT + path);
                     File file = new File(ROOT + path);
                     file.getParentFile().mkdirs();
                     file.createNewFile();
