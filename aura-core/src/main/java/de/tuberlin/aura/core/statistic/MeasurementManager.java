@@ -33,7 +33,7 @@ public class MeasurementManager extends EventHandler {
 
     private final EnumMap<MeasurementType, ConcurrentHashMultiset<Measurement>> measurements;
 
-    public String path;  // TODO: Make this configurable from the outside
+    public String path; // TODO: Make this configurable from the outside
 
     public String name;
 

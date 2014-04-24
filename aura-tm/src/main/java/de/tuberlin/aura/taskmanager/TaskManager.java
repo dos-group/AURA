@@ -157,7 +157,7 @@ public final class TaskManager implements WM2TMProtocol {
         if (deploymentDescriptors == null)
             throw new IllegalArgumentException("deploymentDescriptors == null");
 
-        for(final TaskDeploymentDescriptor tdd : deploymentDescriptors) {
+        for (final TaskDeploymentDescriptor tdd : deploymentDescriptors) {
             final TaskDriverContext taskDriverCtx = registerTask(tdd);
             executionManager.scheduleTask(taskDriverCtx);
         }

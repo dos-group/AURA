@@ -1,8 +1,8 @@
 package de.tuberlin.aura.core.protocols;
 
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-
 import java.util.UUID;
+
+import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 
 public interface ClientWMProtocol {
 

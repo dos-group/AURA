@@ -1,20 +1,20 @@
 package de.tuberlin.aura.workloadmanager;
 
-import de.tuberlin.aura.core.descriptors.Descriptors;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
+import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> {
 
@@ -75,20 +75,16 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
                     final TaskDeploymentDescriptor tdd =
-                            new TaskDeploymentDescriptor(
-                                    en.getTaskDescriptor(),
-                                    en.getTaskBindingDescriptor(),
-                                    en.logicalNode.dataPersistenceType,
-                                    en.logicalNode.executionType
-                            );
+                            new TaskDeploymentDescriptor(en.getTaskDescriptor(),
+                                                         en.getTaskBindingDescriptor(),
+                                                         en.logicalNode.dataPersistenceType,
+                                                         en.logicalNode.executionType);
 
-                    final Descriptors.MachineDescriptor machineDescriptor =
-                            en.getTaskDescriptor().getMachineDescriptor();
+                    final Descriptors.MachineDescriptor machineDescriptor = en.getTaskDescriptor().getMachineDescriptor();
 
-                    List<TaskDeploymentDescriptor> deploymentDescriptors =
-                            machineDeployment.get(machineDescriptor);
+                    List<TaskDeploymentDescriptor> deploymentDescriptors = machineDeployment.get(machineDescriptor);
 
-                    if(deploymentDescriptors == null) {
+                    if (deploymentDescriptors == null) {
                         deploymentDescriptors = new ArrayList<TaskDeploymentDescriptor>();
                         machineDeployment.put(machineDescriptor, deploymentDescriptors);
                     }
@@ -105,24 +101,18 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
             public void visit(final Node element) {
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
-                    final Descriptors.MachineDescriptor machineDescriptor =
-                            en.getTaskDescriptor().getMachineDescriptor();
+                    final Descriptors.MachineDescriptor machineDescriptor = en.getTaskDescriptor().getMachineDescriptor();
 
-                    List<TaskDeploymentDescriptor> tddList =
-                            machineDeployment.get(machineDescriptor);
+                    List<TaskDeploymentDescriptor> tddList = machineDeployment.get(machineDescriptor);
 
                     // If TDD are not yet shipped, then do it...
-                    if(tddList != null) {
+                    if (tddList != null) {
 
-                        final WM2TMProtocol tmProtocol =
-                                rpcManager.getRPCProtocolProxy(
-                                        WM2TMProtocol.class,
-                                        machineDescriptor
-                                );
+                        final WM2TMProtocol tmProtocol = rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, machineDescriptor);
 
                         tmProtocol.installTasks(tddList);
 
-                        //... and remove it from our mapping.
+                        // ... and remove it from our mapping.
                         machineDeployment.remove(machineDescriptor);
                     }
                 }

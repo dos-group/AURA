@@ -1,5 +1,13 @@
 package de.tuberlin.aura.workloadmanager;
 
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.log4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
@@ -11,13 +19,6 @@ import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
-import org.apache.log4j.Logger;
-
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 
 // TODO: introduce the concept of a session, that allows to submit multiple queries...
@@ -58,7 +59,7 @@ public class WorkloadManager implements ClientWMProtocol {
     }
 
     /**
-     *
+     * 
      * @param zkServer
      * @param machineDescriptor
      */
@@ -108,7 +109,7 @@ public class WorkloadManager implements ClientWMProtocol {
     // ---------------------------------------------------
 
     /**
-     *
+     * 
      * @param sessionID
      */
     @Override
@@ -143,7 +144,7 @@ public class WorkloadManager implements ClientWMProtocol {
     }
 
     /**
-     *
+     * 
      * @param sessionID
      */
     @Override
@@ -160,8 +161,8 @@ public class WorkloadManager implements ClientWMProtocol {
 
         for (final UUID topologyID : assignedTopologies) {
             final TopologyController topologyController = registeredTopologies.get(topologyID);
-            //topologyController.cancelTopology(); // TODO: Not implemented yet!
-            //unregisterTopology(topologyID);
+            // topologyController.cancelTopology(); // TODO: Not implemented yet!
+            // unregisterTopology(topologyID);
         }
 
         LOG.info("CLOSED SESSION [" + sessionID + "]");
@@ -183,7 +184,7 @@ public class WorkloadManager implements ClientWMProtocol {
     }
 
     /**
-     *
+     * 
      * @param topologyID
      */
     public void unregisterTopology(final UUID topologyID) {
@@ -194,7 +195,7 @@ public class WorkloadManager implements ClientWMProtocol {
         if (registeredTopologies.remove(topologyID) == null)
             throw new IllegalStateException("topologyID not found");
 
-        for(final Set<UUID> assignedTopologies : registeredSessions.values()) {
+        for (final Set<UUID> assignedTopologies : registeredSessions.values()) {
             if (assignedTopologies.contains(topologyID))
                 assignedTopologies.remove(topologyID);
         }
@@ -205,7 +206,7 @@ public class WorkloadManager implements ClientWMProtocol {
     // ---------------------------------------------------
 
     /**
-     *
+     * 
      * @param args
      */
     public static void main(final String[] args) {

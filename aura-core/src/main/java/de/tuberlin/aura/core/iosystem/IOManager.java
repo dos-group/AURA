@@ -383,9 +383,7 @@ public final class IOManager extends EventDispatcher {
             dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, networkConnectionSetupEventLoopGroup, allocator);
         }
 
-        public void buildLocalDataChannel(final UUID srcTaskID,
-                                          final UUID dstTaskID,
-                                          final MemoryManager.Allocator allocator) {
+        public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.Allocator allocator) {
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
@@ -397,9 +395,7 @@ public final class IOManager extends EventDispatcher {
             dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, localConnectionListenerEventLoopGroup, allocator);
         }
 
-        public void buildNetworkControlChannel(final UUID srcMachineID,
-                                               final UUID dstMachineID,
-                                               final InetSocketAddress socketAddress) {
+        public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress) {
             // sanity check.
             if (socketAddress == null)
                 throw new IllegalArgumentException("socketAddress == null");

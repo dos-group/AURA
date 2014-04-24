@@ -428,7 +428,8 @@ public class DataWriter {
               // amount.
               .option(ChannelOption.TCP_NODELAY, false)
               // size of the system lvl send bufferQueue PER SOCKET
-              // -> bufferQueue size, as we always have only 1 channel per socket in the examples case
+              // -> bufferQueue size, as we always have only 1 channel per socket in the examples
+              // case
               .option(ChannelOption.SO_SNDBUF, bufferSize)
               // the mark the outbound bufferQueue has to reach in order to change the writable
               // state of

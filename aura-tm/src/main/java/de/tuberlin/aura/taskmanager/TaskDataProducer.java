@@ -133,7 +133,7 @@ public final class TaskDataProducer implements DataProducer {
 
     /**
      * Return the gate index for the corresponding task ID.
-     *
+     * 
      * @param taskID The unique ID of a connected task.
      * @return The gate index or null if no suitable mapping exists.
      */
@@ -163,9 +163,9 @@ public final class TaskDataProducer implements DataProducer {
                 for (final Descriptors.TaskDescriptor outputTask : outputGate) {
 
                     driverContext.managerContext.ioManager.connectDataChannel(driverContext.taskDescriptor.taskID,
-                            outputTask.taskID,
-                            outputTask.getMachineDescriptor(),
-                            outputAllocator);
+                                                                              outputTask.taskID,
+                                                                              outputTask.getMachineDescriptor(),
+                                                                              outputAllocator);
                 }
             }
         }
@@ -173,7 +173,7 @@ public final class TaskDataProducer implements DataProducer {
 
     /**
      * Create the output gates from the binding descriptor.
-     *
+     * 
      * @return The list of output gates or null if no the task has no outputs.
      */
     private List<OutputGate> createOutputGates() {

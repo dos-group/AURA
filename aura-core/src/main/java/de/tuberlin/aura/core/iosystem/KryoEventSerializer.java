@@ -1,10 +1,17 @@
 package de.tuberlin.aura.core.iosystem;
 
 
+import java.util.Arrays;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
+
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
@@ -18,11 +25,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Arrays;
-import java.util.UUID;
 
 // TODO: set unique id for serializer!
 // TODO: What for a unique id?
@@ -112,11 +114,13 @@ public final class KryoEventSerializer {
 
     public static class DataIOEventSerializer extends Serializer<IOEvents.DataIOEvent> {
 
-        public DataIOEventSerializer() {
-        }
+        public DataIOEventSerializer() {}
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.DataIOEvent dataIOEvent) {
+
+            // TODO: Use UUIDSerializer
+
             output.writeString(dataIOEvent.type);
             output.writeLong(dataIOEvent.srcTaskID.getMostSignificantBits());
             output.writeLong(dataIOEvent.srcTaskID.getLeastSignificantBits());
@@ -141,14 +145,16 @@ public final class KryoEventSerializer {
         private TaskExecutionManager executionManager;
 
 
-        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator,
-                                             final TaskExecutionManager executionManager) {
+        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator, final TaskExecutionManager executionManager) {
             this.allocator = allocator;
             this.executionManager = executionManager;
         }
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.TransferBufferEvent transferBufferEvent) {
+
+            // TODO: Use UUIDSerializer
+
             output.writeLong(transferBufferEvent.srcTaskID.getMostSignificantBits());
             output.writeLong(transferBufferEvent.srcTaskID.getLeastSignificantBits());
             output.writeLong(transferBufferEvent.dstTaskID.getMostSignificantBits());
@@ -181,9 +187,15 @@ public final class KryoEventSerializer {
                 } else {
                     if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
                         if (gateIndex == 0) {
-                            allocator = new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(), Arrays.asList(allocatorGroup.getAllocator(0), allocatorGroup.getAllocator(1)));
+                            allocator =
+                                    new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                                                           Arrays.asList(allocatorGroup.getAllocator(0),
+                                                                                         allocatorGroup.getAllocator(1)));
                         } else {
-                            allocator = new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(), Arrays.asList(allocatorGroup.getAllocator(2), allocatorGroup.getAllocator(3)));
+                            allocator =
+                                    new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                                                           Arrays.asList(allocatorGroup.getAllocator(2),
+                                                                                         allocatorGroup.getAllocator(3)));
                         }
                     } else {
                         throw new IllegalStateException("Not supported more than two input gates.");

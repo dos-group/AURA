@@ -7,6 +7,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
@@ -17,8 +20,6 @@ import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public final class SimpleClient {
 
@@ -288,6 +289,6 @@ public final class SimpleClient {
 
         ac.closeSession();
 
-        //lce.shutdown();
+        // lce.shutdown();
     }
 }

@@ -1,8 +1,8 @@
 package de.tuberlin.aura.core.protocols;
 
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
-
 import java.util.List;
+
+import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 
 public interface WM2TMProtocol {
 
