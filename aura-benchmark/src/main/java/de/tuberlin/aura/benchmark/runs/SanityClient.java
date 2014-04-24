@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.client;
+package de.tuberlin.aura.benchmark.runs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,6 +8,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.statistic.record.Record;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,7 @@ import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import de.tuberlin.aura.core.task.common.*;
-import de.tuberlin.aura.core.task.common.BenchmarkRecord.SanityBenchmarkRecord;
+import de.tuberlin.aura.core.statistic.record.BenchmarkRecord.SanityBenchmarkRecord;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
@@ -36,8 +37,8 @@ public final class SanityClient {
     private SanityClient() {}
 
     /**
-*
-*/
+     *
+     */
     public static class Source extends TaskInvokeable {
 
         private static final int RECORDS = 100;
@@ -82,8 +83,8 @@ public final class SanityClient {
     }
 
     /**
-*
-*/
+     *
+     */
     public static class ForwardWithOneInput extends TaskInvokeable {
 
         public ForwardWithOneInput(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {

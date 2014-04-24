@@ -1,21 +1,33 @@
-package de.tuberlin.aura.demo.benchmark;
+package de.tuberlin.aura.benchmark.evaluators;
 
 import java.io.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
-import de.tuberlin.aura.core.task.common.MedianHelper;
+import de.tuberlin.aura.core.statistic.MedianHelper;
 
 /**
- * Created by teots on 2/27/14.
+ *
  */
 public class BenchmarkEvaluator {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private String path;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     public BenchmarkEvaluator(String path) {
         this.path = path;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public void evaluate() {
         DecimalFormat format = new DecimalFormat("000");
@@ -102,6 +114,10 @@ public class BenchmarkEvaluator {
         System.out.println("Median Queue Latency: " + MedianHelper.findMedianDouble(queuingTimes) + " ms");
         System.out.println("Avg Queue Size: " + Double.toString((double) queueSizeSum / (double) queueSize.size()));
     }
+
+    // ---------------------------------------------------
+    // Main.
+    // ---------------------------------------------------
 
     public static void main(String[] args) {
         BenchmarkEvaluator evaluator = new BenchmarkEvaluator("/home/teots/Desktop/logs");

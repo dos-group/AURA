@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.benchmark;
+package de.tuberlin.aura.benchmark.evaluators;
 
 import java.io.*;
 import java.text.DecimalFormat;
@@ -7,18 +7,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import de.tuberlin.aura.core.task.common.MedianHelper;
+import de.tuberlin.aura.core.statistic.MedianHelper;
 
 /**
- * Created by teots on 2/27/14.
+ *
  */
 public class MapReduceEvaluator {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private String path;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     public MapReduceEvaluator(String path) {
         this.path = path;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public void evaluate() {
         DecimalFormat format = new DecimalFormat("0.00");
@@ -121,6 +133,10 @@ public class MapReduceEvaluator {
         System.out.println("Avg throughput: " + format.format(avgThroughput));
         System.out.println("Mdn throughput: " + format.format(mdnThroughput));
     }
+
+    // ---------------------------------------------------
+    // Main.
+    // ---------------------------------------------------
 
     public static void main(String[] args) {
         MapReduceEvaluator evaluator = new MapReduceEvaluator("/home/teots/Desktop/logs");

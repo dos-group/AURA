@@ -107,7 +107,7 @@ public final class AuraClient {
 
         this.registeredTopologyMonitors = new HashMap<>();
 
-        // create client session.
+        // create examples session.
         this.clientSessionID = UUID.randomUUID();
 
         clientProtocol.openSession(clientSessionID);

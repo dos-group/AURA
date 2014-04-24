@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.client;
+package de.tuberlin.aura.demo.examples;
 
 public final class TwoTaskTest {
     /*

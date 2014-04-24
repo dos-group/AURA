@@ -120,7 +120,7 @@ public class WorkloadManager implements ClientWMProtocol {
         if (registeredSessions.containsKey(sessionID))
             throw new IllegalStateException("session with this ID [" + sessionID.toString() + "] already exists");
 
-        // register a new session for a client.
+        // register a new session for a examples.
         registeredSessions.put(sessionID, new HashSet<UUID>());
         LOG.info("OPENED SESSION [" + sessionID + "]");
     }
@@ -155,7 +155,7 @@ public class WorkloadManager implements ClientWMProtocol {
         if (!registeredSessions.containsKey(sessionID))
             throw new IllegalStateException("session with this ID [" + sessionID.toString() + "] does not exist");
 
-        // register a new session for a client.
+        // register a new session for a examples.
         final Set<UUID> assignedTopologies = registeredSessions.get(sessionID);
 
         for (final UUID topologyID : assignedTopologies) {

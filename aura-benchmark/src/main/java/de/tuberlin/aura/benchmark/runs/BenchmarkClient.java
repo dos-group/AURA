@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.client;
+package de.tuberlin.aura.benchmark.runs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,6 +8,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.statistic.record.BenchmarkRecord;
+import de.tuberlin.aura.core.statistic.MedianHelper;
+import de.tuberlin.aura.core.statistic.record.Record;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.task.common;
+package de.tuberlin.aura.core.statistic;
 
 import java.util.LinkedList;
 import java.util.List;

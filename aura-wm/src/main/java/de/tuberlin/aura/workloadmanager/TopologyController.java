@@ -274,7 +274,7 @@ public class TopologyController extends EventDispatcher {
 
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                // Send to the client the finish notification...
+                // Send to the examples the finish notification...
                 IOEvents.ControlIOEvent event = new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED);
                 event.setPayload(TopologyController.this.topology.name);
 

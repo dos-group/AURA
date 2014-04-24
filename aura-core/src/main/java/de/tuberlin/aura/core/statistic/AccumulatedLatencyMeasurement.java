@@ -1,9 +1,13 @@
 package de.tuberlin.aura.core.statistic;
 
 /**
- * Created by teots on 3/12/14.
+ *
  */
 public class AccumulatedLatencyMeasurement extends Measurement {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
     private long minTime = 0l;
 
@@ -13,6 +17,10 @@ public class AccumulatedLatencyMeasurement extends Measurement {
 
     private long mdnTime = 0l;
 
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
+
     public AccumulatedLatencyMeasurement(MeasurementType type, String description, long minTime, long maxTime, double avgTime, long mdnTime) {
         super(type, description);
         this.minTime = minTime;
@@ -20,6 +28,10 @@ public class AccumulatedLatencyMeasurement extends Measurement {
         this.avgTime = avgTime;
         this.mdnTime = mdnTime;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     @Override
     public String getHeader() {

@@ -14,15 +14,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ConcurrentHashMultiset;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 
-/**
- * @author Christian Wuertz, Asterios Katsifodimos
- */
 @ThreadSafe
 public class MeasurementManager extends EventHandler {
 
-    /**
-     * Logger.
-     */
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private static final Logger LOG = LoggerFactory.getLogger(MeasurementManager.class);
 
     private static String ROOT = null;
@@ -35,10 +33,13 @@ public class MeasurementManager extends EventHandler {
 
     private final EnumMap<MeasurementType, ConcurrentHashMultiset<Measurement>> measurements;
 
-    // TODO: Make this configurable from the outside
-    public String path;
+    public String path;  // TODO: Make this configurable from the outside
 
     public String name;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     private MeasurementManager(String path, String name) {
         this.path = path;
@@ -50,6 +51,10 @@ public class MeasurementManager extends EventHandler {
             this.measurements.put(type, ConcurrentHashMultiset.<Measurement>create());
         }
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     /**
      * Initialize the config of this class. This should be done by either the WorkloadManager or the
