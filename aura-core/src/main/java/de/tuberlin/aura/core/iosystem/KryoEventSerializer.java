@@ -1,18 +1,10 @@
 package de.tuberlin.aura.core.iosystem;
 
 
-import java.util.Arrays;
-import java.util.UUID;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
-
-import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
@@ -26,6 +18,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+
+import java.util.Arrays;
+import java.util.UUID;
 
 // TODO: set unique id for serializer!
 // TODO: What for a unique id?
@@ -98,17 +93,12 @@ public final class KryoEventSerializer {
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-            try {
-                final ByteBuf ioBuffer = ctx.alloc().buffer();
-                ioBuffer.writeInt(0);
-                kryo.writeClassAndObject(new Output(new ByteBufOutputStream(ioBuffer)), msg);
-                final int size = ioBuffer.writerIndex() - 4;
-                ioBuffer.writerIndex(0).writeInt(size).writerIndex(size + 4);
-                ctx.write(ioBuffer, promise);
-            } catch (Exception e) {
-                LOG.error("Exception: {}", e);
-                throw e;
-            }
+            final ByteBuf ioBuffer = ctx.alloc().buffer();
+            ioBuffer.writeInt(0);
+            kryo.writeClassAndObject(new Output(new ByteBufOutputStream(ioBuffer)), msg);
+            final int size = ioBuffer.writerIndex() - 4;
+            ioBuffer.writerIndex(0).writeInt(size).writerIndex(size + 4);
+            ctx.write(ioBuffer, promise);
         }
     }
 
@@ -120,57 +110,37 @@ public final class KryoEventSerializer {
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.BaseIOEvent baseIOEvent) {
-            try {
-                output.writeString(baseIOEvent.type);
-                output.flush();
-            } catch (Exception e) {
-                LOG.error("Exception: {}", e);
-                throw e;
-            }
+            output.writeString(baseIOEvent.type);
+            output.flush();
         }
 
         @Override
         public IOEvents.BaseIOEvent read(Kryo kryo, Input input, Class<IOEvents.BaseIOEvent> type) {
-            try {
-                return new IOEvents.BaseIOEvent(input.readString());
-            } catch (Exception e) {
-                LOG.error("Exception: {}", e);
-                throw e;
-            }
+            return new IOEvents.BaseIOEvent(input.readString());
         }
     }
 
     public static class DataIOEventSerializer extends Serializer<IOEvents.DataIOEvent> {
 
-        public DataIOEventSerializer() {}
+        public DataIOEventSerializer() {
+        }
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.DataIOEvent dataIOEvent) {
-            try {
-                output.writeString(dataIOEvent.type);
-                output.writeLong(dataIOEvent.srcTaskID.getMostSignificantBits());
-                output.writeLong(dataIOEvent.srcTaskID.getLeastSignificantBits());
-                output.writeLong(dataIOEvent.dstTaskID.getMostSignificantBits());
-                output.writeLong(dataIOEvent.dstTaskID.getLeastSignificantBits());
-                output.flush();
-            } catch (Exception e) {
-                LOG.error("Exception: {}", e);
-                throw e;
-            }
+            output.writeString(dataIOEvent.type);
+            output.writeLong(dataIOEvent.srcTaskID.getMostSignificantBits());
+            output.writeLong(dataIOEvent.srcTaskID.getLeastSignificantBits());
+            output.writeLong(dataIOEvent.dstTaskID.getMostSignificantBits());
+            output.writeLong(dataIOEvent.dstTaskID.getLeastSignificantBits());
+            output.flush();
         }
 
         @Override
         public IOEvents.DataIOEvent read(Kryo kryo, Input input, Class<IOEvents.DataIOEvent> type) {
-            try {
-                final String eventType = input.readString();
-                final UUID src = new UUID(input.readLong(), input.readLong());
-                final UUID dst = new UUID(input.readLong(), input.readLong());
-
-                return new IOEvents.DataIOEvent(eventType, src, dst);
-            } catch (Exception e) {
-                LOG.error("Exception: {}", e);
-                throw e;
-            }
+            final String eventType = input.readString();
+            final UUID src = new UUID(input.readLong(), input.readLong());
+            final UUID dst = new UUID(input.readLong(), input.readLong());
+            return new IOEvents.DataIOEvent(eventType, src, dst);
         }
     }
 
@@ -180,92 +150,62 @@ public final class KryoEventSerializer {
 
         private TaskExecutionManager executionManager;
 
-        private long readExecutionCounter = 0;
 
-        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator, final TaskExecutionManager executionManager) {
+        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator,
+                                             final TaskExecutionManager executionManager) {
             this.allocator = allocator;
             this.executionManager = executionManager;
         }
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.TransferBufferEvent transferBufferEvent) {
-            try {
-                // TODO: Use UUIDSerializer
-                output.writeLong(transferBufferEvent.srcTaskID.getMostSignificantBits());
-                output.writeLong(transferBufferEvent.srcTaskID.getLeastSignificantBits());
-                output.writeLong(transferBufferEvent.dstTaskID.getMostSignificantBits());
-                output.writeLong(transferBufferEvent.dstTaskID.getLeastSignificantBits());
-                output.writeLong(transferBufferEvent.messageID.getMostSignificantBits());
-                output.writeLong(transferBufferEvent.messageID.getLeastSignificantBits());
-                output.writeBytes(transferBufferEvent.buffer.memory, transferBufferEvent.buffer.baseOffset, allocator.getBufferSize());
-                output.flush();
-
-                // TODO: executionManager is null here
-                // Descriptors.TaskDescriptor td =
-                // executionManager.findTaskExecutionUnitByTaskID(transferBufferEvent.srcTaskID).getCurrentTaskDriverContext().taskDescriptor;
-                // LOG.debug("Free for {} {}", td.name, td.taskIndex);
-                transferBufferEvent.buffer.free();
-                // LOG.debug("Free for {} {} - done", td.name, td.taskIndex);
-            } catch (Exception e) {
-                LOG.error("Exception: {}", e);
-                throw e;
-            }
+            output.writeLong(transferBufferEvent.srcTaskID.getMostSignificantBits());
+            output.writeLong(transferBufferEvent.srcTaskID.getLeastSignificantBits());
+            output.writeLong(transferBufferEvent.dstTaskID.getMostSignificantBits());
+            output.writeLong(transferBufferEvent.dstTaskID.getLeastSignificantBits());
+            output.writeLong(transferBufferEvent.messageID.getMostSignificantBits());
+            output.writeLong(transferBufferEvent.messageID.getLeastSignificantBits());
+            output.writeBytes(transferBufferEvent.buffer.memory, transferBufferEvent.buffer.baseOffset, allocator.getBufferSize());
+            output.flush();
+            transferBufferEvent.buffer.free();
         }
 
         @Override
         public IOEvents.TransferBufferEvent read(Kryo kryo, Input input, Class<IOEvents.TransferBufferEvent> type) {
+            final UUID src = new UUID(input.readLong(), input.readLong());
+            final UUID dst = new UUID(input.readLong(), input.readLong());
+            final UUID msgID = new UUID(input.readLong(), input.readLong());
 
-            try {
-                final UUID src = new UUID(input.readLong(), input.readLong());
-                final UUID dst = new UUID(input.readLong(), input.readLong());
-                final UUID msgID = new UUID(input.readLong(), input.readLong());
+            if (allocator == null) {
+                final TaskExecutionManager tem = executionManager;
+                final TaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
+                final TaskDriverContext taskDriverContext = executionUnit.getCurrentTaskDriverContext();
+                final DataConsumer dataConsumer = taskDriverContext.getDataConsumer();
+                final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
+                MemoryManager.BufferAllocatorGroup allocatorGroup = executionUnit.getInputAllocator();
 
-                if (allocator == null) {
-                    final TaskExecutionManager tem = executionManager;
-                    final TaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
-                    final TaskDriverContext taskDriverContext = executionUnit.getCurrentTaskDriverContext();
-                    final DataConsumer dataConsumer = taskDriverContext.getDataConsumer();
-                    final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
-                    MemoryManager.BufferAllocatorGroup allocatorGroup = executionUnit.getInputAllocator();
+                // -------------------- STUPID HOT FIX --------------------
 
-                    // -------------------- STUPID HOT FIX --------------------
-
-                    if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 1) {
-                        allocator = allocatorGroup;
-                    } else {
-                        if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
-                            if (gateIndex == 0) {
-                                allocator =
-                                        new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                                               Arrays.asList(allocatorGroup.getAllocator(0),
-                                                                                             allocatorGroup.getAllocator(1)));
-                            } else {
-                                allocator =
-                                        new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                                               Arrays.asList(allocatorGroup.getAllocator(2),
-                                                                                             allocatorGroup.getAllocator(3)));
-                            }
+                if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 1) {
+                    allocator = allocatorGroup;
+                } else {
+                    if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
+                        if (gateIndex == 0) {
+                            allocator = new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(), Arrays.asList(allocatorGroup.getAllocator(0), allocatorGroup.getAllocator(1)));
                         } else {
-                            throw new IllegalStateException("Not supported more than two input gates.");
+                            allocator = new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(), Arrays.asList(allocatorGroup.getAllocator(2), allocatorGroup.getAllocator(3)));
                         }
+                    } else {
+                        throw new IllegalStateException("Not supported more than two input gates.");
                     }
-
-                    // -------------------- STUPID HOT FIX --------------------
                 }
 
-                // TODO: Remove expensive logging
-                Descriptors.TaskDescriptor td = executionManager.findTaskExecutionUnitByTaskID(dst).getCurrentTaskDriverContext().taskDescriptor;
-                LOG.debug("Read for {} {}", td.name, td.taskIndex);
-                final MemoryManager.MemoryView buffer = allocator.alloc();
-                LOG.debug("Read for {} {} -> memory allocated", td.name, td.taskIndex);
-
-                input.readBytes(buffer.memory, buffer.baseOffset, allocator.getBufferSize());
-
-                return new IOEvents.TransferBufferEvent(msgID, src, dst, buffer);
-            } catch (Exception e) {
-                LOG.error("Exception: {}", e);
-                throw e;
+                // -------------------- STUPID HOT FIX --------------------
             }
+
+            final MemoryManager.MemoryView buffer = allocator.alloc();
+            input.readBytes(buffer.memory, buffer.baseOffset, allocator.getBufferSize());
+            return new IOEvents.TransferBufferEvent(msgID, src, dst, buffer);
         }
     }
 }

@@ -50,16 +50,16 @@ public class TestClient {
 
             final UUID taskID = driverContext.taskDescriptor.taskID;
 
-            int i = 0;
-            while (i++ < 1500 && isInvokeableRunning()) {
-                final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
+            //int i = 0;
+            //while (i++ < 1500 && isInvokeableRunning()) {
+            //    final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 /*for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
                     final MemoryManager.MemoryView buffer = producer.alloc();
                     final IOEvents.DataIOEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
                     producer.emit(0, index, outputBuffer);
                 }*/
-            }
+            //}
         }
 
         @Override

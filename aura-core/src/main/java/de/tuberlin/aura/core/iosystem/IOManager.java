@@ -314,7 +314,7 @@ public final class IOManager extends EventDispatcher {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (cf.isSuccess()) {
-                    LOG.info("network server bound to adress " + machine.dataAddress);
+                    LOG.info("network server bound to address " + machine.dataAddress);
                 } else {
                     LOG.error("bound attempt failed: " + cf.cause().getLocalizedMessage());
                     throw new IllegalStateException("could not start netty network server");
@@ -383,7 +383,9 @@ public final class IOManager extends EventDispatcher {
             dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, networkConnectionSetupEventLoopGroup, allocator);
         }
 
-        public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.Allocator allocator) {
+        public void buildLocalDataChannel(final UUID srcTaskID,
+                                          final UUID dstTaskID,
+                                          final MemoryManager.Allocator allocator) {
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
@@ -395,7 +397,9 @@ public final class IOManager extends EventDispatcher {
             dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, localConnectionListenerEventLoopGroup, allocator);
         }
 
-        public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress) {
+        public void buildNetworkControlChannel(final UUID srcMachineID,
+                                               final UUID dstMachineID,
+                                               final InetSocketAddress socketAddress) {
             // sanity check.
             if (socketAddress == null)
                 throw new IllegalArgumentException("socketAddress == null");
