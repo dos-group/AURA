@@ -98,6 +98,9 @@ public final class IOEvents {
         }
     }
 
+    /**
+     *
+     */
     public static class GenericIOEvent extends DataIOEvent {
 
         public final Object payload;

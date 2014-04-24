@@ -1,13 +1,21 @@
 package de.tuberlin.aura.core.statistic;
 
 /**
- * Created by teots on 3/12/14.
+ *
  */
 public class ThroughputMeasurement extends Measurement {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
     private static final boolean MEASURE_TIME_IN_MILLISECONDS = true;
 
     private long throughput = 0;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     /**
      * TODO: Make the size of the time slot variable.
@@ -22,6 +30,10 @@ public class ThroughputMeasurement extends Measurement {
         this.throughput = throughput;
         this.timestamp = timeslot;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     @Override
     public String getHeader() {
@@ -53,7 +65,6 @@ public class ThroughputMeasurement extends Measurement {
         result = prime * result + (this.type.hashCode());
         result = prime * result + (this.description.hashCode());
         result = prime * result + (int) (this.throughput);
-
         return result;
     }
 
@@ -66,7 +77,6 @@ public class ThroughputMeasurement extends Measurement {
         builder.append("\t");
         builder.append((double) this.throughput * 8.0d / 1024.0d / 1024.0d);
         builder.append(" Mbit/s");
-
         return builder.toString();
     }
 }

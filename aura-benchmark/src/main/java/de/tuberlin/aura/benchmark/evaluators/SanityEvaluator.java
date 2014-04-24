@@ -1,19 +1,31 @@
-package de.tuberlin.aura.demo.benchmark;
+package de.tuberlin.aura.benchmark.evaluators;
 
 import java.io.*;
 
 /**
- * Created by teots on 2/27/14.
+ *
  */
 public class SanityEvaluator {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
     private static final int EXECUTION_UNITS = 8;
 
     private String path;
 
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
+
     public SanityEvaluator(String path) {
         this.path = path;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public void evaluate() {
 
@@ -57,6 +69,10 @@ public class SanityEvaluator {
         System.out.println("Buffer Diff: " + Integer.toString(sumSources - sumSinks));
     }
 
+    // ---------------------------------------------------
+    // Private Methods.
+    // ---------------------------------------------------
+
     private void checkForExceptions(File file) {
 
         int running = 0;
@@ -90,6 +106,10 @@ public class SanityEvaluator {
             System.out.println("Running: " + Integer.toString(running) + " Finished: " + Integer.toString(finished));
         }
     }
+
+    // ---------------------------------------------------
+    // Main.
+    // ---------------------------------------------------
 
     public static void main(String[] args) {
         SanityEvaluator evaluator = new SanityEvaluator("/home/teots/Desktop/logs");

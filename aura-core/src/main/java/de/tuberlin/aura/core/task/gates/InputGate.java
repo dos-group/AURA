@@ -20,8 +20,8 @@ public final class InputGate extends AbstractGate {
     private DataReader channelReader;
 
     private static final Logger LOG = LoggerFactory.getLogger(InputGate.class);
-	
-	// ---------------------------------------------------
+
+    // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
@@ -32,6 +32,7 @@ public final class InputGate extends AbstractGate {
     public InputGate(final TaskDriverContext context, int gateIndex) {
         super(context, gateIndex, context.taskBindingDescriptor.inputGateBindings.get(gateIndex).size());
     }
+
     // ---------------------------------------------------
     // Public.
     // ---------------------------------------------------

@@ -314,7 +314,7 @@ public final class IOManager extends EventDispatcher {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
                 if (cf.isSuccess()) {
-                    LOG.info("network server bound to adress " + machine.dataAddress);
+                    LOG.info("network server bound to address " + machine.dataAddress);
                 } else {
                     LOG.error("bound attempt failed: " + cf.cause().getLocalizedMessage());
                     throw new IllegalStateException("could not start netty network server");
