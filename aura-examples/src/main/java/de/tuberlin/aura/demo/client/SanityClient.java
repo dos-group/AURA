@@ -282,7 +282,7 @@ public final class SanityClient {
         // LOG.addAppender(consoleAppender);
         // LOG.setLevel(Level.INFO);
 
-        int machines = 10;
+        int machines = 99;
 
         // Local
         // final String measurementPath = "/home/teots/Desktop/logs";

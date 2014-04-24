@@ -62,6 +62,7 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
      * @param topology
      */
     private void scheduleTopology(AuraTopology topology) {
+        LOG.debug("Schedule topology [{}] on {} task managers", topology.name, infrastructureManager.getNumberOfMachine());
 
         // Scheduling.
         TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
