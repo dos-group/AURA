@@ -188,7 +188,7 @@ public final class TaskExecutionManager extends EventDispatcher {
                         public void operationComplete(ChannelFuture future) throws Exception {
                             try {
                                 Channel channel = future.channel();
-                                LOG.debug("Change event loop from {} to event loop of task {}", channel.eventLoop().parent(), event.dstTaskID);
+                                LOG.trace("Change event loop from {} to event loop of task {}", channel.eventLoop().parent(), event.dstTaskID);
 
                                 // Determine the execution unit the given channel is connected to.
                                 TaskExecutionUnit executionUnit = findTaskExecutionUnitByTaskID(event.dstTaskID);
@@ -230,7 +230,7 @@ public final class TaskExecutionManager extends EventDispatcher {
                                 // Enable auto read again.
                                 channel.config().setAutoRead(true);
 
-                                LOG.debug("Changed event loop to {}", channel.eventLoop().parent());
+                                LOG.trace("Changed event loop to {}", channel.eventLoop().parent());
                             } catch (Throwable t) {
                                 LOG.error(t.getLocalizedMessage(), t);
                                 throw t;

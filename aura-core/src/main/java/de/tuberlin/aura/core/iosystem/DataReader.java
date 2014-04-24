@@ -166,12 +166,25 @@ public class DataReader {
         return inputQueues.get(gateToQueueIndex.get(new Pair<UUID, Integer>(taskID, gateIndex)));
     }
 
-
-    public void bindQueue(final UUID srcTaskID,
-                          final Channel channel,
-                          final int gateIndex,
-                          final int channelIndex,
-                          final BufferQueue<IOEvents.DataIOEvent> queue) {
+    /**
+     * TODO: Is the "synchronized" annotation really necessary? Without this annotation access to
+     * the channelToQueueIndex rarely causes a NullPointerException. Maybe it is enough to use
+     * synchronized maps. However, the performance influence of each solution must be evaluated.
+     * 
+     * We could execute ~350 topologies one after the other without any problems while using a
+     * synchronized version of this method.
+     * 
+     * @param srcTaskID
+     * @param channel
+     * @param gateIndex
+     * @param channelIndex
+     * @param queue
+     */
+    public synchronized void bindQueue(final UUID srcTaskID,
+                                       final Channel channel,
+                                       final int gateIndex,
+                                       final int channelIndex,
+                                       final BufferQueue<IOEvents.DataIOEvent> queue) {
 
         Pair<UUID, Integer> index = new Pair<>(srcTaskID, gateIndex);
         final int queueIndex;

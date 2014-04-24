@@ -68,7 +68,7 @@ public class SanityEvaluator {
             BufferedReader br = new BufferedReader(new FileReader(file));
             String line = null;
             while ((line = br.readLine()) != null) {
-                if (line.toLowerCase().contains("exception") || line.toLowerCase().contains("ERROR") || line.contains("WARN")) {
+                if (line.toLowerCase().contains("exception") || line.contains("ERROR") || line.contains("WARN")) {
                     System.out.print(file.getPath() + " -> ");
                     System.out.println(line);
                 } else if (line.contains("TASK_STATE_RUNNING  [TASK_TRANSITION_RUN]")) {

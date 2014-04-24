@@ -243,7 +243,7 @@ public final class Client {
         // Add the job resubmission handler.
         ac.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, new EventHandler() {
 
-            private int runs = 1;
+            private int runs = 5;
 
             private int jobCounter = 1;
 

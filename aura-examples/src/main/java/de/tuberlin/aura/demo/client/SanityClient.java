@@ -3,6 +3,7 @@ package de.tuberlin.aura.demo.client;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
@@ -19,8 +20,8 @@ import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import de.tuberlin.aura.core.task.common.*;
 import de.tuberlin.aura.core.task.common.BenchmarkRecord.SanityBenchmarkRecord;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
 
@@ -83,9 +84,9 @@ public final class SanityClient {
     /**
 *
 */
-    public static class Task2Exe extends TaskInvokeable {
+    public static class ForwardWithOneInput extends TaskInvokeable {
 
-        public Task2Exe(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
+        public ForwardWithOneInput(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
         }
 
@@ -109,18 +110,18 @@ public final class SanityClient {
                     final Record<SanityBenchmarkRecord> record = driverContext.recordReader.readRecord(event);
                     ++bufferCount;
 
+                    if (!record.getData().nextTask.equals(driverContext.taskDescriptor.taskID)) {
+                        LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found "
+                                + driverContext.taskDescriptor.taskID + " Task: " + driverContext.taskDescriptor.name);
+                    } else {
+                        ++correct;
+                    }
+
                     for (int index = 0; index < outputs.size(); ++index) {
                         final UUID outputTaskID = getTaskID(0, index);
 
                         final MemoryManager.MemoryView sendBuffer = producer.alloc();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
-
-                        if (!record.getData().nextTask.equals(driverContext.taskDescriptor.taskID)) {
-                            LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found "
-                                    + driverContext.taskDescriptor.taskID + " Task: " + driverContext.taskDescriptor.name);
-                        } else {
-                            ++correct;
-                        }
 
                         record.getData().nextTask = outputTaskID;
 
@@ -143,12 +144,100 @@ public final class SanityClient {
         }
     }
 
+    public static class ForwardWithTwoInputs extends TaskInvokeable {
+
+        public ForwardWithTwoInputs(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
+            super(context, producer, consumer, LOG);
+        }
+
+        @Override
+        public void open() throws Throwable {
+            consumer.openGate(0);
+            consumer.openGate(1);
+        }
+
+        @Override
+        public void run() throws Throwable {
+            final UUID taskID = driverContext.taskDescriptor.taskID;
+            final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
+
+            long bufferCount = 0l;
+            long correct = 0l;
+
+            while (!consumer.isExhausted() && isInvokeableRunning()) {
+                final IOEvents.TransferBufferEvent leftEvent = consumer.absorb(0);
+                final IOEvents.TransferBufferEvent rightEvent = consumer.absorb(1);
+
+                if (leftEvent != null) {
+                    final Record<SanityBenchmarkRecord> leftRecord = driverContext.recordReader.readRecord(leftEvent);
+                    ++bufferCount;
+
+                    if (!leftRecord.getData().nextTask.equals(driverContext.taskDescriptor.taskID)) {
+                        LOG.error("Buffer expected taskID: " + leftRecord.getData().nextTask.toString() + " but found "
+                                + driverContext.taskDescriptor.taskID + " Task: " + driverContext.taskDescriptor.name);
+                    } else {
+                        ++correct;
+                    }
+
+                    for (int index = 0; index < outputs.size(); ++index) {
+                        final UUID outputTaskID = getTaskID(0, index);
+
+                        final MemoryManager.MemoryView sendBuffer = producer.alloc();
+                        final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
+
+                        leftRecord.getData().nextTask = outputTaskID;
+
+                        driverContext.recordWriter.writeRecord(leftRecord, outputBuffer);
+                        producer.emit(0, index, outputBuffer);
+                    }
+
+                    leftEvent.buffer.free();
+                }
+
+                if (rightEvent != null) {
+                    final Record<SanityBenchmarkRecord> rightRecord = driverContext.recordReader.readRecord(leftEvent);
+                    ++bufferCount;
+
+                    if (!rightRecord.getData().nextTask.equals(driverContext.taskDescriptor.taskID)) {
+                        LOG.error("Buffer expected taskID: " + rightRecord.getData().nextTask.toString() + " but found "
+                                + driverContext.taskDescriptor.taskID + " Task: " + driverContext.taskDescriptor.name);
+                    } else {
+                        ++correct;
+                    }
+
+                    for (int index = 0; index < outputs.size(); ++index) {
+                        final UUID outputTaskID = getTaskID(0, index);
+
+                        final MemoryManager.MemoryView sendBuffer = producer.alloc();
+                        final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
+
+                        rightRecord.getData().nextTask = outputTaskID;
+
+                        driverContext.recordWriter.writeRecord(rightRecord, outputBuffer);
+                        producer.emit(0, index, outputBuffer);
+                    }
+
+                    rightEvent.buffer.free();
+                }
+            }
+
+            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
+            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
+        }
+
+        @Override
+        public void close() throws Throwable {
+            LOG.debug("{} {} done", driverContext.taskDescriptor.name, driverContext.taskDescriptor.taskIndex);
+            producer.done();
+        }
+    }
+
     /**
      *
      */
-    public static class Task3Exe extends TaskInvokeable {
+    public static class Sink extends TaskInvokeable {
 
-        public Task3Exe(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
+        public Sink(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
         }
 
@@ -193,6 +282,8 @@ public final class SanityClient {
         // LOG.addAppender(consoleAppender);
         // LOG.setLevel(Level.INFO);
 
+        int machines = 10;
+
         // Local
         // final String measurementPath = "/home/teots/Desktop/logs";
         // final String zookeeperAddress = "localhost:2181";
@@ -201,62 +292,21 @@ public final class SanityClient {
         // LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
         // true,
         // zookeeperAddress,
-        // 6,
+        // machines,
         // measurementPath);
 
         // Wally
         final String zookeeperAddress = "wally101.cit.tu-berlin.de:2181";
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
-
-        final AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-        atb1.addNode(new Node(UUID.randomUUID(), "Source", 264, 1), Source.class)
-            .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Node(UUID.randomUUID(), "Middle", 264, 1), Task2Exe.class)
-            .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-            .addNode(new Node(UUID.randomUUID(), "Sink", 264, 1), Task3Exe.class);
-        // atb1.addNode(new Node(UUID.randomUUID(), "Source", 396, 1), Source.class)
-        // .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", 396, 1), Task3Exe.class);
+        List<AuraTopology> topologies = buildTopologies(ac, machines, 8);
+        SubmissionHandler handler = new SubmissionHandler(ac, topologies, 1);
 
         // Add the job resubmission handler.
-        ac.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, new EventHandler() {
+        ac.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, handler);
 
-            private int runs = 1;
-
-            private int jobCounter = 1;
-
-            @Handle(event = IOEvents.ControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
-            private void handleTopologyFinished(final IOEvents.ControlIOEvent event) {
-                String jobName = (String) event.getPayload();
-                LOG.info("Topology ({}) finished.", jobName);
-
-                if (jobCounter < runs) {
-                    Thread t = new Thread() {
-
-                        public void run() {
-                            // This break is only necessary to make it easier to distinguish jobs in
-                            // the log files.
-                            try {
-                                Thread.sleep(2000);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-
-                            AuraTopology at =
-                                    atb1.build("Job " + Integer.toString(++jobCounter), EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
-                            ac.submitTopology(at, null);
-                        }
-                    };
-
-                    t.start();
-                }
-            }
-        });
-
-        // Submit the first job. Other runs of this jobs are scheduled on demand.
-        AuraTopology at = atb1.build("Job " + Integer.toString(1), EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING));
-        ac.submitTopology(at, null);
+        // Start job submission.
+        handler.handleTopologyFinished(null);
 
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();
@@ -265,5 +315,145 @@ public final class SanityClient {
         }
 
         // lce.shutdown();
+    }
+
+    public static List<AuraTopology> buildTopologies(AuraClient client, int machines, int tasksPerMaschine) {
+        List<AuraTopology> topologies = new ArrayList<>();
+
+        int executionUnits = machines * tasksPerMaschine;
+        AuraDirectedGraph.AuraTopologyBuilder atb;
+
+        // 2 layered - point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 2, 1), Source.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
+        topologies.add(atb.build("Job: 2 layered - point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 2 layered - all2all connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 2, 1), Source.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
+        topologies.add(atb.build("Job: 2 layered - all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - point2point + point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - point2point + point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all + point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - all2all + point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - point2point + all2all connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - point2point + all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all + all2all connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - all2all + all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - point2point (join) point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - point2point (join) point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all (join) point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - all2all (join) point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all (join) all2all connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - all2all (join) all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        return topologies;
+    }
+
+    private static class SubmissionHandler extends EventHandler {
+
+        private final AuraClient client;
+
+        private final List<AuraTopology> topologies;
+
+        private final int runs;
+
+        private int jobCounter = 0;
+
+        public SubmissionHandler(final AuraClient client, final List<AuraTopology> topologies, final int runs) {
+            this.client = client;
+            this.topologies = topologies;
+            this.runs = runs;
+        }
+
+        @EventHandler.Handle(event = IOEvents.ControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
+        private void handleTopologyFinished(final IOEvents.ControlIOEvent event) {
+            if (event != null) {
+                String jobName = (String) event.getPayload();
+                LOG.info("Topology ({}) finished.", jobName);
+            }
+
+            // Each topology is executed #runs times
+            if (jobCounter < runs * topologies.size()) {
+                final int jobIndex = jobCounter++ / runs;
+
+                Thread t = new Thread() {
+
+                    public void run() {
+                        // This break is only necessary to make it easier to distinguish jobs in
+                        // the log files.
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+
+                        LOG.info("Submit: {}", topologies.get(jobIndex).name);
+                        client.submitTopology(topologies.get(jobIndex), null);
+                    }
+                };
+
+                t.start();
+            }
+        }
     }
 }
