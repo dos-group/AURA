@@ -271,7 +271,7 @@ public class DataReader {
 
                             // Disable the auto read functionality of the channel. You must not
                             // forget to enable it again!
-                            ctx.channel().config().setAutoRead(true);
+                            ctx.channel().config().setAutoRead(false);
 
                             IOEvents.DataIOEvent connected =
                                     new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, event.srcTaskID, event.dstTaskID);

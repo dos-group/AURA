@@ -236,7 +236,7 @@ public final class TaskDataProducer implements DataProducer {
                         final OutputGate og = outputGates.get(gateIndex);
                         og.setChannelWriter(channelIndex, channelWriter);
 
-                        LOG.info("OUTPUT CONNECTION FROM " + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID
+                        LOG.debug("OUTPUT CONNECTION FROM " + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID
                                 + "] TO TASK " + outputTask.name + " [" + outputTask.taskID + "] IS ESTABLISHED");
                     }
 

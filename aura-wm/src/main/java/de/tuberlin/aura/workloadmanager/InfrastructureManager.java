@@ -98,6 +98,7 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
             // the directories in ZooKeeper.
             this.zookeeper = new ZooKeeper(zkServers, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(eh));
             ZookeeperHelper.initDirectories(this.zookeeper);
+
             // Store the workload manager machine descriptor.
             ZookeeperHelper.storeInZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
 
@@ -141,6 +142,10 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
         return md;
     }
 
+    public synchronized int getNumberOfMachine() {
+        return nodeMap.values().size();
+    }
+
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
@@ -152,56 +157,44 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
          */
         @Override
         public synchronized void process(WatchedEvent event) {
-            LOG.debug("received event: " + event.getState().toString());
-            LOG.debug("received event: " + event.getType().toString());
+            LOG.debug("Received event - state: {} - type: {}", event.getState().toString(), event.getType().toString());
 
             try {
-                switch (event.getType()) {
-                    case NodeChildrenChanged:
-                        // Find out whether a node was created or deleted.
-                        final List<String> nodeList = zookeeper.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, false);
+                // Find out whether a node was created or deleted.
+                final List<String> nodeList = zookeeper.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, this);
 
-                        if (nodeMap.values().size() < nodeList.size()) {
-                            // A node has been added.
-                            MachineDescriptor newMachine = null;
-                            for (final String node : nodeList) {
-                                final UUID machineID = UUID.fromString(node);
-                                if (!nodeMap.containsKey(machineID)) {
-                                    newMachine = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, event.getPath() + "/" + node);
-                                    nodeMap.put(machineID, newMachine);
-                                    break;
-                                }
-                            }
-
-                            dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_ADDED, newMachine));
-
-                        } else {
-                            // A node has been removed.
-                            UUID machineID = null;
-                            for (final UUID uid : nodeMap.keySet()) {
-                                if (!nodeList.contains(uid.toString())) {
-                                    machineID = uid;
-                                    break;
-                                }
-                            }
-
-                            final MachineDescriptor removedMachine = nodeMap.remove(machineID);
-
-                            if (removedMachine == null)
-                                LOG.error("machine with uid = " + machineID + " can not be removed");
-                            else
-                                LOG.info("REMOVED MACHINE uid = " + machineID);
-
-                            dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_REMOVED, removedMachine));
+                if (nodeMap.values().size() < nodeList.size()) {
+                    // A node has been added.
+                    MachineDescriptor newMachine = null;
+                    for (final String node : nodeList) {
+                        final UUID machineID = UUID.fromString(node);
+                        if (!nodeMap.containsKey(machineID)) {
+                            newMachine = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, event.getPath() + "/" + node);
+                            nodeMap.put(machineID, newMachine);
                         }
+                    }
 
-                        break;
-                    default:
-                        // Nothing to do here.
+                    dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_ADDED, newMachine));
+
+                } else {
+                    // A node has been removed.
+                    UUID machineID = null;
+                    for (final UUID uid : nodeMap.keySet()) {
+                        if (!nodeList.contains(uid.toString())) {
+                            machineID = uid;
+                            break;
+                        }
+                    }
+
+                    final MachineDescriptor removedMachine = nodeMap.remove(machineID);
+
+                    if (removedMachine == null)
+                        LOG.error("machine with uid = " + machineID + " can not be removed");
+                    else
+                        LOG.info("REMOVED MACHINE uid = " + machineID);
+
+                    dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_REMOVED, removedMachine));
                 }
-
-                // Stay interested in changes within the worker folder.
-                zookeeper.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, this);
             } catch (KeeperException e) {
                 LOG.error("ZooKeeper operation failed", e);
             } catch (InterruptedException e) {

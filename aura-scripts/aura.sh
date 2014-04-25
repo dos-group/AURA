@@ -174,7 +174,6 @@ echo \$! > $AURA_DATA_PATH/data/tm_pid
 exit
 SSHEND
 			fi
-			sleep 1
 			printf "done\n"
 		done
 	;;

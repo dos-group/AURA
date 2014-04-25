@@ -77,13 +77,23 @@ public class ZookeeperHelper {
         // Create the root folder of the aura application in ZooKeeper.
         Stat stat = zk.exists(ZOOKEEPER_ROOT, false);
         if (stat == null) {
-            zk.create(ZOOKEEPER_ROOT, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            try {
+                zk.create(ZOOKEEPER_ROOT, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            } catch (KeeperException.NodeExistsException e) {
+                // No need to worry about this. You only want those nodes to exists. No matter who
+                // created them.
+            }
         }
 
         // Create a folder that is used to register the task-managers.
         stat = zk.exists(ZOOKEEPER_TASKMANAGERS, false);
         if (stat == null) {
-            zk.create(ZOOKEEPER_TASKMANAGERS, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            try {
+                zk.create(ZOOKEEPER_TASKMANAGERS, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            } catch (KeeperException.NodeExistsException e) {
+                // No need to worry about this. You only want those nodes to exists. No matter who
+                // created them.
+            }
         }
     }
 
