@@ -1,16 +1,25 @@
 package de.tuberlin.aura.core.statistic;
 
-/**
- * Created by teots on 3/12/14.
- */
 public class TimeMeasurement extends Measurement {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private long time = 0;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     public TimeMeasurement(MeasurementType type, String description, long time) {
         super(type, description);
         this.time = time;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     @Override
     public String getHeader() {
@@ -41,7 +50,6 @@ public class TimeMeasurement extends Measurement {
         result = prime * result + (this.type.hashCode());
         result = prime * result + (this.description.hashCode());
         result = prime * result + (int) (this.time);
-
         return result;
     }
 
@@ -53,7 +61,6 @@ public class TimeMeasurement extends Measurement {
         builder.append(this.description);
         builder.append("\t");
         builder.append(this.time);
-
         return builder.toString();
     }
 }

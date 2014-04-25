@@ -6,6 +6,8 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.statistic.MeasurementManager;
+import de.tuberlin.aura.core.statistic.record.RecordReader;
+import de.tuberlin.aura.core.statistic.record.RecordWriter;
 
 /**
  *

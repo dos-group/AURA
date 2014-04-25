@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.client;
+package de.tuberlin.aura.benchmark.runs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,8 +18,12 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
-import de.tuberlin.aura.core.task.common.*;
-import de.tuberlin.aura.core.task.common.BenchmarkRecord.SanityBenchmarkRecord;
+import de.tuberlin.aura.core.statistic.record.BenchmarkRecord.SanityBenchmarkRecord;
+import de.tuberlin.aura.core.statistic.record.Record;
+import de.tuberlin.aura.core.task.common.DataConsumer;
+import de.tuberlin.aura.core.task.common.DataProducer;
+import de.tuberlin.aura.core.task.common.TaskDriverContext;
+import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
@@ -36,8 +40,8 @@ public final class SanityClient {
     private SanityClient() {}
 
     /**
-*
-*/
+     *
+     */
     public static class Source extends TaskInvokeable {
 
         private static final int RECORDS = 100;
@@ -82,8 +86,8 @@ public final class SanityClient {
     }
 
     /**
-*
-*/
+     *
+     */
     public static class ForwardWithOneInput extends TaskInvokeable {
 
         public ForwardWithOneInput(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
@@ -282,7 +286,7 @@ public final class SanityClient {
         // LOG.addAppender(consoleAppender);
         // LOG.setLevel(Level.INFO);
 
-        int machines = 10;
+        int machines = 99;
 
         // Local
         // final String measurementPath = "/home/teots/Desktop/logs";
@@ -314,6 +318,7 @@ public final class SanityClient {
             e.printStackTrace();
         }
 
+        ac.closeSession();
         // lce.shutdown();
     }
 

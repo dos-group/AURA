@@ -1,9 +1,10 @@
 package de.tuberlin.aura.core.statistic;
 
-/**
- * @author Asterios Katsifodimos
- */
 public abstract class Measurement {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
     protected long timestamp;
 
@@ -11,11 +12,19 @@ public abstract class Measurement {
 
     protected String description;
 
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
+
     protected Measurement(MeasurementType type, String description) {
         this.timestamp = System.currentTimeMillis();
         this.type = type;
         this.description = description;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public long getTimestamp() {
         return this.timestamp;
