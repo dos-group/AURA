@@ -1,6 +1,7 @@
 package de.tuberlin.aura.workloadmanager;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
@@ -22,7 +23,7 @@ public class TopologyController extends EventDispatcher {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TopologyController.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TopologyController.class);
 
     private final WorkloadManagerContext context;
 

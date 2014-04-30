@@ -16,17 +16,11 @@ import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
-import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
-import io.netty.channel.local.LocalChannel;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
 
 
 // TODO: let the bufferQueue size be configurable
 public class DataWriter {
-
-    public static final int DEFAULT_BUFFER_SIZE = 64 << 10; // 65536
 
     private static final Logger LOG = LoggerFactory.getLogger(DataWriter.class);
 
@@ -45,10 +39,9 @@ public class DataWriter {
                                                      final UUID dstTaskID,
                                                      final OutgoingConnectionType<T> type,
                                                      final SocketAddress address,
-                                                     final EventLoopGroup eventLoopGroup,
                                                      final MemoryManager.Allocator allocator) {
 
-        return new ChannelWriter<>(type, srcTaskID, dstTaskID, address, eventLoopGroup, allocator);
+        return new ChannelWriter<>(type, srcTaskID, dstTaskID, address, allocator);
     }
 
     // ---------------------------------------------------
@@ -64,8 +57,6 @@ public class DataWriter {
         private final UUID dstID;
 
         private Channel channel;
-
-        private final EventLoopGroup eventLoopGroup;
 
         // poll thread
 
@@ -91,7 +82,6 @@ public class DataWriter {
                              final UUID srcID,
                              final UUID dstID,
                              final SocketAddress address,
-                             final EventLoopGroup eventLoopGroup,
                              final MemoryManager.Allocator allocator) {
 
             this.srcID = srcID;
@@ -100,26 +90,11 @@ public class DataWriter {
 
             this.awaitGateOpenLatch = new ResettableCountDownLatch(1);
 
-            this.eventLoopGroup = eventLoopGroup;
+            IOEvents.SetupIOEvent event =
+                    new IOEvents.SetupIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, srcID, dstID, type, address, allocator);
+            event.setPayload(this);
 
-            Bootstrap bootstrap = type.bootStrap(this.eventLoopGroup);
-            bootstrap.handler(new ChannelInitializer<T>() {
-
-                @Override
-                protected void initChannel(T ch) throws Exception {
-                    ch.pipeline()
-                      .addLast(KryoEventSerializer.getLengthDecoder())
-                      .addLast(new KryoEventSerializer.KryoOutboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(allocator, null)))
-                      .addLast(new KryoEventSerializer.KryoInboundHandler(new KryoEventSerializer.TransferBufferEventSerializer(allocator, null)))
-                      .addLast(new OpenCloseGateHandler())
-                      .addLast(new WritableHandler());
-                }
-            });
-
-            // on success:
-            // the close future is registered
-            // the polling thread is started
-            bootstrap.connect(address).addListener(new ConnectListener());
+            dispatcher.dispatchEvent(event);
         }
 
         /**
@@ -191,7 +166,6 @@ public class DataWriter {
 
             private final Logger LOG = LoggerFactory.getLogger(Poll.class);
 
-
             /*
              * We use a Callable here to be able to shutdown single threads instead of all threads
              * managed by the executor.
@@ -233,7 +207,7 @@ public class DataWriter {
                             LOG.trace("Channel not writable.");
                         }
                     } catch (InterruptedException e) {
-                        LOG.debug("Interrupted");
+                        LOG.debug("Polling thread interrupted");
                         // interrupted during take command, 2. scenarios
                         // 1. interrupt while transferQueue was empty -> event == null,
                         // transferQueue == empty
@@ -253,14 +227,14 @@ public class DataWriter {
                                                                                 transferQueue.getName() + " -> Not writable",
                                                                                 notWritable));
 
-                LOG.debug("Polling Thread is closing.");
+                LOG.debug("Polling thread is closing.");
 
                 // signal shutdown method
                 pollFinished.countDown();
             }
         }
 
-        private class OpenCloseGateHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
+        public final class OpenCloseGateHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
 
             @Override
             protected void channelRead0(ChannelHandlerContext ctx, IOEvents.DataIOEvent gateEvent) throws Exception {
@@ -305,7 +279,7 @@ public class DataWriter {
         /**
          * Sets the channel if the connection to the server was successful.
          */
-        private class ConnectListener implements ChannelFutureListener {
+        public final class ConnectListener implements ChannelFutureListener {
 
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
@@ -322,15 +296,15 @@ public class DataWriter {
                                                                                 srcID,
                                                                                 dstID));
 
-                        // Disable the auto read functionality of the channel. You must not forget
-                        // to enable it again!
-                        future.channel().config().setAutoRead(true);
+                        // Dispatch OUTPUT_CHANNEL_CONNECTED event.
+                        final IOEvents.GenericIOEvent connected =
+                                new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
+                                                            ChannelWriter.this,
+                                                            srcID,
+                                                            dstID);
+                        connected.setChannel(channel);
+                        dispatcher.dispatchEvent(connected);
 
-                        IOEvents.DataIOEvent event = new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, srcID, dstID);
-                        event.setPayload(ChannelWriter.this);
-                        event.setChannel(future.channel());
-
-                        dispatcher.dispatchEvent(event);
                     } else if (future.cause() != null) {
                         LOG.error("Connection attempt failed: ", future.cause());
                         throw new IllegalStateException("connection attempt failed.", future.cause());
@@ -342,7 +316,7 @@ public class DataWriter {
         /**
          * Sets the writable flag for this channel.
          */
-        private class WritableHandler extends ChannelInboundHandlerAdapter {
+        public final class WritableHandler extends ChannelInboundHandlerAdapter {
 
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -355,92 +329,6 @@ public class DataWriter {
                 channelWritable.set(ctx.channel().isWritable());
                 ctx.fireChannelWritabilityChanged();
             }
-        }
-    }
-
-    public interface OutgoingConnectionType<T> {
-
-        Bootstrap bootStrap(EventLoopGroup eventLoopGroup);
-    }
-
-    public static abstract class AbstractConnection<T> implements OutgoingConnectionType<T> {
-
-        protected final int bufferSize;
-
-        public AbstractConnection(int bufferSize) {
-            if ((bufferSize & (bufferSize - 1)) != 0) {
-                // not a power of two
-                LOG.warn("The given buffer size is not a power of two.");
-
-                this.bufferSize = Util.nextPowerOf2(bufferSize);
-            } else {
-                this.bufferSize = bufferSize;
-            }
-        }
-
-        public AbstractConnection() {
-            this(DEFAULT_BUFFER_SIZE);
-        }
-    }
-
-    public static class LocalConnection extends AbstractConnection<LocalChannel> {
-
-        public LocalConnection() {
-            super();
-        }
-
-        public LocalConnection(int bufferSize) {
-            super(bufferSize);
-        }
-
-        @Override
-        public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
-            Bootstrap bs = new Bootstrap();
-            bs.group(eventLoopGroup).channel(LocalChannel.class)
-            // the mark the outbound bufferQueue has to reach in order
-            // to change the writable state of a channel true
-              .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-              // the mark the outbound bufferQueue has to reach in order
-              // to change the writable state of a channel false
-              .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
-
-            return bs;
-        }
-    }
-
-    public static class NetworkConnection extends AbstractConnection<SocketChannel> {
-
-        public NetworkConnection() {
-            super();
-        }
-
-        public NetworkConnection(int bufferSize) {
-            super(bufferSize);
-        }
-
-        @Override
-        public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
-            Bootstrap bs = new Bootstrap();
-            bs.group(eventLoopGroup).channel(NioSocketChannel.class)
-            // true, periodically heartbeats from tcp
-              .option(ChannelOption.SO_KEEPALIVE, true)
-              // false, means that messages get only sent if the size of the data reached a relevant
-              // amount.
-              .option(ChannelOption.TCP_NODELAY, false)
-              // size of the system lvl send bufferQueue PER SOCKET
-              // -> bufferQueue size, as we always have only 1 channel per socket in the examples
-              // case
-              .option(ChannelOption.SO_SNDBUF, bufferSize)
-              // the mark the outbound bufferQueue has to reach in order to change the writable
-              // state of
-              // a channel true
-              .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, 0)
-              // the mark the outbound bufferQueue has to reach in order to change the writable
-              // state of
-              // a channel false
-              .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, bufferSize);
-
-            return bs;
         }
     }
 }

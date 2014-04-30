@@ -15,6 +15,7 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
+import de.tuberlin.aura.core.common.utils.NettyHelper;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.task.common.DataConsumer;
@@ -30,7 +31,6 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 public class DataReader {
 
@@ -123,9 +123,11 @@ public class DataReader {
             @Override
             public void initChannel(T ch) throws Exception {
                 ch.pipeline()
-                  .addLast(getLengthDecoder())
+                  .addLast(NettyHelper.getLengthDecoder())
                   .addLast(new KryoOutboundHandler(new TransferBufferEventSerializer(null, executionManager)))
-                  .addLast(new KryoInboundHandler(new TransferBufferEventSerializer(null, executionManager)));
+                  .addLast(new KryoInboundHandler(new TransferBufferEventSerializer(null, executionManager)))
+                  .addLast(new DataHandler())
+                  .addLast(new EventHandler());
             }
         });
 
@@ -214,7 +216,6 @@ public class DataReader {
     public boolean isConnected(UUID contextID, int gateIndex, int channelIndex) {
         Pair<UUID, Integer> index = new Pair<>(contextID, gateIndex);
         return connectedChannels.containsKey(index) && connectedChannels.get(index).containsKey(channelIndex);
-
     }
 
     public void write(final UUID taskID, final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event) {
@@ -225,14 +226,6 @@ public class DataReader {
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
-
-    // ---------------------------------------------------
-    // Netty specific stuff.
-    // ---------------------------------------------------
-
-    public LengthFieldBasedFrameDecoder getLengthDecoder() {
-        return new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4);
-    }
 
     // ---------------------------------------------------
     // Kryo Inbound- & Outbound-Handler.
@@ -260,47 +253,39 @@ public class DataReader {
             final IOEvents.DataIOEvent event = (IOEvents.DataIOEvent) kryo.readClassAndObject(new Input(new ByteBufInputStream(buffer)));
             buffer.release();
 
-            try {
-                if (event instanceof IOEvents.TransferBufferEvent) {
-                    inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
-                } else {
-                    switch (event.type) {
-                        case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
-                            // TODO: ensure that queue is bound before first data buffer event
-                            // arrives
+            if (event instanceof IOEvents.TransferBufferEvent) {
+                inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+            } else {
+                switch (event.type) {
+                    case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
+                        // TODO: ensure that queue is bound before first data buffer event
+                        // arrives
 
-                            // Disable the auto read functionality of the channel. You must not
-                            // forget to enable it again!
-                            ctx.channel().config().setAutoRead(false);
+                        // Disable the auto read functionality of the channel. You must not
+                        // forget to enable it again!
+                        ctx.channel().config().setAutoRead(false);
 
-                            IOEvents.DataIOEvent connected =
-                                    new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, event.srcTaskID, event.dstTaskID);
-                            connected.setPayload(DataReader.this);
-                            connected.setChannel(ctx.channel());
+                        IOEvents.DataIOEvent connected =
+                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, event.srcTaskID, event.dstTaskID);
+                        connected.setPayload(DataReader.this);
+                        connected.setChannel(ctx.channel());
 
-                            dispatcher.dispatchEvent(connected);
-                            break;
+                        dispatcher.dispatchEvent(connected);
+                        break;
 
-                        case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
-                            inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
-                            break;
+                    case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
+                        inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                        break;
 
-                        case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK:
-                            inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
-                            break;
+                    case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK:
+                        inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                        break;
 
-                        default:
-                            event.setChannel(ctx.channel());
-                            dispatcher.dispatchEvent(event);
-                            break;
-                    }
+                    default:
+                        event.setChannel(ctx.channel());
+                        dispatcher.dispatchEvent(event);
+                        break;
                 }
-            } catch (Throwable t) {
-                LOG.error("Event: {}", event);
-                LOG.error("Channel: {}", ctx.channel());
-                LOG.error("Channel to queue index: {}", channelToQueueIndex.get(ctx.channel()));
-                LOG.error("Input queue: {}", inputQueues.get(channelToQueueIndex.get(ctx.channel())));
-                LOG.error(t.getLocalizedMessage(), t);
             }
 
             // ctx.fireChannelRead(event);
@@ -451,21 +436,19 @@ public class DataReader {
     }
 
 
-    private final class DataHandler extends SimpleChannelInboundHandler<IOEvents.TransferBufferEvent> {
+    public final class DataHandler extends SimpleChannelInboundHandler<IOEvents.TransferBufferEvent> {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.TransferBufferEvent event) {
             try {
-
                 inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
-
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private final class EventHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
+    public final class EventHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event) throws Exception {

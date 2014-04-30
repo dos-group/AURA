@@ -44,7 +44,7 @@ public final class SanityClient {
      */
     public static class Source extends TaskInvokeable {
 
-        private static final int RECORDS = 100;
+        private static final int RECORDS = 10;
 
         public Source(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
@@ -304,7 +304,7 @@ public final class SanityClient {
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
         List<AuraTopology> topologies = buildTopologies(ac, machines, 8);
-        SubmissionHandler handler = new SubmissionHandler(ac, topologies, 1);
+        SubmissionHandler handler = new SubmissionHandler(ac, topologies, 20);
 
         // Add the job resubmission handler.
         ac.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, handler);
@@ -434,7 +434,7 @@ public final class SanityClient {
         private void handleTopologyFinished(final IOEvents.ControlIOEvent event) {
             if (event != null) {
                 String jobName = (String) event.getPayload();
-                LOG.info("Topology ({}) finished.", jobName);
+                LOG.error("Topology ({}) finished.", jobName);
             }
 
             // Each topology is executed #runs times
@@ -452,7 +452,7 @@ public final class SanityClient {
                             e.printStackTrace();
                         }
 
-                        LOG.info("Submit: {}", topologies.get(jobIndex).name);
+                        LOG.error("Submit: {} - run {}/{}", topologies.get(jobIndex).name, ((jobCounter - 1) % runs) + 1, runs);
                         client.submitTopology(topologies.get(jobIndex), null);
                     }
                 };

@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 // TODO: set unique id for serializer!
 // TODO: What for a unique id?
@@ -38,14 +37,6 @@ public final class KryoEventSerializer {
 
     // Disallow instantiation.
     private KryoEventSerializer() {}
-
-    // ---------------------------------------------------
-    // Netty specific stuff.
-    // ---------------------------------------------------
-
-    public static LengthFieldBasedFrameDecoder getLengthDecoder() {
-        return new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4);
-    }
 
     // ---------------------------------------------------
     // Kryo Inbound- & Outbound-Handler.

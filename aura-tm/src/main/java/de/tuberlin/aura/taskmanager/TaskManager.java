@@ -1,11 +1,16 @@
 package de.tuberlin.aura.taskmanager;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
@@ -34,7 +39,7 @@ public final class TaskManager implements WM2TMProtocol {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TaskManager.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TaskManager.class);
 
     private final IOManager ioManager;
 
@@ -221,7 +226,7 @@ public final class TaskManager implements WM2TMProtocol {
         List<TaskDriverContext> contexts = deployedTopologyTasks.get(topologyID);
 
         if (contexts == null) {
-            contexts = new ArrayList<>();
+            contexts = new CopyOnWriteArrayList<>();
             deployedTopologyTasks.put(topologyID, contexts);
         }
 

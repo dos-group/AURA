@@ -6,7 +6,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -29,7 +30,7 @@ public class WorkloadManager implements ClientWMProtocol {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
+    private static final Logger LOG = LoggerFactory.getLogger(WorkloadManager.class);
 
     private final MachineDescriptor machineDescriptor;
 

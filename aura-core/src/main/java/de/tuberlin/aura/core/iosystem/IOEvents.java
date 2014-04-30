@@ -1,5 +1,6 @@
 package de.tuberlin.aura.core.iosystem;
 
+import java.net.SocketAddress;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -85,6 +86,10 @@ public final class IOEvents {
             super(type);
         }
 
+        public BaseIOEvent(final String type, final boolean sticky) {
+            super(type, null, sticky);
+        }
+
         public void setChannel(final Channel channel) {
             // sanity check.
             if (channel == null)
@@ -106,7 +111,11 @@ public final class IOEvents {
         public final Object payload;
 
         public GenericIOEvent(final String type, final Object payload, final UUID srcTaskID, final UUID dstTaskID) {
-            super(type, srcTaskID, dstTaskID);
+            this(type, payload, srcTaskID, dstTaskID, false);
+        }
+
+        public GenericIOEvent(final String type, final Object payload, final UUID srcTaskID, final UUID dstTaskID, boolean sticky) {
+            super(type, srcTaskID, dstTaskID, sticky);
 
             this.payload = payload;
         }
@@ -133,7 +142,11 @@ public final class IOEvents {
         public final UUID dstTaskID;
 
         public DataIOEvent(final String type, final UUID srcTaskID, final UUID dstTaskID) {
-            super(type);
+            this(type, srcTaskID, dstTaskID, false);
+        }
+
+        public DataIOEvent(final String type, final UUID srcTaskID, final UUID dstTaskID, final boolean sticky) {
+            super(type, sticky);
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
@@ -151,6 +164,58 @@ public final class IOEvents {
                                         .append(" type = " + type + ", ")
                                         .append(" srcTaskID = " + srcTaskID.toString() + ", ")
                                         .append(" dstTaskID = " + dstTaskID.toString())
+                                        .append(" }")
+                                        .toString();
+        }
+    }
+
+    /**
+     *
+     */
+    public static class SetupIOEvent<T extends Channel> extends BaseIOEvent {
+
+        private static final long serialVersionUID = -1L;
+
+        public final UUID srcTaskID;
+
+        public final UUID dstTaskID;
+
+        public final OutgoingConnectionType<T> connectionType;
+
+        public final SocketAddress address;
+
+        public final MemoryManager.Allocator allocator;
+
+        public SetupIOEvent(final String type,
+                            final UUID srcTaskID,
+                            final UUID dstTaskID,
+                            final OutgoingConnectionType<T> connectionType,
+                            final SocketAddress address,
+                            final MemoryManager.Allocator allocator) {
+            super(type);
+
+            // sanity check.
+            if (srcTaskID == null)
+                throw new IllegalArgumentException("srcTaskID == null");
+            if (dstTaskID == null)
+                throw new IllegalArgumentException("dstTaskID == null");
+
+            this.srcTaskID = srcTaskID;
+            this.dstTaskID = dstTaskID;
+            this.connectionType = connectionType;
+            this.address = address;
+            this.allocator = allocator;
+        }
+
+        @Override
+        public String toString() {
+            return (new StringBuilder()).append("DataIOEvent = {")
+                                        .append(" type = " + type + ", ")
+                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
+                                        .append(" dstTaskID = " + dstTaskID.toString() + ", ")
+                                        .append(" connectionType = " + connectionType.toString() + ", ")
+                                        .append(" address = " + address.toString() + ", ")
+                                        .append(" allocator = " + allocator.toString())
                                         .append(" }")
                                         .toString();
         }

@@ -54,10 +54,12 @@ public class QueueManager<T> {
     }
 
     /**
+     * [Christian] TODO: Synchronized necessary -> concurrent access from ConsumerEventHandler?
+     * 
      * @param gateIndex
      * @return
      */
-    public BufferQueue<T> getInputQueue(int gateIndex) {
+    public synchronized BufferQueue<T> getInputQueue(int gateIndex) {
 
         if (inputQueues.containsKey(gateIndex)) {
             return inputQueues.get(gateIndex);
@@ -71,11 +73,13 @@ public class QueueManager<T> {
     }
 
     /**
+     * [Christian] TODO: Synchronized -> concurrent access from ProducerEventHandler?
+     * 
      * @param gateIndex
      * @param channelIndex
      * @return
      */
-    public BufferQueue<T> getOutputQueue(int gateIndex, int channelIndex) {
+    public synchronized BufferQueue<T> getOutputQueue(int gateIndex, int channelIndex) {
 
         final LongKey key = new LongKey(gateIndex, channelIndex);
         if (outputQueues.containsKey(key)) {

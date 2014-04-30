@@ -143,6 +143,7 @@ SSHEND
 			ADDRESS="wally`printf "%03d" $i`.$URL"
 			printf "Start TaskManager on $ADDRESS ... "
 
+			# Start Zookeeper	
 			if [ $i -lt $(($2 + $ZOOKEEPERS)) ]; then
 				echo "START ZOOKEEPER"
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
@@ -150,12 +151,8 @@ sh $ZOOKEEPER_PATH/bin/zkServer.sh start
 exit
 SSHEND
 			fi	
-		done		
 
-# -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011
-	
-		for i in $(seq $2 $3); do
-			ADDRESS="wally`printf "%03d" $i`.$URL"
+			# Start WorkloadManger
 			if [ $i -eq $2 ]; then
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 cd aura/aura-wm/
@@ -165,6 +162,7 @@ echo \$! > $AURA_DATA_PATH/data/wm_pid
 exit
 SSHEND
 				sleep 5
+			# Start TaskManager 
 			else
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 cd aura/aura-tm/

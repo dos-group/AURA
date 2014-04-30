@@ -66,11 +66,6 @@ public final class IOManager extends EventDispatcher {
 
     private final LocalEventLoopGroup localConnectionListenerEventLoopGroup;
 
-    private final NioEventLoopGroup networkConnectionSetupEventLoopGroup;
-
-    private final LocalEventLoopGroup localConnectionSetupEventLoopGroup;
-
-    // private final NioEventLoopGroup outputEventLoopGroup;
 
     // ---------------------------------------------------
     // Constructors.
@@ -98,9 +93,6 @@ public final class IOManager extends EventDispatcher {
         // TODO: Make the number of thread configurable
         this.networkConnectionListenerEventLoopGroup = new NioEventLoopGroup(4);
         this.localConnectionListenerEventLoopGroup = new LocalEventLoopGroup(4);
-
-        this.networkConnectionSetupEventLoopGroup = new NioEventLoopGroup(4);
-        this.localConnectionSetupEventLoopGroup = new LocalEventLoopGroup(4);
 
         startNetworkConnectionSetupServer(this.machine, networkConnectionListenerEventLoopGroup);
 
@@ -380,7 +372,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, networkConnectionSetupEventLoopGroup, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new AbstractConnection.NetworkConnection(), socketAddress, allocator);
         }
 
         public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.Allocator allocator) {
@@ -392,7 +384,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, localConnectionListenerEventLoopGroup, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new AbstractConnection.LocalConnection(), localAddress, allocator);
         }
 
         public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress) {

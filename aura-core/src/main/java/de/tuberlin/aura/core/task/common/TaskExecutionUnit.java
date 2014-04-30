@@ -14,6 +14,7 @@ import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNetworkInputEventLoopGr
 import de.tuberlin.aura.core.memory.MemoryManager;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 public final class TaskExecutionUnit {
 
@@ -248,7 +249,6 @@ public final class TaskExecutionUnit {
                                                             }
                                                         });
 
-
                 currentTaskCtx.taskDriver.startupDriver(inputAllocator, outputAllocator);
 
                 try {
@@ -282,10 +282,18 @@ public final class TaskExecutionUnit {
         public final LocalEventLoopGroup localOutputEventLoopGroup;
 
         public DataFlowEventLoops(int networkInputThreads, int localInputThreads, int networkOutputThreads, int localOutputThreads) {
-            this.networkInputEventLoopGroup = new ExecutionUnitNetworkInputEventLoopGroup(networkInputThreads);
-            this.localInputEventLoopGroup = new ExecutionUnitLocalInputEventLoopGroup(localInputThreads);
-            this.networkOutputEventLoopGroup = new NioEventLoopGroup(networkOutputThreads);
-            this.localOutputEventLoopGroup = new LocalEventLoopGroup(localOutputThreads);
+
+            DefaultThreadFactory factory = new DefaultThreadFactory("EU-" + executionUnitID + "-networkInput");
+            this.networkInputEventLoopGroup = new ExecutionUnitNetworkInputEventLoopGroup(networkInputThreads, factory);
+
+            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-localInput");
+            this.localInputEventLoopGroup = new ExecutionUnitLocalInputEventLoopGroup(localInputThreads, factory);
+
+            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-networkOutput");
+            this.networkOutputEventLoopGroup = new NioEventLoopGroup(networkOutputThreads, factory);
+
+            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-localOutput");
+            this.localOutputEventLoopGroup = new LocalEventLoopGroup(localOutputThreads, factory);
         }
     }
 }
