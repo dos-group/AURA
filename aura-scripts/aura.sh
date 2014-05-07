@@ -1,9 +1,9 @@
 #!/bin/sh
-USER="chwuertz"
+USER="andreas.kunft"
 URL="cit.tu-berlin.de"
 
-LOCAL_AURA_PATH="/home/teots/IdeaProjects/AURA"
-LOCAL_AURA_LOGS_DESTINATION="/home/teots/Desktop/logs"
+LOCAL_AURA_PATH="/home/akunft/dev/AURA"
+LOCAL_AURA_LOGS_DESTINATION="/home/akunft/aura_measurements"
 HOME_PATH="/home/$USER"
 AURA_PATH="$HOME_PATH/aura"
 DATA_PATH="/data/$USER"
@@ -112,7 +112,7 @@ mkdir -p $BENCHMARK_PATH
 exit
 SSHEND
 		
-			scp -r $LOCAL_AURA_INPUT/* $USER@$ADDRESS:$AURA_INPUT_PATH/ > /dev/null
+			#scp -r $LOCAL_AURA_INPUT/* $USER@$ADDRESS:$AURA_INPUT_PATH/ > /dev/null
 
 		done		
 
