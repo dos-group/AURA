@@ -169,6 +169,8 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
         dataProducer.shutdownProducer(awaitExhaustion);
 
         dataConsumer.shutdownConsumer();
+
+        LOG.info("exhausted sent: " + getTaskDriverContext().managerContext.ioManager.dataWriter.exhaustedSent.get());
     }
 
     // ---------------------------------------------------

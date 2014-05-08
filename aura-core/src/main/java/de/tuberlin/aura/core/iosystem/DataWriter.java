@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,11 @@ public class DataWriter {
 
     private ExecutorService pollThreadExecutor;
 
+    public final AtomicLong exhaustedSent;
+
     public DataWriter(IEventDispatcher dispatcher) {
+
+        this.exhaustedSent = new AtomicLong(0);
 
         this.dispatcher = dispatcher;
 
@@ -195,6 +200,7 @@ public class DataWriter {
 
                             if (dataIOEvent.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
                                 LOG.debug("Data source exhausted. Shutting down poll thread.");
+                                exhaustedSent.incrementAndGet();
                                 shutdown = true;
                             }
 
@@ -331,4 +337,8 @@ public class DataWriter {
             }
         }
     }
+
+    // ---------------------------------------------------------------
+    // STRATEGIES
+    //
 }

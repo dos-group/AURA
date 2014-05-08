@@ -1,16 +1,10 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
-import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
@@ -60,60 +54,91 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
     // Private Methods.
     // ---------------------------------------------------
 
+    // /**
+    // * @param topology
+    // */
+    // private synchronized void deployTopology(final AuraTopology topology) {
+    //
+    // final Map<Descriptors.MachineDescriptor, List<TaskDeploymentDescriptor>> machineDeployment =
+    // new HashMap<>();
+    //
+    // // Collect all deployment descriptors for a machine.
+    // TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
+    //
+    // @Override
+    // public void visit(final Node element) {
+    // for (final ExecutionNode en : element.getExecutionNodes()) {
+    //
+    // final TaskDeploymentDescriptor tdd =
+    // new TaskDeploymentDescriptor(en.getTaskDescriptor(),
+    // en.getTaskBindingDescriptor(),
+    // en.logicalNode.dataPersistenceType,
+    // en.logicalNode.executionType);
+    //
+    // final Descriptors.MachineDescriptor machineDescriptor =
+    // en.getTaskDescriptor().getMachineDescriptor();
+    //
+    // List<TaskDeploymentDescriptor> deploymentDescriptors =
+    // machineDeployment.get(machineDescriptor);
+    //
+    // if (deploymentDescriptors == null) {
+    // deploymentDescriptors = new ArrayList<>();
+    // machineDeployment.put(machineDescriptor, deploymentDescriptors);
+    // }
+    //
+    // deploymentDescriptors.add(tdd);
+    // }
+    // }
+    // });
+    //
+    // // Ship the deployment descriptors to the task managers.
+    // TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
+    //
+    // @Override
+    // public void visit(final Node element) {
+    // for (final ExecutionNode en : element.getExecutionNodes()) {
+    //
+    // final Descriptors.MachineDescriptor machineDescriptor =
+    // en.getTaskDescriptor().getMachineDescriptor();
+    //
+    // List<TaskDeploymentDescriptor> tddList = machineDeployment.get(machineDescriptor);
+    //
+    // // If TDD are not yet shipped, then do it...
+    // if (tddList != null) {
+    //
+    // final WM2TMProtocol tmProtocol = rpcManager.getRPCProtocolProxy(WM2TMProtocol.class,
+    // machineDescriptor);
+    // tmProtocol.installTasks(tddList);
+    //
+    // // ... and remove it from our mapping.
+    // machineDeployment.remove(machineDescriptor);
+    // }
+    // }
+    // }
+    // });
+    // }
+
     /**
      * @param topology
      */
     private synchronized void deployTopology(final AuraTopology topology) {
 
-        final Map<Descriptors.MachineDescriptor, List<TaskDeploymentDescriptor>> machineDeployment = new HashMap<>();
-
-        // Collect all deployment descriptors for a machine.
+        // Deploying.
         TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
 
             @Override
             public void visit(final Node element) {
                 for (final ExecutionNode en : element.getExecutionNodes()) {
-
                     final TaskDeploymentDescriptor tdd =
                             new TaskDeploymentDescriptor(en.getTaskDescriptor(),
                                                          en.getTaskBindingDescriptor(),
                                                          en.logicalNode.dataPersistenceType,
                                                          en.logicalNode.executionType);
-
-                    final Descriptors.MachineDescriptor machineDescriptor = en.getTaskDescriptor().getMachineDescriptor();
-
-                    List<TaskDeploymentDescriptor> deploymentDescriptors = machineDeployment.get(machineDescriptor);
-
-                    if (deploymentDescriptors == null) {
-                        deploymentDescriptors = new ArrayList<>();
-                        machineDeployment.put(machineDescriptor, deploymentDescriptors);
-                    }
-
-                    deploymentDescriptors.add(tdd);
-                }
-            }
-        });
-
-        // Ship the deployment descriptors to the task managers.
-        TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
-
-            @Override
-            public void visit(final Node element) {
-                for (final ExecutionNode en : element.getExecutionNodes()) {
-
-                    final Descriptors.MachineDescriptor machineDescriptor = en.getTaskDescriptor().getMachineDescriptor();
-
-                    List<TaskDeploymentDescriptor> tddList = machineDeployment.get(machineDescriptor);
-
-                    // If TDD are not yet shipped, then do it...
-                    if (tddList != null) {
-
-                        final WM2TMProtocol tmProtocol = rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, machineDescriptor);
-                        tmProtocol.installTasks(tddList);
-
-                        // ... and remove it from our mapping.
-                        machineDeployment.remove(machineDescriptor);
-                    }
+                    final WM2TMProtocol tmProtocol =
+                            rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
+                    tmProtocol.installTask(tdd);
+                    // LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: "
+                    // + tdd.toString());
                 }
             }
         });

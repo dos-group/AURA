@@ -57,7 +57,7 @@ public final class IOManager extends EventDispatcher {
 
     private final DataReader dataReader;
 
-    private final DataWriter dataWriter;
+    public final DataWriter dataWriter;
 
     // Event Loops for Netty
     private final NioEventLoopGroup controlPlaneEventLoopGroup;
