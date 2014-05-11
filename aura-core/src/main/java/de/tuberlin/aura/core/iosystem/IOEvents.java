@@ -180,7 +180,7 @@ public final class IOEvents {
 
         public final UUID dstTaskID;
 
-        public final OutgoingConnectionType<T> connectionType;
+        public final DataWriter.OutgoingConnectionType<T> connectionType;
 
         public final SocketAddress address;
 
@@ -189,7 +189,7 @@ public final class IOEvents {
         public SetupIOEvent(final String type,
                             final UUID srcTaskID,
                             final UUID dstTaskID,
-                            final OutgoingConnectionType<T> connectionType,
+                            final DataWriter.OutgoingConnectionType<T> connectionType,
                             final SocketAddress address,
                             final MemoryManager.Allocator allocator) {
             super(type);

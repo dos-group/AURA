@@ -21,15 +21,15 @@ import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 
-public final class SimpleClient {
+public final class ExampleClient {
 
     /**
      * Logger.
      */
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleClient.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ExampleClient.class);
 
     // Disallow Instantiation.
-    private SimpleClient() {}
+    private ExampleClient() {}
 
     /**
      *

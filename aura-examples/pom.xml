@@ -43,7 +43,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>de.tuberlin.aura.demo.examples.SimpleClient</mainClass>
+                            <mainClass>de.tuberlin.aura.demo.examples.ExampleClient</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

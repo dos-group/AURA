@@ -372,7 +372,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new AbstractConnection.NetworkConnection(), socketAddress, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, allocator);
         }
 
         public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.Allocator allocator) {
@@ -384,7 +384,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new AbstractConnection.LocalConnection(), localAddress, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, allocator);
         }
 
         public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress) {

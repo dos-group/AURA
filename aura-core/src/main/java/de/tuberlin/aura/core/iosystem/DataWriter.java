@@ -17,7 +17,12 @@ import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
 import de.tuberlin.aura.core.memory.MemoryManager;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 
 
 // TODO: let the bufferQueue size be configurable
@@ -61,6 +66,8 @@ public class DataWriter {
 
         private final UUID dstID;
 
+        private final MemoryManager.Allocator allocator;
+
         private Channel channel;
 
         // poll thread
@@ -95,8 +102,10 @@ public class DataWriter {
 
             this.awaitGateOpenLatch = new ResettableCountDownLatch(1);
 
-            IOEvents.SetupIOEvent event =
-                    new IOEvents.SetupIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, srcID, dstID, type, address, allocator);
+            this.allocator = allocator;
+
+            IOEvents.SetupIOEvent<T> event =
+                    new IOEvents.SetupIOEvent<>(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, srcID, dstID, type, address, allocator);
             event.setPayload(this);
 
             dispatcher.dispatchEvent(event);
@@ -338,7 +347,86 @@ public class DataWriter {
         }
     }
 
-    // ---------------------------------------------------------------
-    // STRATEGIES
-    //
+
+    public interface OutgoingConnectionType<T extends Channel> {
+
+        Bootstrap bootStrap(final EventLoopGroup eventLoopGroup);
+
+        ChannelInitializer<T> getPipeline(final ChannelWriter channelWriter);
+    }
+
+    public static class LocalConnection implements OutgoingConnectionType<LocalChannel> {
+
+        @Override
+        public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
+            return new Bootstrap().group(eventLoopGroup).channel(LocalChannel.class)
+            // the mark the outbound bufferQueue has to reach in order
+            // to change the writable state of a channel true
+                                  .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, IOConfig.NETTY_LOW_WATER_MARK)
+                                  // the mark the outbound bufferQueue has to reach in order
+                                  // to change the writable state of a channel false
+                                  .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, IOConfig.TRANSFER_BUFFER_SIZE)
+                                  .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        }
+
+        @Override
+        public ChannelInitializer<LocalChannel> getPipeline(final ChannelWriter channelWriter) {
+            return new ChannelInitializer<LocalChannel>() {
+
+                @Override
+                protected void initChannel(LocalChannel ch) throws Exception {
+                    ch.pipeline().addLast(channelWriter.new OpenCloseGateHandler()).addLast(channelWriter.new WritableHandler());
+                    // .addLast(channelWriter.new ChannelActiveHandler())
+                    // .addLast(channelWriter.new WriteHandler());
+                }
+            };
+        }
+    }
+
+    public static class NetworkConnection implements OutgoingConnectionType<SocketChannel> {
+
+        @Override
+        public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
+            return new Bootstrap().group(eventLoopGroup).channel(NioSocketChannel.class)
+            // true, periodically heartbeats from tcp
+                                  .option(ChannelOption.SO_KEEPALIVE, true)
+                                  // false, means that messages get only sent if the size of the
+                                  // data reached a relevant
+                                  // amount.
+                                  .option(ChannelOption.TCP_NODELAY, false)
+                                  // size of the system lvl send bufferQueue PER SOCKET
+                                  // -> bufferQueue size, as we always have only 1 channel per
+                                  // socket in the client case
+                                  .option(ChannelOption.SO_SNDBUF, IOConfig.TRANSFER_BUFFER_SIZE)
+                                  // the mark the outbound bufferQueue has to reach in order to
+                                  // change the writable
+                                  // state of
+                                  // a channel true
+                                  .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, IOConfig.NETTY_LOW_WATER_MARK)
+                                  // the mark the outbound bufferQueue has to reach in order to
+                                  // change the writable
+                                  // state of
+                                  // a channel false
+                                  .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, IOConfig.NETTY_HIGH_WATER_MARK)
+                                  .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+        }
+
+        @Override
+        public ChannelInitializer<SocketChannel> getPipeline(final ChannelWriter channelWriter) {
+            return new ChannelInitializer<SocketChannel>() {
+
+                @Override
+                protected void initChannel(SocketChannel ch) throws Exception {
+                    ch.pipeline()
+                      .addLast(KryoEventSerializer.LENGTH_FIELD_DECODER())
+                      .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER(channelWriter.allocator, null))
+                      .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(channelWriter.allocator, null))
+                      .addLast(channelWriter.new OpenCloseGateHandler())
+                      .addLast(channelWriter.new WritableHandler());
+                    // .addLast(channelWriter.new ChannelActiveHandler())
+                    // .addLast(channelWriter.new WriteHandler());
+                }
+            };
+        }
+    }
 }
