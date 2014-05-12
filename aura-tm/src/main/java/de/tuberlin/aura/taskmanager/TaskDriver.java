@@ -10,6 +10,7 @@ import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
+import de.tuberlin.aura.core.iosystem.BlockingSignalQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.memory.MemoryManager;
@@ -83,7 +84,10 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 + taskDescriptor.taskIndex, measurementManager);
 
         this.queueManager =
-                QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), measurementManager);
+                QueueManager.newInstance(taskDescriptor.taskID,
+                                         new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(),
+                                         new BlockingSignalQueue.Factory<IOEvents.DataIOEvent>(),
+                                         measurementManager);
 
         this.driverContext =
                 new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM, measurementManager);

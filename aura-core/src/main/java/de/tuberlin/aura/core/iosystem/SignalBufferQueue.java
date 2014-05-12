@@ -17,7 +17,7 @@ import de.tuberlin.aura.core.statistic.MeasurementType;
  * 
  * @param <T>
  */
-public class BlockingBufferQueue<T> implements BufferQueue<T> {
+public class SignalBufferQueue<T> implements BufferQueue<T> {
 
     public final static Logger LOG = LoggerFactory.getLogger(BlockingBufferQueue.class);
 
@@ -33,7 +33,9 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
 
     private MeasurementManager measurementManager;
 
-    BlockingBufferQueue(String name, MeasurementManager measurementManager) {
+    private QueueObserver observer;
+
+    SignalBufferQueue(String name, MeasurementManager measurementManager) {
         this.name = name;
         this.measurementManager = measurementManager;
         this.backingQueue = new LinkedBlockingQueue<>();
@@ -55,11 +57,11 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
                                                                           (double) this.sumLatency / (double) this.counter,
                                                                           -1));
             this.measurementManager.add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
-                    "Queue Size -> " + this.name,
-                    -1,
-                    -1,
-                    (double) this.sumQueueSize / (double) this.counter,
-                    -1));
+                                                                          "Queue Size -> " + this.name,
+                                                                          -1,
+                                                                          -1,
+                                                                          (double) this.sumQueueSize / (double) this.counter,
+                                                                          -1));
 
             // LOG.info(this.name + ": TIME_IN_QUEUE|" + Double.toString((double) this.sumLatency /
             // (double) this.counter) + "|" +
@@ -81,7 +83,11 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         holder.time = System.currentTimeMillis();
         holder.data = value;
 
-        return backingQueue.offer(holder);
+        backingQueue.offer(holder);
+        if (backingQueue.size() == 1) {
+            observer.signalNotEmpty();
+        }
+        return true;
     }
 
     @Override
@@ -91,6 +97,9 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         holder.data = value;
 
         backingQueue.put(holder);
+        if (backingQueue.size() == 1) {
+            observer.signalNotEmpty();
+        }
     }
 
     @Override
@@ -132,10 +141,12 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
 
     @Override
     public void registerObserver(QueueObserver observer) {
+        this.observer = observer;
     }
 
     @Override
     public void removeObserver(QueueObserver observer) {
+        this.observer = null;
     }
 
     @Override

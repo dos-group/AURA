@@ -111,10 +111,10 @@ public final class TaskDataConsumer implements DataConsumer {
 
             // DEBUGGING!
             /*
-             * event = inputGates.get(gateIndex).getInputQueue().poll(20, TimeUnit.SECONDS);
+             * event = inputGates.get(gateIndex).getInboundQueue().poll(20, TimeUnit.SECONDS);
              * if(event == null) { LOG.info("TIMEOUT"); LOG.info("GATE 0: size = " +
-             * inputGates.get(0).getInputQueue().size()); LOG.info("GATE 1: size = " +
-             * inputGates.get(1).getInputQueue().size()); }
+             * inputGates.get(0).getInboundQueue().size()); LOG.info("GATE 1: size = " +
+             * inputGates.get(1).getInboundQueue().size()); }
              */
 
             switch (event.type) {
@@ -323,7 +323,7 @@ public final class TaskDataConsumer implements DataConsumer {
 
                         // create queue, if there is none yet as we can have multiple channels
                         // insert in one queue (aka multiple channels per gate)
-                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getInputQueue(gateIndex);
+                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getInboundQueue(gateIndex);
                         channelReader.bindQueue(driverContext.taskDescriptor.taskID, event.getChannel(), gateIndex, channelIndex, queue);
 
                         inputGates.get(gateIndex).setChannelReader(channelReader);
@@ -386,7 +386,7 @@ public final class TaskDataConsumer implements DataConsumer {
  * 
  * if (initialAbsorbCall) {
  * 
- * event = inputGates.get(gateIndex).getInputQueue().take();
+ * event = inputGates.get(gateIndex).getInboundQueue().take();
  * 
  * // TODO: What happens if DATA_EVENT_SOURCE_EXHAUSTED occurs in the first call ?
  * 
@@ -398,7 +398,7 @@ public final class TaskDataConsumer implements DataConsumer {
  * 
  * while (retrieve) {
  * 
- * eventLookUp = inputGates.get(gateIndex).getInputQueue().take();
+ * eventLookUp = inputGates.get(gateIndex).getInboundQueue().take();
  * 
  * switch (eventLookUp.type) {
  * 

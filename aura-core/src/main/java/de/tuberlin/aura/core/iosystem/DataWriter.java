@@ -2,10 +2,10 @@ package de.tuberlin.aura.core.iosystem;
 
 import java.net.SocketAddress;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -23,6 +23,8 @@ import io.netty.channel.*;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 
 // TODO: let the bufferQueue size be configurable
@@ -76,11 +78,7 @@ public class DataWriter {
 
         private final CountDownLatch pollFinished = new CountDownLatch(1);
 
-        private Future<?> pollResult;
-
         private final CountDownLatch queueReady = new CountDownLatch(1);
-
-        private final AtomicBoolean channelWritable = new AtomicBoolean(false);
 
         private BufferQueue<IOEvents.DataIOEvent> transferQueue;
 
@@ -143,11 +141,6 @@ public class DataWriter {
                 shutdown = true;
             }
 
-            // even if we shutdown gracefully, we have to send an interrupt
-            // otherwise the thread would never return, if the transferQueue is already empty and
-            // the poll thread is blocked in the take method.
-            pollResult.cancel(true);
-
             try {
                 // we can't use the return value of result cause we have to interrupt the thread
                 // therefore we need the latch and the field
@@ -170,83 +163,6 @@ public class DataWriter {
             this.transferQueue = queue;
             LOG.debug("Event queue attached.");
             queueReady.countDown();
-        }
-
-        /**
-         * Takes buffers from the context transferQueue and writes them to the channel. If the
-         * channel is currently not writable, no calls to the channel are made.
-         */
-        private class Poll implements Runnable {
-
-            private final Logger LOG = LoggerFactory.getLogger(Poll.class);
-
-            /*
-             * We use a Callable here to be able to shutdown single threads instead of all threads
-             * managed by the executor.
-             */
-            @Override
-            public void run() {
-                try {
-                    queueReady.await();
-                } catch (InterruptedException e) {
-                    if (shutdown) {
-                        LOG.info("Shutdown signal received. Queue was not attached.");
-                        // set shutdown true, as the interrupt occurred while the queue was not
-                        // attached yet.
-                        shutdown = true;
-                    }
-                }
-
-                long notWritable = 0l;
-                long writes = 0l;
-                long writeDuration = 0l;
-
-                while (!shutdown) {
-                    try {
-                        if (channelWritable.get()) {
-
-                            IOEvents.DataIOEvent dataIOEvent = transferQueue.take();
-
-                            if (dataIOEvent.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
-                                LOG.debug("Data source exhausted. Shutting down poll thread.");
-                                exhaustedSent.incrementAndGet();
-                                shutdown = true;
-                            }
-
-                            long start = System.nanoTime();
-                            channel.writeAndFlush(dataIOEvent).syncUninterruptibly();
-                            writeDuration += Math.abs(System.nanoTime() - start);
-                            ++writes;
-                        } else {
-                            ++notWritable;
-                            LOG.trace("Channel not writable.");
-                        }
-                    } catch (InterruptedException e) {
-                        LOG.debug("Polling thread interrupted");
-                        // interrupted during take command, 2. scenarios
-                        // 1. interrupt while transferQueue was empty -> event == null,
-                        // transferQueue == empty
-                        // 2. interrupt before the transferQueue acquired the lock -> event == null,
-                        // transferQueue == not empty
-
-                        // either the thread is forced to shut down -> shutdown == true
-                        // or gracefully, send events in transferQueue before shutdown -> shutdown
-                        // == false
-                    }
-                }
-
-                transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER,
-                                                                                transferQueue.getName() + " -> Avg. write",
-                                                                                (long) ((double) writeDuration / (double) writes)));
-                transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER,
-                                                                                transferQueue.getName() + " -> Not writable",
-                                                                                notWritable));
-
-                LOG.debug("Polling thread is closing.");
-
-                // signal shutdown method
-                pollFinished.countDown();
-            }
         }
 
         public final class OpenCloseGateHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
@@ -304,9 +220,6 @@ public class DataWriter {
                         channel = future.channel();
                         LOG.debug("Channel successfully connected.");
 
-                        Poll pollThread = new Poll();
-                        pollResult = pollThreadExecutor.submit(pollThread);
-
                         future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
                                                                                 srcID,
                                                                                 dstID));
@@ -328,22 +241,101 @@ public class DataWriter {
             }
         }
 
-        /**
-         * Sets the writable flag for this channel.
-         */
-        public final class WritableHandler extends ChannelInboundHandlerAdapter {
+        private class ChannelActiveHandler extends ChannelInboundHandlerAdapter {
 
             @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                channelWritable.set(ctx.channel().isWritable());
+            public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+                ctx.channel().eventLoop().submit(new Callable<Void>() {
+
+                    @Override
+                    public Void call() throws Exception {
+                        queueReady.await();
+                        // bind observer
+                        transferQueue.registerObserver(new WriteableObserver(ctx));
+                        return null;
+                    }
+                }).addListener(new GenericFutureListener<Future<? super Void>>() {
+
+                    @Override
+                    public void operationComplete(Future<? super Void> future) throws Exception {
+                        if (future.isSuccess()) {
+                            // goes to WriteHandler
+                            ctx.fireChannelWritabilityChanged();
+                        } else {
+                            if (future.cause() != null)
+                                throw new IllegalStateException(future.cause());
+                        }
+                    }
+                });
+
                 ctx.fireChannelActive();
             }
+        }
+
+        private class WriteHandler extends ChannelInboundHandlerAdapter {
+
+            long notWritable = 0l;
+
+            long writes = 0l;
+
+            long writeDuration = 0l;
 
             @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
-                channelWritable.set(ctx.channel().isWritable());
-                ctx.fireChannelWritabilityChanged();
+            public void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
+
+                if (ctx.channel().isWritable()) {
+                    final IOEvents.DataIOEvent event = transferQueue.poll();
+                    if (event != null) {
+
+                        final long start = System.nanoTime();
+                        ctx.channel().writeAndFlush(event).addListener(new ChannelFutureListener() {
+
+                            @Override
+                            public void operationComplete(ChannelFuture future) throws Exception {
+                                writeDuration += Math.abs(System.nanoTime() - start);
+                                ++writes;
+
+                                if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
+                                    LOG.debug("Data source exhausted. Shutting down poll thread.");
+
+                                    transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, transferQueue.getName()
+                                            + " -> Avg. write", (long) ((double) writeDuration / (double) writes)));
+                                    transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, transferQueue.getName()
+                                            + " -> Not writable", notWritable));
+
+                                    pollFinished.countDown();
+                                } else {
+                                    ctx.pipeline().fireChannelWritabilityChanged();
+                                }
+                            }
+                        });
+                    }
+                }
             }
+        }
+    }
+
+    private static class WriteableObserver implements BufferQueue.QueueObserver {
+
+        private final ChannelHandlerContext ctx;
+
+        public WriteableObserver(ChannelHandlerContext ctx) {
+            this.ctx = ctx;
+        }
+
+        @Override
+        public void signalNotFull() {
+            ctx.fireChannelWritabilityChanged();
+        }
+
+        @Override
+        public void signalNotEmpty() {
+            ctx.fireChannelWritabilityChanged();
+        }
+
+        @Override
+        public void signalNewElement() {
+            ctx.fireChannelWritabilityChanged();
         }
     }
 
@@ -375,9 +367,10 @@ public class DataWriter {
 
                 @Override
                 protected void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(channelWriter.new OpenCloseGateHandler()).addLast(channelWriter.new WritableHandler());
-                    // .addLast(channelWriter.new ChannelActiveHandler())
-                    // .addLast(channelWriter.new WriteHandler());
+                    ch.pipeline()
+                      .addLast(channelWriter.new OpenCloseGateHandler())
+                      .addLast(channelWriter.new ChannelActiveHandler())
+                      .addLast(channelWriter.new WriteHandler());
                 }
             };
         }
@@ -422,9 +415,8 @@ public class DataWriter {
                       .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER(channelWriter.allocator, null))
                       .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(channelWriter.allocator, null))
                       .addLast(channelWriter.new OpenCloseGateHandler())
-                      .addLast(channelWriter.new WritableHandler());
-                    // .addLast(channelWriter.new ChannelActiveHandler())
-                    // .addLast(channelWriter.new WriteHandler());
+                      .addLast(channelWriter.new ChannelActiveHandler())
+                      .addLast(channelWriter.new WriteHandler());
                 }
             };
         }

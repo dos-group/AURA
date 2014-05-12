@@ -228,7 +228,7 @@ public final class TaskDataProducer implements DataProducer {
                     // Set the channel on right position.
                     if (outputTask.taskID.equals(event.dstTaskID)) {
                         // get the right queue manager for task context
-                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutputQueue(gateIndex, channelIndex);
+                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutboundQueue(gateIndex, channelIndex);
 
                         final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.payload;
                         channelWriter.setOutputQueue(queue);

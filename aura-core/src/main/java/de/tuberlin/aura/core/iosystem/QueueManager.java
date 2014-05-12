@@ -18,11 +18,13 @@ public class QueueManager<T> {
 
     public static Map<UUID, QueueManager> BINDINGS = new HashMap<UUID, QueueManager>();
 
-    private final Map<Integer, BufferQueue<T>> inputQueues;
+    private final Map<Integer, BufferQueue<T>> inboundQueues;
 
-    private final Map<LongKey, BufferQueue<T>> outputQueues;
+    private final Map<LongKey, BufferQueue<T>> outboundQueues;
 
-    private final BufferQueue.FACTORY<T> queueFactory;
+    private final BufferQueue.FACTORY<T> inboundFactory;
+
+    private final BufferQueue.FACTORY<T> outboundFactory;
 
     private final MeasurementManager measurementManager;
 
@@ -30,10 +32,13 @@ public class QueueManager<T> {
 
     private int outputQueuesCounter;
 
-    private QueueManager(BufferQueue.FACTORY<T> factory, MeasurementManager measurementManager) {
-        this.inputQueues = new HashMap<>();
-        this.outputQueues = new HashMap<>();
-        this.queueFactory = factory;
+    private QueueManager(BufferQueue.FACTORY<T> inboundFactory, BufferQueue.FACTORY<T> outboundFactory, MeasurementManager measurementManager) {
+        this.inboundQueues = new HashMap<>();
+        this.inboundFactory = inboundFactory;
+
+        this.outboundQueues = new HashMap<>();
+        this.outboundFactory = outboundFactory;
+
         this.measurementManager = measurementManager;
     }
 
@@ -47,8 +52,11 @@ public class QueueManager<T> {
      * @param <F>
      * @return
      */
-    public static <F> QueueManager<F> newInstance(UUID taskID, BufferQueue.FACTORY<F> queueFactory, MeasurementManager measurementManager) {
-        QueueManager<F> instance = new QueueManager<>(queueFactory, measurementManager);
+    public static <F> QueueManager<F> newInstance(UUID taskID,
+                                                  BufferQueue.FACTORY<F> inboundFactory,
+                                                  BufferQueue.FACTORY<F> outboundFactory,
+                                                  MeasurementManager measurementManager) {
+        QueueManager<F> instance = new QueueManager<>(inboundFactory, outboundFactory, measurementManager);
         BINDINGS.put(taskID, instance);
         return instance;
     }
@@ -59,14 +67,14 @@ public class QueueManager<T> {
      * @param gateIndex
      * @return
      */
-    public synchronized BufferQueue<T> getInputQueue(int gateIndex) {
+    public synchronized BufferQueue<T> getInboundQueue(int gateIndex) {
 
-        if (inputQueues.containsKey(gateIndex)) {
-            return inputQueues.get(gateIndex);
+        if (inboundQueues.containsKey(gateIndex)) {
+            return inboundQueues.get(gateIndex);
         }
 
-        final BufferQueue<T> queue = queueFactory.newInstance("InputQueue " + Integer.toString(inputQueuesCounter), this.measurementManager);
-        inputQueues.put(gateIndex, queue);
+        final BufferQueue<T> queue = inboundFactory.newInstance("InputQueue " + Integer.toString(inputQueuesCounter), this.measurementManager);
+        inboundQueues.put(gateIndex, queue);
         ++this.inputQueuesCounter;
 
         return queue;
@@ -79,15 +87,15 @@ public class QueueManager<T> {
      * @param channelIndex
      * @return
      */
-    public synchronized BufferQueue<T> getOutputQueue(int gateIndex, int channelIndex) {
+    public synchronized BufferQueue<T> getOutboundQueue(int gateIndex, int channelIndex) {
 
         final LongKey key = new LongKey(gateIndex, channelIndex);
-        if (outputQueues.containsKey(key)) {
-            return outputQueues.get(key);
+        if (outboundQueues.containsKey(key)) {
+            return outboundQueues.get(key);
         }
 
-        final BufferQueue<T> queue = queueFactory.newInstance("OutputQueue " + Integer.toString(outputQueuesCounter), this.measurementManager);
-        outputQueues.put(key, queue);
+        final BufferQueue<T> queue = outboundFactory.newInstance("OutputQueue " + Integer.toString(outputQueuesCounter), this.measurementManager);
+        outboundQueues.put(key, queue);
         ++this.outputQueuesCounter;
 
         return queue;

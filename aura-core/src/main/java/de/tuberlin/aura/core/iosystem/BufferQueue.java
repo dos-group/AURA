@@ -10,6 +10,8 @@ public interface BufferQueue<T> extends Iterable<T> {
 
     T poll(final long timeout, final TimeUnit timeUnit) throws InterruptedException;
 
+    T poll();
+
     boolean offer(T value);
 
     void put(T value) throws InterruptedException;
@@ -18,12 +20,29 @@ public interface BufferQueue<T> extends Iterable<T> {
 
     public int size();
 
-    public MeasurementManager getMeasurementManager();
-
-    public String getName();
-
     public interface FACTORY<T> {
 
         BufferQueue<T> newInstance(String name, MeasurementManager measurementManager);
+    }
+
+    // measurement
+
+    public String getName();
+
+    public MeasurementManager getMeasurementManager();
+
+    // observer
+
+    public void registerObserver(QueueObserver observer);
+
+    public void removeObserver(QueueObserver observer);
+
+    public interface QueueObserver {
+
+        public void signalNotFull();
+
+        public void signalNotEmpty();
+
+        public void signalNewElement();
     }
 }
