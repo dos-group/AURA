@@ -10,7 +10,7 @@ import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.statistic.*;
 import de.tuberlin.aura.core.statistic.record.BenchmarkRecord;
 import de.tuberlin.aura.core.statistic.record.BenchmarkRecord.WordCountBenchmarkRecord;
@@ -88,7 +88,7 @@ public final class MapReduceClient {
 
                     final UUID outputTaskID = getTaskID(0, index);
 
-                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final MemoryView buffer = producer.allocBlocking();
                     final IOEvents.TransferBufferEvent event = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
 
                     final Record<WordCountBenchmarkRecord> record = new Record<>(new WordCountBenchmarkRecord(word, 1));

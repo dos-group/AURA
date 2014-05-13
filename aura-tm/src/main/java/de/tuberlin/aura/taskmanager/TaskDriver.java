@@ -13,7 +13,7 @@ import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
 import de.tuberlin.aura.core.iosystem.BlockingSignalQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.*;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
@@ -107,7 +107,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
      *
      */
     @Override
-    public void startupDriver(final MemoryManager.Allocator inputAllocator, final MemoryManager.Allocator outputAllocator) {
+    public void startupDriver(final IAllocator inputAllocator, final IAllocator outputAllocator) {
         // sanity check.
         if (inputAllocator == null)
             throw new IllegalArgumentException("inputAllocator == null");

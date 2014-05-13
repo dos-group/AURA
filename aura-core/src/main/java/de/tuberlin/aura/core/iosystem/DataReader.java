@@ -299,7 +299,7 @@ public class DataReader {
              .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
 
             return b;
-  }
+        }
 
         @Override
         public ChannelInitializer<SocketChannel> getPipeline(final DataReader dataReader) {
@@ -309,8 +309,8 @@ public class DataReader {
                 public void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline()
                       .addLast(KryoEventSerializer.LENGTH_FIELD_DECODER())
-                      .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER(null, dataReader.executionManager))
-                      .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(null, dataReader.executionManager))
+                      .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER())
+                      .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(dataReader.executionManager))
                       .addLast(dataReader.new TransferEventHandler())
                       .addLast(dataReader.new DataEventHandler());
                 }

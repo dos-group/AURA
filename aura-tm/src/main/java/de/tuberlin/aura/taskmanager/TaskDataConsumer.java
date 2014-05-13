@@ -13,7 +13,7 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskStates;
@@ -49,13 +49,13 @@ public final class TaskDataConsumer implements DataConsumer {
 
     private final IEventHandler consumerEventHandler;
 
-    private final MemoryManager.Allocator allocator;
+    private final IAllocator allocator;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataConsumer(final TaskDriverContext driverContext, final MemoryManager.Allocator allocator) {
+    public TaskDataConsumer(final TaskDriverContext driverContext, final IAllocator allocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");

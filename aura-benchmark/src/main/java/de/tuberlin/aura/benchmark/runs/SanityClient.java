@@ -15,7 +15,7 @@ import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import de.tuberlin.aura.core.statistic.record.BenchmarkRecord.SanityBenchmarkRecord;
@@ -63,7 +63,7 @@ public final class SanityClient {
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
 
-                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final MemoryView buffer = producer.allocBlocking();
                     final IOEvents.TransferBufferEvent event = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
 
                     final Record<SanityBenchmarkRecord> record = new Record<>(new SanityBenchmarkRecord(outputTaskID));
@@ -126,7 +126,7 @@ public final class SanityClient {
                     for (int index = 0; index < outputs.size(); ++index) {
                         final UUID outputTaskID = getTaskID(0, index);
 
-                        final MemoryManager.MemoryView sendBuffer = producer.alloc();
+                        final MemoryView sendBuffer = producer.allocBlocking();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         record.getData().nextTask = outputTaskID;
@@ -190,7 +190,7 @@ public final class SanityClient {
                     for (int index = 0; index < outputs.size(); ++index) {
                         final UUID outputTaskID = getTaskID(0, index);
 
-                        final MemoryManager.MemoryView sendBuffer = producer.alloc();
+                        final MemoryView sendBuffer = producer.allocBlocking();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         leftRecord.getData().nextTask = outputTaskID;
@@ -218,7 +218,7 @@ public final class SanityClient {
                     for (int index = 0; index < outputs.size(); ++index) {
                         final UUID outputTaskID = getTaskID(0, index);
 
-                        final MemoryManager.MemoryView sendBuffer = producer.alloc();
+                        final MemoryView sendBuffer = producer.allocBlocking();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         rightRecord.getData().nextTask = outputTaskID;

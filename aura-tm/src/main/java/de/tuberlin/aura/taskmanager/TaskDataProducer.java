@@ -12,7 +12,9 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.BufferCallback;
+import de.tuberlin.aura.core.memory.IAllocator;
+import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskStates;
@@ -43,13 +45,13 @@ public final class TaskDataProducer implements DataProducer {
     private final IEventHandler producerEventHandler;
 
 
-    private final MemoryManager.Allocator outputAllocator;
+    private final IAllocator outputAllocator;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataProducer(final TaskDriverContext driverContext, final MemoryManager.Allocator outputAllocator) {
+    public TaskDataProducer(final TaskDriverContext driverContext, final IAllocator outputAllocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
@@ -145,8 +147,13 @@ public final class TaskDataProducer implements DataProducer {
      * @return
      */
     @Override
-    public MemoryManager.MemoryView alloc() {
+    public MemoryView alloc(BufferCallback callback) {
         return outputAllocator.alloc();
+    }
+
+    @Override
+    public MemoryView allocBlocking() throws InterruptedException {
+        return outputAllocator.allocBlocking();
     }
 
     // ---------------------------------------------------

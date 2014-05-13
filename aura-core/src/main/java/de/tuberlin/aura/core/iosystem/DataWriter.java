@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import io.netty.bootstrap.Bootstrap;
@@ -51,7 +51,7 @@ public class DataWriter {
                                                      final UUID dstTaskID,
                                                      final OutgoingConnectionType<T> type,
                                                      final SocketAddress address,
-                                                     final MemoryManager.Allocator allocator) {
+                                                     final IAllocator allocator) {
 
         return new ChannelWriter<>(type, srcTaskID, dstTaskID, address, allocator);
     }
@@ -68,7 +68,7 @@ public class DataWriter {
 
         private final UUID dstID;
 
-        private final MemoryManager.Allocator allocator;
+        private final IAllocator allocator;
 
         private Channel channel;
 
@@ -92,7 +92,7 @@ public class DataWriter {
                              final UUID srcID,
                              final UUID dstID,
                              final SocketAddress address,
-                             final MemoryManager.Allocator allocator) {
+                             final IAllocator allocator) {
 
             this.srcID = srcID;
 
@@ -412,8 +412,8 @@ public class DataWriter {
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline()
                       .addLast(KryoEventSerializer.LENGTH_FIELD_DECODER())
-                      .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER(channelWriter.allocator, null))
-                      .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(channelWriter.allocator, null))
+                      .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER())
+                      .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(null))
                       .addLast(channelWriter.new OpenCloseGateHandler())
                       .addLast(channelWriter.new ChannelActiveHandler())
                       .addLast(channelWriter.new WriteHandler());

@@ -19,7 +19,7 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -119,10 +119,7 @@ public final class IOManager extends EventDispatcher {
      * @param dstTaskID
      * @param dstMachine
      */
-    public void connectDataChannel(final UUID srcTaskID,
-                                   final UUID dstTaskID,
-                                   final MachineDescriptor dstMachine,
-                                   final MemoryManager.Allocator allocator) {
+    public void connectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine, final IAllocator allocator) {
         // sanity check.
         if (srcTaskID == null)
             throw new IllegalArgumentException("srcTask == null");
@@ -361,7 +358,7 @@ public final class IOManager extends EventDispatcher {
         public void buildNetworkDataChannel(final UUID srcTaskID,
                                             final UUID dstTaskID,
                                             final InetSocketAddress socketAddress,
-                                            final MemoryManager.Allocator allocator) {
+                                            final IAllocator allocator) {
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
@@ -375,7 +372,7 @@ public final class IOManager extends EventDispatcher {
             dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, allocator);
         }
 
-        public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.Allocator allocator) {
+        public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final IAllocator allocator) {
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");

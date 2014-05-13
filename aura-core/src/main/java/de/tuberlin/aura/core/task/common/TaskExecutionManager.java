@@ -19,7 +19,9 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitLocalInputEventLoopGroup;
 import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNetworkInputEventLoopGroup;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
+import de.tuberlin.aura.core.memory.IAllocator;
+import de.tuberlin.aura.core.memory.IBufferMemoryManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -57,7 +59,7 @@ public final class TaskExecutionManager extends EventDispatcher {
 
     private final TaskExecutionUnit[] executionUnit;
 
-    private final MemoryManager.BufferMemoryManager bufferMemoryManager;
+    private final IBufferMemoryManager bufferMemoryManager;
 
     private IOManager ioManager;
 
@@ -69,7 +71,7 @@ public final class TaskExecutionManager extends EventDispatcher {
      * @param machineDescriptor
      * @param bufferMemoryManager
      */
-    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor, final MemoryManager.BufferMemoryManager bufferMemoryManager) {
+    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor, final IBufferMemoryManager bufferMemoryManager) {
         // TODO: Cleanup
         super(true, "TaskExecutionManagerEventDispatcher");
 
@@ -161,8 +163,8 @@ public final class TaskExecutionManager extends EventDispatcher {
      */
     private void initializeExecutionUnits() {
         for (int i = 0; i < numberOfCores; ++i) {
-            final MemoryManager.BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
-            final MemoryManager.BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
+            final BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
+            final BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
 
             this.executionUnit[i] = new TaskExecutionUnit(this, i, inputBuffer, outputBuffer);
             this.executionUnit[i].start();
@@ -294,7 +296,7 @@ public final class TaskExecutionManager extends EventDispatcher {
             private void handleOutputChannelSetup(final IOEvents.SetupIOEvent event) {
 
                 final DataWriter.OutgoingConnectionType connectionType = event.connectionType;
-                final MemoryManager.Allocator allocator = event.allocator;
+                final IAllocator allocator = event.allocator;
                 final DataWriter.ChannelWriter dataWriter = (DataWriter.ChannelWriter) event.getPayload();
 
                 // Determine the execution unit the given channel is connected to.

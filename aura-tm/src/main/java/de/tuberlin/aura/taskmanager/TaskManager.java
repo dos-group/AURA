@@ -24,7 +24,8 @@ import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.BufferMemoryManager;
+import de.tuberlin.aura.core.memory.IBufferMemoryManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
@@ -61,7 +62,7 @@ public final class TaskManager implements WM2TMProtocol {
 
     private final Map<UUID, List<TaskDriverContext>> deployedTopologyTasks;
 
-    private final MemoryManager.BufferMemoryManager bufferMemoryManager;
+    private final IBufferMemoryManager bufferMemoryManager;
 
     // ---------------------------------------------------
     // Constructors.
@@ -85,7 +86,7 @@ public final class TaskManager implements WM2TMProtocol {
         this.deployedTopologyTasks = new HashMap<>();
 
         // Setup buffer memory management.
-        this.bufferMemoryManager = new MemoryManager.BufferMemoryManager(machine);
+        this.bufferMemoryManager = new BufferMemoryManager(machine);
 
         // Setup execution manager.
         this.executionManager = new TaskExecutionManager(ownMachine, this.bufferMemoryManager);
