@@ -283,7 +283,7 @@ public final class Descriptors {
 
         public final String name;
 
-        public final UserCode userCode;
+        public final List<UserCode> userCodeList;
 
         private MachineDescriptor machine;
 
@@ -291,7 +291,7 @@ public final class Descriptors {
         // Constructors.
         // ---------------------------------------------------
 
-        public TaskDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final UserCode userCode) {
+        public TaskDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
             // sanity check.
             if (topologyID == null)
                 throw new IllegalArgumentException("topologyID == null");
@@ -301,8 +301,8 @@ public final class Descriptors {
                 throw new IllegalArgumentException("taskIndex < 0");
             if (name == null)
                 throw new IllegalArgumentException("name == null");
-            if (userCode == null)
-                throw new IllegalArgumentException("userCode == null");
+            if (userCodeList == null)
+                throw new IllegalArgumentException("userCodeList == null");
 
             this.topologyID = topologyID;
 
@@ -312,7 +312,7 @@ public final class Descriptors {
 
             this.name = name;
 
-            this.userCode = userCode;
+            this.userCodeList = userCodeList;
         }
 
         // ---------------------------------------------------

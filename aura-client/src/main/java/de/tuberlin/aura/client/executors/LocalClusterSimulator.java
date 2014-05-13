@@ -15,7 +15,7 @@ import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 
 import de.tuberlin.aura.core.common.utils.ProcessExecutor;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
+import de.tuberlin.aura.core.measurement.MeasurementManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.taskmanager.TaskManager;
 import de.tuberlin.aura.workloadmanager.WorkloadManager;

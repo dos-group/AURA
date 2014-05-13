@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import de.tuberlin.aura.core.statistic.MedianHelper;
+import de.tuberlin.aura.core.measurement.MedianHelper;
 
 /**
  *

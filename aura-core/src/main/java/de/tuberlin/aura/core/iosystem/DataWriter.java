@@ -8,14 +8,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import de.tuberlin.aura.core.memory.spi.IAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
-import de.tuberlin.aura.core.memory.MemoryManager;
-import de.tuberlin.aura.core.statistic.MeasurementType;
-import de.tuberlin.aura.core.statistic.NumberMeasurement;
+import de.tuberlin.aura.core.measurement.MeasurementType;
+import de.tuberlin.aura.core.measurement.NumberMeasurement;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.local.LocalChannel;
@@ -46,7 +46,7 @@ public class DataWriter {
                                                      final OutgoingConnectionType<T> type,
                                                      final SocketAddress address,
                                                      final EventLoopGroup eventLoopGroup,
-                                                     final MemoryManager.Allocator allocator) {
+                                                     final IAllocator allocator) {
 
         return new ChannelWriter<>(type, srcTaskID, dstTaskID, address, eventLoopGroup, allocator);
     }
@@ -92,7 +92,7 @@ public class DataWriter {
                              final UUID dstID,
                              final SocketAddress address,
                              final EventLoopGroup eventLoopGroup,
-                             final MemoryManager.Allocator allocator) {
+                             final IAllocator allocator) {
 
             this.srcID = srcID;
 

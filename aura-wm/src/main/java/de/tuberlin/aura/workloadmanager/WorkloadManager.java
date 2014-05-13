@@ -15,8 +15,8 @@ import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
+import de.tuberlin.aura.core.measurement.MeasurementManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 

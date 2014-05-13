@@ -8,9 +8,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.tuberlin.aura.core.statistic.AccumulatedLatencyMeasurement;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
-import de.tuberlin.aura.core.statistic.MeasurementType;
+import de.tuberlin.aura.core.measurement.AccumulatedLatencyMeasurement;
+import de.tuberlin.aura.core.measurement.MeasurementManager;
+import de.tuberlin.aura.core.measurement.MeasurementType;
 
 /**
  * Simple wrapper for a {@link java.util.concurrent.LinkedBlockingQueue}.

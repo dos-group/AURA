@@ -11,8 +11,8 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.iosystem.DataWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
-import de.tuberlin.aura.core.task.common.DataProducer;
-import de.tuberlin.aura.core.task.common.TaskDriverContext;
+import de.tuberlin.aura.core.task.spi.IDataProducer;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
 
 public final class OutputGate extends AbstractGate {
 
@@ -26,19 +26,19 @@ public final class OutputGate extends AbstractGate {
 
     private final List<DataWriter.ChannelWriter> channelWriter;
 
-    private final DataProducer producer;
+    private final IDataProducer producer;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
     /**
-     * @param driverContext
+     * @param taskDriver
      * @param gateIndex
      * @param producer
      */
-    public OutputGate(final TaskDriverContext driverContext, int gateIndex, final DataProducer producer) {
-        super(driverContext, gateIndex, driverContext.taskBindingDescriptor.outputGateBindings.get(gateIndex).size());
+    public OutputGate(final ITaskDriver taskDriver, int gateIndex, final IDataProducer producer) {
+        super(taskDriver, gateIndex, taskDriver.getTaskBindingDescriptor().outputGateBindings.get(gateIndex).size());
 
         this.producer = producer;
 
@@ -53,8 +53,8 @@ public final class OutputGate extends AbstractGate {
 
         final EventHandler outputGateEventHandler = new OutputGateEventHandler();
 
-        driverContext.driverDispatcher.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, outputGateEventHandler);
-        driverContext.driverDispatcher.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, outputGateEventHandler);
+        taskDriver.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, outputGateEventHandler);
+        taskDriver.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, outputGateEventHandler);
     }
 
     // ---------------------------------------------------

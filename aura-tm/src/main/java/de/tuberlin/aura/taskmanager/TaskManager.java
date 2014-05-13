@@ -3,6 +3,8 @@ package de.tuberlin.aura.taskmanager;
 import java.io.IOException;
 import java.util.*;
 
+import de.tuberlin.aura.core.memory.BufferMemoryManager;
+import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -19,16 +21,15 @@ import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.measurement.MeasurementManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
-import de.tuberlin.aura.core.task.common.TaskDriverContext;
-import de.tuberlin.aura.core.task.common.TaskExecutionManager;
-import de.tuberlin.aura.core.task.common.TaskManagerContext;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.task.spi.ITaskManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
-public final class TaskManager implements WM2TMProtocol {
+public final class TaskManager implements ITaskManager {
 
     // ---------------------------------------------------
     // Fields.
@@ -36,27 +37,27 @@ public final class TaskManager implements WM2TMProtocol {
 
     private static final Logger LOG = Logger.getLogger(TaskManager.class);
 
-    private final IOManager ioManager;
 
-    private final IORedispatcher ioHandler;
+    private final IOManager ioManager;
 
     private final RPCManager rpcManager;
 
-    private final TaskExecutionManager executionManager;
+    private final ITaskExecutionManager executionManager;
+
+    private final IBufferMemoryManager bufferMemoryManager;
 
     private final ZooKeeper zookeeper;
 
-    private final TaskManagerContext managerContext;
+
+    private final IORedispatcher ioHandler;
 
     private final MachineDescriptor workloadManagerMachine;
 
-    private final MachineDescriptor ownMachine;
+    private final MachineDescriptor taskManagerMachine;
 
-    private final Map<UUID, TaskDriverContext> deployedTasks;
+    private final Map<UUID, ITaskDriver> deployedTasks;
 
-    private final Map<UUID, List<TaskDriverContext>> deployedTopologyTasks;
-
-    private final MemoryManager.BufferMemoryManager bufferMemoryManager;
+    private final Map<UUID, List<ITaskDriver>> deployedTopologyTasks;
 
     // ---------------------------------------------------
     // Constructors.
@@ -73,28 +74,29 @@ public final class TaskManager implements WM2TMProtocol {
         if (machine == null)
             throw new IllegalArgumentException("machine == null");
 
-        this.ownMachine = machine;
+        this.taskManagerMachine = machine;
 
         this.deployedTasks = new HashMap<>();
 
         this.deployedTopologyTasks = new HashMap<>();
 
         // Setup buffer memory management.
-        this.bufferMemoryManager = new MemoryManager.BufferMemoryManager(machine);
+        this.bufferMemoryManager = new BufferMemoryManager(machine);
 
         // Setup execution manager.
-        this.executionManager = new TaskExecutionManager(ownMachine, this.bufferMemoryManager);
+        this.executionManager = new TaskExecutionManager(taskManagerMachine, this.bufferMemoryManager);
 
         this.executionManager.addEventListener(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK, new IEventHandler() {
 
             @Override
             public void handleEvent(Event e) {
-                unregisterTask((TaskDriverContext) e.getPayload());
+                unregisterTask((ITaskDriver) e.getPayload());
             }
         });
 
         // setup IO.
         this.ioManager = setupIOManager(machine, executionManager);
+
         this.executionManager.setIOManager(this.ioManager);
 
         this.rpcManager = new RPCManager(ioManager);
@@ -126,14 +128,38 @@ public final class TaskManager implements WM2TMProtocol {
         rpcManager.registerRPCProtocolImpl(this, WM2TMProtocol.class);
 
         ioManager.connectMessageChannelBlocking(workloadManagerMachine);
-
-        // setup task manager context.
-        this.managerContext = new TaskManagerContext(ioManager, rpcManager, executionManager, workloadManagerMachine, ownMachine);
     }
 
     // ---------------------------------------------------
     // Public Methods.
     // ---------------------------------------------------
+
+    @Override
+    public IOManager getIOManager() {
+        return ioManager;
+    }
+
+    @Override
+    public RPCManager getRPCManager() {
+        return rpcManager;
+    }
+
+    @Override
+    public ITaskExecutionManager getTaskExecutionManager() {
+        return executionManager;
+    }
+
+    @Override
+    public MachineDescriptor getWorkloadManagerMachineDescriptor() {
+        return workloadManagerMachine;
+    }
+
+    @Override
+    public MachineDescriptor getTaskManagerMachineDescriptor() {
+        return taskManagerMachine;
+    }
+
+    // ------------- Workload Manager Protocol ---------------
 
     /**
      * @param taskDeploymentDescriptor
@@ -144,8 +170,8 @@ public final class TaskManager implements WM2TMProtocol {
         if (taskDeploymentDescriptor == null)
             throw new IllegalArgumentException("taskDescriptor == null");
 
-        final TaskDriverContext taskDriverCtx = registerTask(taskDeploymentDescriptor);
-        executionManager.scheduleTask(taskDriverCtx);
+        final ITaskDriver taskDriver = registerTask(taskDeploymentDescriptor);
+        executionManager.scheduleTask(taskDriver);
     }
 
     /**
@@ -158,8 +184,8 @@ public final class TaskManager implements WM2TMProtocol {
             throw new IllegalArgumentException("deploymentDescriptors == null");
 
         for (final TaskDeploymentDescriptor tdd : deploymentDescriptors) {
-            final TaskDriverContext taskDriverCtx = registerTask(tdd);
-            executionManager.scheduleTask(taskDriverCtx);
+            final ITaskDriver taskDriver = registerTask(tdd);
+            executionManager.scheduleTask(taskDriver);
         }
     }
 
@@ -182,8 +208,8 @@ public final class TaskManager implements WM2TMProtocol {
                     }));
 
             ZookeeperHelper.initDirectories(zookeeper);
-            final String zkTaskManagerDir = ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + ownMachine.uid.toString();
-            ZookeeperHelper.storeInZookeeper(zookeeper, zkTaskManagerDir, ownMachine);
+            final String zkTaskManagerDir = ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + taskManagerMachine.uid.toString();
+            ZookeeperHelper.storeInZookeeper(zookeeper, zkTaskManagerDir, taskManagerMachine);
 
             return zookeeper;
 
@@ -196,7 +222,7 @@ public final class TaskManager implements WM2TMProtocol {
      * @param machineDescriptor
      * @return
      */
-    private IOManager setupIOManager(final MachineDescriptor machineDescriptor, final TaskExecutionManager executionManager) {
+    private IOManager setupIOManager(final MachineDescriptor machineDescriptor, final ITaskExecutionManager executionManager) {
         final IOManager ioManager = new IOManager(machineDescriptor, executionManager);
         return ioManager;
     }
@@ -205,7 +231,7 @@ public final class TaskManager implements WM2TMProtocol {
      * @param taskDeploymentDescriptor
      * @return
      */
-    private TaskDriverContext registerTask(final TaskDeploymentDescriptor taskDeploymentDescriptor) {
+    private ITaskDriver registerTask(final TaskDeploymentDescriptor taskDeploymentDescriptor) {
 
         final UUID taskID = taskDeploymentDescriptor.taskDescriptor.taskID;
 
@@ -213,47 +239,46 @@ public final class TaskManager implements WM2TMProtocol {
             throw new IllegalStateException("task already deployed");
 
         // Create an task driver for the submitted task.
-        final TaskDriver taskDriver = new TaskDriver(managerContext, taskDeploymentDescriptor);
-        final TaskDriverContext taskDriverCtx = taskDriver.getTaskDriverContext();
-        deployedTasks.put(taskID, taskDriverCtx);
+        final ITaskDriver taskDriver = new TaskDriver(this, taskDeploymentDescriptor);
+        deployedTasks.put(taskID, taskDriver);
 
         final UUID topologyID = taskDeploymentDescriptor.taskDescriptor.topologyID;
-        List<TaskDriverContext> contexts = deployedTopologyTasks.get(topologyID);
+        List<ITaskDriver> contexts = deployedTopologyTasks.get(topologyID);
 
         if (contexts == null) {
             contexts = new ArrayList<>();
             deployedTopologyTasks.put(topologyID, contexts);
         }
 
-        contexts.add(taskDriverCtx);
-        return taskDriverCtx;
+        contexts.add(taskDriver);
+        return taskDriver;
     }
 
     /**
-     * @param taskDriverCtx
+     * @param taskDriver
      */
-    private void unregisterTask(final TaskDriverContext taskDriverCtx) {
+    private void unregisterTask(final ITaskDriver taskDriver) {
         // sanity check.
-        if (taskDriverCtx == null)
-            throw new IllegalArgumentException("taskDriverCtx == null");
+        if (taskDriver == null)
+            throw new IllegalArgumentException("taskDriver == null");
 
-        if (deployedTasks.remove(taskDriverCtx.taskDescriptor.taskID) == null)
+        if (deployedTasks.remove(taskDriver.getTaskDescriptor().taskID) == null)
             throw new IllegalStateException("task is not deployed");
 
-        final List<TaskDriverContext> taskList = deployedTopologyTasks.get(taskDriverCtx.taskDescriptor.topologyID);
+        final List<ITaskDriver> taskList = deployedTopologyTasks.get(taskDriver.getTaskDescriptor().topologyID);
 
         if (taskList == null)
             throw new IllegalStateException();
 
-        if (!taskList.remove(taskDriverCtx))
+        if (!taskList.remove(taskDriver))
             throw new IllegalStateException();
 
         if (taskList.size() == 0)
-            deployedTopologyTasks.remove(taskDriverCtx.taskDescriptor.topologyID);
+            deployedTopologyTasks.remove(taskDriver.getTaskDescriptor().topologyID);
 
         LOG.trace("Shutdown event dispatchers");
-        taskDriverCtx.driverDispatcher.shutdown();
-        taskDriverCtx.taskFSM.shutdown();
+        taskDriver.shutdown();
+        taskDriver.getTaskStateMachine().shutdown();
     }
 
     /**
@@ -266,14 +291,14 @@ public final class TaskManager implements WM2TMProtocol {
         if (!(event.getPayload() instanceof StateMachine.FSMTransitionEvent))
             throw new IllegalArgumentException("event is not FSMTransitionEvent");
 
-        final List<TaskDriverContext> ctxList = deployedTopologyTasks.get(event.getTopologyID());
-        if (ctxList == null) {
+        final List<ITaskDriver> taskList = deployedTopologyTasks.get(event.getTopologyID());
+        if (taskList == null) {
             // throw new IllegalArgumentException("ctxList == null");
             LOG.info("Task driver context for topology [" + event.getTopologyID() + "] is removed");
         } else {
-            for (final TaskDriverContext ctx : ctxList) {
-                if (ctx.taskDescriptor.taskID.equals(event.getTaskID())) {
-                    ctx.taskFSM.dispatchEvent((Event) event.getPayload());
+            for (final ITaskDriver taskDriver : taskList) {
+                if (taskDriver.getTaskDescriptor().taskID.equals(event.getTaskID())) {
+                    taskDriver.getTaskStateMachine().dispatchEvent((Event) event.getPayload());
                 }
             }
         }
@@ -290,22 +315,22 @@ public final class TaskManager implements WM2TMProtocol {
 
         @Handle(event = IOEvents.GenericIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
         private void handleDataOutputChannelEvent(final DataIOEvent event) {
-            deployedTasks.get(event.srcTaskID).driverDispatcher.dispatchEvent(event);
+            deployedTasks.get(event.srcTaskID).dispatchEvent(event);
         }
 
         @Handle(event = IOEvents.GenericIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
         private void handleDataInputChannelEvent(final DataIOEvent event) {
-            deployedTasks.get(event.dstTaskID).driverDispatcher.dispatchEvent(event);
+            deployedTasks.get(event.dstTaskID).dispatchEvent(event);
         }
 
         @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN)
         private void handleDataChannelGateOpenEvent(final DataIOEvent event) {
-            deployedTasks.get(event.srcTaskID).driverDispatcher.dispatchEvent(event);
+            deployedTasks.get(event.srcTaskID).dispatchEvent(event);
         }
 
         @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE)
         private void handleDataChannelGateCloseEvent(final DataIOEvent event) {
-            deployedTasks.get(event.srcTaskID).driverDispatcher.dispatchEvent(event);
+            deployedTasks.get(event.srcTaskID).dispatchEvent(event);
         }
 
         @Handle(event = IOEvents.TaskControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION)

@@ -61,7 +61,7 @@ public class AuraDirectedGraph {
 
         public final Map<Pair<String, String>, Edge> edges;
 
-        public final Map<String, UserCode> userCodeMap;
+        public final Map<String, List<UserCode>> userCodeMap;
 
         public final Map<UUID, Node> uidNodeMap;
 
@@ -82,7 +82,7 @@ public class AuraDirectedGraph {
                             final Map<String, Node> sourceMap,
                             final Map<String, Node> sinkMap,
                             final Map<Pair<String, String>, Edge> edges,
-                            final Map<String, UserCode> userCodeMap,
+                            final Map<String, List<UserCode>> userCodeMap,
                             final Map<UUID, Node> uidNodeMap,
                             final DeploymentType deploymentType,
                             final EnumSet<MonitoringType> monitoringProperties) {
@@ -174,9 +174,9 @@ public class AuraDirectedGraph {
 
         private final UserCodeExtractor codeExtractor;
 
-        private final Map<String, UserCode> userCodeMap;
+        private final Map<String, List<UserCode>> userCodeMap;
 
-        private final Map<String, Class<?>> userCodeClazzMap;
+        private final Map<String, List<Class<?>>> userCodeClazzMap;
 
         private final Map<UUID, Node> uidNodeMap;
 
@@ -229,10 +229,42 @@ public class AuraDirectedGraph {
                 throw new IllegalStateException("node already exists");
 
             nodeMap.put(node.name, node);
+
             sourceMap.put(node.name, node);
+
             sinkMap.put(node.name, node);
+
             uidNodeMap.put(node.uid, node);
-            userCodeClazzMap.put(node.name, userCodeClazz);
+
+            final List<Class<?>> userCodeClazzList = new ArrayList<>();
+
+            userCodeClazzList.add(userCodeClazz);
+
+            userCodeClazzMap.put(node.name, userCodeClazzList);
+
+            return nodeConnector.currentSource(node);
+        }
+
+
+        public NodeConnector addNode(final Node node, List<Class<?>> userCodeClazzList) {
+            // sanity check.
+            if (node == null)
+                throw new IllegalArgumentException("node == null");
+            if (userCodeClazzList == null)
+                throw new IllegalArgumentException("userCodeClazzList == null");
+
+            if (nodeMap.containsKey(node.name))
+                throw new IllegalStateException("node already exists");
+
+            nodeMap.put(node.name, node);
+
+            sourceMap.put(node.name, node);
+
+            sinkMap.put(node.name, node);
+
+            uidNodeMap.put(node.uid, node);
+
+            userCodeClazzMap.put(node.name, userCodeClazzList);
 
             return nodeConnector.currentSource(node);
         }
@@ -296,9 +328,16 @@ public class AuraDirectedGraph {
                 }
 
                 for (final Node n : nodeMap.values()) {
-                    final Class<?> userCodeClazz = userCodeClazzMap.get(n.name);
-                    final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
-                    userCodeMap.put(n.name, uc);
+                    final List<Class<?>> userCodeClazzList = userCodeClazzMap.get(n.name);
+
+                    final List<UserCode> userCodeList = new ArrayList<>();
+
+                    for(final Class<?> userCodeClazz : userCodeClazzList) {
+                        final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
+                        userCodeList.add(uc);
+                    }
+
+                    userCodeMap.put(n.name, userCodeList);
                 }
 
                 isBuilded = true;

@@ -6,6 +6,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.memory.spi.IAllocator;
+import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
+import de.tuberlin.aura.core.memory.MemoryView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,11 +19,10 @@ import com.esotericsoftware.kryo.io.Output;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.memory.MemoryManager;
-import de.tuberlin.aura.core.task.common.DataConsumer;
-import de.tuberlin.aura.core.task.common.TaskDriverContext;
-import de.tuberlin.aura.core.task.common.TaskExecutionManager;
-import de.tuberlin.aura.core.task.common.TaskExecutionUnit;
+import de.tuberlin.aura.core.task.spi.IDataConsumer;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -76,14 +78,14 @@ public class DataReader {
     private final Map<Pair<UUID, Integer>, Map<Integer, Channel>> connectedChannels;
 
 
-    final TaskExecutionManager executionManager;
+    final ITaskExecutionManager executionManager;
 
     /**
      * Creates a new Data Reader. There should only be one Data Reader per task manager.
      * 
      * @param dispatcher the dispatcher to which events should be published.
      */
-    public DataReader(IEventDispatcher dispatcher, final TaskExecutionManager executionManager) {
+    public DataReader(IEventDispatcher dispatcher, final ITaskExecutionManager executionManager) {
 
         this.dispatcher = dispatcher;
 
@@ -382,12 +384,12 @@ public class DataReader {
 
     public class TransferBufferEventSerializer extends Serializer<IOEvents.TransferBufferEvent> {
 
-        private MemoryManager.Allocator allocator;
+        private IAllocator allocator;
 
-        private TaskExecutionManager executionManager;
+        private ITaskExecutionManager executionManager;
 
 
-        public TransferBufferEventSerializer(final MemoryManager.Allocator allocator, final TaskExecutionManager executionManager) {
+        public TransferBufferEventSerializer(final IAllocator allocator, final ITaskExecutionManager executionManager) {
             this.allocator = allocator;
             this.executionManager = executionManager;
         }
@@ -412,27 +414,27 @@ public class DataReader {
             final UUID msgID = new UUID(input.readLong(), input.readLong());
 
             if (allocator == null) {
-                final TaskExecutionManager tem = executionManager;
-                final TaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
-                final TaskDriverContext taskDriverContext = executionUnit.getCurrentTaskDriverContext();
-                final DataConsumer dataConsumer = taskDriverContext.getDataConsumer();
+                final ITaskExecutionManager tem = executionManager;
+                final ITaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
+                final ITaskDriver taskDriver = executionUnit.getCurrentTaskDriver();
+                final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
                 final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
-                MemoryManager.BufferAllocatorGroup allocatorGroup = executionUnit.getInputAllocator();
+                BufferAllocatorGroup allocatorGroup = executionUnit.getInputAllocator();
 
                 // -------------------- STUPID HOT FIX --------------------
 
-                if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 1) {
+                if (taskDriver.getTaskBindingDescriptor().inputGateBindings.size() == 1) {
                     allocator = allocatorGroup;
                 } else {
-                    if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
+                    if (taskDriver.getTaskBindingDescriptor().inputGateBindings.size() == 2) {
                         if (gateIndex == 0) {
                             allocator =
-                                    new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                    new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
                                                                            Arrays.asList(allocatorGroup.getAllocator(0),
                                                                                          allocatorGroup.getAllocator(1)));
                         } else {
                             allocator =
-                                    new MemoryManager.BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                    new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
                                                                            Arrays.asList(allocatorGroup.getAllocator(2),
                                                                                          allocatorGroup.getAllocator(3)));
                         }
@@ -444,7 +446,7 @@ public class DataReader {
                 // -------------------- STUPID HOT FIX --------------------
             }
 
-            final MemoryManager.MemoryView buffer = allocator.alloc();
+            final MemoryView buffer = allocator.alloc();
             input.readBytes(buffer.memory, buffer.baseOffset, allocator.getBufferSize());
             return new IOEvents.TransferBufferEvent(msgID, src, dst, buffer);
         }

@@ -4,7 +4,7 @@ import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.MemoryView;
 import io.netty.channel.Channel;
 
 public final class IOEvents {
@@ -167,13 +167,13 @@ public final class IOEvents {
 
         // public final byte[] data;
 
-        public final MemoryManager.MemoryView buffer;
+        public final MemoryView buffer;
 
-        public TransferBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.MemoryView buffer) {
+        public TransferBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final MemoryView buffer) {
             this(UUID.randomUUID(), srcTaskID, dstTaskID, buffer);
         }
 
-        public TransferBufferEvent(final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.MemoryView buffer) {
+        public TransferBufferEvent(final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final MemoryView buffer) {
 
             super(DataEventType.DATA_EVENT_BUFFER, srcTaskID, dstTaskID);
 

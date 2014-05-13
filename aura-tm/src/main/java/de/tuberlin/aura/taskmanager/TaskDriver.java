@@ -3,6 +3,8 @@ package de.tuberlin.aura.taskmanager;
 
 import java.lang.reflect.Constructor;
 
+import de.tuberlin.aura.core.memory.spi.IAllocator;
+import de.tuberlin.aura.core.task.spi.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,9 +14,9 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
-import de.tuberlin.aura.core.memory.MemoryManager;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
-import de.tuberlin.aura.core.task.common.*;
+import de.tuberlin.aura.core.measurement.MeasurementManager;
+import de.tuberlin.aura.core.measurement.record.RecordReader;
+import de.tuberlin.aura.core.measurement.record.RecordWriter;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskTransition;
 import de.tuberlin.aura.core.task.usercode.UserCode;
@@ -23,18 +25,15 @@ import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
 /**
  *
  */
-public final class TaskDriver extends EventDispatcher implements TaskDriverLifecycle {
+public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    /**
-     * Logger.
-     */
     private static final Logger LOG = LoggerFactory.getLogger(TaskDriver.class);
 
-    private final TaskManagerContext managerContext;
+    private final ITaskManager taskManager;
 
     private final Descriptors.TaskDescriptor taskDescriptor;
 
@@ -42,60 +41,65 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
     private final QueueManager<IOEvents.DataIOEvent> queueManager;
 
-    private DataProducer dataProducer;
-
-    private DataConsumer dataConsumer;
-
-    private Class<? extends TaskInvokeable> invokeableClazz;
-
-    private TaskInvokeable invokeable;
-
-    private final TaskDriverContext driverContext;
-
     private final StateMachine.FiniteStateMachine<TaskState, TaskTransition> taskFSM;
+
+
+    private IDataProducer dataProducer;
+
+    private IDataConsumer dataConsumer;
+
+    private Class<? extends AbstractTaskInvokeable> invokeableClazz;
+
+    private AbstractTaskInvokeable invokeable;
+
+
+    // Measurement stuff...
+
+    private final MeasurementManager measurementManager;
+
+    private final RecordReader recordReader;
+
+    private final RecordWriter recordWriter;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDriver(final TaskManagerContext managerContext, final Descriptors.TaskDeploymentDescriptor deploymentDescriptor) {
+    public TaskDriver(final ITaskManager taskManager, final Descriptors.TaskDeploymentDescriptor deploymentDescriptor) {
         super(true, "TaskDriver-" + deploymentDescriptor.taskDescriptor.name + "-" + deploymentDescriptor.taskDescriptor.taskIndex
                 + "-EventDispatcher");
 
         // sanity check.
-        if (managerContext == null)
-            throw new IllegalArgumentException("managerContext == null");
+        if (taskManager == null)
+            throw new IllegalArgumentException("taskManager == null");
         if (deploymentDescriptor == null)
             throw new IllegalArgumentException("deploymentDescriptor == null");
 
-        this.managerContext = managerContext;
+        this.taskManager = taskManager;
 
         this.taskDescriptor = deploymentDescriptor.taskDescriptor;
 
         this.taskBindingDescriptor = deploymentDescriptor.taskBindingDescriptor;
 
         this.taskFSM = createTaskFSM();
+
         this.taskFSM.setName("FSM-" + taskDescriptor.name + "-" + taskDescriptor.taskIndex + "-EventDispatcher");
 
-
-        MeasurementManager measurementManager = MeasurementManager.getInstance("/tm/" + taskDescriptor.name + "_" + taskDescriptor.taskIndex, "Task");
+        this.measurementManager = MeasurementManager.getInstance("/tm/" + taskDescriptor.name + "_" + taskDescriptor.taskIndex, "Task");
         MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + taskDescriptor.taskID + "-" + taskDescriptor.name + "-"
                 + taskDescriptor.taskIndex, measurementManager);
 
+        this.recordReader = new RecordReader();
+
+        this.recordWriter = new RecordWriter();
+
         this.queueManager =
                 QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), measurementManager);
-
-        this.driverContext =
-                new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM, measurementManager);
     }
 
     // ---------------------------------------------------
     // Public Methods.
     // ---------------------------------------------------
-
-    public TaskDriverContext getTaskDriverContext() {
-        return driverContext;
-    }
 
     // ------------- Task Driver Lifecycle ---------------
 
@@ -103,24 +107,21 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
      *
      */
     @Override
-    public void startupDriver(final MemoryManager.Allocator inputAllocator, final MemoryManager.Allocator outputAllocator) {
+    public void startupDriver(final IAllocator inputAllocator, final IAllocator outputAllocator) {
         // sanity check.
         if (inputAllocator == null)
             throw new IllegalArgumentException("inputAllocator == null");
         if (outputAllocator == null)
             throw new IllegalArgumentException("outputAllocator == null");
 
-        dataConsumer = new TaskDataConsumer(driverContext, inputAllocator);
+        dataConsumer = new TaskDataConsumer(this, inputAllocator);
 
-        driverContext.setDataConsumer(dataConsumer);
+        dataProducer = new TaskDataProducer(this, outputAllocator);
 
-        dataProducer = new TaskDataProducer(driverContext, outputAllocator);
+        // TODO: A Task can in future contain a list of associated user code.
+        invokeableClazz = implantInvokeableCode(taskDescriptor.userCodeList.get(0));
 
-        driverContext.setDataProducer(dataProducer);
-
-        invokeableClazz = implantInvokeableCode(taskDescriptor.userCode);
-
-        invokeable = createInvokeable(invokeableClazz, driverContext, dataProducer, dataConsumer, LOG);
+        invokeable = createInvokeable(invokeableClazz, this, dataProducer, dataConsumer, LOG);
 
         if (invokeable == null)
             throw new IllegalStateException("invokeable == null");
@@ -172,6 +173,74 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
     }
 
     // ---------------------------------------------------
+
+    @Override
+    public Descriptors.TaskDescriptor getTaskDescriptor() {
+        return taskDescriptor;
+    }
+
+    @Override
+    public Descriptors.TaskBindingDescriptor getTaskBindingDescriptor() {
+        return taskBindingDescriptor;
+    }
+
+    @Override
+    public QueueManager<IOEvents.DataIOEvent> getQueueManager() {
+        return queueManager;
+    }
+
+    @Override
+    public StateMachine.FiniteStateMachine getTaskStateMachine() {
+        return taskFSM;
+    }
+
+    @Override
+    public void connectDataChannel(final Descriptors.TaskDescriptor dstTaskDescriptor, final IAllocator allocator) {
+        // sanity check.
+        if(dstTaskDescriptor == null)
+            throw new IllegalArgumentException("dstTaskDescriptor == null");
+        if(allocator == null)
+            throw new IllegalArgumentException("allocator == null");
+
+        taskManager.getIOManager().connectDataChannel(
+                taskDescriptor.taskID,
+                dstTaskDescriptor.taskID,
+                dstTaskDescriptor.getMachineDescriptor(),
+                allocator
+        );
+    }
+
+    @Override
+    public IDataProducer getDataProducer() {
+        return dataProducer;
+    }
+
+    @Override
+    public IDataConsumer getDataConsumer() {
+        return dataConsumer;
+    }
+
+    @Override
+    public MeasurementManager getMeasurementManager() {
+        return measurementManager;
+    }
+
+    @Override
+    public RecordReader getRecordReader() {
+        return recordReader;
+    }
+
+    @Override
+    public RecordWriter getRecordWriter() {
+        return recordWriter;
+    }
+
+    @Override
+    public ITaskManager getTaskManager() {
+        return taskManager;
+    }
+
+    // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------
 
@@ -179,11 +248,11 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
      * @param userCode
      * @return
      */
-    private Class<? extends TaskInvokeable> implantInvokeableCode(final UserCode userCode) {
+    private Class<? extends AbstractTaskInvokeable> implantInvokeableCode(final UserCode userCode) {
         // Try to register the bytecode as a class in the JVM.
         final UserCodeImplanter codeImplanter = new UserCodeImplanter(this.getClass().getClassLoader());
         @SuppressWarnings("unchecked")
-        final Class<? extends TaskInvokeable> userCodeClazz = (Class<? extends TaskInvokeable>) codeImplanter.implantUserCodeClass(userCode);
+        final Class<? extends AbstractTaskInvokeable> userCodeClazz = (Class<? extends AbstractTaskInvokeable>) codeImplanter.implantUserCodeClass(userCode);
         // sanity check.
         if (userCodeClazz == null)
             throw new IllegalArgumentException("userCodeClazz == null");
@@ -195,17 +264,17 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
      * @param invokableClazz
      * @return
      */
-    private TaskInvokeable createInvokeable(final Class<? extends TaskInvokeable> invokableClazz,
-                                            final TaskDriverContext driverContext,
-                                            final DataProducer dataProducer,
-                                            final DataConsumer dataConsumer,
+    private AbstractTaskInvokeable createInvokeable(final Class<? extends AbstractTaskInvokeable> invokableClazz,
+                                            final ITaskDriver taskDriver,
+                                            final IDataProducer dataProducer,
+                                            final IDataConsumer dataConsumer,
                                             final Logger LOG) {
         try {
 
-            final Constructor<? extends TaskInvokeable> invokeableCtor =
-                    invokableClazz.getConstructor(TaskDriverContext.class, DataProducer.class, DataConsumer.class, Logger.class);
+            final Constructor<? extends AbstractTaskInvokeable> invokeableCtor =
+                    invokableClazz.getConstructor(ITaskDriver.class, IDataProducer.class, IDataConsumer.class, Logger.class);
 
-            final TaskInvokeable invokeable = invokeableCtor.newInstance(driverContext, dataProducer, dataConsumer, LOG);
+            final AbstractTaskInvokeable invokeable = invokeableCtor.newInstance(taskDriver, dataProducer, dataConsumer, LOG);
 
             return invokeable;
 
@@ -271,7 +340,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                     stateUpdate.setTaskID(taskDescriptor.taskID);
                     stateUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                    managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, stateUpdate);
+                    taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), stateUpdate);
                 } catch (Throwable t) {
                     LOG.error(t.getLocalizedMessage(), t);
                     throw t;
@@ -304,7 +373,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 transitionUpdate.setTaskID(taskDescriptor.taskID);
                 transitionUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
+                taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), transitionUpdate);
             }
         });
 
@@ -322,7 +391,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 transitionUpdate.setTaskID(taskDescriptor.taskID);
                 transitionUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
+                taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), transitionUpdate);
             }
         });
 
@@ -340,7 +409,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 transitionUpdate.setTaskID(taskDescriptor.taskID);
                 transitionUpdate.setTopologyID(taskDescriptor.topologyID);
 
-                managerContext.ioManager.sendEvent(managerContext.workloadManagerMachine, transitionUpdate);
+                taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), transitionUpdate);
             }
         });
 

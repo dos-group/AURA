@@ -4,7 +4,7 @@ import java.io.*;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
-import de.tuberlin.aura.core.statistic.MedianHelper;
+import de.tuberlin.aura.core.measurement.MedianHelper;
 
 /**
  *

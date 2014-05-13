@@ -68,7 +68,9 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
 
             @Override
             public void visit(final Node element) {
+
                 for (final ExecutionNode en : element.getExecutionNodes()) {
+
                     en.getTaskDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
 
                     LOG.debug(en.getTaskDescriptor().getMachineDescriptor().address.toString() + " -> " + en.getTaskDescriptor().name + "_"

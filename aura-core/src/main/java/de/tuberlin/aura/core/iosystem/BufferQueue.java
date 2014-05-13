@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.iosystem;
 
 import java.util.concurrent.TimeUnit;
 
-import de.tuberlin.aura.core.statistic.MeasurementManager;
+import de.tuberlin.aura.core.measurement.MeasurementManager;
 
 public interface BufferQueue<T> extends Iterable<T> {
 

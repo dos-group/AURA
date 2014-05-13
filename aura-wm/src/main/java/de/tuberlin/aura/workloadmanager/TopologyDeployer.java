@@ -1,15 +1,9 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
-import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
@@ -64,7 +58,26 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
      */
     private synchronized void deployTopology(final AuraTopology topology) {
 
-        final Map<Descriptors.MachineDescriptor, List<TaskDeploymentDescriptor>> machineDeployment =
+        // Deploying.
+        TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
+
+            @Override
+            public void visit(final Node element) {
+                for (final ExecutionNode en : element.getExecutionNodes()) {
+                    final TaskDeploymentDescriptor tdd =
+                            new TaskDeploymentDescriptor(en.getTaskDescriptor(),
+                                    en.getTaskBindingDescriptor(),
+                                    en.logicalNode.dataPersistenceType,
+                                    en.logicalNode.executionType);
+                    final WM2TMProtocol tmProtocol =
+                            rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
+                    tmProtocol.installTask(tdd);
+                    LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString());
+                }
+            }
+        });
+
+        /*final Map<Descriptors.MachineDescriptor, List<TaskDeploymentDescriptor>> machineDeployment =
                 new HashMap<Descriptors.MachineDescriptor, List<TaskDeploymentDescriptor>>();
 
         // Collect all deployment descriptors for a machine.
@@ -117,6 +130,6 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                     }
                 }
             }
-        });
+        });*/
     }
 }

@@ -43,10 +43,10 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
             @Override
             public void visit(final Node element) {
-                final UserCode userCode = topology.userCodeMap.get(element.name);
+                final List<UserCode> userCodeList = topology.userCodeMap.get(element.name);
                 for (int index = 0; index < element.degreeOfParallelism; ++index) {
                     final UUID taskID = UUID.randomUUID();
-                    final TaskDescriptor taskDescriptor = new TaskDescriptor(topology.topologyID, taskID, index, element.name, userCode);
+                    final TaskDescriptor taskDescriptor = new TaskDescriptor(topology.topologyID, taskID, index, element.name, userCodeList);
                     final UUID executionNodeID = UUID.randomUUID();
                     final ExecutionNode executionNode = new ExecutionNode(executionNodeID, index, element);
                     executionNode.setTaskDescriptor(taskDescriptor);

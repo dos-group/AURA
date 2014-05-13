@@ -34,6 +34,8 @@ public class ExecutionUnitNetworkInputEventLoopGroup extends NioEventLoopGroup {
 
     private final EventExecutor[] children;
 
+    private final AtomicInteger counter = new AtomicInteger(0);
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------

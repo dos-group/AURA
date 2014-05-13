@@ -3,6 +3,7 @@ package de.tuberlin.aura.benchmark.runs;
 import java.io.*;
 import java.util.*;
 
+import de.tuberlin.aura.core.memory.MemoryView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,15 +11,14 @@ import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
-import de.tuberlin.aura.core.statistic.*;
-import de.tuberlin.aura.core.statistic.record.BenchmarkRecord;
-import de.tuberlin.aura.core.statistic.record.BenchmarkRecord.WordCountBenchmarkRecord;
-import de.tuberlin.aura.core.statistic.record.Record;
-import de.tuberlin.aura.core.task.common.DataConsumer;
-import de.tuberlin.aura.core.task.common.DataProducer;
-import de.tuberlin.aura.core.task.common.TaskDriverContext;
-import de.tuberlin.aura.core.task.common.TaskInvokeable;
+import de.tuberlin.aura.core.measurement.*;
+import de.tuberlin.aura.core.measurement.record.BenchmarkRecord;
+import de.tuberlin.aura.core.measurement.record.BenchmarkRecord.WordCountBenchmarkRecord;
+import de.tuberlin.aura.core.measurement.record.Record;
+import de.tuberlin.aura.core.task.spi.AbstractTaskInvokeable;
+import de.tuberlin.aura.core.task.spi.IDataConsumer;
+import de.tuberlin.aura.core.task.spi.IDataProducer;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
@@ -37,29 +37,29 @@ public final class MapReduceClient {
     /**
      *
      */
-    public static class Mapper extends TaskInvokeable {
+    public static class Mapper extends AbstractTaskInvokeable {
 
         private static final String DATA_PATH = "/data/chwuertz/aura/input/";
 
         // private static final String DATA_PATH = "/home/teots/Desktop/text";
 
-        public Mapper(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
-            super(context, producer, consumer, LOG);
+        public Mapper(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+            super(taskDriver, producer, consumer, LOG);
         }
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = driverContext.taskDescriptor.taskID;
+            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
 
             long send = 0l;
             long accumulatedBufferSize = 0l;
 
-            final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
+            final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
 
             File dir = new File(DATA_PATH);
             File[] files = dir.listFiles();
-            File dataFile = files[driverContext.taskDescriptor.taskIndex % files.length];
-            driverContext.measurementManager.add(new InformationMeasurement(MeasurementType.INFORMATION, "FILE", dataFile.getName()));
+            File dataFile = files[taskDriver.getTaskDescriptor().taskIndex % files.length];
+            taskDriver.getMeasurementManager().add(new InformationMeasurement(MeasurementType.INFORMATION, "FILE", dataFile.getName()));
 
             Map<Integer, Integer> indexMap = new TreeMap<>();
             for (int i = 0; i < outputs.size(); ++i) {
@@ -88,12 +88,12 @@ public final class MapReduceClient {
 
                     final UUID outputTaskID = getTaskID(0, index);
 
-                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final MemoryView buffer = producer.alloc();
                     final IOEvents.TransferBufferEvent event = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
 
                     final Record<WordCountBenchmarkRecord> record = new Record<>(new WordCountBenchmarkRecord(word, 1));
 
-                    driverContext.recordWriter.writeRecord(record, event);
+                    taskDriver.getRecordWriter().writeRecord(record, event);
                     producer.emit(0, index, event);
 
                     accumulatedBufferSize += buffer.size();
@@ -101,13 +101,13 @@ public final class MapReduceClient {
                 }
             }
 
-            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
-            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "TOTAL_BUFFER_SIZE", accumulatedBufferSize));
+            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
+            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "TOTAL_BUFFER_SIZE", accumulatedBufferSize));
 
             for (Map.Entry<Integer, Integer> entry : indexMap.entrySet()) {
-                driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER,
-                                                                           "INDEX " + Integer.toString(entry.getKey()),
-                                                                           entry.getValue()));
+                taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER,
+                        "INDEX " + Integer.toString(entry.getKey()),
+                        entry.getValue()));
             }
         }
 
@@ -120,10 +120,10 @@ public final class MapReduceClient {
     /**
      *
      */
-    public static class Reducer extends TaskInvokeable {
+    public static class Reducer extends AbstractTaskInvokeable {
 
-        public Reducer(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
-            super(context, producer, consumer, LOG);
+        public Reducer(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+            super(taskDriver, producer, consumer, LOG);
         }
 
         @Override
@@ -145,7 +145,7 @@ public final class MapReduceClient {
                 // LOG.debug("received: " + buffer);
 
                 if (event != null) {
-                    final Record<BenchmarkRecord> record = driverContext.recordReader.readRecord(event);
+                    final Record<BenchmarkRecord> record = taskDriver.getRecordReader().readRecord(event);
 
                     long now = System.currentTimeMillis();
                     long latency = now - record.getData().time;
@@ -184,21 +184,21 @@ public final class MapReduceClient {
             // LOG.info("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) +
             // "|" + Long.toString(maxLatency) + "|"
             // + Long.toString(medianLatency));
-            driverContext.measurementManager.add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
-                                                                                   "Buffer latency",
-                                                                                   minLatency,
-                                                                                   maxLatency,
-                                                                                   avgLatency,
-                                                                                   medianLatency));
+            taskDriver.getMeasurementManager().add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
+                    "Buffer latency",
+                    minLatency,
+                    maxLatency,
+                    avgLatency,
+                    medianLatency));
             for (Map.Entry<Long, Long> entry : dataArrival.entrySet()) {
-                driverContext.measurementManager.add(new ThroughputMeasurement(MeasurementType.THROUGHPUT,
-                                                                               "Throughput",
-                                                                               entry.getValue(),
-                                                                               entry.getKey()));
+                taskDriver.getMeasurementManager().add(new ThroughputMeasurement(MeasurementType.THROUGHPUT,
+                        "Throughput",
+                        entry.getValue(),
+                        entry.getKey()));
             }
 
-            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "SINK", received));
-            driverContext.measurementManager.add(new NumberMeasurement(MeasurementType.NUMBER, "TOTAL_BUFFER_SIZE", accumulatedBufferSize));
+            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SINK", received));
+            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "TOTAL_BUFFER_SIZE", accumulatedBufferSize));
         }
     }
 

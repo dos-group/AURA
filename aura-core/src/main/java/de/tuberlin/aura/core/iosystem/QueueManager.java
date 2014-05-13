@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 
-import de.tuberlin.aura.core.statistic.MeasurementManager;
+import de.tuberlin.aura.core.measurement.MeasurementManager;
 
 public class QueueManager<T> {
 
