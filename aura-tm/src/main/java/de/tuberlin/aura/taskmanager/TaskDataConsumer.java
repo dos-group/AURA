@@ -1,6 +1,7 @@
 package de.tuberlin.aura.taskmanager;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -10,9 +11,9 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
@@ -97,6 +98,12 @@ public final class TaskDataConsumer implements DataConsumer {
     // Public Methods.
     // ---------------------------------------------------
 
+    private final Map<Integer, Long> exhaustedEvents = new HashMap<Integer, Long>();
+
+    long countGate0 = 0;
+
+    long countGate1 = 0;
+
     public IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException {
 
         if (activeGates.get(gateIndex).size() == 0)
@@ -107,7 +114,15 @@ public final class TaskDataConsumer implements DataConsumer {
         IOEvents.DataIOEvent event = null;
 
         while (retrieve) {
-            event = inputGates.get(gateIndex).getInputQueue().take();
+            event = inputGates.get(gateIndex).getInputQueue().poll(30, TimeUnit.SECONDS);
+            if (event == null) {
+                for (Map.Entry<Integer, Long> exhaustedEvent : exhaustedEvents.entrySet()) {
+                    LOG.warn("Gate " + exhaustedEvent.getKey() + " exhausted events: " + exhaustedEvent.getValue());
+                }
+                LOG.warn("Gate 0 count: " + countGate0);
+                LOG.warn("Gate 1 count: " + countGate1);
+                return null;
+            }
 
             // DEBUGGING!
             /*
@@ -121,6 +136,12 @@ public final class TaskDataConsumer implements DataConsumer {
 
                 case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
                     final Set<UUID> activeChannelSet = activeGates.get(gateIndex);
+
+                    if (!exhaustedEvents.containsKey(gateIndex)) {
+                        exhaustedEvents.put(gateIndex, 1L);
+                    } else {
+                        exhaustedEvents.put(gateIndex, exhaustedEvents.get(gateIndex) + 1);
+                    }
 
                     if (!activeChannelSet.remove(event.srcTaskID))
                         throw new IllegalStateException();
@@ -161,6 +182,11 @@ public final class TaskDataConsumer implements DataConsumer {
 
                 // data event -> absorb
                 default:
+                    if (gateIndex == 0) {
+                        countGate0++;
+                    } else {
+                        countGate1++;
+                    }
                     retrieve = false;
                     break;
             }
@@ -352,7 +378,6 @@ public final class TaskDataConsumer implements DataConsumer {
                 allInputGatesConnected &= allInputChannelsPerGateConnected;
                 ++gateIndex;
             }
-
 
 
             // Check if the incoming channel is connecting to the correct task.

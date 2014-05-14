@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 
+import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 import de.tuberlin.aura.core.statistic.MeasurementManager;
 
 public class QueueManager<T> {
@@ -47,8 +48,11 @@ public class QueueManager<T> {
     // ---------------------------------------------------
 
     /**
+     * 
      * @param taskID
-     * @param queueFactory
+     * @param inboundFactory
+     * @param outboundFactory
+     * @param measurementManager
      * @param <F>
      * @return
      */
@@ -101,17 +105,17 @@ public class QueueManager<T> {
         return queue;
     }
 
+    public void clearInboundQueues() {
+        inboundQueues.clear();
+    }
+
+    public void clearOutboundQueues() {
+        outboundQueues.clear();
+    }
+
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
-
-    /**
-     *
-     */
-    public enum GATE {
-        IN,
-        OUT
-    }
 
     /**
      * We assume here that values for gate and channel do not exceed 16 bit (which is reasonable as

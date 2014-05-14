@@ -9,10 +9,10 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
-import de.tuberlin.aura.core.iosystem.BlockingSignalQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
+import de.tuberlin.aura.core.iosystem.queues.BlockingBufferQueue;
+import de.tuberlin.aura.core.iosystem.queues.BlockingSignalQueue;
 import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.*;
@@ -172,9 +172,11 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         dataProducer.shutdownProducer(awaitExhaustion);
 
+        queueManager.clearOutboundQueues();
+
         dataConsumer.shutdownConsumer();
 
-        LOG.info("exhausted sent: " + getTaskDriverContext().managerContext.ioManager.dataWriter.exhaustedSent.get());
+        queueManager.clearInboundQueues();
     }
 
     // ---------------------------------------------------

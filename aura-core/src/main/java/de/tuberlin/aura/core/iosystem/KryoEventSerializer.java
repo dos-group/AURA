@@ -84,18 +84,23 @@ public final class KryoEventSerializer {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
             final ByteBuf ioBuffer = (ByteBuf) msg;
-            LOG.warn("entry " + ctx);
+            // LOG.warn("entry " + ctx);
             try {
                 final Input input = new UnsafeMemoryInput(ioBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
                 ioBuffer.order(ByteOrder.nativeOrder());
-                final Registration reg = kryo.readClass(input);
+                final Registration reg;
+                synchronized (lock) {
+                    reg = kryo.readClass(input);
+                }
 
                 switch (reg.getId()) {
                     case IOConfig.IO_DATA_EVENT_ID: {
-                        final Object event = kryo.readObject(input, reg.getType());
+                        final Object event;
+                        synchronized (lock) {
+                            event = kryo.readObject(input, reg.getType());
+                        }
                         if (allocator == null && executionManager != null) {
                             bindAllocator(((IOEvents.DataIOEvent) event).srcTaskID, ((IOEvents.DataIOEvent) event).dstTaskID);
-                            LOG.info(((IOEvents.DataIOEvent) event).srcTaskID + " bound to allocator: " + allocator);
                         }
                         ctx.fireChannelRead(event);
                         break;
@@ -111,18 +116,17 @@ public final class KryoEventSerializer {
                                         ctx.channel().config().setAutoRead(false);
                                     }
                                     ReferenceCountUtil.retain(ioBuffer);
-                                    LOG.warn("view == null " + ctx);
-                                } else {
-                                    userSpaceBuffer = view;
-                                    Object event = kryo.readObject(input, reg.getType());
-                                    ctx.fireChannelRead(event);
+                                    // LOG.warn("view == null " + ctx);
+                                    break;
                                 }
                             }
-                        } else {
-                            userSpaceBuffer = view;
-                            Object event = kryo.readObject(input, reg.getType());
-                            ctx.fireChannelRead(event);
                         }
+                        userSpaceBuffer = view;
+                        Object event;
+                        synchronized (lock) {
+                            event = kryo.readObject(input, reg.getType());
+                        }
+                        ctx.fireChannelRead(event);
 
                         break;
                     }
@@ -148,22 +152,23 @@ public final class KryoEventSerializer {
             }
 
             @Override
-            public void bufferReader(MemoryView buffer) {
+            public void bufferReader(final MemoryView buffer) {
                 synchronized (lock) {
                     try {
                         userSpaceBuffer = buffer;
                         final Input input = new UnsafeMemoryInput(pendingBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
                         Object event = kryo.readClassAndObject(input);
                         ctx.fireChannelRead(event);
-                        LOG.warn("callback to ctx -> " + ctx + " with buffer " + buffer + "[ " + pendingBuffer.nioBuffer() + " ]");
+                        // LOG.warn("callback to ctx -> " + ctx + " with buffer " + buffer + "[ " +
+                        // pendingBuffer.nioBuffer() + " ]");
                     } finally {
                         pendingBuffer.release();
                     }
                 }
                 if (pendingCallbacks.decrementAndGet() == 0) {
                     ctx.channel().config().setAutoRead(true);
-                }
-            }
+      }
+                    }
         }
 
         public MemoryView getBuffer() {
@@ -217,6 +222,7 @@ public final class KryoEventSerializer {
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            //LOG.warn("write");
             final ByteBuf ioBuffer = ctx.alloc().buffer(IOConfig.MAX_EVENT_SIZE, IOConfig.MAX_EVENT_SIZE);
             UnsafeMemoryOutput output = new UnsafeMemoryOutput(ioBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
             output.order(ByteOrder.nativeOrder());
@@ -292,7 +298,7 @@ public final class KryoEventSerializer {
                                                      transferBufferEvent.buffer.size());
 
             transferBufferEvent.buffer.free();
-            LOG.info("free");
+            //LOG.info("free");
    }
 
         @Override

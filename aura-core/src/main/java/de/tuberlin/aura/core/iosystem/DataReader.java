@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -146,7 +147,7 @@ public class DataReader {
      * TODO: Is the "synchronized" annotation really necessary? Without this annotation access to
      * the channelToQueueIndex rarely causes a NullPointerException. Maybe it is enough to use
      * synchronized maps. However, the performance influence of each solution must be evaluated.
-     * 
+     * <p/>
      * We could execute ~350 topologies one after the other without any problems while using a
      * synchronized version of this method.
      * 
@@ -181,6 +182,8 @@ public class DataReader {
         }
         channels.put(channelIndex, channel);
         connectedChannels.put(index, channels);
+
+        // LOG.error("input queues: " + inputQueues.size());
     }
 
     private Integer newQueueIndex() {
@@ -213,6 +216,22 @@ public class DataReader {
         }
     }
 
+    public final class StateHandler extends ChannelInboundHandlerAdapter {
+
+        private final boolean inactive = true;
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            // LOG.error("channel unregister");
+        }
+
+        @Override
+        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+
+            // LOG.error("channel inactive");
+        }
+    }
+
     public final class DataEventHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
 
         @Override
@@ -236,6 +255,10 @@ public class DataReader {
 
                 case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
                     inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
+                    // send acknowledge
+                    IOEvents.DataIOEvent acknowledge =
+                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED_ACK, event.dstTaskID, event.srcTaskID);
+                    ctx.channel().writeAndFlush(acknowledge);
                     break;
 
                 case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK:
@@ -277,7 +300,10 @@ public class DataReader {
 
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(dataReader.new TransferEventHandler()).addLast(dataReader.new DataEventHandler());
+                    ch.pipeline()
+                      .addLast(dataReader.new StateHandler())
+                      .addLast(dataReader.new TransferEventHandler())
+                      .addLast(dataReader.new DataEventHandler());
                 }
             };
         }
@@ -308,6 +334,7 @@ public class DataReader {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline()
+                      .addLast(dataReader.new StateHandler())
                       .addLast(KryoEventSerializer.LENGTH_FIELD_DECODER())
                       .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER())
                       .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(dataReader.executionManager))

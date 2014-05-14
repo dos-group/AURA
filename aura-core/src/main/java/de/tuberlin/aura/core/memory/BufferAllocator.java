@@ -33,11 +33,11 @@ public final class BufferAllocator implements IAllocator {
 
     private final int bufferSize;
 
-    private final int bufferCount;
+    public final int bufferCount;
 
     private final byte[] memoryArena;
 
-    private final BlockingQueue<MemoryView> freeList;
+    public final BlockingQueue<MemoryView> freeList;
 
     private final ConcurrentLinkedQueue<BufferCallback> callbackList;
 
@@ -81,7 +81,7 @@ public final class BufferAllocator implements IAllocator {
     }
 
     @Override
-    public synchronized MemoryView allocBlocking() throws InterruptedException {
+    public MemoryView allocBlocking() throws InterruptedException {
         MemoryView view = freeList.poll(10, TimeUnit.SECONDS);
         if (view == null) {
             logStatus();
@@ -111,13 +111,13 @@ public final class BufferAllocator implements IAllocator {
     }
 
     @Override
-    public synchronized void free(final MemoryView memory) {
+    public void free(final MemoryView memory) {
         // sanity check.
         if (memory == null)
             throw new IllegalArgumentException("memory == null");
 
         if (!callbackList.isEmpty()) {
-            BufferCallback bufferCallback = callbackList.poll();
+            final BufferCallback bufferCallback = callbackList.poll();
             bufferCallback.bufferReader(memory);
         } else {
             freeList.add(memory);

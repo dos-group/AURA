@@ -4,16 +4,14 @@ import java.net.SocketAddress;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
+import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
@@ -34,17 +32,9 @@ public class DataWriter {
 
     private final IEventDispatcher dispatcher;
 
-    private ExecutorService pollThreadExecutor;
-
-    public final AtomicLong exhaustedSent;
-
     public DataWriter(IEventDispatcher dispatcher) {
 
-        this.exhaustedSent = new AtomicLong(0);
-
         this.dispatcher = dispatcher;
-
-        this.pollThreadExecutor = Executors.newCachedThreadPool();
     }
 
     public <T extends Channel> ChannelWriter<T> bind(final UUID srcTaskID,
@@ -68,13 +58,7 @@ public class DataWriter {
 
         private final UUID dstID;
 
-        private final IAllocator allocator;
-
         private Channel channel;
-
-        // poll thread
-
-        private volatile boolean shutdown = false;
 
         private final CountDownLatch pollFinished = new CountDownLatch(1);
 
@@ -100,8 +84,6 @@ public class DataWriter {
 
             this.awaitGateOpenLatch = new ResettableCountDownLatch(1);
 
-            this.allocator = allocator;
-
             IOEvents.SetupIOEvent<T> event =
                     new IOEvents.SetupIOEvent<>(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, srcID, dstID, type, address, allocator);
             event.setPayload(this);
@@ -124,7 +106,7 @@ public class DataWriter {
                     awaitGateOpenLatch.await();
                 }
 
-                this.transferQueue.put(event);
+                this.transferQueue.offer(event);
             } catch (InterruptedException e) {
                 LOG.error("Write of event " + event + " was interrupted.", e);
             }
@@ -135,16 +117,12 @@ public class DataWriter {
          */
         public void shutdown(boolean awaitExhaustion) {
 
-            // force interrupt
-            if (!awaitExhaustion) {
-                // stops send, even if events left in the transferQueue
-                shutdown = true;
-            }
-
             try {
                 // we can't use the return value of result cause we have to interrupt the thread
                 // therefore we need the latch and the field
-                pollFinished.await();
+                if (awaitExhaustion) {
+                    pollFinished.await();
+                }
             } catch (InterruptedException e) {
                 LOG.error("Receiving future from poll thread failed. Interrupt.", e);
             } finally {
@@ -200,6 +178,10 @@ public class DataWriter {
 
                         break;
 
+                    case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED_ACK:
+                        LOG.debug("RECEIVED EXHAUSTED ACK EVENT");
+                        pollFinished.countDown();
+                        break;
                     default:
                         LOG.error("RECEIVED UNKNOWN EVENT TYPE: " + gateEvent.type);
                         break;
@@ -302,8 +284,6 @@ public class DataWriter {
                                             + " -> Avg. write", (long) ((double) writeDuration / (double) writes)));
                                     transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, transferQueue.getName()
                                             + " -> Not writable", notWritable));
-
-                                    pollFinished.countDown();
                                 } else {
                                     ctx.pipeline().fireChannelWritabilityChanged();
                                 }

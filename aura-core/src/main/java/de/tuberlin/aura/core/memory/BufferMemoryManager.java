@@ -20,7 +20,7 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
 
     public static final int BUFFER_SIZE = BufferAllocator._64K;
 
-    public static final double BUFFER_LOAD_FACTOR = 0.01;
+    public static final double BUFFER_LOAD_FACTOR = 0.4;
 
     public static final int NUM_OF_ALLOCATORS_PER_GROUP = 4;
 
@@ -65,8 +65,8 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
 
         final int perExecutionUnitBuffers = globalBufferCount / numOfExecutionUnits;
 
-        final int buffersPerAllocator = 10; // (perExecutionUnitBuffers / groupsPerExecutionUnit) /
-                                            // NUM_OF_ALLOCATORS_PER_GROUP;
+        final int buffersPerAllocator = 1; // (perExecutionUnitBuffers / groupsPerExecutionUnit) /
+                                           // NUM_OF_ALLOCATORS_PER_GROUP;
 
         this.allocatorGroups =
                 setupBufferAllocatorGroups(numOfExecutionUnits * groupsPerExecutionUnit,

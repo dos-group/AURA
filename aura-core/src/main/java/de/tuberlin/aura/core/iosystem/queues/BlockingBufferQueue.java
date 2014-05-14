@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.iosystem;
+package de.tuberlin.aura.core.iosystem.queues;
 
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
@@ -55,11 +55,11 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
                                                                           (double) this.sumLatency / (double) this.counter,
                                                                           -1));
             this.measurementManager.add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
-                    "Queue Size -> " + this.name,
-                    -1,
-                    -1,
-                    (double) this.sumQueueSize / (double) this.counter,
-                    -1));
+                                                                          "Queue Size -> " + this.name,
+                                                                          -1,
+                                                                          -1,
+                                                                          (double) this.sumQueueSize / (double) this.counter,
+                                                                          -1));
 
             // LOG.info(this.name + ": TIME_IN_QUEUE|" + Double.toString((double) this.sumLatency /
             // (double) this.counter) + "|" +
@@ -131,12 +131,10 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     }
 
     @Override
-    public void registerObserver(QueueObserver observer) {
-    }
+    public void registerObserver(QueueObserver observer) {}
 
     @Override
-    public void removeObserver(QueueObserver observer) {
-    }
+    public void removeObserver(QueueObserver observer) {}
 
     @Override
     public String getName() {

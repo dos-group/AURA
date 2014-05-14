@@ -41,7 +41,7 @@ public final class SimpleClient {
      */
     public static class Source extends TaskInvokeable {
 
-        private static final int RECORDS = 1000;
+        private static final int RECORDS = 10;
 
         public Source(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
@@ -205,17 +205,16 @@ public final class SimpleClient {
                 final IOEvents.TransferBufferEvent event = consumer.absorb(0);
 
                 if (event != null) {
-
                     count++;
-                    if (count % 100 == 0)
+                    if (count % 10000 == 0)
                         LOG.info("Sink receive {}.", count);
-                    LOG.info("free in sink");
+                    // LOG.info("free in sink");
                     event.buffer.free();
                 }
             }
 
             LOG.info("Sink finished {}.", count);
-      }
+        }
     }
 
 
@@ -237,10 +236,10 @@ public final class SimpleClient {
                                           true,
                                           zookeeperAddress,
                                           machines,
-                               measurementPath);
+                                          measurementPath);
 
- // Wally
-        //final String zookeeperAddress = "wally101.cit.tu-berlin.de:2181";
+        // Wally
+        // final String zookeeperAddress = "wally101.cit.tu-berlin.de:2181";
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
         List<AuraTopology> topologies = buildTopologies(ac, machines, cores);
@@ -268,13 +267,12 @@ public final class SimpleClient {
         int executionUnits = machines * tasksPerMaschine;
         AuraDirectedGraph.AuraTopologyBuilder atb;
 
-        // // 2 layered - point2point connection
-        // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 2, 1), Source.class)
-        // .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
-        // topologies.add(atb.build("Job: 2 layered - point2point connection",
-        // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+        // 2 layered - point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 2, 1), Source.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
+        topologies.add(atb.build("Job: 2 layered - point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
 
         // 2 layered - all2all connection
         atb = client.createTopologyBuilder();
@@ -283,93 +281,74 @@ public final class SimpleClient {
            .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
         topologies.add(atb.build("Job: 2 layered - all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
 
-        // // 3 layered - point2point + point2point connection
-        // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
-        // .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1),
-        // ForwardWithOneInput.class)
-        // .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
-        // topologies.add(atb.build("Job: 3 layered - point2point + point2point connection",
-        // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
-        //
-        // // 3 layered - all2all + point2point connection
-        // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
-        // .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1),
-        // ForwardWithOneInput.class)
-        // .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
-        // topologies.add(atb.build("Job: 3 layered - all2all + point2point connection",
-        // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
-        //
-        // // 3 layered - point2point + all2all connection
-        // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
-        // .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1),
-        // ForwardWithOneInput.class)
-        // .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
-        // topologies.add(atb.build("Job: 3 layered - point2point + all2all connection",
-        // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
-        //
-        // // 3 layered - all2all + all2all connection
-        // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
-        // .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1),
-        // ForwardWithOneInput.class)
-        // .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
-        // topologies.add(atb.build("Job: 3 layered - all2all + all2all connection",
-        // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
-        //
-        // // 3 layered - point2point (join) point2point connection
-        // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1),
-        // Source.class)
-        // .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1),
-        // Source.class)
-        // .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1),
-        // ForwardWithTwoInputs.class)
-        // .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
-        // topologies.add(atb.build("Job: 3 layered - point2point (join) point2point connection",
-        // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
-        //
-        // // 3 layered - all2all (join) point2point connection
-        // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1),
-        // Source.class)
-        // .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1),
-        // Source.class)
-        // .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1),
-        // ForwardWithTwoInputs.class)
-        // .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
-        // topologies.add(atb.build("Job: 3 layered - all2all (join) point2point connection",
-        // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
-        //
-        // // 3 layered - all2all (join) all2all connection
-        // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1),
-        // Source.class)
-        // .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1),
-        // Source.class)
-        // .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1),
-        // ForwardWithTwoInputs.class)
-        // .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
-        // topologies.add(atb.build("Job: 3 layered - all2all (join) all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+        // 3 layered - point2point + point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - point2point + point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all + point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - all2all + point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - point2point + all2all connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - point2point + all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all + all2all connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 3, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - all2all + all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - point2point (join) point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - point2point (join) point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all (join) point2point connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - all2all (join) point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all (join) all2all connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), Source.class)
+           .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+        topologies.add(atb.build("Job: 3 layered - all2all (join) all2all connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
 
         return topologies;
     }

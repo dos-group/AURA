@@ -12,7 +12,7 @@
  * public domain, as explained at http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package de.tuberlin.aura.core.iosystem;
+package de.tuberlin.aura.core.iosystem.queues;
 
 import java.util.AbstractQueue;
 import java.util.Collection;
@@ -34,23 +34,23 @@ import de.tuberlin.aura.core.statistic.MeasurementManager;
  * tail of the queue, and the queue retrieval operations obtain elements at the head of the queue.
  * Linked queues typically have higher throughput than array-based queues but less predictable
  * performance in most concurrent applications.
- * 
- * <p>
+ * <p/>
+ * <p/>
  * The optional capacity bound constructor argument serves as a way to prevent excessive queue
  * expansion. The capacity, if unspecified, is equal to {@link Integer#MAX_VALUE}. Linked nodes are
  * dynamically created upon each insertion unless this would bring the queue above capacity.
- * 
- * <p>
+ * <p/>
+ * <p/>
  * This class and its iterator implement all of the <em>optional</em> methods of the
  * {@link java.util.Collection} and {@link java.util.Iterator} interfaces.
- * 
- * <p>
+ * <p/>
+ * <p/>
  * This class is a member of the <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  * 
- * @since 1.5
- * @author Doug Lea
  * @param <E> the type of elements held in this collection
+ * @author Doug Lea
+ * @since 1.5
  */
 public class BlockingSignalQueue<E> extends AbstractQueue<E> implements BlockingQueue<E>, java.io.Serializable, BufferQueue<E> {
 
@@ -141,10 +141,14 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
         }
     }
 
-    /** The capacity bound, or Integer.MAX_VALUE if none */
+    /**
+     * The capacity bound, or Integer.MAX_VALUE if none
+     */
     private final int capacity;
 
-    /** Current number of elements */
+    /**
+     * Current number of elements
+     */
     private final AtomicInteger count = new AtomicInteger();
 
     /**
@@ -157,16 +161,24 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
      */
     private transient Node<E> last;
 
-    /** Lock held by take, poll, etc */
+    /**
+     * Lock held by take, poll, etc
+     */
     private final ReentrantLock takeLock = new ReentrantLock();
 
-    /** Wait queue for waiting takes */
+    /**
+     * Wait queue for waiting takes
+     */
     private final Condition notEmpty = takeLock.newCondition();
 
-    /** Lock held by put, offer, etc */
+    /**
+     * Lock held by put, offer, etc
+     */
     private final ReentrantLock putLock = new ReentrantLock();
 
-    /** Wait queue for waiting puts */
+    /**
+     * Wait queue for waiting puts
+     */
     private final Condition notFull = putLock.newCondition();
 
     /**
@@ -300,6 +312,7 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
 
     // this doc comment is overridden to remove the reference to collections
     // greater in size than Integer.MAX_VALUE
+
     /**
      * Returns the number of elements in this queue.
      * 
@@ -311,12 +324,13 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
 
     // this doc comment is a modified copy of the inherited doc comment,
     // without the reference to unlimited queues.
+
     /**
      * Returns the number of additional elements that this queue can ideally (in the absence of
      * memory or resource constraints) accept without blocking. This is always equal to the initial
      * capacity of this queue less the current {@code size} of this queue.
-     * 
-     * <p>
+     * <p/>
+     * <p/>
      * Note that you <em>cannot</em> always tell if an attempt to insert an element will succeed by
      * inspecting {@code remainingCapacity} because it may be the case that another thread is about
      * to insert or remove an element.
@@ -584,13 +598,13 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
 
     /**
      * Returns an array containing all of the elements in this queue, in proper sequence.
-     * 
-     * <p>
+     * <p/>
+     * <p/>
      * The returned array will be "safe" in that no references to it are maintained by this queue.
      * (In other words, this method must allocate a new array). The caller is thus free to modify
      * the returned array.
-     * 
-     * <p>
+     * <p/>
+     * <p/>
      * This method acts as bridge between array-based and collection-based APIs.
      * 
      * @return an array containing all of the elements in this queue
@@ -614,23 +628,24 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
      * runtime type of the returned array is that of the specified array. If the queue fits in the
      * specified array, it is returned therein. Otherwise, a new array is allocated with the runtime
      * type of the specified array and the size of this queue.
-     * 
-     * <p>
+     * <p/>
+     * <p/>
      * If this queue fits in the specified array with room to spare (i.e., the array has more
      * elements than this queue), the element in the array immediately following the end of the
      * queue is set to {@code null}.
-     * 
-     * <p>
+     * <p/>
+     * <p/>
      * Like the {@link #toArray()} method, this method acts as bridge between array-based and
      * collection-based APIs. Further, this method allows precise control over the runtime type of
      * the output array, and may, under certain circumstances, be used to save allocation costs.
-     * 
-     * <p>
+     * <p/>
+     * <p/>
      * Suppose {@code x} is a queue known to contain only strings. The following code can be used to
      * dump the queue into a newly allocated array of {@code String}:
+     * <p/>
      * 
      * <pre> {@code String[] y = x.toArray(new String[0]);}</pre>
-     * 
+     * <p/>
      * Note that {@code toArray(new Object[0])} is identical in function to {@code toArray()}.
      * 
      * @param a the array into which the elements of the queue are to be stored, if it is big
@@ -760,8 +775,8 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
     /**
      * Returns an iterator over the elements in this queue in proper sequence. The elements will be
      * returned in order from first (head) to last (tail).
-     * 
-     * <p>
+     * <p/>
+     * <p/>
      * The returned iterator is <a href="package-summary.html#Weakly"><i>weakly consistent</i></a>.
      * 
      * @return an iterator over the elements in this queue in proper sequence
@@ -801,7 +816,7 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
 
         /**
          * Returns the next live successor of p, or null if no such.
-         * 
+         * <p/>
          * Unlike other traversal methods, iterators need to handle both: - dequeued nodes (p.next
          * == p) - (possibly multiple) interior removed nodes (p.item == null)
          */
