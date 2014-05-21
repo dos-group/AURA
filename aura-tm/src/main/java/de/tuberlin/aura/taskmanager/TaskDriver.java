@@ -2,6 +2,7 @@ package de.tuberlin.aura.taskmanager;
 
 
 import java.lang.reflect.Constructor;
+import java.util.List;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.task.spi.*;
@@ -157,6 +158,13 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
         // TODO: Wait until all gates are closed? -> invokeable.close() emits all
         // DATA_EVENT_SOURCE_EXHAUSTED events
         taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
+
+        if(dataProducer.hasStoredBuffers()) {
+
+            LOG.info("BUFFERS ARE STORED AND CAN BE CONSUMED");
+
+            joinDispatcherThread();
+        }
     }
 
     /**
@@ -167,9 +175,27 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         invokeable.stopInvokeable();
 
-        dataProducer.shutdownProducer(awaitExhaustion);
+        if(!dataProducer.hasStoredBuffers())
+            dataProducer.shutdownProducer(awaitExhaustion);
 
         dataConsumer.shutdownConsumer();
+    }
+
+    /**
+     *
+     * @param outputBinding
+     */
+    @Override
+    public void createOutputBinding(final List<List<Descriptors.TaskDescriptor>> outputBinding) {
+        // sanity check.
+        if(outputBinding == null)
+            throw new IllegalArgumentException("outputBinding == null");
+
+        taskFSM.reset();
+
+        taskBindingDescriptor.addOutputGateBinding(outputBinding);
+
+        dataProducer.bind();
     }
 
     // ---------------------------------------------------

@@ -3,7 +3,6 @@ package de.tuberlin.aura.demo.examples;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,13 +13,11 @@ import de.tuberlin.aura.core.task.spi.*;
 import de.tuberlin.aura.taskmanager.TaskRecordReader;
 import de.tuberlin.aura.taskmanager.TaskRecordWriter;
 import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.Level;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
@@ -38,25 +35,40 @@ public final class SimpleClient {
     /**
      *
      */
-    public static class Task1Exe extends AbstractTaskInvokeable {
+    public static class TaskMap1 extends AbstractTaskInvokeable {
 
-        public Task1Exe(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+        private final IRecordWriter recordWriter;
+
+        public TaskMap1(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
 
             super(taskDriver, producer, consumer, LOG);
+
+            this.recordWriter = new TaskRecordWriter(BufferAllocator._64K);
         }
 
         @Override
         public void run() throws Throwable {
 
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
+            final UUID srcTaskID = taskDriver.getTaskDescriptor().taskID;
+
+            final List<Descriptors.TaskDescriptor> outputBinding = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+
             int i = 0;
-            while (i++ < 1 && isInvokeableRunning()) {
-                final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
-                for (int index = 0; index < outputs.size(); ++index) {
-                    final UUID outputTaskID = getTaskID(0, index);
-                    final MemoryView buffer = producer.alloc();
-                    final IOEvents.DataIOEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
-                    producer.emit(0, index, outputBuffer);
+            while (i++ < 10 && isInvokeableRunning()) {
+
+                for (int index = 0; index < outputBinding.size(); ++index) {
+
+                    final UUID dstTaskID = getTaskID(0, index);
+
+                    final MemoryView outBuffer = producer.alloc();
+
+                    recordWriter.selectBuffer(outBuffer);
+
+                    recordWriter.writeRecord(new Integer(100));
+
+                    final IOEvents.TransferBufferEvent outEvent = new IOEvents.TransferBufferEvent(srcTaskID, dstTaskID, outBuffer);
+
+                    producer.emit(0, index, outEvent);
                 }
             }
         }
@@ -70,53 +82,19 @@ public final class SimpleClient {
     /**
      *
      */
-    /*public static class Task2Exe extends AbstractTaskInvokeable {
-
-        public Task2Exe(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-
-            super(taskDriver, producer, consumer, LOG);
-        }
-
-        @Override
-        public void run() throws Throwable {
-
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
-
-            int i = 0;
-            int buffers = 1000;
-            while (i++ < buffers && isInvokeableRunning()) {
-                final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
-                for (int index = 0; index < outputs.size(); ++index) {
-                    final UUID outputTaskID = getTaskID(0, index);
-                    final MemoryView buffer = producer.alloc();
-                    final IOEvents.DataIOEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
-                    producer.emit(0, index, outputBuffer);
-                }
-
-                if (i % 1000 == 0) {
-                    LOG.debug("Send {}/{}", i, buffers);
-                }
-            }
-        }
-
-        @Override
-        public void close() throws Throwable {
-            producer.done();
-        }
-    }*/
-
-    /**
-     *
-     */
-    public static class Task3Exe extends AbstractTaskInvokeable {
+    public static class TaskLeftInput extends AbstractTaskInvokeable {
 
         private final IRecordWriter recordWriter;
 
-        public Task3Exe(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+        private final IRecordReader recordReader;
+
+        public TaskLeftInput(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
 
             super(taskDriver, producer, consumer, LOG);
 
             this.recordWriter = new TaskRecordWriter(BufferAllocator._64K);
+
+            this.recordReader = new TaskRecordReader(BufferAllocator._64K);
         }
 
         @Override
@@ -129,26 +107,155 @@ public final class SimpleClient {
 
             while (!consumer.isExhausted() && isInvokeableRunning()) {
 
-                final IOEvents.TransferBufferEvent input = consumer.absorb(0);
+                final IOEvents.TransferBufferEvent inEvent = consumer.absorb(0);
 
-                if (input != null) {
-                    input.buffer.free();
+                if (inEvent != null) {
+
+                    recordReader.selectBuffer(inEvent.buffer);
+
+                    final Integer value = recordReader.readRecord(Integer.class);
+
+                    inEvent.buffer.free();
+
+                    final MemoryView outBuffer = producer.alloc();
+
+                    recordWriter.selectBuffer(outBuffer);
+
+                    recordWriter.writeRecord(new Integer(value + 100));
+
+                    producer.store(outBuffer);
+                }
+            }
+        }
+    }
+
+    /**
+     *
+     */
+    public static class TaskRightInput extends AbstractTaskInvokeable {
+
+        private final IRecordWriter recordWriter;
+
+        public TaskRightInput(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+
+            super(taskDriver, producer, consumer, LOG);
+
+            this.recordWriter = new TaskRecordWriter(BufferAllocator._64K);
+        }
+
+        @Override
+        public void run() throws Throwable {
+
+            final UUID srcTaskID = taskDriver.getTaskDescriptor().taskID;
+
+            final List<Descriptors.TaskDescriptor> outputBinding = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+
+            int i = 0;
+            while (i++ < 10 && isInvokeableRunning()) {
+
+                for (int index = 0; index < outputBinding.size(); ++index) {
+
+                    final UUID dstTaskID = getTaskID(0, index);
+
+                    final MemoryView outBuffer = producer.alloc();
+
+                    recordWriter.selectBuffer(outBuffer);
+
+                    recordWriter.writeRecord(new Integer(50));
+
+                    final IOEvents.TransferBufferEvent outEvent = new IOEvents.TransferBufferEvent(srcTaskID, dstTaskID, outBuffer);
+
+                    producer.emit(0, index, outEvent);
+                }
+            }
+        }
+
+        @Override
+        public void close() throws Throwable {
+            producer.done();
+        }
+    }
+
+    /**
+     *
+     */
+    public static class TaskBinaryInput extends AbstractTaskInvokeable {
+
+        private final IRecordWriter recordWriter;
+
+        private final IRecordReader recordReaderLeft;
+
+        private final IRecordReader recordReaderRight;
+
+        public TaskBinaryInput(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+
+            super(taskDriver, producer, consumer, LOG);
+
+            this.recordWriter = new TaskRecordWriter(BufferAllocator._64K);
+
+            this.recordReaderLeft = new TaskRecordReader(BufferAllocator._64K);
+
+            this.recordReaderRight = new TaskRecordReader(BufferAllocator._64K);
+        }
+
+        @Override
+        public void open() throws Throwable {
+            consumer.openGate(0);
+            consumer.openGate(1);
+        }
+
+        @Override
+        public void run() throws Throwable {
+
+            final UUID srcTaskID = taskDriver.getTaskDescriptor().taskID;
+
+            final List<Descriptors.TaskDescriptor> outputBinding = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+
+            while (!consumer.isExhausted() && isInvokeableRunning()) {
+
+                final IOEvents.TransferBufferEvent inBufferLeft = consumer.absorb(0);
+
+                final IOEvents.TransferBufferEvent inBufferRight = consumer.absorb(1);
+
+
+                Integer valueLeft = 0;
+
+                if (inBufferLeft != null) {
+
+                    recordReaderLeft.selectBuffer(inBufferLeft.buffer);
+
+                    valueLeft = recordReaderLeft.readRecord(Integer.class);
+
+                    inBufferLeft.buffer.free();
                 }
 
-                if (input != null) {
-                    final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
-                    for (int index = 0; index < outputs.size(); ++index) {
-                        final UUID outputTaskID = getTaskID(0, index);
-                        final MemoryView buffer = producer.alloc();
+                Integer valueRight = 0;
 
-                        final IOEvents.TransferBufferEvent outputBuffer =
-                                new IOEvents.TransferBufferEvent(taskDriver.getTaskDescriptor().taskID, outputTaskID, buffer);
+                if (inBufferRight != null) {
 
-                        this.recordWriter.selectBuffer(outputBuffer);
+                    recordReaderRight.selectBuffer(inBufferRight.buffer);
 
-                        this.recordWriter.writeRecord(new Integer(101));
+                    valueRight = recordReaderRight.readRecord(Integer.class);
 
-                        producer.emit(0, index, outputBuffer);
+                    inBufferRight.buffer.free();
+                }
+
+
+                if (inBufferLeft != null && inBufferRight != null) {
+
+                    for (int index = 0; index < outputBinding.size(); ++index) {
+
+                        final UUID dstTaskID = getTaskID(0, index);
+
+                        final MemoryView outBuffer = producer.alloc();
+
+                        recordWriter.selectBuffer(outBuffer);
+
+                        recordWriter.writeRecord(new Integer(valueLeft + valueRight));
+
+                        final IOEvents.TransferBufferEvent outEvent = new IOEvents.TransferBufferEvent(srcTaskID, dstTaskID, outBuffer);
+
+                        producer.emit(0, index, outEvent);
                     }
                 }
             }
@@ -163,11 +270,11 @@ public final class SimpleClient {
     /**
      *
      */
-    public static class Task4Exe extends AbstractTaskInvokeable {
+    public static class TaskMap3 extends AbstractTaskInvokeable {
 
         private IRecordReader recordReader;
 
-        public Task4Exe(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+        public TaskMap3(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
 
             super(taskDriver, producer, consumer, LOG);
 
@@ -182,20 +289,19 @@ public final class SimpleClient {
         @Override
         public void run() throws Throwable {
 
-            int bufferCounter = 0;
-
             while (!consumer.isExhausted() && isInvokeableRunning()) {
-                final IOEvents.TransferBufferEvent buffer = consumer.absorb(0);
 
-                if(buffer != null) {
-                    recordReader.selectBuffer(buffer);
+                final IOEvents.TransferBufferEvent inEvent = consumer.absorb(0);
+
+                if (inEvent != null) {
+
+                    recordReader.selectBuffer(inEvent.buffer);
+
                     final Integer value = recordReader.readRecord(Integer.class);
-                    LOG.info("Value = " + value);
-                }
 
-                if (buffer != null) {
-                    buffer.buffer.free();
-                    ++bufferCounter;
+                    LOG.info("----------------> READ BUFFER: " + value);
+
+                    inEvent.buffer.free();
                 }
             }
         }
@@ -226,15 +332,34 @@ public final class SimpleClient {
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraDirectedGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
-        atb1.addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task1", 4, 1), Task1Exe.class)
-            .connectTo("Task3", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
-            //.addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task2", 4, 1), Task2Exe.class)
-            //.connectTo("Task3", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
-            .addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task3", 4, 1), Task3Exe.class)
-            .connectTo("Task4", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
-            .addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task4", 4, 1), Task4Exe.class);
 
-        ac.submitTopology(atb1.build("JOB"), null);
+        atb1.addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "TaskMap1", 2, 1), TaskMap1.class).
+                connectTo("TaskLeftInput", AuraDirectedGraph.Edge.TransferType.POINT_TO_POINT)
+            .addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "TaskLeftInput", 2, 1), TaskLeftInput.class);
+
+        final AuraDirectedGraph.AuraTopology at1 = atb1.build("JOB 1");
+
+        ac.submitTopology(at1, null);
+
+
+        try {
+            new BufferedReader(new InputStreamReader(System.in)).readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        final AuraDirectedGraph.AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
+
+        atb2.addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "TaskRightInput", 2, 1), TaskRightInput.class)
+                .connectTo("TaskBinaryInput", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
+            .connectFrom("TaskLeftInput", "TaskBinaryInput", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
+            .addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "TaskBinaryInput", 2, 1), TaskBinaryInput.class)
+                .connectTo("TaskMap3", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
+            .addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "TaskMap3", 2, 1), TaskMap3.class);
+
+        final AuraDirectedGraph.AuraTopology at2 = atb2.build("JOB 2");
+
+        ac.submitToTopology(at1.topologyID, at2);
 
         try {
             new BufferedReader(new InputStreamReader(System.in)).readLine();
@@ -243,6 +368,15 @@ public final class SimpleClient {
         }
 
         ac.closeSession();
+
+        //atb1.addNode(new AuraDirectedGraph.Node(taskNodeID, "Task1", 4, 1), TaskMap1.class);
+        //.connectTo("Task3", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task2", 4, 1), TaskLeftInput.class)
+        //.connectTo("Task3", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task3", 4, 1), TaskBinaryInput.class)
+        //.connectTo("Task4", AuraDirectedGraph.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new AuraDirectedGraph.Node(UUID.randomUUID(), "Task4", 4, 1), TaskMap3.class);
+
 
         // lce.shutdown();
     }

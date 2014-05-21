@@ -147,6 +147,22 @@ public final class AuraClient {
         clientProtocol.closeSession(clientSessionID);
     }
 
+    /**
+     *
+     * @param topologyID
+     * @param topology
+     */
+    public void submitToTopology(final UUID topologyID, final AuraTopology topology) {
+        // sanity check.
+        if (topologyID == null)
+            throw new IllegalArgumentException("topologyID == null");
+        if (topology == null)
+            throw new IllegalArgumentException("topology == null");
+
+        clientProtocol.submitToTopology(clientSessionID, topologyID, topology);
+    }
+
+
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------

@@ -10,6 +10,8 @@ import de.tuberlin.aura.core.measurement.record.RecordReader;
 import de.tuberlin.aura.core.measurement.record.RecordWriter;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 
+import java.util.List;
+
 /**
  *
  */
@@ -29,11 +31,15 @@ public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
 
     public abstract IDataConsumer getDataConsumer();
 
+    public abstract ITaskManager getTaskManager();
+
+
     public abstract MeasurementManager getMeasurementManager();
 
     public abstract RecordReader getRecordReader();
 
     public abstract RecordWriter getRecordWriter();
 
-    public abstract ITaskManager getTaskManager();
+
+    public abstract void createOutputBinding(final List<List<Descriptors.TaskDescriptor>> outputBinding);
 }

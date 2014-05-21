@@ -3,6 +3,7 @@ package de.tuberlin.aura.taskmanager;
 import java.io.IOException;
 import java.util.*;
 
+import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.BufferMemoryManager;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
 import org.apache.log4j.Logger;
@@ -187,6 +188,27 @@ public final class TaskManager implements ITaskManager {
             final ITaskDriver taskDriver = registerTask(tdd);
             executionManager.scheduleTask(taskDriver);
         }
+    }
+
+    /**
+     *
+     * @param taskID
+     * @param outputBinding
+     */
+    @Override
+    public void addOutputBinding(final UUID taskID, final List<List<Descriptors.TaskDescriptor>> outputBinding) {
+        // sanity check.
+        if (taskID == null)
+            throw new IllegalArgumentException("taskID == null");
+        if(outputBinding == null)
+            throw new IllegalArgumentException("outputBinding == null");
+
+        final ITaskDriver taskDriver = deployedTasks.get(taskID);
+
+        if(taskDriver == null)
+            throw new IllegalArgumentException("taskDriver == null");
+
+        taskDriver.createOutputBinding(outputBinding);
     }
 
     // ---------------------------------------------------

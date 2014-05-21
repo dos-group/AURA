@@ -430,6 +430,8 @@ public final class StateMachine {
 
         private final S errorState;
 
+        private final S initialState;
+
         private final Set<S> finalStates;
 
         private final Map<S, List<FiniteStateMachine<? extends Enum<?>, ? extends Enum<?>>>> nestedFSMs;
@@ -484,6 +486,8 @@ public final class StateMachine {
             this.stateTransitionMtx = stateTransitionMtx;
 
             this.currentState = initialState;
+
+            this.initialState = initialState;
 
             this.errorState = errorState;
 
@@ -608,6 +612,21 @@ public final class StateMachine {
             }
 
             currentState = nextState;
+        }
+
+        /**
+         *
+         * @return
+         */
+        public boolean isInFinalState() {
+            return finalStates.contains(currentState);
+        }
+
+        /**
+         *
+         */
+        public void reset() {
+            currentState = initialState;
         }
     }
 

@@ -19,4 +19,14 @@ public interface IDataProducer {
     public abstract int getOutputGateIndexFromTaskID(final UUID taskID);
 
     public abstract MemoryView alloc();
+
+
+    public abstract void store(final MemoryView buffer);
+
+    public abstract boolean hasStoredBuffers();
+
+    public abstract void emitStoredBuffers(final int gateIdx);
+
+    public abstract void bind();
+
 }

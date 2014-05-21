@@ -35,16 +35,18 @@ public final class TaskDataProducer implements IDataProducer {
 
     private final ITaskDriver taskDriver;
 
-    private final List<OutputGate> outputGates;
+    private List<OutputGate> outputGates;
 
-    private final Map<UUID, Integer> taskIDToGateIndex;
+    private Map<UUID, Integer> taskIDToGateIndex;
 
-    private final Map<Integer, UUID> channelIndexToTaskID;
+    private Map<Integer, UUID> channelIndexToTaskID;
 
     private final IEventHandler producerEventHandler;
 
-
     private final IAllocator outputAllocator;
+
+
+    private final List<MemoryView> bufferStorage;
 
     // ---------------------------------------------------
     // Constructors.
@@ -65,6 +67,8 @@ public final class TaskDataProducer implements IDataProducer {
         this.producerEventHandler = new ProducerEventHandler();
 
         this.taskDriver.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, producerEventHandler);
+
+        this.bufferStorage = new ArrayList<MemoryView>();
 
         this.taskIDToGateIndex = new HashMap<>();
 
@@ -148,6 +152,85 @@ public final class TaskDataProducer implements IDataProducer {
     @Override
     public MemoryView alloc() {
         return outputAllocator.alloc();
+    }
+
+    /**
+     *
+     * @param buffer
+     */
+    @Override
+    public void store(final MemoryView buffer) {
+        // sanity check.
+        if(buffer == null)
+            throw new IllegalArgumentException("buffer == null");
+
+        bufferStorage.add(buffer);
+    }
+
+    /**
+     *
+     * @return
+     */
+    @Override
+    public boolean hasStoredBuffers() {
+        return bufferStorage.size() > 0;
+    }
+
+    /**
+     *
+     */
+    @Override
+    public void bind() {
+
+        taskDriver.getTaskStateMachine().dispatchEvent(
+                new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED)
+        );
+
+        this.taskIDToGateIndex.clear();
+
+        this.channelIndexToTaskID.clear();
+
+        createOutputMappings();
+
+        this.outputGates = createOutputGates();
+
+        connectOutputDataChannels();
+
+        taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
+                new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+
+                    @Override
+                    public void stateAction(TaskStates.TaskState previousState,
+                                            TaskStates.TaskTransition transition,
+                                            TaskStates.TaskState state) {
+                        emitStoredBuffers(0);
+                    }
+                });
+    }
+
+    /**
+     *
+     * @param gateIdx
+     */
+    @Override
+    public void emitStoredBuffers(final int gateIdx) {
+
+        final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(gateIdx);
+        for (int channelIdx = 0; channelIdx < outputs.size(); ++channelIdx) {
+            final UUID outputTaskID = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(gateIdx).get(channelIdx).taskID;;
+
+            for(final MemoryView buffer : bufferStorage) {
+
+                final IOEvents.TransferBufferEvent outputBuffer =
+                        new IOEvents.TransferBufferEvent(taskDriver.getTaskDescriptor().taskID, outputTaskID, buffer);
+
+                emit(gateIdx, channelIdx, outputBuffer);
+            }
+        }
+
+        done();
+
+        taskDriver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
     }
 
     // ---------------------------------------------------

@@ -7,7 +7,9 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.usercode.UserCode;
+import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
@@ -43,6 +45,16 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
             @Override
             public void visit(final Node element) {
+
+                if(element.isAlreadyDeployed) {
+                    for(final ExecutionNode en : element.getExecutionNodes()) {
+                        // Reset the task state.
+                        en.setState(TaskStates.TaskState.TASK_STATE_CREATED);
+                        executionNodeMap.put(en.getTaskDescriptor().taskID, en);
+                    }
+                    return;
+                }
+
                 final List<UserCode> userCodeList = topology.userCodeMap.get(element.name);
                 for (int index = 0; index < element.degreeOfParallelism; ++index) {
                     final UUID taskID = UUID.randomUUID();
@@ -70,7 +82,11 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                 final Map<UUID, Map<UUID, List<TaskDescriptor>>> gateExecutionNodeInputs = new HashMap<>();
                 for (final Node n : element.getInputs()) {
 
+                    if(element.isAlreadyDeployed)
+                        continue;
+
                     final Edge ie = topology.edges.get(new Pair<>(n.name, element.name));
+
                     switch (ie.transferType) {
 
                         case ALL_TO_ALL: {
@@ -176,6 +192,11 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                 for (final Node n : element.getOutputs()) {
 
                     final Edge ie = topology.edges.get(new Pair<>(element.name, n.name));
+
+                    if (ie == null)
+                        System.out.println("XXX");
+
+
                     switch (ie.transferType) {
 
                         case ALL_TO_ALL: {

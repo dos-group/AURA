@@ -3,7 +3,7 @@ package de.tuberlin.aura.taskmanager;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.FastOutput;
 import com.esotericsoftware.kryo.io.Output;
-import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.task.spi.IRecordWriter;
 
 public class TaskRecordWriter implements IRecordWriter {
@@ -41,16 +41,16 @@ public class TaskRecordWriter implements IRecordWriter {
 
     /**
      *
-     * @param transferBuffer
+     * @param memView
      */
-    public void selectBuffer(final IOEvents.TransferBufferEvent transferBuffer) {
+    public void selectBuffer(final MemoryView memView) {
         // sanity check.
-        if(transferBuffer == null)
-            throw new IllegalArgumentException("transferBuffer == null");
+        if(memView == null)
+            throw new IllegalArgumentException("memView == null");
 
-        buffer = transferBuffer.buffer.memory;
+        buffer = memView.memory;
 
-        memoryBaseOffset = transferBuffer.buffer.baseOffset;
+        memoryBaseOffset = memView.baseOffset;
 
         // TODO: do we need to flush before we select a new buffer?
 

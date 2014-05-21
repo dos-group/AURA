@@ -243,6 +243,32 @@ public class EventDispatcher implements IEventDispatcher {
         }
     }
 
+    @Override
+    public void shutdown() {
+        if (useDispatchThread) {
+            LOG.trace("Shutdown event dispatcher");
+
+            isRunning.set(false);
+
+            // Feed the poison pill to the event dispatcher thread to terminate it.
+            eventQueue.add(new Event(IOEvents.InternalEventType.POISON_PILL_TERMINATION));
+        }
+    }
+
+    /**
+     *
+     * @return
+     */
+    public void joinDispatcherThread() {
+        if(useDispatchThread) {
+            try {
+                dispatcherThread.join();
+            } catch (InterruptedException e) {
+                LOG.error(e.getLocalizedMessage());
+            }
+        }
+    }
+
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------
@@ -263,18 +289,6 @@ public class EventDispatcher implements IEventDispatcher {
             }
         } else { // listeners == null
             LOG.info("no listener registered for event " + event.type);
-        }
-    }
-
-    @Override
-    public void shutdown() {
-        if (useDispatchThread) {
-            LOG.trace("Shutdown event dispatcher");
-
-            isRunning.set(false);
-
-            // Feed the poison pill to the event dispatcher thread to terminate it.
-            eventQueue.add(new Event(IOEvents.InternalEventType.POISON_PILL_TERMINATION));
         }
     }
 }

@@ -259,8 +259,12 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                                                     TaskStates.TaskTransition transition,
                                                     TaskStates.TaskState state) {
                                 try {
-                                    oldTaskDriver.teardownDriver(true);
-                                    unregisterTask(oldTaskDriver);
+
+                                    if (!oldTaskDriver.getDataProducer().hasStoredBuffers()) {
+                                        oldTaskDriver.teardownDriver(true);
+                                        unregisterTask(oldTaskDriver);
+                                    }
+
                                 } catch (Throwable t) {
                                     LOG.error(t.getLocalizedMessage(), t);
                                     throw t;
@@ -299,8 +303,9 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             }
                         });
 
-
-                currentTaskDriver.startupDriver(inputAllocator, outputAllocator);
+                if(currentTaskDriver.getDataProducer() == null) {
+                    currentTaskDriver.startupDriver(inputAllocator, outputAllocator);
+                }
 
                 try {
                     executeLatch.await();
@@ -308,12 +313,14 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                     LOG.error(e.getLocalizedMessage(), e);
                 }
 
-                currentTaskDriver.executeDriver();
-                LOG.debug("Execution Unit {} completed the execution of task {}",
-                          TaskExecutionUnit.this.executionUnitID,
-                          currentTaskDriver.getTaskDescriptor().taskID);
+                if(!currentTaskDriver.getDataProducer().hasStoredBuffers()) {
+                    currentTaskDriver.executeDriver();
+                    LOG.debug("Execution Unit {} completed the execution of task {}",
+                            TaskExecutionUnit.this.executionUnitID,
+                            currentTaskDriver.getTaskDescriptor().taskID);
+                }
 
-                // TODO: This is necessary to indicate that this execution unit is free via the
+               // TODO: This is necessary to indicate that this execution unit is free via the
                 // getNumberOfEnqueuedTasks()-method. This isn't thread safe in any way!
                 currentTaskDriver = null;
             }

@@ -301,8 +301,8 @@ public final class Descriptors {
                 throw new IllegalArgumentException("taskIndex < 0");
             if (name == null)
                 throw new IllegalArgumentException("name == null");
-            if (userCodeList == null)
-                throw new IllegalArgumentException("userCodeList == null");
+            //if (userCodeList == null)
+            //    throw new IllegalArgumentException("userCodeList == null");
 
             this.topologyID = topologyID;
 
@@ -396,14 +396,22 @@ public final class Descriptors {
 
             this.task = task;
 
-            this.inputGateBindings = Collections.unmodifiableList(inputGateBindings);
+            this.inputGateBindings = inputGateBindings;
 
-            this.outputGateBindings = Collections.unmodifiableList(outputGateBindings);
+            this.outputGateBindings = outputGateBindings;
         }
 
         // ---------------------------------------------------
         // Public Methods.
         // ---------------------------------------------------
+
+        public void addOutputGateBinding(final List<List<TaskDescriptor>> outputGateBindings) {
+            // sanity check.
+            if (outputGateBindings == null)
+                throw new IllegalArgumentException("outputGateBindings == null");
+
+            this.outputGateBindings.addAll(outputGateBindings);
+        }
 
         @Override
         public boolean equals(Object other) {

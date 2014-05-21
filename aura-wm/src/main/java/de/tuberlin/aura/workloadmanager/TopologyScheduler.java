@@ -71,9 +71,12 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
 
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
-                    en.getTaskDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
+                    if (!en.logicalNode.isAlreadyDeployed) {
+                        en.getTaskDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
+                    }
 
-                    LOG.debug(en.getTaskDescriptor().getMachineDescriptor().address.toString() + " -> " + en.getTaskDescriptor().name + "_"
+                    LOG.debug(en.getTaskDescriptor().getMachineDescriptor().address.toString()
+                            + " -> " + en.getTaskDescriptor().name + "_"
                             + en.getTaskDescriptor().taskIndex);
                 }
             }
