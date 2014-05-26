@@ -109,33 +109,6 @@ public final class IOEvents {
     /**
      *
      */
-    public static class GenericIOEvent extends DataIOEvent {
-
-        public final Object payload;
-
-        public GenericIOEvent(final String type, final Object payload, final UUID srcTaskID, final UUID dstTaskID) {
-            this(type, payload, srcTaskID, dstTaskID, false);
-        }
-
-        public GenericIOEvent(final String type, final Object payload, final UUID srcTaskID, final UUID dstTaskID, boolean sticky) {
-            super(type, srcTaskID, dstTaskID, sticky);
-
-            this.payload = payload;
-        }
-
-        @Override
-        public String toString() {
-            return (new StringBuilder()).append("GenericIOEvent = {")
-                                        .append(" type = " + type + ", ")
-                                        .append(" payload = " + payload.toString() + ", ")
-                                        .append(" }")
-                                        .toString();
-        }
-    }
-
-    /**
-     *
-     */
     public static class DataIOEvent extends BaseIOEvent {
 
         private static final long serialVersionUID = -1L;

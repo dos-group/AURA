@@ -207,12 +207,11 @@ public class DataWriter {
                                                                                 dstID));
 
                         // Dispatch OUTPUT_CHANNEL_CONNECTED event.
-                        final IOEvents.GenericIOEvent connected =
-                                new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                                            ChannelWriter.this,
-                                                            srcID,
+                        final IOEvents.DataIOEvent connected =
+                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,                                                            srcID,
                                                             dstID);
-                        connected.setChannel(channel);
+                        connected.setPayload(ChannelWriter.this);
+                       connected.setChannel(channel);
                         dispatcher.dispatchEvent(connected);
 
                     } else if (future.cause() != null) {

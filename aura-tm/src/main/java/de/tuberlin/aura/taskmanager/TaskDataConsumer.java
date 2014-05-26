@@ -326,8 +326,8 @@ public final class TaskDataConsumer implements DataConsumer {
 
     private final class ConsumerEventHandler extends EventHandler {
 
-        @Handle(event = IOEvents.GenericIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
-        private void handleTaskInputDataChannelConnect(final IOEvents.GenericIOEvent event) {
+        @Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
+        private void handleTaskInputDataChannelConnect(final IOEvents.DataIOEvent event) {
 
             boolean found = false;
 
@@ -345,7 +345,7 @@ public final class TaskDataConsumer implements DataConsumer {
                     if (inputTask.taskID.equals(event.srcTaskID)) {
 
                         // wire queue to input gate
-                        final DataReader channelReader = (DataReader) event.payload;
+                        final DataReader channelReader = (DataReader) event.getPayload();
 
                         // create queue, if there is none yet as we can have multiple channels
                         // insert in one queue (aka multiple channels per gate)

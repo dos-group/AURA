@@ -270,12 +270,12 @@ public final class TaskExecutionManager extends EventDispatcher {
                                     channel.config().setAutoRead(true);
 
                                     // Dispatch INPUT_CHANNEL_CONNECTED event.
-                                    IOEvents.GenericIOEvent connected =
-                                            new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                                        event.getPayload(),
+                                    IOEvents.DataIOEvent connected =
+                                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
                                                                         event.srcTaskID,
                                                                         event.dstTaskID,
                                                                         true);
+                                    connected.setPayload(event.getPayload());
                                     connected.setChannel(event.getChannel());
                                     ioManager.dispatchEvent(connected);
                                 }

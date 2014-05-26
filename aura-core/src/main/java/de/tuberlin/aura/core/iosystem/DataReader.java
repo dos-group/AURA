@@ -216,22 +216,6 @@ public class DataReader {
         }
     }
 
-    public final class StateHandler extends ChannelInboundHandlerAdapter {
-
-        private final boolean inactive = true;
-
-        @Override
-        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
-            // LOG.error("channel unregister");
-        }
-
-        @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-
-            // LOG.error("channel inactive");
-        }
-    }
-
     public final class DataEventHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
 
         @Override
@@ -300,10 +284,7 @@ public class DataReader {
 
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline()
-                      .addLast(dataReader.new StateHandler())
-                      .addLast(dataReader.new TransferEventHandler())
-                      .addLast(dataReader.new DataEventHandler());
+                    ch.pipeline().addLast(dataReader.new TransferEventHandler()).addLast(dataReader.new DataEventHandler());
                 }
             };
         }
@@ -334,7 +315,6 @@ public class DataReader {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline()
-                      .addLast(dataReader.new StateHandler())
                       .addLast(KryoEventSerializer.LENGTH_FIELD_DECODER())
                       .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER())
                       .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(dataReader.executionManager))

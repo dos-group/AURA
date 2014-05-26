@@ -221,8 +221,8 @@ public final class TaskDataProducer implements DataProducer {
 
     private final class ProducerEventHandler extends EventHandler {
 
-        @Handle(event = IOEvents.GenericIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
-        private void handleTaskOutputDataChannelConnect(final IOEvents.GenericIOEvent event) {
+        @Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
+        private void handleTaskOutputDataChannelConnect(final IOEvents.DataIOEvent event) {
             int gateIndex = 0;
             boolean allOutputGatesConnected = true;
             for (final List<Descriptors.TaskDescriptor> outputGate : driverContext.taskBindingDescriptor.outputGateBindings) {
@@ -237,7 +237,7 @@ public final class TaskDataProducer implements DataProducer {
                         // get the right queue manager for task context
                         final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutboundQueue(gateIndex, channelIndex);
 
-                        final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.payload;
+                        final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.getPayload();
                         channelWriter.setOutputQueue(queue);
 
                         final OutputGate og = outputGates.get(gateIndex);
