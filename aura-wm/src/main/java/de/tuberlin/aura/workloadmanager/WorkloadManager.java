@@ -17,7 +17,6 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
@@ -244,8 +243,6 @@ public class WorkloadManager implements ClientWMProtocol {
             LOG.error(builder.toString());
             System.exit(1);
         }
-
-        MeasurementManager.setRoot(measurementPath);
 
         long start = System.nanoTime();
         new WorkloadManager(zkServer, dataPort, controlPort);

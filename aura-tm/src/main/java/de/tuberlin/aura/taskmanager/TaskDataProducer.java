@@ -171,8 +171,7 @@ public final class TaskDataProducer implements DataProducer {
 
                     driverContext.managerContext.ioManager.connectDataChannel(driverContext.taskDescriptor.taskID,
                                                                               outputTask.taskID,
-                                                                              outputTask.getMachineDescriptor(),
-                                                                              outputAllocator);
+                                                                              outputTask.getMachineDescriptor());
                 }
             }
         }
@@ -223,6 +222,7 @@ public final class TaskDataProducer implements DataProducer {
 
         @Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
         private void handleTaskOutputDataChannelConnect(final IOEvents.DataIOEvent event) {
+
             int gateIndex = 0;
             boolean allOutputGatesConnected = true;
             for (final List<Descriptors.TaskDescriptor> outputGate : driverContext.taskBindingDescriptor.outputGateBindings) {
@@ -238,7 +238,7 @@ public final class TaskDataProducer implements DataProducer {
                         final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutboundQueue(gateIndex, channelIndex);
 
                         final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.getPayload();
-                        channelWriter.setOutputQueue(queue);
+                        channelWriter.setOutboundQueue(queue);
 
                         final OutputGate og = outputGates.get(gateIndex);
                         og.setChannelWriter(channelIndex, channelWriter);

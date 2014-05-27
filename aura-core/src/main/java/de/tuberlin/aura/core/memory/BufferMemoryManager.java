@@ -65,8 +65,7 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
 
         final int perExecutionUnitBuffers = globalBufferCount / numOfExecutionUnits;
 
-        final int buffersPerAllocator = 1; // (perExecutionUnitBuffers / groupsPerExecutionUnit) /
-                                           // NUM_OF_ALLOCATORS_PER_GROUP;
+        final int buffersPerAllocator = (perExecutionUnitBuffers / groupsPerExecutionUnit) / NUM_OF_ALLOCATORS_PER_GROUP;
 
         this.allocatorGroups =
                 setupBufferAllocatorGroups(numOfExecutionUnits * groupsPerExecutionUnit,

@@ -7,7 +7,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 
 public class QueueManager<T> {
 
@@ -27,20 +26,16 @@ public class QueueManager<T> {
 
     private final BufferQueue.FACTORY<T> outboundFactory;
 
-    private final MeasurementManager measurementManager;
-
     private int inputQueuesCounter;
 
     private int outputQueuesCounter;
 
-    private QueueManager(BufferQueue.FACTORY<T> inboundFactory, BufferQueue.FACTORY<T> outboundFactory, MeasurementManager measurementManager) {
+    private QueueManager(BufferQueue.FACTORY<T> inboundFactory, BufferQueue.FACTORY<T> outboundFactory) {
         this.inboundQueues = new HashMap<>();
         this.inboundFactory = inboundFactory;
 
         this.outboundQueues = new HashMap<>();
         this.outboundFactory = outboundFactory;
-
-        this.measurementManager = measurementManager;
     }
 
     // ---------------------------------------------------
@@ -52,15 +47,11 @@ public class QueueManager<T> {
      * @param taskID
      * @param inboundFactory
      * @param outboundFactory
-     * @param measurementManager
      * @param <F>
      * @return
      */
-    public static <F> QueueManager<F> newInstance(UUID taskID,
-                                                  BufferQueue.FACTORY<F> inboundFactory,
-                                                  BufferQueue.FACTORY<F> outboundFactory,
-                                                  MeasurementManager measurementManager) {
-        QueueManager<F> instance = new QueueManager<>(inboundFactory, outboundFactory, measurementManager);
+    public static <F> QueueManager<F> newInstance(UUID taskID, BufferQueue.FACTORY<F> inboundFactory, BufferQueue.FACTORY<F> outboundFactory) {
+        QueueManager<F> instance = new QueueManager<>(inboundFactory, outboundFactory);
         BINDINGS.put(taskID, instance);
         return instance;
     }
@@ -77,7 +68,7 @@ public class QueueManager<T> {
             return inboundQueues.get(gateIndex);
         }
 
-        final BufferQueue<T> queue = inboundFactory.newInstance("InputQueue " + Integer.toString(inputQueuesCounter), this.measurementManager);
+        final BufferQueue<T> queue = inboundFactory.newInstance();
         inboundQueues.put(gateIndex, queue);
         ++this.inputQueuesCounter;
 
@@ -98,7 +89,7 @@ public class QueueManager<T> {
             return outboundQueues.get(key);
         }
 
-        final BufferQueue<T> queue = outboundFactory.newInstance("OutputQueue " + Integer.toString(outputQueuesCounter), this.measurementManager);
+        final BufferQueue<T> queue = outboundFactory.newInstance();
         outboundQueues.put(key, queue);
         ++this.outputQueuesCounter;
 

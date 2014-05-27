@@ -70,19 +70,12 @@ public class DataReader {
      * @param dispatcher the dispatcher to which events should be published.
      */
     public DataReader(IEventDispatcher dispatcher, final TaskExecutionManager executionManager) {
-
         this.dispatcher = dispatcher;
-
         this.executionManager = executionManager;
-
         inputQueues = new HashMap<>();
-
         channelToQueueIndex = new HashMap<>();
-
         gateToQueueIndex = new HashMap<>();
-
         connectedChannels = new HashMap<>();
-
         queueIndex = 0;
     }
 
@@ -211,7 +204,7 @@ public class DataReader {
             try {
                 inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LOG.error("put on input queue was interrupted.", e);
             }
         }
     }
@@ -222,15 +215,9 @@ public class DataReader {
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event) throws Exception {
             switch (event.type) {
                 case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
-                    // TODO: ensure that queue is bound before first data buffer event
-                    // arrives
-
-                    // Disable the auto read functionality of the channel. You must not
-                    // forget to enable it again!
-                    ctx.channel().config().setAutoRead(false);
-
+                    // TODO: ensure that queue is bound before first data buffer event arrives
                     IOEvents.DataIOEvent connected =
-                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, event.srcTaskID, event.dstTaskID);
+                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, event.srcTaskID, event.dstTaskID);
                     connected.setPayload(DataReader.this);
                     connected.setChannel(ctx.channel());
 
@@ -284,7 +271,10 @@ public class DataReader {
 
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(dataReader.new TransferEventHandler()).addLast(dataReader.new DataEventHandler());
+                    ch.pipeline()
+                      .addLast(new KryoEventSerializer.LocalTransferBufferCopyHandler(dataReader.executionManager))
+                      .addLast(dataReader.new TransferEventHandler())
+                      .addLast(dataReader.new DataEventHandler());
                 }
             };
         }
@@ -299,7 +289,7 @@ public class DataReader {
             // both
             b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
             // sets the max. number of pending, not yet fully connected (handshake) channels
-             .option(ChannelOption.SO_BACKLOG, 128)
+             .option(ChannelOption.SO_BACKLOG, 1024)
              // .option(ChannelOption.SO_RCVBUF, IOConfig.NETTY_RECEIVE_BUFFER_SIZE)
              // set keep alive, so idle connections are persistent
              .childOption(ChannelOption.SO_KEEPALIVE, true)

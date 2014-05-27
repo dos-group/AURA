@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.utils.ProcessExecutor;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.taskmanager.TaskManager;
 import de.tuberlin.aura.workloadmanager.WorkloadManager;
@@ -125,8 +124,6 @@ public final class LocalClusterSimulator {
 
             case EXECUTION_MODE_SINGLE_PROCESS: {
                 new WorkloadManager(zkServer, getFreePort(), getFreePort());
-
-                MeasurementManager.setRoot(measurementPath);
 
                 for (int i = 0; i < numNodes; ++i) {
                     tmList.add(new TaskManager(zkServer, getFreePort(), getFreePort()));

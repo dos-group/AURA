@@ -2,10 +2,7 @@ package de.tuberlin.aura.core.iosystem.queues;
 
 import static de.tuberlin.aura.core.common.utils.UnsafeAccess.UNSAFE;
 
-import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
-
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 
 abstract class SpscLinkedQueuePad0<E> {
 
@@ -80,11 +77,6 @@ public final class SignalSpscLinkedQueue<E> extends SpscLinkedQueueTail<E> imple
         return null;
     }
 
-    @Override
-    public Iterator<E> iterator() {
-        throw new UnsupportedOperationException();
-    }
-
     public E peek() {
         return tail.lvValue();
     }
@@ -105,15 +97,6 @@ public final class SignalSpscLinkedQueue<E> extends SpscLinkedQueueTail<E> imple
     // --------------------------------------------------------------
 
     private QueueObserver observer;
-
-    private final MeasurementManager measurementManager;
-
-    private final String name;
-
-    public SignalSpscLinkedQueue(String name, MeasurementManager measurementManager) {
-        this.measurementManager = measurementManager;
-        this.name = name;
-    }
 
 
     @Override
@@ -137,15 +120,6 @@ public final class SignalSpscLinkedQueue<E> extends SpscLinkedQueueTail<E> imple
     }
 
     @Override
-    public String getName() {
-        return this.name;
-    }
-
-    public MeasurementManager getMeasurementManager() {
-        return this.measurementManager;
-    }
-
-    @Override
     public void registerObserver(QueueObserver observer) {
         this.observer = observer;
     }
@@ -158,8 +132,8 @@ public final class SignalSpscLinkedQueue<E> extends SpscLinkedQueueTail<E> imple
     public static class Factory<F> implements FACTORY<F> {
 
         @Override
-        public BufferQueue<F> newInstance(String name, MeasurementManager measurementManager) {
-            return new SignalSpscLinkedQueue<>(name, measurementManager);
+        public BufferQueue<F> newInstance() {
+            return new SignalSpscLinkedQueue<>();
         }
     }
 }

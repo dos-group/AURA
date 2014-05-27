@@ -30,7 +30,7 @@ public final class CountClient {
     /**
      * Logger.
      */
-    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(SanityClient.class);
+    private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(CountClient.class);
 
     // Disallow Instantiation.
     private CountClient() {}

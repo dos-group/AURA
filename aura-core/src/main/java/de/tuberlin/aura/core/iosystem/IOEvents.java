@@ -1,11 +1,9 @@
 package de.tuberlin.aura.core.iosystem;
 
-import java.net.SocketAddress;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
-import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.memory.MemoryView;
 import io.netty.channel.Channel;
 
@@ -31,11 +29,7 @@ public final class IOEvents {
 
         private DataEventType() {}
 
-        public static final String DATA_EVENT_INPUT_CHANNEL_SETUP = "DATA_EVENT_INPUT_CHANNEL_SETUP";
-
         public static final String DATA_EVENT_INPUT_CHANNEL_CONNECTED = "DATA_EVENT_INPUT_CHANNEL_CONNECTED";
-
-        public static final String DATA_EVENT_OUTPUT_CHANNEL_SETUP = "DATA_EVENT_OUTPUT_CHANNEL_SETUP";
 
         public static final String DATA_EVENT_OUTPUT_CHANNEL_CONNECTED = "DATA_EVENT_OUTPUT_CHANNEL_CONNECTED";
 
@@ -140,58 +134,6 @@ public final class IOEvents {
                                         .append(" type = " + type + ", ")
                                         .append(" srcTaskID = " + srcTaskID.toString() + ", ")
                                         .append(" dstTaskID = " + dstTaskID.toString())
-                                        .append(" }")
-                                        .toString();
-        }
-    }
-
-    /**
-     *
-     */
-    public static class SetupIOEvent<T extends Channel> extends BaseIOEvent {
-
-        private static final long serialVersionUID = -1L;
-
-        public final UUID srcTaskID;
-
-        public final UUID dstTaskID;
-
-        public final DataWriter.OutgoingConnectionType<T> connectionType;
-
-        public final SocketAddress address;
-
-        public final IAllocator allocator;
-
-        public SetupIOEvent(final String type,
-                            final UUID srcTaskID,
-                            final UUID dstTaskID,
-                            final DataWriter.OutgoingConnectionType<T> connectionType,
-                            final SocketAddress address,
-                            final IAllocator allocator) {
-            super(type);
-
-            // sanity check.
-            if (srcTaskID == null)
-                throw new IllegalArgumentException("srcTaskID == null");
-            if (dstTaskID == null)
-                throw new IllegalArgumentException("dstTaskID == null");
-
-            this.srcTaskID = srcTaskID;
-            this.dstTaskID = dstTaskID;
-            this.connectionType = connectionType;
-            this.address = address;
-            this.allocator = allocator;
-        }
-
-        @Override
-        public String toString() {
-            return (new StringBuilder()).append("DataIOEvent = {")
-                                        .append(" type = " + type + ", ")
-                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
-                                        .append(" dstTaskID = " + dstTaskID.toString() + ", ")
-                                        .append(" connectionType = " + connectionType.toString() + ", ")
-                                        .append(" address = " + address.toString() + ", ")
-                                        .append(" allocator = " + allocator.toString())
                                         .append(" }")
                                         .toString();
         }

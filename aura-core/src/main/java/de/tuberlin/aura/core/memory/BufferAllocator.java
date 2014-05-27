@@ -1,7 +1,7 @@
 package de.tuberlin.aura.core.memory;
 
+import java.util.LinkedList;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -39,7 +39,9 @@ public final class BufferAllocator implements IAllocator {
 
     public final BlockingQueue<MemoryView> freeList;
 
-    private final ConcurrentLinkedQueue<BufferCallback> callbackList;
+    private final LinkedList<BufferCallback> callbackList;
+
+    private final Object callbackLock = new Object();
 
     // ---------------------------------------------------
     // Constructor.
@@ -63,7 +65,7 @@ public final class BufferAllocator implements IAllocator {
 
         this.freeList = new LinkedBlockingQueue<>();
 
-        this.callbackList = new ConcurrentLinkedQueue<>();
+        this.callbackList = new LinkedList<>();
 
         for (int i = 0; i < bufferCount; ++i) {
             this.freeList.add(new MemoryView(this, memoryArena, i * bufferSize, bufferSize));
@@ -75,7 +77,7 @@ public final class BufferAllocator implements IAllocator {
     // ---------------------------------------------------
 
     @Override
-    public synchronized MemoryView alloc() {
+    public MemoryView alloc() {
         final MemoryView memory = freeList.poll();
         return memory;
     }
@@ -97,17 +99,18 @@ public final class BufferAllocator implements IAllocator {
     }
 
     @Override
-    public synchronized MemoryView alloc(final BufferCallback callback) {
+    public MemoryView alloc(final BufferCallback callback) {
         // sanity check.
         if (callback == null)
             throw new IllegalArgumentException("callback == null");
 
-        final MemoryView memory = freeList.poll();
-
-        if (memory == null) {
-            callbackList.add(callback);
+        synchronized (callbackLock) {
+            final MemoryView memory = freeList.poll();
+            if (memory == null) {
+                callbackList.add(callback);
+            }
+            return memory;
         }
-        return memory;
     }
 
     @Override
@@ -116,11 +119,13 @@ public final class BufferAllocator implements IAllocator {
         if (memory == null)
             throw new IllegalArgumentException("memory == null");
 
-        if (!callbackList.isEmpty()) {
-            final BufferCallback bufferCallback = callbackList.poll();
-            bufferCallback.bufferReader(memory);
-        } else {
-            freeList.add(memory);
+        synchronized (callbackLock) {
+            if (!callbackList.isEmpty()) {
+                final BufferCallback bufferCallback = callbackList.poll();
+                bufferCallback.bufferReader(memory);
+            } else {
+                freeList.add(memory);
+            }
         }
     }
 

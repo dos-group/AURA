@@ -24,8 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-import de.tuberlin.aura.core.statistic.MeasurementManager;
-
 /**
  * An optionally-bounded {@linkplain java.util.concurrent.BlockingQueue blocking queue} based on
  * linked nodes. This queue orders elements FIFO (first-in-first-out). The <em>head</em> of the
@@ -63,8 +61,7 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
      * cases. Also, to minimize need for puts to get takeLock and vice-versa, cascading notifies are
      * used. When a put notices that it has enabled at least one take, it signals taker. That taker
      * in turn signals others if more items have been entered since the signal. And symmetrically
-     * for takes signalling puts. Operations such as remove(Object) and iterators acquire both
-     * locks.
+     * for takes signalling puts. Operations such as remove(Object) and iterators retain both locks.
      * 
      * Visibility between writers and readers is provided as follows:
      * 
@@ -95,32 +92,14 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
         this.observer = null;
     }
 
-    @Override
-    public MeasurementManager getMeasurementManager() {
-        return this.measurementManager;
-    }
-
     private String name;
-
-    private MeasurementManager measurementManager;
-
-    @Override
-    public String getName() {
-        return this.name;
-    }
 
     public static class Factory<F> implements FACTORY<F> {
 
         @Override
-        public BufferQueue<F> newInstance(String name, MeasurementManager measurementManager) {
-            return new BlockingSignalQueue<>(name, measurementManager);
+        public BufferQueue<F> newInstance() {
+            return new BlockingSignalQueue<>();
         }
-    }
-
-    public BlockingSignalQueue(String name, MeasurementManager manager) {
-        this();
-        this.name = name;
-        this.measurementManager = manager;
     }
 
     /**

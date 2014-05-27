@@ -27,7 +27,6 @@ import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.memory.BufferMemoryManager;
 import de.tuberlin.aura.core.memory.IBufferMemoryManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import de.tuberlin.aura.core.task.common.TaskManagerContext;
@@ -101,7 +100,6 @@ public final class TaskManager implements WM2TMProtocol {
 
         // setup IO.
         this.ioManager = setupIOManager(machine, executionManager);
-        this.executionManager.setIOManager(this.ioManager);
 
         this.rpcManager = new RPCManager(ioManager);
 
@@ -351,8 +349,6 @@ public final class TaskManager implements WM2TMProtocol {
             LOG.error(builder.toString());
             System.exit(1);
         }
-
-        MeasurementManager.setRoot(measurementPath);
 
         long start = System.nanoTime();
         new TaskManager(zkServer, dataPort, controlPort);

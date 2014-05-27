@@ -72,15 +72,18 @@ public final class MemoryView {
     }
 
     public void free() {
-        allocator.free(this);
+        if (refCount.decrementAndGet() <= 0) {
+            allocator.free(this);
+            refCount.set(0);
+        }
     }
 
     public MemoryView weakCopy() {
-        acquire();
+        retain();
         return this;
     }
 
-    public void acquire() {
+    public void retain() {
         refCount.getAndIncrement();
     }
 

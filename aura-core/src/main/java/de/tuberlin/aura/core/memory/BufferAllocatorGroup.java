@@ -83,21 +83,21 @@ public final class BufferAllocatorGroup implements IAllocator {
 
     @Override
     public MemoryView alloc() {
-        for (final IAllocator allocator : assignedAllocators) {
-            if (allocator.hasFree()) {
-                return allocator.alloc();
-            }
-        }
+        // for (final IAllocator allocator : assignedAllocators) {
+        // if (allocator.hasFree()) {
+        // return allocator.alloc();
+        // }
+        // }
         return assignedAllocators.get(0).alloc();
     }
 
     @Override
     public MemoryView allocBlocking() throws InterruptedException {
-        for (final IAllocator allocator : assignedAllocators) {
-            if (allocator.hasFree()) {
-                return allocator.allocBlocking();
-            }
-        }
+        // for (final IAllocator allocator : assignedAllocators) {
+        // if (allocator.hasFree()) {
+        // return allocator.allocBlocking();
+        // }
+        // }
         return assignedAllocators.get(0).allocBlocking();
     }
 
@@ -107,27 +107,29 @@ public final class BufferAllocatorGroup implements IAllocator {
         if (bufferCallback == null)
             throw new IllegalArgumentException("bufferCallback == null");
 
-        if (allocCounter.get() == Integer.MAX_VALUE)
-            allocCounter.set(0);
-
-        final int count = allocCounter.getAndIncrement();
-
-        int allocatorIndex = count % (assignedAllocators.size());
-        int tmpAllocatorIndex = allocatorIndex;
-        int index = 0;
-
-        while (index++ < assignedAllocators.size()) {
-            final IAllocator allocator = assignedAllocators.get((tmpAllocatorIndex++) % (assignedAllocators.size()));
-            if (allocator.hasFree()) {
-                return allocator.alloc();
-            }
-        }
-
-        return assignedAllocators.get(allocatorIndex).alloc(bufferCallback);
+        // if (allocCounter.get() == Integer.MAX_VALUE)
+        // allocCounter.set(0);
+        //
+        // final int count = allocCounter.getAndIncrement();
+        //
+        // int allocatorIndex = count % (assignedAllocators.size());
+        // int tmpAllocatorIndex = allocatorIndex;
+        // int index = 0;
+        //
+        // while (index++ < assignedAllocators.size()) {
+        // final IAllocator allocator = assignedAllocators.get((tmpAllocatorIndex++) %
+        // (assignedAllocators.size()));
+        // if (allocator.hasFree()) {
+        // return allocator.alloc();
+        // }
+        // }
+        //
+        // return assignedAllocators.get(allocatorIndex).alloc(bufferCallback);
+        return assignedAllocators.get(0).alloc(bufferCallback);
     }
 
     @Override
-    public void free(MemoryView memory) {
+   public void free(MemoryView memory) {
         memory.free();
     }
 

@@ -9,12 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
-import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitLocalInputEventLoopGroup;
-import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNetworkInputEventLoopGroup;
 import de.tuberlin.aura.core.memory.IAllocator;
-import io.netty.channel.local.LocalEventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.concurrent.DefaultThreadFactory;
 
 public final class TaskExecutionUnit {
 
@@ -39,8 +34,6 @@ public final class TaskExecutionUnit {
     private final IAllocator inputAllocator;
 
     private final IAllocator outputAllocator;
-
-    protected final DataFlowEventLoops dataFlowEventLoops;
 
     // ---------------------------------------------------
     // Constructors.
@@ -67,9 +60,6 @@ public final class TaskExecutionUnit {
         this.inputAllocator = inputAllocator;
 
         this.outputAllocator = outputAllocator;
-
-        // TODO: Make this configurable
-        this.dataFlowEventLoops = new DataFlowEventLoops(2, 2, 2, 2);
 
         this.executorThread = new Thread(new ExecutionUnitRunner());
 
@@ -268,32 +258,6 @@ public final class TaskExecutionUnit {
             }
 
             LOG.debug("Terminate thread of execution unit {}", TaskExecutionUnit.this.executionUnitID);
-        }
-    }
-
-    protected class DataFlowEventLoops {
-
-        public final ExecutionUnitNetworkInputEventLoopGroup networkInputEventLoopGroup;
-
-        public final ExecutionUnitLocalInputEventLoopGroup localInputEventLoopGroup;
-
-        public final NioEventLoopGroup networkOutputEventLoopGroup;
-
-        public final LocalEventLoopGroup localOutputEventLoopGroup;
-
-        public DataFlowEventLoops(int networkInputThreads, int localInputThreads, int networkOutputThreads, int localOutputThreads) {
-
-            DefaultThreadFactory factory = new DefaultThreadFactory("EU-" + executionUnitID + "-networkInput");
-            this.networkInputEventLoopGroup = new ExecutionUnitNetworkInputEventLoopGroup(networkInputThreads, factory);
-
-            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-localInput");
-            this.localInputEventLoopGroup = new ExecutionUnitLocalInputEventLoopGroup(localInputThreads, factory);
-
-            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-networkOutput");
-            this.networkOutputEventLoopGroup = new NioEventLoopGroup(networkOutputThreads, factory);
-
-            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-localOutput");
-            this.localOutputEventLoopGroup = new LocalEventLoopGroup(localOutputThreads, factory);
         }
     }
 }
