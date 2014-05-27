@@ -70,19 +70,12 @@ public class DataReader {
      * @param dispatcher the dispatcher to which events should be published.
      */
     public DataReader(IEventDispatcher dispatcher, final TaskExecutionManager executionManager) {
-
         this.dispatcher = dispatcher;
-
         this.executionManager = executionManager;
-
         inputQueues = new HashMap<>();
-
         channelToQueueIndex = new HashMap<>();
-
         gateToQueueIndex = new HashMap<>();
-
         connectedChannels = new HashMap<>();
-
         queueIndex = 0;
     }
 
@@ -222,19 +215,11 @@ public class DataReader {
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event) throws Exception {
             switch (event.type) {
                 case IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED:
-                    // TODO: ensure that queue is bound before first data buffer event
-                    // arrives
+                    // TODO: ensure that queue is bound before first data buffer event arrives
+                    event.setPayload(DataReader.this);
+                    event.setChannel(ctx.channel());
 
-                    // Disable the auto read functionality of the channel. You must not
-                    // forget to enable it again!
-                    ctx.channel().config().setAutoRead(false);
-
-                    IOEvents.DataIOEvent connected =
-                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, event.srcTaskID, event.dstTaskID);
-                    connected.setPayload(DataReader.this);
-                    connected.setChannel(ctx.channel());
-
-                    dispatcher.dispatchEvent(connected);
+                    dispatcher.dispatchEvent(event);
                     break;
 
                 case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:

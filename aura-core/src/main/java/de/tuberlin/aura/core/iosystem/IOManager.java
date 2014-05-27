@@ -62,9 +62,13 @@ public final class IOManager extends EventDispatcher {
     // Event Loops for Netty
     private final NioEventLoopGroup controlPlaneEventLoopGroup;
 
-    private final NioEventLoopGroup networkConnectionListenerEventLoopGroup;
+    private final NioEventLoopGroup tcpInboundELG;
 
-    private final LocalEventLoopGroup localConnectionListenerEventLoopGroup;
+    private final NioEventLoopGroup tcpOutboundELG;
+
+    private final LocalEventLoopGroup localInboundELG;
+
+    private final LocalEventLoopGroup localOutboundELG;
 
 
     // ---------------------------------------------------
@@ -91,12 +95,15 @@ public final class IOManager extends EventDispatcher {
         this.dataWriter = new DataWriter(IOManager.this);
 
         // TODO: Make the number of thread configurable
-        this.networkConnectionListenerEventLoopGroup = new NioEventLoopGroup(4);
-        this.localConnectionListenerEventLoopGroup = new LocalEventLoopGroup(4);
+        this.tcpInboundELG = new NioEventLoopGroup(4);
+        this.tcpOutboundELG = new NioEventLoopGroup(4);
 
-        startNetworkConnectionSetupServer(this.machine, networkConnectionListenerEventLoopGroup);
+        this.localInboundELG = new LocalEventLoopGroup(4);
+        this.localOutboundELG = new LocalEventLoopGroup(4);
 
-        startLocalDataConnectionSetupServer(localConnectionListenerEventLoopGroup);
+        startNetworkConnectionSetupServer(this.machine, tcpInboundELG);
+
+        startLocalDataConnectionSetupServer(localInboundELG);
 
         // Configure the control plane.
         this.controlPlaneEventLoopGroup = new NioEventLoopGroup();
@@ -369,7 +376,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, tcpOutboundELG);
         }
 
         public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final IAllocator allocator) {
@@ -381,7 +388,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, localOutboundELG);
         }
 
         public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress) {

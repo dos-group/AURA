@@ -238,7 +238,7 @@ public final class TaskDataProducer implements DataProducer {
                         final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutboundQueue(gateIndex, channelIndex);
 
                         final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.getPayload();
-                        channelWriter.setOutputQueue(queue);
+                        channelWriter.setOutboundQueue(queue);
 
                         final OutputGate og = outputGates.get(gateIndex);
                         og.setChannelWriter(channelIndex, channelWriter);

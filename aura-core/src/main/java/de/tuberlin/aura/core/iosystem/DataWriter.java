@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
-import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import io.netty.bootstrap.Bootstrap;
@@ -24,8 +23,6 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
-
-// TODO: let the bufferQueue size be configurable
 public class DataWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataWriter.class);
@@ -39,11 +36,11 @@ public class DataWriter {
 
     public <T extends Channel> ChannelWriter<T> bind(final UUID srcTaskID,
                                                      final UUID dstTaskID,
-                                                     final OutgoingConnectionType<T> type,
+                                                     final OutgoingConnectionType<T> connectionType,
                                                      final SocketAddress address,
-                                                     final IAllocator allocator) {
+                                                     final EventLoopGroup eventLoopGroup) {
 
-        return new ChannelWriter<>(type, srcTaskID, dstTaskID, address, allocator);
+        return new ChannelWriter<>(srcTaskID, dstTaskID, connectionType, address, eventLoopGroup);
     }
 
     // ---------------------------------------------------
@@ -60,11 +57,11 @@ public class DataWriter {
 
         private Channel channel;
 
-        private final CountDownLatch pollFinished = new CountDownLatch(1);
+        private final CountDownLatch exhaustedAcknowledged = new CountDownLatch(1);
 
-        private final CountDownLatch queueReady = new CountDownLatch(1);
+        private final CountDownLatch queueBound = new CountDownLatch(1);
 
-        private BufferQueue<IOEvents.DataIOEvent> transferQueue;
+        private BufferQueue<IOEvents.DataIOEvent> outboundQueue;
 
         // gate semantics
 
@@ -72,30 +69,27 @@ public class DataWriter {
 
         private AtomicBoolean gateOpen = new AtomicBoolean(false);
 
-        public ChannelWriter(final OutgoingConnectionType<T> type,
-                             final UUID srcID,
-                             final UUID dstID,
+        public ChannelWriter(final UUID srcTaskID,
+                             final UUID dstTaskID,
+                             final OutgoingConnectionType<T> connectionType,
                              final SocketAddress address,
-                             final IAllocator allocator) {
+                             final EventLoopGroup eventLoopGroup) {
 
-            this.srcID = srcID;
-
-            this.dstID = dstID;
-
+            this.srcID = srcTaskID;
+            this.dstID = dstTaskID;
             this.awaitGateOpenLatch = new ResettableCountDownLatch(1);
 
-            IOEvents.SetupIOEvent<T> event =
-                    new IOEvents.SetupIOEvent<>(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, srcID, dstID, type, address, allocator);
-            event.setPayload(this);
+            Bootstrap bootstrap = connectionType.bootStrap(eventLoopGroup);
+            bootstrap.handler(connectionType.getPipeline(this));
 
-            dispatcher.dispatchEvent(event);
+            bootstrap.connect(address).addListener(new ConnectListener());
         }
 
         /**
          * Writes the event to the channel.
          * <p/>
          * If the the gate the channel is connected to is not open yet, the events are buffered in a
-         * transferQueue. If this intermediate transferQueue is full, this method blocks until the
+         * outboundQueue. If this intermediate outboundQueue is full, this method blocks until the
          * gate is opened.
          * 
          * @param event
@@ -106,22 +100,28 @@ public class DataWriter {
                     awaitGateOpenLatch.await();
                 }
 
-                this.transferQueue.offer(event);
+                this.outboundQueue.offer(event);
             } catch (InterruptedException e) {
                 LOG.error("Write of event " + event + " was interrupted.", e);
             }
         }
 
         /**
-         * Shut down the channel writer.
+         * Disconnects and closes the channel.
+         * 
+         * If `awaitExhaustion` is set, this method blocks until the acknowledge for the exhausted
+         * event is received. If not, the channel is shut down immediately, even if there are still
+         * events in the attached queue.
+         * 
+         * @param awaitExhaustion true, if the method should block until the exhausted event is
+         *        received.
          */
         public void shutdown(boolean awaitExhaustion) {
 
             try {
-                // we can't use the return value of result cause we have to interrupt the thread
-                // therefore we need the latch and the field
+                // wait for the receivers acknowledge before shutdown
                 if (awaitExhaustion) {
-                    pollFinished.await();
+                    exhaustedAcknowledged.await();
                 }
             } catch (InterruptedException e) {
                 LOG.error("Receiving future from poll thread failed. Interrupt.", e);
@@ -137,12 +137,15 @@ public class DataWriter {
             }
         }
 
-        public void setOutputQueue(BufferQueue<IOEvents.DataIOEvent> queue) {
-            this.transferQueue = queue;
+        public void setOutboundQueue(BufferQueue<IOEvents.DataIOEvent> queue) {
+            this.outboundQueue = queue;
             LOG.debug("Event queue attached.");
-            queueReady.countDown();
+            queueBound.countDown();
         }
 
+        /**
+         * Handles all incoming events (currently gate open, gate close, exhausted acknowledge).
+         */
         public final class OpenCloseGateHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
 
             @Override
@@ -174,13 +177,13 @@ public class DataWriter {
                         // as the gate is closed, now events could be enqueued at this point
                         IOEvents.DataIOEvent closedGate =
                                 new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE_ACK, srcID, dstID);
-                        transferQueue.offer(closedGate);
+                        outboundQueue.offer(closedGate);
 
                         break;
 
                     case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED_ACK:
                         LOG.debug("RECEIVED EXHAUSTED ACK EVENT");
-                        pollFinished.countDown();
+                        exhaustedAcknowledged.countDown();
                         break;
                     default:
                         LOG.error("RECEIVED UNKNOWN EVENT TYPE: " + gateEvent.type);
@@ -190,7 +193,11 @@ public class DataWriter {
         }
 
         /**
-         * Sets the channel if the connection to the server was successful.
+         * If the connection was successfully established, a
+         * {@link de.tuberlin.aura.core.iosystem.IOEvents.DataEventType#DATA_EVENT_INPUT_CHANNEL_CONNECTED}
+         * is send to the peer and a
+         * {@link de.tuberlin.aura.core.iosystem.IOEvents.DataEventType#DATA_EVENT_OUTPUT_CHANNEL_CONNECTED}
+         * is dispatched.
          */
         public final class ConnectListener implements ChannelFutureListener {
 
@@ -208,10 +215,9 @@ public class DataWriter {
 
                         // Dispatch OUTPUT_CHANNEL_CONNECTED event.
                         final IOEvents.DataIOEvent connected =
-                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,                                                            srcID,
-                                                            dstID);
+                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, srcID, dstID);
                         connected.setPayload(ChannelWriter.this);
-                       connected.setChannel(channel);
+                        connected.setChannel(channel);
                         dispatcher.dispatchEvent(connected);
 
                     } else if (future.cause() != null) {
@@ -222,6 +228,10 @@ public class DataWriter {
             }
         }
 
+        /**
+         * Binds the write observer to the outbound queue and triggers the initial write to the
+         * channel.
+         */
         private class ChannelActiveHandler extends ChannelInboundHandlerAdapter {
 
             @Override
@@ -230,9 +240,9 @@ public class DataWriter {
 
                     @Override
                     public Void call() throws Exception {
-                        queueReady.await();
+                        queueBound.await();
                         // bind observer
-                        transferQueue.registerObserver(new WriteableObserver(ctx));
+                        outboundQueue.registerObserver(new WriteableObserver(ctx));
                         return null;
                     }
                 }).addListener(new GenericFutureListener<Future<? super Void>>() {
@@ -265,7 +275,7 @@ public class DataWriter {
             public void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
 
                 if (ctx.channel().isWritable()) {
-                    final IOEvents.DataIOEvent event = transferQueue.poll();
+                    final IOEvents.DataIOEvent event = outboundQueue.poll();
                     if (event != null) {
 
                         final long start = System.nanoTime();
@@ -279,9 +289,9 @@ public class DataWriter {
                                 if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
                                     LOG.debug("Data source exhausted. Shutting down poll thread.");
 
-                                    transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, transferQueue.getName()
+                                    outboundQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, outboundQueue.getName()
                                             + " -> Avg. write", (long) ((double) writeDuration / (double) writes)));
-                                    transferQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, transferQueue.getName()
+                                    outboundQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, outboundQueue.getName()
                                             + " -> Not writable", notWritable));
                                 } else {
                                     ctx.pipeline().fireChannelWritabilityChanged();

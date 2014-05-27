@@ -101,7 +101,6 @@ public final class TaskManager implements WM2TMProtocol {
 
         // setup IO.
         this.ioManager = setupIOManager(machine, executionManager);
-        this.executionManager.setIOManager(this.ioManager);
 
         this.rpcManager = new RPCManager(ioManager);
 
