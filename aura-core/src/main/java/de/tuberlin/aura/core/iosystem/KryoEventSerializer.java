@@ -3,7 +3,9 @@ package de.tuberlin.aura.core.iosystem;
 
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.UUID;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -45,7 +47,9 @@ public final class KryoEventSerializer {
     // ---------------------------------------------------
 
     public static LengthFieldBasedFrameDecoder LENGTH_FIELD_DECODER() {
-        return new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4);
+        LengthFieldBasedFrameDecoder decoder = new LengthFieldBasedFrameDecoder(1048576, 0, 4, 0, 4);
+        // decoder.setSingleDecode(true);
+        return decoder;
     }
 
     public static ChannelInboundHandlerAdapter KRYO_INBOUND_HANDLER(final TaskExecutionManager taskExecutionManager) {
@@ -62,6 +66,8 @@ public final class KryoEventSerializer {
 
     private static final class KryoInboundHandler extends ChannelInboundHandlerAdapter {
 
+        private long CALLBACKS = 0;
+
         private Kryo kryo;
 
         private IAllocator allocator;
@@ -72,7 +78,19 @@ public final class KryoEventSerializer {
 
         private final AtomicInteger pendingCallbacks = new AtomicInteger(0);
 
-        private final Object lock = new Object();
+        private final LinkedBlockingQueue<PendingEvent> pendingObjects = new LinkedBlockingQueue<>();
+
+        private static class PendingEvent {
+
+            public final long index;
+
+            public final Object event;
+
+            public PendingEvent(final long index, final Object event) {
+                this.index = index;
+                this.event = event;
+            }
+        }
 
         public KryoInboundHandler(TaskExecutionManager executionManager) {
             kryo = new Kryo();
@@ -88,44 +106,41 @@ public final class KryoEventSerializer {
             try {
                 final Input input = new UnsafeMemoryInput(ioBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
                 ioBuffer.order(ByteOrder.nativeOrder());
-                final Registration reg;
-                synchronized (lock) {
-                    reg = kryo.readClass(input);
-                }
+                final Registration reg = kryo.readClass(input);
 
                 switch (reg.getId()) {
                     case IOConfig.IO_DATA_EVENT_ID: {
-                        final Object event;
-                        synchronized (lock) {
-                            event = kryo.readObject(input, reg.getType());
-                        }
+                        final Object event = kryo.readObject(input, reg.getType());
+                        // LOG.info(event + "");
                         if (allocator == null && executionManager != null) {
                             bindAllocator(((IOEvents.DataIOEvent) event).srcTaskID, ((IOEvents.DataIOEvent) event).dstTaskID);
                         }
-                        ctx.fireChannelRead(event);
+                        if (pendingCallbacks.get() >= 1) {
+                            // LOG.error("queue");
+                            pendingObjects.offer(new PendingEvent(CALLBACKS, event));
+                        } else {
+                            ctx.fireChannelRead(event);
+                        }
                         break;
                     }
                     case IOConfig.IO_TRANSFER_EVENT_ID: {
                         // get buffer
                         MemoryView view = allocator.alloc();
                         if (view == null) {
-                            synchronized (lock) {
-                                view = allocator.alloc(new Callback(ioBuffer, ctx));
-                                if (view == null) {
-                                    if (pendingCallbacks.incrementAndGet() == 1) {
-                                        ctx.channel().config().setAutoRead(false);
-                                    }
-                                    ReferenceCountUtil.retain(ioBuffer);
-                                    // LOG.warn("view == null " + ctx);
-                                    break;
+                            view = allocator.alloc(new Callback(ioBuffer, ctx));
+                            if (view == null) {
+                                LOG.error("view == null");
+                                if (pendingCallbacks.incrementAndGet() == 1) {
+                                    // LOG.error("read false");
+                                    ctx.channel().config().setAutoRead(false);
                                 }
+                                ReferenceCountUtil.retain(ioBuffer);
+                                // LOG.warn("view == null " + ctx);
+                                break;
                             }
                         }
                         userSpaceBuffer = view;
-                        Object event;
-                        synchronized (lock) {
-                            event = kryo.readObject(input, reg.getType());
-                        }
+                        Object event = kryo.readObject(input, reg.getType());
                         ctx.fireChannelRead(event);
 
                         break;
@@ -141,34 +156,52 @@ public final class KryoEventSerializer {
 
         private class Callback implements BufferCallback {
 
-
             private final ByteBuf pendingBuffer;
 
             private final ChannelHandlerContext ctx;
 
+            private final long index;
+
             Callback(final ByteBuf pendingBuffer, ChannelHandlerContext ctx) {
                 this.pendingBuffer = pendingBuffer;
                 this.ctx = ctx;
+                this.index = ++CALLBACKS;
             }
 
             @Override
             public void bufferReader(final MemoryView buffer) {
-                synchronized (lock) {
-                    try {
-                        userSpaceBuffer = buffer;
-                        final Input input = new UnsafeMemoryInput(pendingBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
-                        Object event = kryo.readClassAndObject(input);
-                        ctx.fireChannelRead(event);
-                        // LOG.warn("callback to ctx -> " + ctx + " with buffer " + buffer + "[ " +
-                        // pendingBuffer.nioBuffer() + " ]");
-                    } finally {
-                        pendingBuffer.release();
+                ctx.channel().eventLoop().execute(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        try {
+                            userSpaceBuffer = buffer;
+                            final Input input = new UnsafeMemoryInput(pendingBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
+                            Object event = kryo.readClassAndObject(input);
+                            ctx.fireChannelRead(event);
+                            // LOG.warn("callback run " + index);
+                            for (Iterator<PendingEvent> itr = pendingObjects.iterator(); itr.hasNext();) {
+                                PendingEvent obj = itr.next();
+                                // LOG.error("queued " + obj.index + " : " + obj);
+                                if (obj.index == index) {
+                                    // LOG.error("fire");
+                                    ctx.fireChannelRead(obj.event);
+                                    itr.remove();
+                                } else {
+                                    break;
+                                }
+                            }
+                        } finally {
+                            pendingBuffer.release();
+                        }
+                        if (pendingCallbacks.decrementAndGet() == 0) {
+                            // LOG.error("no pending callbacks");
+                            ctx.channel().config().setAutoRead(true);
+                            // ctx.pipeline().read();
+                        }
                     }
-                }
-                if (pendingCallbacks.decrementAndGet() == 0) {
-                    ctx.channel().config().setAutoRead(true);
-      }
-                    }
+                });
+            }
         }
 
         public MemoryView getBuffer() {
@@ -222,7 +255,7 @@ public final class KryoEventSerializer {
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-            //LOG.warn("write");
+            // LOG.warn("write");
             final ByteBuf ioBuffer = ctx.alloc().buffer(IOConfig.MAX_EVENT_SIZE, IOConfig.MAX_EVENT_SIZE);
             UnsafeMemoryOutput output = new UnsafeMemoryOutput(ioBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
             output.order(ByteOrder.nativeOrder());
@@ -298,8 +331,8 @@ public final class KryoEventSerializer {
                                                      transferBufferEvent.buffer.size());
 
             transferBufferEvent.buffer.free();
-            //LOG.info("free");
-   }
+            // LOG.info("free");
+        }
 
         @Override
         public IOEvents.TransferBufferEvent read(Kryo kryo, Input input, Class<IOEvents.TransferBufferEvent> type) {

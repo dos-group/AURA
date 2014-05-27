@@ -62,7 +62,7 @@ public class DataReader {
     private final Map<Pair<UUID, Integer>, Map<Integer, Channel>> connectedChannels;
 
 
-    final TaskExecutionManager executionManager;
+    public final TaskExecutionManager executionManager;
 
     /**
      * Creates a new Data Reader. There should only be one Data Reader per task manager.

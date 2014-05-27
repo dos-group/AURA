@@ -3,6 +3,7 @@ package de.tuberlin.aura.benchmark.runs;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -16,17 +17,15 @@ import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.BufferAllocator;
 import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.task.common.DataConsumer;
-import de.tuberlin.aura.core.task.common.DataProducer;
-import de.tuberlin.aura.core.task.common.TaskDriverContext;
-import de.tuberlin.aura.core.task.common.TaskInvokeable;
+import de.tuberlin.aura.core.task.common.*;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
 
-public final class SimpleClient {
+public final class CountClient {
 
     /**
      * Logger.
@@ -34,24 +33,31 @@ public final class SimpleClient {
     private static final org.slf4j.Logger LOG = LoggerFactory.getLogger(SanityClient.class);
 
     // Disallow Instantiation.
-    private SimpleClient() {}
+    private CountClient() {}
 
     /**
      *
      */
     public static class Source extends TaskInvokeable {
 
-        private static final int RECORDS = 10;
+        private final TaskRecordWriter writer;
+
+        private final TaskRecordReader reader;
+
+
+        private static final long RECORDS = 10;
 
         public Source(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
+            writer = new TaskRecordWriter(BufferAllocator._64K);
+            reader = new TaskRecordReader(BufferAllocator._64K);
         }
 
         @Override
         public void run() throws Throwable {
             final UUID taskID = driverContext.taskDescriptor.taskID;
 
-            int i = 0;
+            long i = 0;
             while (i++ < RECORDS && isInvokeableRunning()) {
 
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
@@ -59,13 +65,14 @@ public final class SimpleClient {
                     final UUID outputTaskID = getTaskID(0, index);
 
                     final MemoryView buffer = producer.allocBlocking();
+                    writer.selectBuffer(buffer);
+                    writer.writeRecord(i);
+
                     final IOEvents.TransferBufferEvent event = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
 
                     producer.emit(0, index, event);
                 }
             }
-
-            LOG.error("Source finished");
         }
 
         @Override
@@ -79,6 +86,10 @@ public final class SimpleClient {
      *
      */
     public static class ForwardWithOneInput extends TaskInvokeable {
+
+        long count = 0;
+
+        long out = 0;
 
         public ForwardWithOneInput(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
@@ -98,6 +109,12 @@ public final class SimpleClient {
                 final IOEvents.TransferBufferEvent event = consumer.absorb(0);
 
                 if (event != null) {
+                    count++;
+                    ByteBuffer byteBuf = ByteBuffer.wrap(event.buffer.memory, event.buffer.baseOffset, event.buffer.size);
+                    final long value = byteBuf.getLong();
+                    if (value != count) {
+                        LOG.error("expected: " + count + ", but was: " + value);
+                    }
 
                     event.buffer.free();
 
@@ -105,6 +122,9 @@ public final class SimpleClient {
                         final UUID outputTaskID = getTaskID(0, index);
 
                         final MemoryView sendBuffer = producer.allocBlocking();
+                        ByteBuffer outBuf = ByteBuffer.wrap(sendBuffer.memory, sendBuffer.baseOffset, sendBuffer.size);
+                        outBuf.putLong(++out);
+                        outBuf.flip();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         producer.emit(0, index, outputBuffer);
@@ -123,6 +143,12 @@ public final class SimpleClient {
     }
 
     public static class ForwardWithTwoInputs extends TaskInvokeable {
+
+        long countLeft = 0;
+
+        long countRight = 0;
+
+        long out = 0;
 
         public ForwardWithTwoInputs(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
@@ -144,6 +170,12 @@ public final class SimpleClient {
                 final IOEvents.TransferBufferEvent rightEvent = consumer.absorb(1);
 
                 if (leftEvent != null) {
+                    countLeft++;
+                    ByteBuffer byteBuf = ByteBuffer.wrap(leftEvent.buffer.memory, leftEvent.buffer.baseOffset, leftEvent.buffer.size);
+                    final long value = byteBuf.getLong();
+                    if (value != countLeft) {
+                        LOG.error("left expected: " + countLeft + ", but was: " + value);
+                    }
 
                     leftEvent.buffer.free();
 
@@ -151,6 +183,9 @@ public final class SimpleClient {
                         final UUID outputTaskID = getTaskID(0, index);
 
                         final MemoryView sendBuffer = producer.allocBlocking();
+                        ByteBuffer outBuf = ByteBuffer.wrap(sendBuffer.memory, sendBuffer.baseOffset, sendBuffer.size);
+                        outBuf.putLong(++out);
+                        outBuf.flip();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         producer.emit(0, index, outputBuffer);
@@ -160,6 +195,12 @@ public final class SimpleClient {
                 }
 
                 if (rightEvent != null) {
+                    countRight++;
+                    ByteBuffer byteBuf = ByteBuffer.wrap(rightEvent.buffer.memory);
+                    final long value = byteBuf.getLong();
+                    if (value != countRight) {
+                        LOG.error("right expected: " + countRight + ", but was: " + value);
+                    }
 
                     rightEvent.buffer.free();
 
@@ -167,6 +208,9 @@ public final class SimpleClient {
                         final UUID outputTaskID = getTaskID(0, index);
 
                         final MemoryView sendBuffer = producer.allocBlocking();
+                        ByteBuffer outBuf = ByteBuffer.wrap(sendBuffer.memory, sendBuffer.baseOffset, sendBuffer.size);
+                        outBuf.putLong(++out);
+                        outBuf.flip();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         producer.emit(0, index, outputBuffer);
@@ -191,8 +235,12 @@ public final class SimpleClient {
 
         long count = 0;
 
+        private final TaskRecordReader recordReader;
+
         public Sink(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
+
+            recordReader = new TaskRecordReader(BufferAllocator._64K);
         }
 
         @Override
@@ -203,16 +251,21 @@ public final class SimpleClient {
         @Override
         public void run() throws Throwable {
 
-            if (count % 3 == 0)
-                Thread.sleep(3000);
-
             while (!consumer.isExhausted() && isInvokeableRunning()) {
                 final IOEvents.TransferBufferEvent event = consumer.absorb(0);
 
                 if (event != null) {
                     count++;
-                    // if (count % 10000 == 0)
-                    // LOG.info("Sink receive {}.", count);
+
+                    recordReader.selectBuffer(event.buffer);
+                    long value = recordReader.readRecord(Long.class);
+                    if (value != count) {
+                        LOG.error("expected: " + count + ", but was: " + value);
+                    }
+
+
+                    if (count % 10000 == 0)
+                        LOG.info("Sink receive {}.", count);
                     // LOG.info("free in sink");
                     event.buffer.free();
                 }
@@ -227,10 +280,20 @@ public final class SimpleClient {
      */
     public static class SinkWithTwoInputs extends TaskInvokeable {
 
-        long count = 0;
+        long countLeft = 0;
+
+        long countRight = 0;
+
+        private final TaskRecordReader recordReaderLeft;
+
+        private final TaskRecordReader recordReaderRight;
 
         public SinkWithTwoInputs(final TaskDriverContext context, DataProducer producer, final DataConsumer consumer, final Logger LOG) {
             super(context, producer, consumer, LOG);
+
+            recordReaderLeft = new TaskRecordReader(BufferAllocator._64K);
+
+            recordReaderRight = new TaskRecordReader(BufferAllocator._64K);
         }
 
         @Override
@@ -246,34 +309,48 @@ public final class SimpleClient {
                 final IOEvents.TransferBufferEvent left = consumer.absorb(0);
                 final IOEvents.TransferBufferEvent right = consumer.absorb(1);
                 if (left != null) {
-                    count++;
-                    // if (count % 10000 == 0)
-                    // LOG.info("Sink left receive {}.", count);
+                    countLeft++;
+                    recordReaderLeft.selectBuffer(left.buffer);
+                    long value = recordReaderLeft.readRecord(Long.class);
+
+                    if (value != countLeft) {
+                        LOG.error("left expected: " + countLeft + ", but was: " + value);
+                    }
+
+                    if (countLeft % 10000 == 0)
+                        LOG.info("Sink left receive {}.", countLeft);
                     // LOG.info("free in sink");
                     left.buffer.free();
                 }
                 if (right != null) {
-                    count++;
-                    // if (count % 10000 == 0)
-                    // LOG.info("Sink right receive {}.", count);
+                    countRight++;
+                    recordReaderRight.selectBuffer(right.buffer);
+                    long value = recordReaderRight.readRecord(Long.class);
+
+                    if (value != countRight) {
+                        LOG.error("right expected: " + countRight + ", but was: " + value);
+                    }
+
+                    if (countRight % 10000 == 0)
+                        LOG.info("Sink right receive {}.", countRight);
                     // LOG.info("free in sink");
                     right.buffer.free();
                 }
             }
 
-            LOG.info("Sink finished {}.", count);
+            LOG.info("Sink finished {}.", (countLeft + countRight));
         }
     }
 
 
- // ---------------------------------------------------
+    // ---------------------------------------------------
     // Main.
     // ---------------------------------------------------
 
     public static void main(String[] args) {
 
-        int machines = 1;
-        int cores = 2;
+        int machines = 4;
+        int cores = 1;
         int runs = 1;
 
         // Local
@@ -316,11 +393,12 @@ public final class SimpleClient {
         AuraDirectedGraph.AuraTopologyBuilder atb;
 
         // // 2 layered - point2point connection
-        atb = client.createTopologyBuilder();
-        atb.addNode(new Node(UUID.randomUUID(), "Source", 1, 1), Source.class)
-           .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Node(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
-        topologies.add(atb.build("Job: 2 layered - point2point connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+        // atb = client.createTopologyBuilder();
+        // atb.addNode(new Node(UUID.randomUUID(), "Source", executionUnits / 2, 1), Source.class)
+        // .connectTo("Sink", Edge.TransferType.POINT_TO_POINT)
+        // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
+        // topologies.add(atb.build("Job: 2 layered - point2point connection",
+        // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
         //
         // // 2 layered - all2all connection
         // atb = client.createTopologyBuilder();
@@ -329,6 +407,15 @@ public final class SimpleClient {
         // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
         // topologies.add(atb.build("Job: 2 layered - all2all connection",
         // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
+
+        // 3 layered - all2all (join) all2all connection
+        atb = client.createTopologyBuilder();
+        atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 3, 1), Source.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 3, 1), Source.class)
+           .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
+        topologies.add(atb.build("Job: 2 layered - all2all (join) connection", EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
         //
         // // 3 layered - point2point + point2point connection
         // atb = client.createTopologyBuilder();
@@ -403,16 +490,16 @@ public final class SimpleClient {
         // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
         // topologies.add(atb.build("Job: 3 layered - all2all (join) point2point connection",
         // EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING)));
-        //
+
         // // 3 layered - all2all (join) all2all connection
         // atb = client.createTopologyBuilder();
-        // atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 4, 1),
+        // atb.addNode(new Node(UUID.randomUUID(), "Source Left", executionUnits / 3, 1),
         // Source.class)
         // .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 4, 1),
+        // .addNode(new Node(UUID.randomUUID(), "Source Right", executionUnits / 3, 1),
         // Source.class)
         // .connectTo("Middle", Edge.TransferType.ALL_TO_ALL)
-        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 4, 1),
+        // .addNode(new Node(UUID.randomUUID(), "Middle", executionUnits / 3, 1),
         // ForwardWithTwoInputs.class)
         // .connectTo("Sink", Edge.TransferType.ALL_TO_ALL)
         // .addNode(new Node(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
