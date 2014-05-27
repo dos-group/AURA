@@ -9,10 +9,11 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.BlockingBufferQueue;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.iosystem.queues.BlockingBufferQueue;
+import de.tuberlin.aura.core.iosystem.queues.BlockingSignalQueue;
+import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.*;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
@@ -83,7 +84,10 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
                 + taskDescriptor.taskIndex, measurementManager);
 
         this.queueManager =
-                QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), measurementManager);
+                QueueManager.newInstance(taskDescriptor.taskID,
+                                         new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(),
+                                         new BlockingSignalQueue.Factory<IOEvents.DataIOEvent>(),
+                                         measurementManager);
 
         this.driverContext =
                 new TaskDriverContext(this, managerContext, taskDescriptor, taskBindingDescriptor, this, queueManager, taskFSM, measurementManager);
@@ -103,7 +107,7 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
      *
      */
     @Override
-    public void startupDriver(final MemoryManager.Allocator inputAllocator, final MemoryManager.Allocator outputAllocator) {
+    public void startupDriver(final IAllocator inputAllocator, final IAllocator outputAllocator) {
         // sanity check.
         if (inputAllocator == null)
             throw new IllegalArgumentException("inputAllocator == null");
@@ -168,7 +172,11 @@ public final class TaskDriver extends EventDispatcher implements TaskDriverLifec
 
         dataProducer.shutdownProducer(awaitExhaustion);
 
+        queueManager.clearOutboundQueues();
+
         dataConsumer.shutdownConsumer();
+
+        queueManager.clearInboundQueues();
     }
 
     // ---------------------------------------------------

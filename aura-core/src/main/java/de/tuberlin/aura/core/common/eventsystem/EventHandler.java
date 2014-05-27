@@ -8,7 +8,9 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public abstract class EventHandler implements IEventHandler {
 
@@ -28,7 +30,7 @@ public abstract class EventHandler implements IEventHandler {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(EventHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(EventHandler.class);
 
     private final Map<Class<?>, Method> eventHandlerMap;
 
@@ -76,7 +78,7 @@ public abstract class EventHandler implements IEventHandler {
                 try {
                     m.invoke(this, event);
                 } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-                    LOG.error(e);
+                    LOG.error(e.getLocalizedMessage(), e);
                     throw new IllegalStateException(e);
                 }
             } else {

@@ -10,7 +10,7 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
 import de.tuberlin.aura.core.iosystem.UUIDSerializer;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.MemoryView;
 
 public class Record<T> {
 
@@ -35,7 +35,7 @@ public class Record<T> {
         this.kryo.addDefaultSerializer(UUID.class, new UUIDSerializer());
     }
 
-    public Record(MemoryManager.MemoryView view) {
+    public Record(MemoryView view) {
         Input input = new Input(view.memory);
         input.skip(view.baseOffset);
 
@@ -49,7 +49,7 @@ public class Record<T> {
         return this.data;
     }
 
-    public void serialize(MemoryManager.MemoryView view) {
+    public void serialize(MemoryView view) {
 
         Output output = new Output(view.memory);
         output.setPosition(view.baseOffset);

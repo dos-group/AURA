@@ -1,10 +1,12 @@
 package de.tuberlin.aura.core.iosystem;
 
+import java.net.SocketAddress;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.iosystem.RPCManager.MethodSignature;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.IAllocator;
+import de.tuberlin.aura.core.memory.MemoryView;
 import io.netty.channel.Channel;
 
 public final class IOEvents {
@@ -46,6 +48,8 @@ public final class IOEvents {
         public static final String DATA_EVENT_BUFFER = "DATA_EVENT_BUFFER";
 
         public static final String DATA_EVENT_SOURCE_EXHAUSTED = "DATA_EVENT_SOURCE_EXHAUSTED";
+
+        public static final String DATA_EVENT_SOURCE_EXHAUSTED_ACK = "DATA_EVENT_SOURCE_EXHAUSTED_ACK";
     }
 
     /**
@@ -85,6 +89,10 @@ public final class IOEvents {
             super(type);
         }
 
+        public BaseIOEvent(final String type, final boolean sticky) {
+            super(type, null, sticky);
+        }
+
         public void setChannel(final Channel channel) {
             // sanity check.
             if (channel == null)
@@ -101,29 +109,6 @@ public final class IOEvents {
     /**
      *
      */
-    public static class GenericIOEvent extends DataIOEvent {
-
-        public final Object payload;
-
-        public GenericIOEvent(final String type, final Object payload, final UUID srcTaskID, final UUID dstTaskID) {
-            super(type, srcTaskID, dstTaskID);
-
-            this.payload = payload;
-        }
-
-        @Override
-        public String toString() {
-            return (new StringBuilder()).append("GenericIOEvent = {")
-                                        .append(" type = " + type + ", ")
-                                        .append(" payload = " + payload.toString() + ", ")
-                                        .append(" }")
-                                        .toString();
-        }
-    }
-
-    /**
-     *
-     */
     public static class DataIOEvent extends BaseIOEvent {
 
         private static final long serialVersionUID = -1L;
@@ -133,7 +118,11 @@ public final class IOEvents {
         public final UUID dstTaskID;
 
         public DataIOEvent(final String type, final UUID srcTaskID, final UUID dstTaskID) {
-            super(type);
+            this(type, srcTaskID, dstTaskID, false);
+        }
+
+        public DataIOEvent(final String type, final UUID srcTaskID, final UUID dstTaskID, final boolean sticky) {
+            super(type, sticky);
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
@@ -159,6 +148,58 @@ public final class IOEvents {
     /**
      *
      */
+    public static class SetupIOEvent<T extends Channel> extends BaseIOEvent {
+
+        private static final long serialVersionUID = -1L;
+
+        public final UUID srcTaskID;
+
+        public final UUID dstTaskID;
+
+        public final DataWriter.OutgoingConnectionType<T> connectionType;
+
+        public final SocketAddress address;
+
+        public final IAllocator allocator;
+
+        public SetupIOEvent(final String type,
+                            final UUID srcTaskID,
+                            final UUID dstTaskID,
+                            final DataWriter.OutgoingConnectionType<T> connectionType,
+                            final SocketAddress address,
+                            final IAllocator allocator) {
+            super(type);
+
+            // sanity check.
+            if (srcTaskID == null)
+                throw new IllegalArgumentException("srcTaskID == null");
+            if (dstTaskID == null)
+                throw new IllegalArgumentException("dstTaskID == null");
+
+            this.srcTaskID = srcTaskID;
+            this.dstTaskID = dstTaskID;
+            this.connectionType = connectionType;
+            this.address = address;
+            this.allocator = allocator;
+        }
+
+        @Override
+        public String toString() {
+            return (new StringBuilder()).append("DataIOEvent = {")
+                                        .append(" type = " + type + ", ")
+                                        .append(" srcTaskID = " + srcTaskID.toString() + ", ")
+                                        .append(" dstTaskID = " + dstTaskID.toString() + ", ")
+                                        .append(" connectionType = " + connectionType.toString() + ", ")
+                                        .append(" address = " + address.toString() + ", ")
+                                        .append(" allocator = " + allocator.toString())
+                                        .append(" }")
+                                        .toString();
+        }
+    }
+
+    /**
+     *
+     */
     public static final class TransferBufferEvent extends DataIOEvent {
 
         private static final long serialVersionUID = -1;
@@ -167,13 +208,13 @@ public final class IOEvents {
 
         // public final byte[] data;
 
-        public final MemoryManager.MemoryView buffer;
+        public final MemoryView buffer;
 
-        public TransferBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.MemoryView buffer) {
+        public TransferBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final MemoryView buffer) {
             this(UUID.randomUUID(), srcTaskID, dstTaskID, buffer);
         }
 
-        public TransferBufferEvent(final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.MemoryView buffer) {
+        public TransferBufferEvent(final UUID messageID, final UUID srcTaskID, final UUID dstTaskID, final MemoryView buffer) {
 
             super(DataEventType.DATA_EVENT_BUFFER, srcTaskID, dstTaskID);
 

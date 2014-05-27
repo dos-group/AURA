@@ -81,7 +81,7 @@ public class ExecutionUnitLocalInputEventLoopGroup extends LocalEventLoopGroup {
         int base = gateIndex * possibilities;
         int index = base + Math.abs(childIndex.getAndIncrement() % possibilities);
 
-        LOG.debug("Handle channel from {} (connected to gate {}) by EventLoop {}/{}", desc, gateIndex, index + 1, children.length);
+        LOG.trace("Handle channel from {} (connected to gate {}) by EventLoop {}/{}", desc, gateIndex, index + 1, children.length);
 
         return (EventLoop) children[index];
     }

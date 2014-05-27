@@ -3,6 +3,8 @@ package de.tuberlin.aura.core.task.common;
 
 import java.lang.reflect.Field;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,11 +13,16 @@ import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.iosystem.DataReader;
+import de.tuberlin.aura.core.iosystem.DataWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitLocalInputEventLoopGroup;
 import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNetworkInputEventLoopGroup;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
+import de.tuberlin.aura.core.memory.IAllocator;
+import de.tuberlin.aura.core.memory.IBufferMemoryManager;
+import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -52,7 +59,7 @@ public final class TaskExecutionManager extends EventDispatcher {
 
     private final TaskExecutionUnit[] executionUnit;
 
-    private final MemoryManager.BufferMemoryManager bufferMemoryManager;
+    private final IBufferMemoryManager bufferMemoryManager;
 
     private IOManager ioManager;
 
@@ -64,7 +71,7 @@ public final class TaskExecutionManager extends EventDispatcher {
      * @param machineDescriptor
      * @param bufferMemoryManager
      */
-    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor, final MemoryManager.BufferMemoryManager bufferMemoryManager) {
+    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor, final IBufferMemoryManager bufferMemoryManager) {
         // TODO: Cleanup
         super(true, "TaskExecutionManagerEventDispatcher");
 
@@ -112,8 +119,12 @@ public final class TaskExecutionManager extends EventDispatcher {
         driverContext.setAssignedExecutionUnitIndex(selectedEU);
         executionUnit[selectedEU].enqueueTask(driverContext);
 
-        LOG.info("EXECUTE TASK " + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID + "]" + " ON EXECUTION UNIT ("
-                + executionUnit[selectedEU].getExecutionUnitID() + ") ON MACHINE [" + machineDescriptor.uid + "]");
+        LOG.info("EXECUTE TASK {}-{} [{}] ON EXECUTION UNIT ({}) ON MACHINE [{}]",
+                 driverContext.taskDescriptor.name,
+                 driverContext.taskDescriptor.taskIndex,
+                 driverContext.taskDescriptor.taskID,
+                 executionUnit[selectedEU].getExecutionUnitID(),
+                 machineDescriptor.uid);
     }
 
     /**
@@ -133,7 +144,7 @@ public final class TaskExecutionManager extends EventDispatcher {
             }
         }
 
-        LOG.warn("No task execution unit was found for this task ID: {}", taskID);
+        LOG.trace("No task execution unit was found for this task ID: {}", taskID);
         return null;
     }
 
@@ -152,8 +163,8 @@ public final class TaskExecutionManager extends EventDispatcher {
      */
     private void initializeExecutionUnits() {
         for (int i = 0; i < numberOfCores; ++i) {
-            final MemoryManager.BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
-            final MemoryManager.BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
+            final BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
+            final BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
 
             this.executionUnit[i] = new TaskExecutionUnit(this, i, inputBuffer, outputBuffer);
             this.executionUnit[i].start();
@@ -166,12 +177,15 @@ public final class TaskExecutionManager extends EventDispatcher {
     private void registerEventListeners() {
         this.ioManager.addEventListener(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP, new EventHandler() {
 
+            private ExecutorService executor = Executors.newSingleThreadExecutor();
+
+            @SuppressWarnings("deprecation")
             @EventHandler.Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_SETUP)
             private void handleInputChannelSetup(final IOEvents.DataIOEvent event) {
 
                 try {
                     // Add the channel to the according event loop group.
-                    Channel channel = event.getChannel();
+                    final Channel channel = event.getChannel();
 
                     // TODO: Dirty dirty hack... set channel to state "closed" to avoid closing the
                     // peer
@@ -185,168 +199,123 @@ public final class TaskExecutionManager extends EventDispatcher {
                     channel.deregister().addListener(new ChannelFutureListener() {
 
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            try {
-                                Channel channel = future.channel();
-                                LOG.trace("Change event loop from {} to event loop of task {}", channel.eventLoop().parent(), event.dstTaskID);
+                        public void operationComplete(final ChannelFuture future) throws Exception {
 
-                                // Determine the execution unit the given channel is connected to.
-                                TaskExecutionUnit executionUnit = findTaskExecutionUnitByTaskID(event.dstTaskID);
+                            channel.eventLoop().execute(new Runnable() {
 
-                                if (channel instanceof LocalChannel) {
-                                    ExecutionUnitLocalInputEventLoopGroup eventLoopGroup = executionUnit.dataFlowEventLoops.localInputEventLoopGroup;
+                                @Override
+                                public void run() {
+                                    try {
+                                        Channel channel = future.channel();
 
-                                    // TODO: Dirty dirty hack... [will be fixed in Netty
-                                    // 4.0.19.Final]
-                                    Class<?> clazz = channel.getClass();
-                                    Field stateField = clazz.getDeclaredField("state");
-                                    stateField.setAccessible(true);
-                                    stateField.setInt(channel, 0);
+                                        if (channel.pipeline().names().size() == 1) {
+                                            // Set the pipeline again.
+                                            DataReader dataReader = (DataReader) event.getPayload();
+                                            channel.pipeline()
+                                                   .addLast(dataReader.new TransferEventHandler())
+                                                   .addLast(dataReader.new DataEventHandler());
+                                        }
 
-                                    Field peerField = clazz.getDeclaredField("peer");
-                                    peerField.setAccessible(true);
-                                    LocalChannel peer = (LocalChannel) peerField.get(channel);
+                                        // Determine the execution unit the given channel is
+                                        // connected to.
+                                        TaskExecutionUnit executionUnit = null;
+                                        while ((executionUnit = findTaskExecutionUnitByTaskID(event.dstTaskID)) == null) {
+                                            Thread.sleep(100);
+                                        }
 
-                                    Field connectPromiseField = clazz.getDeclaredField("connectPromise");
-                                    connectPromiseField.setAccessible(true);
-                                    connectPromiseField.set(peer, peer.unsafe().voidPromise());
+                                        LOG.trace("Change event loop from {} to event loop of task {}", channel.eventLoop().parent(), event.dstTaskID);
 
-                                    // Change event loop group.
-                                    eventLoopGroup.register(channel,
-                                                            event.srcTaskID,
-                                                            executionUnit.getCurrentTaskDriverContext().taskBindingDescriptor.inputGateBindings)
-                                                  .sync();
-                                } else {
-                                    ExecutionUnitNetworkInputEventLoopGroup eventLoopGroup =
-                                            executionUnit.dataFlowEventLoops.networkInputEventLoopGroup;
+                                        if (channel instanceof LocalChannel) {
+                                            ExecutionUnitLocalInputEventLoopGroup eventLoopGroup =
+                                                    executionUnit.dataFlowEventLoops.localInputEventLoopGroup;
 
-                                    // Change event loop group.
-                                    eventLoopGroup.register(channel,
-                                                            event.srcTaskID,
-                                                            executionUnit.getCurrentTaskDriverContext().taskBindingDescriptor.inputGateBindings)
-                                                  .sync();
+                                            // TODO: Dirty dirty hack... [will be fixed in Netty
+                                            // 4.0.19.Final]
+                                            Class<?> clazz = channel.getClass();
+                                            Field stateField = clazz.getDeclaredField("state");
+                                            stateField.setAccessible(true);
+                                            stateField.setInt(channel, 0);
+
+                                            Field peerField = clazz.getDeclaredField("peer");
+                                            peerField.setAccessible(true);
+                                            LocalChannel peer = (LocalChannel) peerField.get(channel);
+
+                                            Field connectPromiseField = clazz.getDeclaredField("connectPromise");
+                                            connectPromiseField.setAccessible(true);
+                                            connectPromiseField.set(peer, peer.unsafe().voidPromise());
+
+                                            // Change event loop group.
+                                            eventLoopGroup.register(channel,
+                                                                    event.srcTaskID,
+                                                                    executionUnit.getCurrentTaskDriverContext().taskBindingDescriptor.inputGateBindings)
+                                                          .sync();
+                                        } else {
+                                            ExecutionUnitNetworkInputEventLoopGroup eventLoopGroup =
+                                                    executionUnit.dataFlowEventLoops.networkInputEventLoopGroup;
+
+                                            // Change event loop group.
+                                            eventLoopGroup.register(channel,
+                                                                    event.srcTaskID,
+                                                                    executionUnit.getCurrentTaskDriverContext().taskBindingDescriptor.inputGateBindings)
+                                                          .sync();
+                                        }
+
+                                        LOG.trace("Changed event loop to {}", channel.eventLoop().parent());
+                                    } catch (IllegalAccessException | NoSuchFieldException | InterruptedException e) {
+                                        LOG.error(e.getLocalizedMessage(), e);
+                                    }
+
+
+                                    // Enable auto read again.
+                                    channel.config().setAutoRead(true);
+
+                                    // Dispatch INPUT_CHANNEL_CONNECTED event.
+                                    IOEvents.DataIOEvent connected =
+                                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
+                                                                        event.srcTaskID,
+                                                                        event.dstTaskID,
+                                                                        true);
+                                    connected.setPayload(event.getPayload());
+                                    connected.setChannel(event.getChannel());
+                                    ioManager.dispatchEvent(connected);
                                 }
-
-                                // Enable auto read again.
-                                channel.config().setAutoRead(true);
-
-                                LOG.trace("Changed event loop to {}", channel.eventLoop().parent());
-                            } catch (Throwable t) {
-                                LOG.error(t.getLocalizedMessage(), t);
-                                throw t;
-                            }
+                            });
                         }
                     })
                            .sync();
-                } catch (InterruptedException e) {
-                    LOG.error(e.getLocalizedMessage(), e);
-                } catch (Throwable e) {
+
+                } catch (IllegalAccessException | NoSuchFieldException | InterruptedException e) {
                     LOG.error(e.getLocalizedMessage(), e);
                 }
-
-                // Dispatch INPUT_CHANNEL_CONNECTED event.
-                IOEvents.GenericIOEvent connected =
-                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                    event.getPayload(),
-                                                    event.srcTaskID,
-                                                    event.dstTaskID);
-                connected.setChannel(event.getChannel());
-                ioManager.dispatchEvent(connected);
             }
         });
 
         this.ioManager.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP, new EventHandler() {
 
-            @EventHandler.Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP)
-            private void handleOutputChannelSetup(final IOEvents.DataIOEvent event) {
+            @EventHandler.Handle(event = IOEvents.SetupIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_SETUP)
+            private void handleOutputChannelSetup(final IOEvents.SetupIOEvent event) {
 
-                try {
-                    // Add the channel to the according event loop group.
-                    Channel channel = event.getChannel();
+                final DataWriter.OutgoingConnectionType connectionType = event.connectionType;
+                final IAllocator allocator = event.allocator;
+                final DataWriter.ChannelWriter dataWriter = (DataWriter.ChannelWriter) event.getPayload();
 
-                    // TODO: Dirty dirty hack... set channel to state "closed" to avoid closing the
-                    // peer
-                    if (channel instanceof LocalChannel) {
-                        Class<?> clazz = channel.getClass();
-                        Field stateField = clazz.getDeclaredField("state");
-                        stateField.setAccessible(true);
-                        stateField.setInt(channel, 3);
-                    }
+                // Determine the execution unit the given channel is connected to.
+                TaskExecutionUnit executionUnit = findTaskExecutionUnitByTaskID(event.srcTaskID);
 
-                    channel.deregister().addListener(new ChannelFutureListener() {
-
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            try {
-                                Channel channel = future.channel();
-                                LOG.debug("Change event loop from {} to event loop of task {}", channel.eventLoop().parent(), event.srcTaskID);
-
-                                // Determine the execution unit the given channel is connected to.
-                                TaskExecutionUnit executionUnit = findTaskExecutionUnitByTaskID(event.srcTaskID);
-
-                                EventLoopGroup eventLoopGroup;
-                                if (channel instanceof LocalChannel) {
-                                    eventLoopGroup = executionUnit.dataFlowEventLoops.localOutputEventLoopGroup;
-
-                                    // TODO: Dirty dirty hack... [will be fixed in Netty
-                                    // 4.0.19.Final]
-                                    Class<?> clazz = channel.getClass();
-                                    Field stateField = clazz.getDeclaredField("state");
-                                    stateField.setAccessible(true);
-                                    stateField.setInt(channel, 0);
-
-                                    Field peerField = clazz.getDeclaredField("peer");
-                                    peerField.setAccessible(true);
-                                    final LocalChannel peer = (LocalChannel) peerField.get(channel);
-
-                                    peerField.set(channel, null);
-
-                                    // Change event loop group.
-                                    eventLoopGroup.register(channel).sync();
-
-                                    // Activate the channels
-                                    stateField.setInt(channel, 2);
-                                    stateField.setInt(peer, 2);
-
-                                    peerField.set(channel, peer);
-                                    peer.eventLoop().execute(new Runnable() {
-
-                                        @Override
-                                        public void run() {
-                                            peer.pipeline().fireChannelActive();
-                                        }
-                                    });
-                                } else {
-                                    eventLoopGroup = executionUnit.dataFlowEventLoops.networkOutputEventLoopGroup;
-
-                                    // Change event loop group.
-                                    eventLoopGroup.register(channel).sync();
-                                }
-
-                                // Enable auto read again.
-                                channel.config().setAutoRead(true);
-
-                                LOG.debug("Changed event loop to {}", channel.eventLoop().parent());
-                            } catch (Throwable t) {
-                                LOG.error(t.getLocalizedMessage(), t);
-                                throw t;
-                            }
-                        }
-                    }).sync();
-                } catch (InterruptedException e) {
-                    LOG.error(e.getLocalizedMessage(), e);
-                } catch (Throwable e) {
-                    LOG.error(e.getLocalizedMessage(), e);
+                EventLoopGroup eventLoopGroup = null;
+                if (connectionType instanceof DataWriter.LocalConnection) {
+                    eventLoopGroup = executionUnit.dataFlowEventLoops.localOutputEventLoopGroup;
+                } else {
+                    eventLoopGroup = executionUnit.dataFlowEventLoops.networkOutputEventLoopGroup;
                 }
 
-                // Dispatch OUTPUT_CHANNEL_CONNECTED event.
-                final IOEvents.GenericIOEvent connected =
-                        new IOEvents.GenericIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED,
-                                                    event.getPayload(),
-                                                    event.srcTaskID,
-                                                    event.dstTaskID);
-                connected.setChannel(event.getChannel());
-                ioManager.dispatchEvent(connected);
+                Bootstrap bootstrap = event.connectionType.bootStrap(eventLoopGroup);
+                bootstrap.handler(event.connectionType.getPipeline(dataWriter));
+
+                // on success:
+                // the close future is registered
+                // the polling thread is started
+                bootstrap.connect(event.address).addListener(dataWriter.new ConnectListener());
             }
         });
     }

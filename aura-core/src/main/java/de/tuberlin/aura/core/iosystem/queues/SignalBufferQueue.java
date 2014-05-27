@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.iosystem;
+package de.tuberlin.aura.core.iosystem.queues;
 
 import java.util.Iterator;
 import java.util.concurrent.BlockingQueue;
@@ -17,7 +17,7 @@ import de.tuberlin.aura.core.statistic.MeasurementType;
  * 
  * @param <T>
  */
-public class BlockingBufferQueue<T> implements BufferQueue<T> {
+public class SignalBufferQueue<T> implements BufferQueue<T> {
 
     public final static Logger LOG = LoggerFactory.getLogger(BlockingBufferQueue.class);
 
@@ -33,7 +33,9 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
 
     private MeasurementManager measurementManager;
 
-    BlockingBufferQueue(String name, MeasurementManager measurementManager) {
+    private QueueObserver observer;
+
+    SignalBufferQueue(String name, MeasurementManager measurementManager) {
         this.name = name;
         this.measurementManager = measurementManager;
         this.backingQueue = new LinkedBlockingQueue<>();
@@ -81,7 +83,11 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         holder.time = System.currentTimeMillis();
         holder.data = value;
 
-        return backingQueue.offer(holder);
+        backingQueue.offer(holder);
+        if (backingQueue.size() == 1) {
+            observer.signalNotEmpty();
+        }
+        return true;
     }
 
     @Override
@@ -91,6 +97,9 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
         holder.data = value;
 
         backingQueue.put(holder);
+        if (backingQueue.size() == 1) {
+            observer.signalNotEmpty();
+        }
     }
 
     @Override
@@ -110,7 +119,14 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
 
     @Override
     public T poll(final long timeout, final TimeUnit timeUnit) throws InterruptedException {
-        return backingQueue.poll(timeout, timeUnit).data;
+        DataHolder<T> elem = backingQueue.poll(timeout, timeUnit);
+        return (elem == null) ? null : elem.data;
+    }
+
+    @Override
+    public T poll() {
+        DataHolder<T> elem = backingQueue.poll();
+        return (elem == null) ? null : elem.data;
     }
 
     @Override
@@ -121,6 +137,16 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     @Override
     public MeasurementManager getMeasurementManager() {
         return this.measurementManager;
+    }
+
+    @Override
+    public void registerObserver(QueueObserver observer) {
+        this.observer = observer;
+    }
+
+    @Override
+    public void removeObserver(QueueObserver observer) {
+        this.observer = null;
     }
 
     @Override
@@ -140,11 +166,11 @@ public class BlockingBufferQueue<T> implements BufferQueue<T> {
     // Inner Classes.
     // ---------------------------------------------------
 
-    public class DataHolder<T> {
+    public class DataHolder<D> {
 
         public long time;
 
-        public T data;
+        public D data;
     }
 
     public class QueueIterator implements Iterator<T> {

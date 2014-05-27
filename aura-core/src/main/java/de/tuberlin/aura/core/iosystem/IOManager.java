@@ -19,7 +19,7 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -57,7 +57,7 @@ public final class IOManager extends EventDispatcher {
 
     private final DataReader dataReader;
 
-    private final DataWriter dataWriter;
+    public final DataWriter dataWriter;
 
     // Event Loops for Netty
     private final NioEventLoopGroup controlPlaneEventLoopGroup;
@@ -66,11 +66,6 @@ public final class IOManager extends EventDispatcher {
 
     private final LocalEventLoopGroup localConnectionListenerEventLoopGroup;
 
-    private final NioEventLoopGroup networkConnectionSetupEventLoopGroup;
-
-    private final LocalEventLoopGroup localConnectionSetupEventLoopGroup;
-
-    // private final NioEventLoopGroup outputEventLoopGroup;
 
     // ---------------------------------------------------
     // Constructors.
@@ -99,9 +94,6 @@ public final class IOManager extends EventDispatcher {
         this.networkConnectionListenerEventLoopGroup = new NioEventLoopGroup(4);
         this.localConnectionListenerEventLoopGroup = new LocalEventLoopGroup(4);
 
-        this.networkConnectionSetupEventLoopGroup = new NioEventLoopGroup(4);
-        this.localConnectionSetupEventLoopGroup = new LocalEventLoopGroup(4);
-
         startNetworkConnectionSetupServer(this.machine, networkConnectionListenerEventLoopGroup);
 
         startLocalDataConnectionSetupServer(localConnectionListenerEventLoopGroup);
@@ -127,10 +119,7 @@ public final class IOManager extends EventDispatcher {
      * @param dstTaskID
      * @param dstMachine
      */
-    public void connectDataChannel(final UUID srcTaskID,
-                                   final UUID dstTaskID,
-                                   final MachineDescriptor dstMachine,
-                                   final MemoryManager.Allocator allocator) {
+    public void connectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine, final IAllocator allocator) {
         // sanity check.
         if (srcTaskID == null)
             throw new IllegalArgumentException("srcTask == null");
@@ -369,7 +358,7 @@ public final class IOManager extends EventDispatcher {
         public void buildNetworkDataChannel(final UUID srcTaskID,
                                             final UUID dstTaskID,
                                             final InetSocketAddress socketAddress,
-                                            final MemoryManager.Allocator allocator) {
+                                            final IAllocator allocator) {
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
@@ -380,10 +369,10 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, networkConnectionSetupEventLoopGroup, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, allocator);
         }
 
-        public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MemoryManager.Allocator allocator) {
+        public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final IAllocator allocator) {
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
@@ -392,7 +381,7 @@ public final class IOManager extends EventDispatcher {
             if (allocator == null)
                 throw new IllegalArgumentException("allocator == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, localConnectionListenerEventLoopGroup, allocator);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, allocator);
         }
 
         public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress) {

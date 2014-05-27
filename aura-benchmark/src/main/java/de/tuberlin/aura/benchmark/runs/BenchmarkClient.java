@@ -15,7 +15,7 @@ import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.statistic.AccumulatedLatencyMeasurement;
 import de.tuberlin.aura.core.statistic.MeasurementType;
 import de.tuberlin.aura.core.statistic.MedianHelper;
@@ -63,7 +63,7 @@ public final class BenchmarkClient {
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
 
-                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final MemoryView buffer = producer.allocBlocking();
                     final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
 
                     final Record<BenchmarkRecord> record = new Record<>(new BenchmarkRecord());
@@ -116,7 +116,7 @@ public final class BenchmarkClient {
                     for (int index = 0; index < outputs.size(); ++index) {
                         final UUID outputTaskID = getTaskID(0, index);
 
-                        final MemoryManager.MemoryView sendBuffer = producer.alloc();
+                        final MemoryView sendBuffer = producer.allocBlocking();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         driverContext.recordWriter.writeRecord(record, outputBuffer);
@@ -174,14 +174,14 @@ public final class BenchmarkClient {
                         final UUID outputTaskID = getTaskID(0, index);
 
                         // Send right record
-                        MemoryManager.MemoryView sendBuffer = producer.alloc();
+                        MemoryView sendBuffer = producer.allocBlocking();
                         IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         driverContext.recordWriter.writeRecord(leftRecord, outputBuffer);
                         producer.emit(0, index, outputBuffer);
 
                         // Send left record
-                        sendBuffer = producer.alloc();
+                        sendBuffer = producer.allocBlocking();
                         outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
                         driverContext.recordWriter.writeRecord(rightRecord, outputBuffer);

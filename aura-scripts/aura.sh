@@ -1,9 +1,9 @@
 #!/bin/sh
-USER="chwuertz"
+USER="andreas.kunft"
 URL="cit.tu-berlin.de"
 
-LOCAL_AURA_PATH="/home/teots/IdeaProjects/AURA"
-LOCAL_AURA_LOGS_DESTINATION="/home/teots/Desktop/logs"
+LOCAL_AURA_PATH="/home/akunft/dev/AURA"
+LOCAL_AURA_LOGS_DESTINATION="/home/akunft/aura_measurements"
 HOME_PATH="/home/$USER"
 AURA_PATH="$HOME_PATH/aura"
 DATA_PATH="/data/$USER"
@@ -112,7 +112,7 @@ mkdir -p $BENCHMARK_PATH
 exit
 SSHEND
 		
-			scp -r $LOCAL_AURA_INPUT/* $USER@$ADDRESS:$AURA_INPUT_PATH/ > /dev/null
+			#scp -r $LOCAL_AURA_INPUT/* $USER@$ADDRESS:$AURA_INPUT_PATH/ > /dev/null
 
 		done		
 
@@ -143,6 +143,7 @@ SSHEND
 			ADDRESS="wally`printf "%03d" $i`.$URL"
 			printf "Start TaskManager on $ADDRESS ... "
 
+			# Start Zookeeper	
 			if [ $i -lt $(($2 + $ZOOKEEPERS)) ]; then
 				echo "START ZOOKEEPER"
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
@@ -150,12 +151,8 @@ sh $ZOOKEEPER_PATH/bin/zkServer.sh start
 exit
 SSHEND
 			fi	
-		done		
 
-# -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011
-	
-		for i in $(seq $2 $3); do
-			ADDRESS="wally`printf "%03d" $i`.$URL"
+			# Start WorkloadManger
 			if [ $i -eq $2 ]; then
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 cd aura/aura-wm/
@@ -165,6 +162,7 @@ echo \$! > $AURA_DATA_PATH/data/wm_pid
 exit
 SSHEND
 				sleep 5
+			# Start TaskManager 
 			else
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 cd aura/aura-tm/

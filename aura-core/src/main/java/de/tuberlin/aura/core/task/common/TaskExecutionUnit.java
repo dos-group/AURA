@@ -11,9 +11,10 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitLocalInputEventLoopGroup;
 import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNetworkInputEventLoopGroup;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.IAllocator;
 import io.netty.channel.local.LocalEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.DefaultThreadFactory;
 
 public final class TaskExecutionUnit {
 
@@ -35,9 +36,9 @@ public final class TaskExecutionUnit {
 
     private TaskDriverContext currentTaskCtx;
 
-    private final MemoryManager.BufferAllocatorGroup inputAllocator;
+    private final IAllocator inputAllocator;
 
-    private final MemoryManager.BufferAllocatorGroup outputAllocator;
+    private final IAllocator outputAllocator;
 
     protected final DataFlowEventLoops dataFlowEventLoops;
 
@@ -47,8 +48,8 @@ public final class TaskExecutionUnit {
 
     public TaskExecutionUnit(final TaskExecutionManager executionManager,
                              final int executionUnitID,
-                             final MemoryManager.BufferAllocatorGroup inputAllocator,
-                             final MemoryManager.BufferAllocatorGroup outputAllocator) {
+                             final IAllocator inputAllocator,
+                             final IAllocator outputAllocator) {
         // sanity check.
         if (executionManager == null)
             throw new IllegalArgumentException("executionManager == null");
@@ -132,14 +133,14 @@ public final class TaskExecutionUnit {
     /**
      * @return
      */
-    public MemoryManager.BufferAllocatorGroup getInputAllocator() {
+    public IAllocator getInputAllocator() {
         return inputAllocator;
     }
 
     /**
      * @return
      */
-    public MemoryManager.BufferAllocatorGroup getOutputAllocator() {
+    public IAllocator getOutputAllocator() {
         return outputAllocator;
     }
 
@@ -248,7 +249,6 @@ public final class TaskExecutionUnit {
                                                             }
                                                         });
 
-
                 currentTaskCtx.taskDriver.startupDriver(inputAllocator, outputAllocator);
 
                 try {
@@ -282,10 +282,18 @@ public final class TaskExecutionUnit {
         public final LocalEventLoopGroup localOutputEventLoopGroup;
 
         public DataFlowEventLoops(int networkInputThreads, int localInputThreads, int networkOutputThreads, int localOutputThreads) {
-            this.networkInputEventLoopGroup = new ExecutionUnitNetworkInputEventLoopGroup(networkInputThreads);
-            this.localInputEventLoopGroup = new ExecutionUnitLocalInputEventLoopGroup(localInputThreads);
-            this.networkOutputEventLoopGroup = new NioEventLoopGroup(networkOutputThreads);
-            this.localOutputEventLoopGroup = new LocalEventLoopGroup(localOutputThreads);
+
+            DefaultThreadFactory factory = new DefaultThreadFactory("EU-" + executionUnitID + "-networkInput");
+            this.networkInputEventLoopGroup = new ExecutionUnitNetworkInputEventLoopGroup(networkInputThreads, factory);
+
+            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-localInput");
+            this.localInputEventLoopGroup = new ExecutionUnitLocalInputEventLoopGroup(localInputThreads, factory);
+
+            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-networkOutput");
+            this.networkOutputEventLoopGroup = new NioEventLoopGroup(networkOutputThreads, factory);
+
+            factory = new DefaultThreadFactory("EU-" + executionUnitID + "-localOutput");
+            this.localOutputEventLoopGroup = new LocalEventLoopGroup(localOutputThreads, factory);
         }
     }
 }

@@ -9,10 +9,12 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
+import de.tuberlin.aura.core.memory.BufferCallback;
+import de.tuberlin.aura.core.memory.IAllocator;
+import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskStates;
@@ -43,13 +45,13 @@ public final class TaskDataProducer implements DataProducer {
     private final IEventHandler producerEventHandler;
 
 
-    private final MemoryManager.Allocator outputAllocator;
+    private final IAllocator outputAllocator;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataProducer(final TaskDriverContext driverContext, final MemoryManager.Allocator outputAllocator) {
+    public TaskDataProducer(final TaskDriverContext driverContext, final IAllocator outputAllocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
@@ -145,8 +147,13 @@ public final class TaskDataProducer implements DataProducer {
      * @return
      */
     @Override
-    public MemoryManager.MemoryView alloc() {
+    public MemoryView alloc(BufferCallback callback) {
         return outputAllocator.alloc();
+    }
+
+    @Override
+    public MemoryView allocBlocking() throws InterruptedException {
+        return outputAllocator.allocBlocking();
     }
 
     // ---------------------------------------------------
@@ -214,8 +221,8 @@ public final class TaskDataProducer implements DataProducer {
 
     private final class ProducerEventHandler extends EventHandler {
 
-        @Handle(event = IOEvents.GenericIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
-        private void handleTaskOutputDataChannelConnect(final IOEvents.GenericIOEvent event) {
+        @Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
+        private void handleTaskOutputDataChannelConnect(final IOEvents.DataIOEvent event) {
             int gateIndex = 0;
             boolean allOutputGatesConnected = true;
             for (final List<Descriptors.TaskDescriptor> outputGate : driverContext.taskBindingDescriptor.outputGateBindings) {
@@ -228,9 +235,9 @@ public final class TaskDataProducer implements DataProducer {
                     // Set the channel on right position.
                     if (outputTask.taskID.equals(event.dstTaskID)) {
                         // get the right queue manager for task context
-                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutputQueue(gateIndex, channelIndex);
+                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getOutboundQueue(gateIndex, channelIndex);
 
-                        final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.payload;
+                        final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.getPayload();
                         channelWriter.setOutputQueue(queue);
 
                         final OutputGate og = outputGates.get(gateIndex);
