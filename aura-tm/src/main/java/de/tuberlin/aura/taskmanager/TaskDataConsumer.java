@@ -119,8 +119,8 @@ public final class TaskDataConsumer implements DataConsumer {
                 for (Map.Entry<Integer, Long> exhaustedEvent : exhaustedEvents.entrySet()) {
                     LOG.warn("Gate " + exhaustedEvent.getKey() + " exhausted events: " + exhaustedEvent.getValue());
                 }
-                LOG.warn("Gate 0 count: " + countGate0);
-                LOG.warn("Gate 1 count: " + countGate1);
+                LOG.warn("Gate 0 count: " + countGate0 + " --> " + ((countGate0 != 0) ? inputGates.get(0).getInputQueue().size() : 0));
+                LOG.warn("Gate 1 count: " + countGate1 + " --> " + ((countGate1 != 0) ? inputGates.get(1).getInputQueue().size() : 0));
                 return null;
             }
 

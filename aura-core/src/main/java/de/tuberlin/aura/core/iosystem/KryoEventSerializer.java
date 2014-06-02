@@ -29,10 +29,7 @@ import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import de.tuberlin.aura.core.task.common.TaskExecutionUnit;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
+import io.netty.channel.*;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.util.ReferenceCountUtil;
 
@@ -79,7 +76,7 @@ public final class KryoEventSerializer {
 
         private final Object lock = new Object();
 
-       private final LinkedBlockingQueue<PendingEvent> pendingObjects = new LinkedBlockingQueue<>();
+        private final LinkedBlockingQueue<PendingEvent> pendingObjects = new LinkedBlockingQueue<>();
 
         private static class PendingEvent {
 
@@ -98,23 +95,7 @@ public final class KryoEventSerializer {
             kryo.register(IOEvents.DataIOEvent.class, new DataIOEventSerializer(), IOConfig.IO_DATA_EVENT_ID);
             kryo.register(IOEvents.TransferBufferEvent.class, new TransferBufferEventSerializer(this), IOConfig.IO_TRANSFER_EVENT_ID);
             this.executionManager = executionManager;
-
-            new Thread() {
-
-                @Override
-                public void run() {
-                    while (true) {
-                        try {
-                            Thread.sleep(120000);
-                            if (pendingCallbacks.get() != 0 || pendingObjects.size() != 0)
-                                LOG.error("callbacks: " + pendingCallbacks.get() + " | events: " + pendingObjects.size());
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }.start();
-      }
+        }
 
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -138,29 +119,26 @@ public final class KryoEventSerializer {
                             } else {
                                 ctx.fireChannelRead(event);
                             }
-            }
+                        }
                         break;
                     }
                     case IOConfig.IO_TRANSFER_EVENT_ID: {
                         // get buffer
-                        MemoryView view = allocator.alloc();
-                        if (view == null) {
-                            view = allocator.alloc(new Callback(ioBuffer, ctx));
-                            synchronized (lock) {
-                                if (view == null) {
-                                    if (pendingCallbacks.incrementAndGet() == 1) {
-                                        // LOG.error("read false");
-                                        ctx.channel().config().setAutoRead(false);
-                                    }
-                                    ReferenceCountUtil.retain(ioBuffer);
-                                    // LOG.warn("view == null " + ctx);
-                                    break;
-        }
+                        synchronized (lock) {
+                            MemoryView view = allocator.alloc(new Callback(ioBuffer, ctx));
+                            if (view == null) {
+                                if (pendingCallbacks.incrementAndGet() == 1) {
+                                    // LOG.error("read false");
+                                    ctx.channel().config().setAutoRead(false);
+                                }
+                                ReferenceCountUtil.retain(ioBuffer);
+                                // LOG.warn("view == null " + ctx);
+                            } else {
+                                userSpaceBuffer = view;
+                                Object event = kryo.readObject(input, reg.getType());
+                                ctx.fireChannelRead(event);
                             }
                         }
-                        userSpaceBuffer = view;
-                        Object event = kryo.readObject(input, reg.getType());
-                        ctx.fireChannelRead(event);
 
                         break;
                     }
@@ -188,7 +166,7 @@ public final class KryoEventSerializer {
             }
 
             @Override
- public void bufferReader(final MemoryView buffer) {
+            public void bufferReader(final MemoryView buffer) {
                 ctx.channel().eventLoop().execute(new Runnable() {
 
                     @Override
@@ -207,11 +185,15 @@ public final class KryoEventSerializer {
                                         // LOG.error("fire");
                                         ctx.fireChannelRead(obj.event);
                                         itr.remove();
+                                    } else if (obj.index <= index) {
+                                        LOG.warn("obj.index < index " + obj.event);
+                                        ctx.fireChannelRead(obj.event);
+                                        itr.remove();
                                     } else {
                                         break;
                                     }
                                 }
-   } finally {
+                            } finally {
                                 pendingBuffer.release();
                             }
                             if (pendingCallbacks.decrementAndGet() == 0) {
@@ -223,7 +205,7 @@ public final class KryoEventSerializer {
                     }
                 });
             }
-     }
+        }
 
         public MemoryView getBuffer() {
             return userSpaceBuffer;
@@ -290,6 +272,171 @@ public final class KryoEventSerializer {
         }
     }
 
+    public static final class LocalTransferBufferCopyHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
+
+        private AtomicLong CALLBACKS = new AtomicLong(0);
+
+        private IAllocator allocator;
+
+        private final TaskExecutionManager executionManager;
+
+        private final AtomicInteger pendingCallbacks = new AtomicInteger(0);
+
+        private final Object lock = new Object();
+
+        private final LinkedBlockingQueue<PendingEvent> pendingObjects = new LinkedBlockingQueue<>();
+
+        private static class PendingEvent {
+
+            public final long index;
+
+            public final Object event;
+
+            public PendingEvent(final long index, final Object event) {
+                this.index = index;
+                this.event = event;
+            }
+        }
+
+        public LocalTransferBufferCopyHandler(TaskExecutionManager executionManager) {
+            this.executionManager = executionManager;
+        }
+
+        @Override
+        public void channelRead0(final ChannelHandlerContext ctx, IOEvents.DataIOEvent msg) throws Exception {
+
+            switch (msg.type) {
+                case IOEvents.DataEventType.DATA_EVENT_BUFFER: {
+                    // get buffer
+                    synchronized (lock) {
+                        MemoryView view = allocator.alloc(new Callback((IOEvents.TransferBufferEvent) msg, ctx));
+                        if (view == null) {
+                            if (pendingCallbacks.incrementAndGet() == 1) {
+                                // LOG.error("read false");
+                                ctx.channel().config().setAutoRead(false);
+                            }
+                            // LOG.warn("view == null " + ctx);
+                        } else {
+                            IOEvents.TransferBufferEvent event = (IOEvents.TransferBufferEvent) msg;
+                            System.arraycopy(event.buffer.memory, event.buffer.baseOffset, view.memory, view.baseOffset, event.buffer.size());
+                            event.buffer.free();
+                            IOEvents.TransferBufferEvent copy = new IOEvents.TransferBufferEvent(event.srcTaskID, event.dstTaskID, view);
+                            ctx.fireChannelRead(copy);
+                        }
+                    }
+
+                    break;
+                }
+
+                default: {
+                    if (allocator == null && executionManager != null) {
+                        bindAllocator(msg.srcTaskID, msg.dstTaskID);
+                    }
+                    synchronized (lock) {
+                        if (pendingCallbacks.get() >= 1) {
+                            // LOG.error("queue");
+                            pendingObjects.offer(new PendingEvent(CALLBACKS.get(), msg));
+                        } else {
+                            ctx.fireChannelRead(msg);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        private class Callback implements BufferCallback {
+
+            private final IOEvents.TransferBufferEvent transferBufferEvent;
+
+            private final ChannelHandlerContext ctx;
+
+            private final long index;
+
+            Callback(final IOEvents.TransferBufferEvent transferBufferEvent, ChannelHandlerContext ctx) {
+                this.transferBufferEvent = transferBufferEvent;
+                this.ctx = ctx;
+                this.index = CALLBACKS.incrementAndGet();
+            }
+
+            @Override
+            public void bufferReader(final MemoryView buffer) {
+                ctx.channel().eventLoop().execute(new Runnable() {
+
+                    @Override
+                    public void run() {
+                        synchronized (lock) {
+                            System.arraycopy(transferBufferEvent.buffer.memory,
+                                             transferBufferEvent.buffer.baseOffset,
+                                             buffer.memory,
+                                             buffer.baseOffset,
+                                             transferBufferEvent.buffer.size());
+                            transferBufferEvent.buffer.free();
+                            IOEvents.TransferBufferEvent copy =
+                                    new IOEvents.TransferBufferEvent(transferBufferEvent.srcTaskID, transferBufferEvent.dstTaskID, buffer);
+                            ctx.fireChannelRead(copy);
+                            // LOG.warn("callback run " + index);
+                            for (Iterator<PendingEvent> itr = pendingObjects.iterator(); itr.hasNext();) {
+                                PendingEvent obj = itr.next();
+                                // LOG.error("queued " + obj.index + " : " + obj);
+                                if (obj.index == index) {
+                                    // LOG.error("fire");
+                                    ctx.fireChannelRead(obj.event);
+                                    itr.remove();
+                                } else if (obj.index <= index) {
+                                    LOG.warn("obj.index < index " + obj.event);
+                                    ctx.fireChannelRead(obj.event);
+                                    itr.remove();
+                                } else {
+                                    break;
+                                }
+                            }
+                            if (pendingCallbacks.decrementAndGet() == 0) {
+                                // LOG.error("no pending callbacks + " + pendingObjects.size());
+                                ctx.channel().config().setAutoRead(true);
+                                ctx.pipeline().read();
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        private void bindAllocator(UUID src, UUID dst) {
+            final TaskExecutionManager tem = executionManager;
+            final TaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
+            final TaskDriverContext taskDriverContext = executionUnit.getCurrentTaskDriverContext();
+            final DataConsumer dataConsumer = taskDriverContext.getDataConsumer();
+            final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
+            IAllocator allocatorGroup = executionUnit.getInputAllocator();
+
+            // -------------------- STUPID HOT FIX --------------------
+
+            if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 1) {
+                allocator = allocatorGroup;
+            } else {
+                if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
+                    if (gateIndex == 0) {
+                        allocator =
+                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0),
+                                                                       ((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
+                    } else {
+                        allocator =
+                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(2),
+                                                                       ((BufferAllocatorGroup) allocatorGroup).getAllocator(3)));
+                    }
+                } else {
+                    throw new IllegalStateException("Not supported more than two input gates.");
+                }
+            }
+
+            // -------------------- STUPID HOT FIX --------------------
+        }
+
+    }
+
     // ---------------------------------------------------
     // Kryo Serializer.
     // ---------------------------------------------------
@@ -353,7 +500,7 @@ public final class KryoEventSerializer {
 
             transferBufferEvent.buffer.free();
             // LOG.info("free");
-  }
+        }
 
         @Override
         public IOEvents.TransferBufferEvent read(Kryo kryo, Input input, Class<IOEvents.TransferBufferEvent> type) {

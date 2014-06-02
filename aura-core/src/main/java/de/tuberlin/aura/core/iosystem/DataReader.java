@@ -1,9 +1,9 @@
 package de.tuberlin.aura.core.iosystem;
 
 import java.net.SocketAddress;
-import java.util.*;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,14 +11,7 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
-import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
-import de.tuberlin.aura.core.memory.BufferCallback;
-import de.tuberlin.aura.core.memory.IAllocator;
-import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.task.common.DataConsumer;
-import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
-import de.tuberlin.aura.core.task.common.TaskExecutionUnit;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -211,7 +204,7 @@ public class DataReader {
             try {
                 inputQueues.get(channelToQueueIndex.get(ctx.channel())).put(event);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LOG.error("put on input queue was interrupted.", e);
             }
         }
     }
@@ -279,162 +272,12 @@ public class DataReader {
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
                     ch.pipeline()
-                      .addLast(new LocalTransferBufferCopyHandler(dataReader.executionManager))
+                      .addLast(new KryoEventSerializer.LocalTransferBufferCopyHandler(dataReader.executionManager))
                       .addLast(dataReader.new TransferEventHandler())
                       .addLast(dataReader.new DataEventHandler());
                 }
             };
         }
-    }
-
-    private static final class LocalTransferBufferCopyHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
-
-        private long CALLBACKS = 0;
-
-        private IAllocator allocator;
-
-        private final TaskExecutionManager executionManager;
-
-        private final AtomicInteger pendingCallbacks = new AtomicInteger(0);
-
-        private final LinkedBlockingQueue<PendingEvent> pendingObjects = new LinkedBlockingQueue<>();
-
-        private static class PendingEvent {
-
-            public final long index;
-
-            public final Object event;
-
-            public PendingEvent(final long index, final Object event) {
-                this.index = index;
-                this.event = event;
-            }
-        }
-
-        public LocalTransferBufferCopyHandler(TaskExecutionManager executionManager) {
-            this.executionManager = executionManager;
-        }
-
-        @Override
-        public void channelRead0(final ChannelHandlerContext ctx, IOEvents.DataIOEvent msg) throws Exception {
-            switch (msg.type) {
-                case IOEvents.DataEventType.DATA_EVENT_BUFFER: {
-                    // get buffer
-                    MemoryView view = allocator.alloc();
-                    if (view == null) {
-                        view = allocator.alloc(new Callback((IOEvents.TransferBufferEvent) msg, ctx));
-                        if (view == null) {
-                            if (pendingCallbacks.incrementAndGet() == 1) {
-                                ctx.channel().config().setAutoRead(false);
-                            }
-                            break;
-                        }
-                    }
-                    IOEvents.TransferBufferEvent event = (IOEvents.TransferBufferEvent) msg;
-                    System.arraycopy(event.buffer.memory, event.buffer.baseOffset, view.memory, view.baseOffset, event.buffer.size());
-                    event.buffer.free();
-                    IOEvents.TransferBufferEvent copy = new IOEvents.TransferBufferEvent(event.srcTaskID, event.dstTaskID, view);
-                    ctx.fireChannelRead(copy);
-
-                    break;
-                }
-                default: {
-                    if (allocator == null && executionManager != null) {
-                        bindAllocator(msg.srcTaskID, msg.dstTaskID);
-                    }
-                    if (pendingCallbacks.get() >= 1) {
-                        // LOG.error("queue");
-                        pendingObjects.offer(new PendingEvent(CALLBACKS, msg));
-                    } else {
-                        ctx.fireChannelRead(msg);
-                    }
-                    break;
-                }
-            }
-        }
-
-        private class Callback implements BufferCallback {
-
-            private final IOEvents.TransferBufferEvent transferBufferEvent;
-
-            private final ChannelHandlerContext ctx;
-
-            private final long index;
-
-            Callback(final IOEvents.TransferBufferEvent transferBufferEvent, ChannelHandlerContext ctx) {
-                this.transferBufferEvent = transferBufferEvent;
-                this.ctx = ctx;
-                this.index = ++CALLBACKS;
-            }
-
-            @Override
-            public void bufferReader(final MemoryView buffer) {
-                ctx.channel().eventLoop().execute(new Runnable() {
-
-                    @Override
-                    public void run() {
-                        System.arraycopy(transferBufferEvent.buffer.memory,
-                                         transferBufferEvent.buffer.baseOffset,
-                                         buffer.memory,
-                                         buffer.baseOffset,
-                                         transferBufferEvent.buffer.size());
-                        transferBufferEvent.buffer.free();
-                        IOEvents.TransferBufferEvent copy =
-                                new IOEvents.TransferBufferEvent(transferBufferEvent.srcTaskID, transferBufferEvent.dstTaskID, buffer);
-                        ctx.fireChannelRead(copy);
-                        // LOG.warn("callback run " + index);
-                        for (Iterator<PendingEvent> itr = pendingObjects.iterator(); itr.hasNext();) {
-                            PendingEvent obj = itr.next();
-                            if (obj.index == index) {
-                                ctx.fireChannelRead(obj.event);
-                                itr.remove();
-                            } else {
-                                break;
-                            }
-                        }
-                        if (pendingCallbacks.decrementAndGet() == 0) {
-                            LOG.error("no pending callbacks + " + pendingObjects.size());
-                            ctx.channel().config().setAutoRead(true);
-                            ctx.channel().read();
-                        }
-                    }
-                });
-            }
-        }
-
-        private void bindAllocator(UUID src, UUID dst) {
-            final TaskExecutionManager tem = executionManager;
-            final TaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
-            final TaskDriverContext taskDriverContext = executionUnit.getCurrentTaskDriverContext();
-            final DataConsumer dataConsumer = taskDriverContext.getDataConsumer();
-            final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
-            IAllocator allocatorGroup = executionUnit.getInputAllocator();
-
-            // -------------------- STUPID HOT FIX --------------------
-
-            if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 1) {
-                allocator = allocatorGroup;
-            } else {
-                if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
-                    if (gateIndex == 0) {
-                        allocator =
-                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0),
-                                                                       ((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
-                    } else {
-                        allocator =
-                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(2),
-                                                                       ((BufferAllocatorGroup) allocatorGroup).getAllocator(3)));
-                    }
-                } else {
-                    throw new IllegalStateException("Not supported more than two input gates.");
-                }
-            }
-
-            // -------------------- STUPID HOT FIX --------------------
-        }
-
     }
 
     public static class NetworkConnection implements InboundConnectionType<SocketChannel> {

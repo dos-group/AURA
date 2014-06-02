@@ -381,6 +381,7 @@ public class DataWriter {
                 @Override
                 protected void initChannel(LocalChannel ch) throws Exception {
                     ch.pipeline()
+                      .addLast(new KryoEventSerializer.LocalTransferBufferCopyHandler(null))
                       .addLast(channelWriter.new OpenCloseGateHandler())
                       .addLast(channelWriter.new ChannelActiveHandler())
                       .addLast(channelWriter.new WriteHandler());
