@@ -246,7 +246,7 @@ public class EventDispatcher implements IEventDispatcher {
         } else {
             if (!dispatch(event)) {
                 if (event.sticky) {
-                    LOG.debug("Add sticky event {}", event);
+                    LOG.info("Add sticky event {}", event);
                     EventDispatcher.this.stickyEvents.add(event);
                 }
             }

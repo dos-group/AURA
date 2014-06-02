@@ -4,7 +4,9 @@ import java.net.SocketAddress;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +14,6 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
-import de.tuberlin.aura.core.statistic.MeasurementType;
-import de.tuberlin.aura.core.statistic.NumberMeasurement;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -59,7 +59,7 @@ public class DataWriter {
 
         private final CountDownLatch exhaustedAcknowledged = new CountDownLatch(1);
 
-        private final CountDownLatch queueBound = new CountDownLatch(1);
+        private final CountDownLatch waitForQueueBind = new CountDownLatch(1);
 
         private BufferQueue<IOEvents.DataIOEvent> outboundQueue;
 
@@ -68,6 +68,10 @@ public class DataWriter {
         private final ResettableCountDownLatch awaitGateOpenLatch;
 
         private AtomicBoolean gateOpen = new AtomicBoolean(false);
+
+        final int maxConnectionRetries = 5;
+
+        final AtomicInteger connnectionRetries = new AtomicInteger();
 
         public ChannelWriter(final UUID srcTaskID,
                              final UUID dstTaskID,
@@ -82,7 +86,28 @@ public class DataWriter {
             Bootstrap bootstrap = connectionType.bootStrap(eventLoopGroup);
             bootstrap.handler(connectionType.getPipeline(this));
 
-            bootstrap.connect(address).addListener(new ConnectListener());
+            // bootstrap.connect(address).addListener(new ConnectListener(bootstrap, address));
+            ChannelFuture future = bootstrap.connect(address);
+            try {
+                boolean await = future.await(30, TimeUnit.SECONDS);
+                if (await) {
+                    channel = future.channel();
+                    LOG.debug("Channel successfully connected.");
+
+                    future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcID, dstID));
+
+                    // Dispatch OUTPUT_CHANNEL_CONNECTED event.
+                    final IOEvents.DataIOEvent connected =
+                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, srcID, dstID);
+                    connected.setPayload(ChannelWriter.this);
+                    connected.setChannel(channel);
+                    dispatcher.dispatchEvent(connected);
+                } else {
+                    LOG.error("could not establish connection");
+                }
+            } catch (InterruptedException e) {
+                LOG.error("connect was interrupted");
+            }
         }
 
         /**
@@ -121,7 +146,14 @@ public class DataWriter {
             try {
                 // wait for the receivers acknowledge before shutdown
                 if (awaitExhaustion) {
-                    exhaustedAcknowledged.await();
+                    while (!exhaustedAcknowledged.await(1, TimeUnit.MINUTES)) {
+                        LOG.error("latch reached timelimit " + outboundQueue.size() + " " + channel + "(" + channel.getClass() + ")");
+                        // channel.pipeline().fireChannelWritabilityChanged();
+                        IOEvents.DataIOEvent event = outboundQueue.poll();
+                        if (event != null) {
+                            channel.writeAndFlush(event);
+                        }
+                    }
                 }
             } catch (InterruptedException e) {
                 LOG.error("Receiving future from poll thread failed. Interrupt.", e);
@@ -140,7 +172,7 @@ public class DataWriter {
         public void setOutboundQueue(BufferQueue<IOEvents.DataIOEvent> queue) {
             this.outboundQueue = queue;
             LOG.debug("Event queue attached.");
-            queueBound.countDown();
+            waitForQueueBind.countDown();
         }
 
         /**
@@ -201,28 +233,40 @@ public class DataWriter {
          */
         public final class ConnectListener implements ChannelFutureListener {
 
+            private final Bootstrap bootstrap;
+
+            private final SocketAddress address;
+
+            public ConnectListener(Bootstrap bootstrap, SocketAddress address) {
+                this.bootstrap = bootstrap;
+                this.address = address;
+            }
+
             @Override
             public void operationComplete(ChannelFuture future) throws Exception {
-                if (future.isDone()) {
-                    if (future.isSuccess()) {
+                if (future.isSuccess()) {
 
-                        channel = future.channel();
-                        LOG.debug("Channel successfully connected.");
+                    channel = future.channel();
+                    LOG.debug("Channel successfully connected.");
 
-                        future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED,
-                                                                                srcID,
-                                                                                dstID));
+                    future.channel().writeAndFlush(new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcID, dstID));
 
-                        // Dispatch OUTPUT_CHANNEL_CONNECTED event.
-                        final IOEvents.DataIOEvent connected =
-                                new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, srcID, dstID);
-                        connected.setPayload(ChannelWriter.this);
-                        connected.setChannel(channel);
-                        dispatcher.dispatchEvent(connected);
+                    LOG.error("connected");
 
-                    } else if (future.cause() != null) {
+                    // Dispatch OUTPUT_CHANNEL_CONNECTED event.
+                    final IOEvents.DataIOEvent connected =
+                            new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, srcID, dstID);
+                    connected.setPayload(ChannelWriter.this);
+                    connected.setChannel(channel);
+                    dispatcher.dispatchEvent(connected);
+
+                } else {
+                    if (connnectionRetries.incrementAndGet() > maxConnectionRetries) {
                         LOG.error("Connection attempt failed: ", future.cause());
                         throw new IllegalStateException("connection attempt failed.", future.cause());
+                    } else {
+                        LOG.info("Connection retry (" + connnectionRetries.get() + ") ...");
+                        bootstrap.connect(address).addListener(this);
                     }
                 }
             }
@@ -240,7 +284,7 @@ public class DataWriter {
 
                     @Override
                     public Void call() throws Exception {
-                        queueBound.await();
+                        waitForQueueBind.await();
                         // bind observer
                         outboundQueue.registerObserver(new WriteableObserver(ctx));
                         return null;
@@ -265,37 +309,17 @@ public class DataWriter {
 
         private class WriteHandler extends ChannelInboundHandlerAdapter {
 
-            long notWritable = 0l;
-
-            long writes = 0l;
-
-            long writeDuration = 0l;
-
             @Override
             public void channelWritabilityChanged(final ChannelHandlerContext ctx) throws Exception {
 
                 if (ctx.channel().isWritable()) {
                     final IOEvents.DataIOEvent event = outboundQueue.poll();
                     if (event != null) {
-
-                        final long start = System.nanoTime();
                         ctx.channel().writeAndFlush(event).addListener(new ChannelFutureListener() {
 
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
-                                writeDuration += Math.abs(System.nanoTime() - start);
-                                ++writes;
-
-                                if (event.type.equals(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED)) {
-                                    LOG.debug("Data source exhausted. Shutting down poll thread.");
-
-                                    outboundQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, outboundQueue.getName()
-                                            + " -> Avg. write", (long) ((double) writeDuration / (double) writes)));
-                                    outboundQueue.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, outboundQueue.getName()
-                                            + " -> Not writable", notWritable));
-                                } else {
-                                    ctx.pipeline().fireChannelWritabilityChanged();
-                                }
+                                ctx.pipeline().fireChannelWritabilityChanged();
                             }
                         });
                     }

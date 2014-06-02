@@ -19,7 +19,6 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -78,7 +77,7 @@ public final class IOManager extends EventDispatcher {
     public IOManager(final MachineDescriptor machine, final TaskExecutionManager executionManager) {
 
         // Event dispatcher doesn't use an own thread.
-        super();
+        super(true, "IOManager");
 
         // sanity check.
         if (machine == null)
@@ -126,7 +125,7 @@ public final class IOManager extends EventDispatcher {
      * @param dstTaskID
      * @param dstMachine
      */
-    public void connectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine, final IAllocator allocator) {
+    public void connectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
         // sanity check.
         if (srcTaskID == null)
             throw new IllegalArgumentException("srcTask == null");
@@ -134,13 +133,11 @@ public final class IOManager extends EventDispatcher {
             throw new IllegalArgumentException("dstTask == null");
         if (dstMachine == null)
             throw new IllegalArgumentException("dstTask == null");
-        if (allocator == null)
-            throw new IllegalArgumentException("allocator == null");
 
         if (machine.equals(dstMachine)) {
-            channelBuilder.buildLocalDataChannel(srcTaskID, dstTaskID, allocator);
+            channelBuilder.buildLocalDataChannel(srcTaskID, dstTaskID);
         } else {
-            channelBuilder.buildNetworkDataChannel(srcTaskID, dstTaskID, dstMachine.dataAddress, allocator);
+            channelBuilder.buildNetworkDataChannel(srcTaskID, dstTaskID, dstMachine.dataAddress);
         }
     }
 
@@ -362,10 +359,7 @@ public final class IOManager extends EventDispatcher {
      */
     private final class ChannelBuilder {
 
-        public void buildNetworkDataChannel(final UUID srcTaskID,
-                                            final UUID dstTaskID,
-                                            final InetSocketAddress socketAddress,
-                                            final IAllocator allocator) {
+        public void buildNetworkDataChannel(final UUID srcTaskID, final UUID dstTaskID, final InetSocketAddress socketAddress) {
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
@@ -373,20 +367,16 @@ public final class IOManager extends EventDispatcher {
                 throw new IllegalArgumentException("dstTaskID == null");
             if (socketAddress == null)
                 throw new IllegalArgumentException("socketAddress == null");
-            if (allocator == null)
-                throw new IllegalArgumentException("allocator == null");
 
             dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, tcpOutboundELG);
         }
 
-        public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID, final IAllocator allocator) {
+        public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID) {
             // sanity check.
             if (srcTaskID == null)
                 throw new IllegalArgumentException("srcTaskID == null");
             if (dstTaskID == null)
                 throw new IllegalArgumentException("dstTaskID == null");
-            if (allocator == null)
-                throw new IllegalArgumentException("allocator == null");
 
             dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, localOutboundELG);
         }

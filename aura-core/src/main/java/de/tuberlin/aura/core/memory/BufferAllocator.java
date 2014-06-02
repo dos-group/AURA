@@ -111,7 +111,7 @@ public final class BufferAllocator implements IAllocator {
     }
 
     @Override
-    public void free(final MemoryView memory) {
+    public synchronized void free(final MemoryView memory) {
         // sanity check.
         if (memory == null)
             throw new IllegalArgumentException("memory == null");
