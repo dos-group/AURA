@@ -61,8 +61,7 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
      * cases. Also, to minimize need for puts to get takeLock and vice-versa, cascading notifies are
      * used. When a put notices that it has enabled at least one take, it signals taker. That taker
      * in turn signals others if more items have been entered since the signal. And symmetrically
-     * for takes signalling puts. Operations such as remove(Object) and iterators acquire both
-     * locks.
+     * for takes signalling puts. Operations such as remove(Object) and iterators retain both locks.
      * 
      * Visibility between writers and readers is provided as follows:
      * 
