@@ -17,6 +17,8 @@ public class Event implements Serializable {
 
     public final String type;
 
+    public final boolean sticky;
+
     private Object payload;
 
     // ---------------------------------------------------
@@ -27,11 +29,7 @@ public class Event implements Serializable {
      * @param type
      */
     public Event(final String type) {
-        // sanity check.
-        if (type == null)
-            throw new IllegalArgumentException("type == null");
-
-        this.type = type;
+        this(type, null, false);
     }
 
     /**
@@ -39,12 +37,17 @@ public class Event implements Serializable {
      * @param payload
      */
     public Event(final String type, Object payload) {
+        this(type, payload, false);
+    }
+
+    public Event(final String type, Object payload, boolean sticky) {
         // sanity check.
         if (type == null)
             throw new IllegalArgumentException("type == null");
 
         this.type = type;
         setPayload(payload);
+        this.sticky = sticky;
     }
 
     /**

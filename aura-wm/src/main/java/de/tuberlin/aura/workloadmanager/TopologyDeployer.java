@@ -1,6 +1,7 @@
 package de.tuberlin.aura.workloadmanager;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
@@ -16,7 +17,7 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TopologyDeployer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TopologyDeployer.class);
 
     private final RPCManager rpcManager;
 
@@ -107,7 +108,6 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
     //
     // final WM2TMProtocol tmProtocol = rpcManager.getRPCProtocolProxy(WM2TMProtocol.class,
     // machineDescriptor);
-    //
     // tmProtocol.installTasks(tddList);
     //
     // // ... and remove it from our mapping.
@@ -119,8 +119,6 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
     // }
 
     /**
-     * TODO: Fix the new version above... this is the working, but old version
-     * 
      * @param topology
      */
     private synchronized void deployTopology(final AuraTopology topology) {
@@ -139,7 +137,8 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                     final WM2TMProtocol tmProtocol =
                             rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
                     tmProtocol.installTask(tdd);
-                    LOG.debug("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString());
+                    // LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: "
+                    // + tdd.toString());
                 }
             }
         });

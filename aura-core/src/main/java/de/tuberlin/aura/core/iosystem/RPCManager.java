@@ -8,9 +8,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
@@ -32,7 +35,7 @@ public final class RPCManager {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(RPCManager.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RPCManager.class);
 
     private final IOManager ioManager;
 
@@ -187,6 +190,16 @@ public final class RPCManager {
             return (T) Proxy.newProxyInstance(protocolInterface.getClassLoader(), new Class[] {protocolInterface}, pc);
         }
 
+        /**
+         * TODO: It should be possible to invoke methods in a non-blocking fashion. This could speed
+         * up our deployment time significantly!
+         * 
+         * @param proxy
+         * @param method
+         * @param methodArguments
+         * @return
+         * @throws Throwable
+         */
         @Override
         public Object invoke(Object proxy, Method method, Object[] methodArguments) throws Throwable {
 
@@ -224,7 +237,7 @@ public final class RPCManager {
                     cdl.await();
                 }
             } catch (InterruptedException e) {
-                LOG.info(e);
+                LOG.info(e.getLocalizedMessage(), e);
             }
 
             // if is no result hasFree, then a response time-out happened...
@@ -301,9 +314,11 @@ public final class RPCManager {
      */
     private final class RPCEventHandler extends EventHandler {
 
+        private ExecutorService executor = Executors.newCachedThreadPool();
+
         @Handle(event = RPCCallerRequestEvent.class)
         private void handleRPCRequest(final RPCCallerRequestEvent event) {
-            new Thread(new Runnable() {
+            this.executor.execute(new Runnable() {
 
                 @Override
                 public void run() {
@@ -314,7 +329,7 @@ public final class RPCManager {
 
                     ioManager.sendEvent(event.getSrcMachineID(), calleeMsg);
                 }
-            }).start();
+            });
         }
 
         @Handle(event = RPCCalleeResponseEvent.class)

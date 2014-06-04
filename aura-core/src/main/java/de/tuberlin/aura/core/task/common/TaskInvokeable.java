@@ -4,9 +4,6 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 
-import de.tuberlin.aura.core.common.statemachine.StateMachine;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
-
 public abstract class TaskInvokeable implements TaskLifecycle {
 
     // ---------------------------------------------------
@@ -48,18 +45,16 @@ public abstract class TaskInvokeable implements TaskLifecycle {
 
         this.isRunning = true;
 
-        driverContext.taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
-                                               new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                                                   @Override
-                                                   public void stateAction(TaskStates.TaskState previousState,
-                                                                           TaskStates.TaskTransition transition,
-                                                                           TaskStates.TaskState state) {
-                                                       MeasurementManager.fireEvent(MeasurementManager.TASK_FINISHED + "-"
-                                                               + driverContext.taskDescriptor.taskID + "-" + driverContext.taskDescriptor.name + "-"
-                                                               + driverContext.taskDescriptor.taskIndex);
-                                                   }
-                                               });
+        // driverContext.taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
+        // new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+        //
+        // @Override
+        // public void stateAction(TaskStates.TaskState previousState,
+        // TaskStates.TaskTransition transition,
+        // TaskStates.TaskState state) {
+        //
+        // }
+        // });
     }
 
     // ---------------------------------------------------

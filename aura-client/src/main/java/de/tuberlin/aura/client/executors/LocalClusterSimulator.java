@@ -10,12 +10,12 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.log4j.Logger;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.utils.ProcessExecutor;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.taskmanager.TaskManager;
 import de.tuberlin.aura.workloadmanager.WorkloadManager;
@@ -37,7 +37,7 @@ public final class LocalClusterSimulator {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(LocalClusterSimulator.class);
+    private static final Logger LOG = LoggerFactory.getLogger(LocalClusterSimulator.class);
 
     private final Set<Integer> reservedPorts;
 
@@ -100,7 +100,7 @@ public final class LocalClusterSimulator {
                 try {
                     FileUtils.deleteDirectory(dir);
                 } catch (IOException e) {
-                    LOG.error(e);
+                    LOG.error(e.getLocalizedMessage(), e);
                 }
             }
 
@@ -124,8 +124,6 @@ public final class LocalClusterSimulator {
 
             case EXECUTION_MODE_SINGLE_PROCESS: {
                 new WorkloadManager(zkServer, getFreePort(), getFreePort());
-
-                MeasurementManager.setRoot(measurementPath);
 
                 for (int i = 0; i < numNodes; ++i) {
                     tmList.add(new TaskManager(zkServer, getFreePort(), getFreePort()));
@@ -186,7 +184,7 @@ public final class LocalClusterSimulator {
                 freePort = ss.getLocalPort();
                 ss.close();
             } catch (IOException e) {
-                LOG.info(e);
+                LOG.info(e.getLocalizedMessage(), e);
             }
         } while (reservedPorts.contains(freePort) || freePort < 1024 || freePort > 65535);
         reservedPorts.add(freePort);

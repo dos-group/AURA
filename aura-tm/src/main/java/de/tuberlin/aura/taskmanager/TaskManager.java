@@ -1,11 +1,16 @@
 package de.tuberlin.aura.taskmanager;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
@@ -19,9 +24,9 @@ import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.BufferMemoryManager;
+import de.tuberlin.aura.core.memory.IBufferMemoryManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.statistic.MeasurementManager;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import de.tuberlin.aura.core.task.common.TaskManagerContext;
@@ -34,7 +39,7 @@ public final class TaskManager implements WM2TMProtocol {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TaskManager.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TaskManager.class);
 
     private final IOManager ioManager;
 
@@ -56,7 +61,7 @@ public final class TaskManager implements WM2TMProtocol {
 
     private final Map<UUID, List<TaskDriverContext>> deployedTopologyTasks;
 
-    private final MemoryManager.BufferMemoryManager bufferMemoryManager;
+    private final IBufferMemoryManager bufferMemoryManager;
 
     // ---------------------------------------------------
     // Constructors.
@@ -80,7 +85,7 @@ public final class TaskManager implements WM2TMProtocol {
         this.deployedTopologyTasks = new HashMap<>();
 
         // Setup buffer memory management.
-        this.bufferMemoryManager = new MemoryManager.BufferMemoryManager(machine);
+        this.bufferMemoryManager = new BufferMemoryManager(machine);
 
         // Setup execution manager.
         this.executionManager = new TaskExecutionManager(ownMachine, this.bufferMemoryManager);
@@ -95,7 +100,6 @@ public final class TaskManager implements WM2TMProtocol {
 
         // setup IO.
         this.ioManager = setupIOManager(machine, executionManager);
-        this.executionManager.setIOManager(this.ioManager);
 
         this.rpcManager = new RPCManager(ioManager);
 
@@ -221,7 +225,7 @@ public final class TaskManager implements WM2TMProtocol {
         List<TaskDriverContext> contexts = deployedTopologyTasks.get(topologyID);
 
         if (contexts == null) {
-            contexts = new ArrayList<>();
+            contexts = new CopyOnWriteArrayList<>();
             deployedTopologyTasks.put(topologyID, contexts);
         }
 
@@ -288,12 +292,12 @@ public final class TaskManager implements WM2TMProtocol {
      */
     private final class IORedispatcher extends EventHandler {
 
-        @Handle(event = IOEvents.GenericIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
+        @Handle(event = IOEvents.DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
         private void handleDataOutputChannelEvent(final DataIOEvent event) {
             deployedTasks.get(event.srcTaskID).driverDispatcher.dispatchEvent(event);
         }
 
-        @Handle(event = IOEvents.GenericIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
+        @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
         private void handleDataInputChannelEvent(final DataIOEvent event) {
             deployedTasks.get(event.dstTaskID).driverDispatcher.dispatchEvent(event);
         }
@@ -345,8 +349,6 @@ public final class TaskManager implements WM2TMProtocol {
             LOG.error(builder.toString());
             System.exit(1);
         }
-
-        MeasurementManager.setRoot(measurementPath);
 
         long start = System.nanoTime();
         new TaskManager(zkServer, dataPort, controlPort);

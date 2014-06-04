@@ -9,11 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
-import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitLocalInputEventLoopGroup;
-import de.tuberlin.aura.core.iosystem.netty.ExecutionUnitNetworkInputEventLoopGroup;
-import de.tuberlin.aura.core.memory.MemoryManager;
-import io.netty.channel.local.LocalEventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
+import de.tuberlin.aura.core.memory.IAllocator;
 
 public final class TaskExecutionUnit {
 
@@ -35,11 +31,9 @@ public final class TaskExecutionUnit {
 
     private TaskDriverContext currentTaskCtx;
 
-    private final MemoryManager.BufferAllocatorGroup inputAllocator;
+    private final IAllocator inputAllocator;
 
-    private final MemoryManager.BufferAllocatorGroup outputAllocator;
-
-    protected final DataFlowEventLoops dataFlowEventLoops;
+    private final IAllocator outputAllocator;
 
     // ---------------------------------------------------
     // Constructors.
@@ -47,8 +41,8 @@ public final class TaskExecutionUnit {
 
     public TaskExecutionUnit(final TaskExecutionManager executionManager,
                              final int executionUnitID,
-                             final MemoryManager.BufferAllocatorGroup inputAllocator,
-                             final MemoryManager.BufferAllocatorGroup outputAllocator) {
+                             final IAllocator inputAllocator,
+                             final IAllocator outputAllocator) {
         // sanity check.
         if (executionManager == null)
             throw new IllegalArgumentException("executionManager == null");
@@ -66,9 +60,6 @@ public final class TaskExecutionUnit {
         this.inputAllocator = inputAllocator;
 
         this.outputAllocator = outputAllocator;
-
-        // TODO: Make this configurable
-        this.dataFlowEventLoops = new DataFlowEventLoops(2, 2, 2, 2);
 
         this.executorThread = new Thread(new ExecutionUnitRunner());
 
@@ -132,14 +123,14 @@ public final class TaskExecutionUnit {
     /**
      * @return
      */
-    public MemoryManager.BufferAllocatorGroup getInputAllocator() {
+    public IAllocator getInputAllocator() {
         return inputAllocator;
     }
 
     /**
      * @return
      */
-    public MemoryManager.BufferAllocatorGroup getOutputAllocator() {
+    public IAllocator getOutputAllocator() {
         return outputAllocator;
     }
 
@@ -248,7 +239,6 @@ public final class TaskExecutionUnit {
                                                             }
                                                         });
 
-
                 currentTaskCtx.taskDriver.startupDriver(inputAllocator, outputAllocator);
 
                 try {
@@ -268,24 +258,6 @@ public final class TaskExecutionUnit {
             }
 
             LOG.debug("Terminate thread of execution unit {}", TaskExecutionUnit.this.executionUnitID);
-        }
-    }
-
-    protected class DataFlowEventLoops {
-
-        public final ExecutionUnitNetworkInputEventLoopGroup networkInputEventLoopGroup;
-
-        public final ExecutionUnitLocalInputEventLoopGroup localInputEventLoopGroup;
-
-        public final NioEventLoopGroup networkOutputEventLoopGroup;
-
-        public final LocalEventLoopGroup localOutputEventLoopGroup;
-
-        public DataFlowEventLoops(int networkInputThreads, int localInputThreads, int networkOutputThreads, int localOutputThreads) {
-            this.networkInputEventLoopGroup = new ExecutionUnitNetworkInputEventLoopGroup(networkInputThreads);
-            this.localInputEventLoopGroup = new ExecutionUnitLocalInputEventLoopGroup(localInputThreads);
-            this.networkOutputEventLoopGroup = new NioEventLoopGroup(networkOutputThreads);
-            this.localOutputEventLoopGroup = new LocalEventLoopGroup(localOutputThreads);
         }
     }
 }

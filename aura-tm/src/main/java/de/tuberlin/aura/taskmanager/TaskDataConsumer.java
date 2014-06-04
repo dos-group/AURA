@@ -1,18 +1,20 @@
 package de.tuberlin.aura.taskmanager;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.BufferQueue;
 import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
+import de.tuberlin.aura.core.memory.IAllocator;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskStates;
@@ -28,7 +30,7 @@ public final class TaskDataConsumer implements DataConsumer {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = Logger.getLogger(TaskDataConsumer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TaskDataConsumer.class);
 
     private final TaskDriverContext driverContext;
 
@@ -48,13 +50,13 @@ public final class TaskDataConsumer implements DataConsumer {
 
     private final IEventHandler consumerEventHandler;
 
-    private final MemoryManager.Allocator allocator;
+    private final IAllocator allocator;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataConsumer(final TaskDriverContext driverContext, final MemoryManager.Allocator allocator) {
+    public TaskDataConsumer(final TaskDriverContext driverContext, final IAllocator allocator) {
         // sanity check.
         if (driverContext == null)
             throw new IllegalArgumentException("driverContext == null");
@@ -96,6 +98,12 @@ public final class TaskDataConsumer implements DataConsumer {
     // Public Methods.
     // ---------------------------------------------------
 
+    private final Map<Integer, Long> exhaustedEvents = new HashMap<Integer, Long>();
+
+    long countGate0 = 0;
+
+    long countGate1 = 0;
+
     public IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException {
 
         if (activeGates.get(gateIndex).size() == 0)
@@ -106,20 +114,34 @@ public final class TaskDataConsumer implements DataConsumer {
         IOEvents.DataIOEvent event = null;
 
         while (retrieve) {
-            event = inputGates.get(gateIndex).getInputQueue().take();
+            event = inputGates.get(gateIndex).getInputQueue().poll(30, TimeUnit.SECONDS);
+            if (event == null) {
+                for (Map.Entry<Integer, Long> exhaustedEvent : exhaustedEvents.entrySet()) {
+                    LOG.warn("Gate " + exhaustedEvent.getKey() + " exhausted events: " + exhaustedEvent.getValue());
+                }
+                LOG.warn("Gate 0 count: " + countGate0 + " --> " + ((countGate0 != 0) ? inputGates.get(0).getInputQueue().size() : 0));
+                LOG.warn("Gate 1 count: " + countGate1 + " --> " + ((countGate1 != 0) ? inputGates.get(1).getInputQueue().size() : 0));
+                return null;
+            }
 
             // DEBUGGING!
             /*
-             * event = inputGates.get(gateIndex).getInputQueue().poll(20, TimeUnit.SECONDS);
+             * event = inputGates.get(gateIndex).getInboundQueue().poll(20, TimeUnit.SECONDS);
              * if(event == null) { LOG.info("TIMEOUT"); LOG.info("GATE 0: size = " +
-             * inputGates.get(0).getInputQueue().size()); LOG.info("GATE 1: size = " +
-             * inputGates.get(1).getInputQueue().size()); }
+             * inputGates.get(0).getInboundQueue().size()); LOG.info("GATE 1: size = " +
+             * inputGates.get(1).getInboundQueue().size()); }
              */
 
             switch (event.type) {
 
                 case IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED:
                     final Set<UUID> activeChannelSet = activeGates.get(gateIndex);
+
+                    if (!exhaustedEvents.containsKey(gateIndex)) {
+                        exhaustedEvents.put(gateIndex, 1L);
+                    } else {
+                        exhaustedEvents.put(gateIndex, exhaustedEvents.get(gateIndex) + 1);
+                    }
 
                     if (!activeChannelSet.remove(event.srcTaskID))
                         throw new IllegalStateException();
@@ -160,6 +182,11 @@ public final class TaskDataConsumer implements DataConsumer {
 
                 // data event -> absorb
                 default:
+                    if (gateIndex == 0) {
+                        countGate0++;
+                    } else {
+                        countGate1++;
+                    }
                     retrieve = false;
                     break;
             }
@@ -299,8 +326,10 @@ public final class TaskDataConsumer implements DataConsumer {
 
     private final class ConsumerEventHandler extends EventHandler {
 
-        @Handle(event = IOEvents.GenericIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
-        private void handleTaskInputDataChannelConnect(final IOEvents.GenericIOEvent event) {
+        @Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
+        private void handleTaskInputDataChannelConnect(final IOEvents.DataIOEvent event) {
+
+            boolean found = false;
 
             int gateIndex = 0;
             boolean allInputGatesConnected = true, connectingToCorrectTask = false;
@@ -316,17 +345,19 @@ public final class TaskDataConsumer implements DataConsumer {
                     if (inputTask.taskID.equals(event.srcTaskID)) {
 
                         // wire queue to input gate
-                        final DataReader channelReader = (DataReader) event.payload;
+                        final DataReader channelReader = (DataReader) event.getPayload();
 
                         // create queue, if there is none yet as we can have multiple channels
                         // insert in one queue (aka multiple channels per gate)
-                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getInputQueue(gateIndex);
+                        final BufferQueue<IOEvents.DataIOEvent> queue = driverContext.queueManager.getInboundQueue(gateIndex);
                         channelReader.bindQueue(driverContext.taskDescriptor.taskID, event.getChannel(), gateIndex, channelIndex, queue);
 
                         inputGates.get(gateIndex).setChannelReader(channelReader);
 
                         LOG.debug("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
                                 + driverContext.taskDescriptor.name + " [" + driverContext.taskDescriptor.taskID + "] IS ESTABLISHED");
+
+                        found = true;
 
                         connectingToCorrectTask |= true;
                     }
@@ -347,6 +378,7 @@ public final class TaskDataConsumer implements DataConsumer {
                 allInputGatesConnected &= allInputChannelsPerGateConnected;
                 ++gateIndex;
             }
+
 
             // Check if the incoming channel is connecting to the correct task.
             if (!connectingToCorrectTask) {
@@ -379,7 +411,7 @@ public final class TaskDataConsumer implements DataConsumer {
  * 
  * if (initialAbsorbCall) {
  * 
- * event = inputGates.get(gateIndex).getInputQueue().take();
+ * event = inputGates.get(gateIndex).getInboundQueue().take();
  * 
  * // TODO: What happens if DATA_EVENT_SOURCE_EXHAUSTED occurs in the first call ?
  * 
@@ -391,7 +423,7 @@ public final class TaskDataConsumer implements DataConsumer {
  * 
  * while (retrieve) {
  * 
- * eventLookUp = inputGates.get(gateIndex).getInputQueue().take();
+ * eventLookUp = inputGates.get(gateIndex).getInboundQueue().take();
  * 
  * switch (eventLookUp.type) {
  * 

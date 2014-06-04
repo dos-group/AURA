@@ -14,22 +14,22 @@ import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryManager;
+import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.task.common.DataConsumer;
 import de.tuberlin.aura.core.task.common.DataProducer;
 import de.tuberlin.aura.core.task.common.TaskDriverContext;
 import de.tuberlin.aura.core.task.common.TaskInvokeable;
 import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 
-public final class SimpleClient {
+public final class ExampleClient {
 
     /**
      * Logger.
      */
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleClient.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ExampleClient.class);
 
     // Disallow Instantiation.
-    private SimpleClient() {}
+    private ExampleClient() {}
 
     /**
      *
@@ -52,7 +52,7 @@ public final class SimpleClient {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
-                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final MemoryView buffer = producer.allocBlocking();
                     final IOEvents.DataIOEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
                     producer.emit(0, index, outputBuffer);
                 }
@@ -90,7 +90,7 @@ public final class SimpleClient {
                 final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
-                    final MemoryManager.MemoryView buffer = producer.alloc();
+                    final MemoryView buffer = producer.allocBlocking();
                     final IOEvents.DataIOEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, buffer);
                     producer.emit(0, index, outputBuffer);
                 }
@@ -151,7 +151,7 @@ public final class SimpleClient {
                     final List<Descriptors.TaskDescriptor> outputs = driverContext.taskBindingDescriptor.outputGateBindings.get(0);
                     for (int index = 0; index < outputs.size(); ++index) {
                         final UUID outputTaskID = getTaskID(0, index);
-                        final MemoryManager.MemoryView buffer = producer.alloc();
+                        final MemoryView buffer = producer.allocBlocking();
                         final IOEvents.DataIOEvent outputBuffer =
                                 new IOEvents.TransferBufferEvent(driverContext.taskDescriptor.taskID, outputTaskID, buffer);
                         producer.emit(0, index, outputBuffer);
