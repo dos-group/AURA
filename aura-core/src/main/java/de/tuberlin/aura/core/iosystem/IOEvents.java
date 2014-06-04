@@ -334,4 +334,7 @@ public final class IOEvents {
             this.result = result;
         }
     }
+
+    // --------------------------------------------------
+    // KRYO
 }

@@ -217,7 +217,6 @@
         <module>aura-examples</module>
         <module>aura-tm</module>
         <module>aura-wm</module>
-        <module>aura-benchmark</module>
     </modules>
 
 </project>

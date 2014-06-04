@@ -62,12 +62,17 @@ public class DataReader {
     private final Map<Pair<UUID, Integer>, Map<Integer, Channel>> connectedChannels;
 
 
+    /**
+     * The {@link de.tuberlin.aura.core.task.common.TaskExecutionManager} the data reader is bound.
+     */
     public final TaskExecutionManager executionManager;
 
     /**
-     * Creates a new Data Reader. There should only be one Data Reader per task manager.
+     * Creates a new DataReader. A DataReader is always bound to a
+     * {@link de.tuberlin.aura.core.task.common.TaskExecutionManager}.
      * 
-     * @param dispatcher the dispatcher to which events should be published.
+     * @param dispatcher the dispatcher used for events
+     * @param executionManager the execution manager the data reader is bound to
      */
     public DataReader(IEventDispatcher dispatcher, final TaskExecutionManager executionManager) {
         this.dispatcher = dispatcher;
@@ -89,19 +94,19 @@ public class DataReader {
      * Notice: the reader does not shut down the worker group. This is in the callers
      * responsibility.
      * 
-     * @param type the connection type of the channel to bind.
-     * @param address the remote address the channel should be connected to.
-     * @param workerGroup the event loop the channel should be associated with.
-     * @param <T> the type of channel this connection uses.
+     * @param type the connection type of the channel to bind
+     * @param address the remote address the channel should be connected to
+     * @param workerGroup the event loop the channel should be associated with
+     * @param <T> the type of channel this connection uses
      */
     public <T extends Channel> void bind(final InboundConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
 
-        ServerBootstrap bootstrap = type.bootStrap(workerGroup);
+        final ServerBootstrap bootstrap = type.bootStrap(workerGroup);
         bootstrap.childHandler(type.getPipeline(this));
 
         try {
             // Bind and start to accept incoming connections.
-            ChannelFuture f = bootstrap.bind(address).addListener(new ChannelFutureListener() {
+            final ChannelFuture f = bootstrap.bind(address).addListener(new ChannelFutureListener() {
 
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -137,18 +142,13 @@ public class DataReader {
     }
 
     /**
-     * TODO: Is the "synchronized" annotation really necessary? Without this annotation access to
-     * the channelToQueueIndex rarely causes a NullPointerException. Maybe it is enough to use
-     * synchronized maps. However, the performance influence of each solution must be evaluated.
-     * <p/>
-     * We could execute ~350 topologies one after the other without any problems while using a
-     * synchronized version of this method.
+     * Binds a inbound queue to this data reader.
      * 
-     * @param srcTaskID
-     * @param channel
-     * @param gateIndex
-     * @param channelIndex
-     * @param queue
+     * @param srcTaskID the UUID of the task
+     * @param channel the channel the queue belongs to
+     * @param gateIndex the gate the queue belongs to
+     * @param channelIndex the channel index the queue belongs to
+     * @param queue the queue
      */
     public synchronized void bindQueue(final UUID srcTaskID,
                                        final Channel channel,
@@ -156,7 +156,7 @@ public class DataReader {
                                        final int channelIndex,
                                        final BufferQueue<IOEvents.DataIOEvent> queue) {
 
-        Pair<UUID, Integer> index = new Pair<>(srcTaskID, gateIndex);
+        final Pair<UUID, Integer> index = new Pair<>(srcTaskID, gateIndex);
         final int queueIndex;
         if (gateToQueueIndex.containsKey(index)) {
             queueIndex = gateToQueueIndex.get(index);
@@ -175,21 +175,36 @@ public class DataReader {
         }
         channels.put(channelIndex, channel);
         connectedChannels.put(index, channels);
-
-        // LOG.error("input queues: " + inputQueues.size());
     }
 
     private Integer newQueueIndex() {
         return queueIndex++;
     }
 
-    public boolean isConnected(UUID contextID, int gateIndex, int channelIndex) {
-        Pair<UUID, Integer> index = new Pair<>(contextID, gateIndex);
+    /**
+     * Returns true if the channel is already bound to this data reader.
+     * 
+     * @param taskID the UUID of the task
+     * @param gateIndex the gate index
+     * @param channelIndex the channel index
+     * @return true if the channel is already bound to this data reader, false otherwise
+     */
+    public boolean isConnected(final UUID taskID, final int gateIndex, final int channelIndex) {
+        final Pair<UUID, Integer> index = new Pair<>(taskID, gateIndex);
         return connectedChannels.containsKey(index) && connectedChannels.get(index).containsKey(channelIndex);
     }
 
+    /**
+     * Writes a {@link de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent} to the channel bound
+     * unique identifer triple (taskID, gateIndex, channelIndex).
+     * 
+     * @param taskID the task id
+     * @param gateIndex the gate index
+     * @param channelIndex the channel index
+     * @param event the event that is written to the channel
+     */
     public void write(final UUID taskID, final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event) {
-        Pair<UUID, Integer> index = new Pair<>(taskID, gateIndex);
+        final Pair<UUID, Integer> index = new Pair<>(taskID, gateIndex);
         connectedChannels.get(index).get(channelIndex).writeAndFlush(event);
     }
 
@@ -197,7 +212,10 @@ public class DataReader {
     // NETTY CHANNEL HANDLER
     // ---------------------------------------------------
 
-    public final class TransferEventHandler extends SimpleChannelInboundHandler<IOEvents.TransferBufferEvent> {
+    /**
+     * Handles {@link de.tuberlin.aura.core.iosystem.IOEvents.TransferBufferEvent}.
+     */
+    public final class TransferBufferEventHandler extends SimpleChannelInboundHandler<IOEvents.TransferBufferEvent> {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.TransferBufferEvent event) {
@@ -209,7 +227,11 @@ public class DataReader {
         }
     }
 
-    public final class DataEventHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
+    /**
+     * Handles all {@link de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent} apart from
+     * {@link de.tuberlin.aura.core.iosystem.IOEvents.TransferBufferEvent}.
+     */
+    public final class DataIOEventHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
 
         @Override
         protected void channelRead0(final ChannelHandlerContext ctx, final IOEvents.DataIOEvent event) throws Exception {
@@ -248,6 +270,14 @@ public class DataReader {
     // Inner Classes (Strategies).
     // ---------------------------------------------------
 
+    /**
+     * Specifies a inbound connection type.
+     * 
+     * Implementing classes are responsible to provide a {@link io.netty.bootstrap.ServerBootstrap}
+     * and the handler pipeline for netty.
+     * 
+     * @param <T> the channel type used by the connection
+     */
     public interface InboundConnectionType<T extends Channel> {
 
         ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup);
@@ -255,6 +285,9 @@ public class DataReader {
         ChannelInitializer<T> getPipeline(final DataReader dataReader);
     }
 
+    /**
+     * A local connection for communication between tasks located on the same task manager.
+     */
     public static class LocalConnection implements InboundConnectionType<LocalChannel> {
 
         @Override
@@ -272,21 +305,25 @@ public class DataReader {
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
                     ch.pipeline()
-                      .addLast(new KryoEventSerializer.LocalTransferBufferCopyHandler(dataReader.executionManager))
-                      .addLast(dataReader.new TransferEventHandler())
-                      .addLast(dataReader.new DataEventHandler());
+                      .addLast(new SerializationHandler.LocalTransferBufferCopyHandler(dataReader.executionManager))
+                      .addLast(dataReader.new TransferBufferEventHandler())
+                      .addLast(dataReader.new DataIOEventHandler());
                 }
             };
         }
     }
 
+    /**
+     * A tcp connection for communication between network connected tasks.
+     */
     public static class NetworkConnection implements InboundConnectionType<SocketChannel> {
+
+        // TODO: check if its better to use a dedicated boss and worker group
+        // TODO: check parameter values, like SO_RCVBUF
 
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             ServerBootstrap b = new ServerBootstrap();
-            // TODO: check if its better to use a dedicated boss and worker group instead of one for
-            // both
             b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
             // sets the max. number of pending, not yet fully connected (handshake) channels
              .option(ChannelOption.SO_BACKLOG, 1024)
@@ -305,11 +342,11 @@ public class DataReader {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline()
-                      .addLast(KryoEventSerializer.LENGTH_FIELD_DECODER())
-                      .addLast(KryoEventSerializer.KRYO_OUTBOUND_HANDLER())
-                      .addLast(KryoEventSerializer.KRYO_INBOUND_HANDLER(dataReader.executionManager))
-                      .addLast(dataReader.new TransferEventHandler())
-                      .addLast(dataReader.new DataEventHandler());
+                      .addLast(SerializationHandler.LENGTH_FIELD_DECODER())
+                      .addLast(SerializationHandler.KRYO_OUTBOUND_HANDLER())
+                      .addLast(SerializationHandler.KRYO_INBOUND_HANDLER(dataReader.executionManager))
+                      .addLast(dataReader.new TransferBufferEventHandler())
+                      .addLast(dataReader.new DataIOEventHandler());
                 }
             };
         }
