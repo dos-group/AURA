@@ -9,6 +9,7 @@ import de.tuberlin.aura.core.measurement.MeasurementManager;
 import de.tuberlin.aura.core.measurement.record.RecordReader;
 import de.tuberlin.aura.core.measurement.record.RecordWriter;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
+import org.slf4j.Logger;
 
 import java.util.List;
 
@@ -17,15 +18,15 @@ import java.util.List;
  */
 public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
 
-    public abstract Descriptors.TaskDescriptor getTaskDescriptor();
+    public abstract Descriptors.AbstractNodeDescriptor getNodeDescriptor();
 
-    public abstract Descriptors.TaskBindingDescriptor getTaskBindingDescriptor();
+    public abstract Descriptors.NodeBindingDescriptor getBindingDescriptor();
 
     public abstract QueueManager<IOEvents.DataIOEvent> getQueueManager();
 
     public abstract StateMachine.FiniteStateMachine getTaskStateMachine();
 
-    public abstract void connectDataChannel(final Descriptors.TaskDescriptor dstTaskDescriptor, final IAllocator allocator);
+    public abstract void connectDataChannel(final Descriptors.AbstractNodeDescriptor dstNodeDescriptor, final IAllocator allocator);
 
     public abstract IDataProducer getDataProducer();
 
@@ -41,5 +42,9 @@ public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
     public abstract RecordWriter getRecordWriter();
 
 
-    public abstract void createOutputBinding(final List<List<Descriptors.TaskDescriptor>> outputBinding);
+    public abstract Logger getLOG();
+
+    public abstract AbstractInvokeable getInvokeable();
+
+        //public abstract void createOutputBinding(final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding);
 }

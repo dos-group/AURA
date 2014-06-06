@@ -1,13 +1,14 @@
 package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.core.descriptors.Descriptors;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.DeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
+import de.tuberlin.aura.core.topology.AuraGraph.*;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
 public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> {
@@ -66,30 +67,30 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
                     final WM2TMProtocol tmProtocol =
-                            rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getTaskDescriptor().getMachineDescriptor());
+                            rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getNodeDescriptor().getMachineDescriptor());
 
                     if(!en.logicalNode.isAlreadyDeployed) {
 
-                        final TaskDeploymentDescriptor tdd =
-                                new TaskDeploymentDescriptor(en.getTaskDescriptor(),
-                                        en.getTaskBindingDescriptor(),
+                        final DeploymentDescriptor tdd =
+                                new Descriptors.DeploymentDescriptor(en.getNodeDescriptor(),
+                                        en.getNodeBindingDescriptor(),
                                         en.logicalNode.dataPersistenceType,
                                         en.logicalNode.executionType);
 
                         tmProtocol.installTask(tdd);
 
-                        LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getTaskDescriptor().name + "]: " + tdd.toString());
+                        LOG.info("TASK DEPLOYMENT DESCRIPTOR [" + en.getNodeDescriptor().name + "]: " + tdd.toString());
 
                     } else {
 
-                        tmProtocol.addOutputBinding(en.getTaskDescriptor().taskID, en.getTaskBindingDescriptor().outputGateBindings);
+                        tmProtocol.addOutputBinding(en.getNodeDescriptor().taskID, en.getNodeBindingDescriptor().outputGateBindings);
                     }
                 }
             }
         });
 
-        /*final Map<Descriptors.MachineDescriptor, List<TaskDeploymentDescriptor>> machineDeployment =
-                new HashMap<Descriptors.MachineDescriptor, List<TaskDeploymentDescriptor>>();
+        /*final Map<Descriptors.MachineDescriptor, List<DeploymentDescriptor>> machineDeployment =
+                new HashMap<Descriptors.MachineDescriptor, List<DeploymentDescriptor>>();
 
         // Collect all deployment descriptors for a machine.
         TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
@@ -98,18 +99,18 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
             public void visit(final Node element) {
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
-                    final TaskDeploymentDescriptor tdd =
-                            new TaskDeploymentDescriptor(en.getTaskDescriptor(),
-                                                         en.getTaskBindingDescriptor(),
+                    final DeploymentDescriptor tdd =
+                            new DeploymentDescriptor(en.getNodeDescriptor(),
+                                                         en.getBindingDescriptor(),
                                                          en.logicalNode.dataPersistenceType,
                                                          en.logicalNode.executionType);
 
-                    final Descriptors.MachineDescriptor machineDescriptor = en.getTaskDescriptor().getMachineDescriptor();
+                    final Descriptors.MachineDescriptor machineDescriptor = en.getNodeDescriptor().getMachineDescriptor();
 
-                    List<TaskDeploymentDescriptor> deploymentDescriptors = machineDeployment.get(machineDescriptor);
+                    List<DeploymentDescriptor> deploymentDescriptors = machineDeployment.get(machineDescriptor);
 
                     if (deploymentDescriptors == null) {
-                        deploymentDescriptors = new ArrayList<TaskDeploymentDescriptor>();
+                        deploymentDescriptors = new ArrayList<DeploymentDescriptor>();
                         machineDeployment.put(machineDescriptor, deploymentDescriptors);
                     }
 
@@ -125,9 +126,9 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
             public void visit(final Node element) {
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
-                    final Descriptors.MachineDescriptor machineDescriptor = en.getTaskDescriptor().getMachineDescriptor();
+                    final Descriptors.MachineDescriptor machineDescriptor = en.getNodeDescriptor().getMachineDescriptor();
 
-                    List<TaskDeploymentDescriptor> tddList = machineDeployment.get(machineDescriptor);
+                    List<DeploymentDescriptor> tddList = machineDeployment.get(machineDescriptor);
 
                     // If TDD are not yet shipped, then do it...
                     if (tddList != null) {

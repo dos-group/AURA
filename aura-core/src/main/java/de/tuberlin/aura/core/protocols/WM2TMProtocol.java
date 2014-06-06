@@ -4,13 +4,12 @@ import java.util.List;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 
 public interface WM2TMProtocol {
 
-    public abstract void installTask(final TaskDeploymentDescriptor taskDeploymentDescriptor);
+    public abstract void installTask(final Descriptors.DeploymentDescriptor deploymentDescriptor);
 
-    public abstract void installTasks(final List<TaskDeploymentDescriptor> deploymentDescriptors);
+    public abstract void installTasks(final List<Descriptors.DeploymentDescriptor> deploymentDescriptors);
 
-    public abstract void addOutputBinding(final UUID taskID, final List<List<Descriptors.TaskDescriptor>> outputBinding);
+    public abstract void addOutputBinding(final UUID taskID, final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding);
 }

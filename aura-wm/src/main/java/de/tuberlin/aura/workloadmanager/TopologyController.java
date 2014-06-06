@@ -1,6 +1,7 @@
 package de.tuberlin.aura.workloadmanager;
 
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.topology.AuraGraph;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -12,8 +13,7 @@ import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPipeline;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.task.common.TaskStates;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyState;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
@@ -97,13 +97,13 @@ public final class TopologyController extends EventDispatcher {
             this.topologyFSM = createTopologyFSM();
 
             boolean abort = false;
-            for(final Map.Entry<Pair<String,String>,AuraDirectedGraph.Edge.TransferType> externalEdges : this.topologyContainer.executingTopology.externalEdges.entrySet()) {
+            for(final Map.Entry<Pair<String,String>,AuraGraph.Edge.TransferType> externalEdges : this.topologyContainer.executingTopology.externalEdges.entrySet()) {
 
                 for(final AuraTopology executedTopology : topologyContainer.executedTopologies) {
 
-                    final AuraDirectedGraph.Node srcNode = executedTopology.nodeMap.get(externalEdges.getKey().getFirst());
+                    final AuraGraph.Node srcNode = executedTopology.nodeMap.get(externalEdges.getKey().getFirst());
 
-                    //final AuraDirectedGraph.Node srcNode = new AuraDirectedGraph.Node(originalSrcNode);
+                    //final AuraGraph.Node srcNode = new AuraGraph.Node(originalSrcNode);
 
                     if(srcNode != null) {
 
@@ -115,7 +115,7 @@ public final class TopologyController extends EventDispatcher {
 
                         topologyContainer.executingTopology.nodeMap.put(srcNode.name, srcNode);
 
-                        final AuraDirectedGraph.Node dstNode = topologyContainer.executingTopology.nodeMap.get(externalEdges.getKey().getSecond());
+                        final AuraGraph.Node dstNode = topologyContainer.executingTopology.nodeMap.get(externalEdges.getKey().getSecond());
 
                         srcNode.addOutput(dstNode);
 
@@ -125,7 +125,7 @@ public final class TopologyController extends EventDispatcher {
 
                         srcNode.inputs.clear();
 
-                        final AuraDirectedGraph.Edge edge = new AuraDirectedGraph.Edge(srcNode, dstNode, externalEdges.getValue(), AuraDirectedGraph.Edge.EdgeType.FORWARD_EDGE);
+                        final AuraGraph.Edge edge = new AuraGraph.Edge(srcNode, dstNode, externalEdges.getValue(), AuraGraph.Edge.EdgeType.FORWARD_EDGE);
 
                         topologyContainer.executingTopology.edges.put(externalEdges.getKey(), edge);
 
@@ -157,7 +157,7 @@ public final class TopologyController extends EventDispatcher {
                 public void handleEvent(Event e) {
                     final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
 
-                    final AuraDirectedGraph.ExecutionNode en = topologyContainer.executingTopology.executionNodeMap.get(event.getTaskID());
+                    final AuraGraph.ExecutionNode en = topologyContainer.executingTopology.executionNodeMap.get(event.getTaskID());
 
                     // sanity check.
                     if (en == null)
@@ -310,21 +310,21 @@ public final class TopologyController extends EventDispatcher {
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
 
-                AuraDirectedGraph.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new AuraDirectedGraph.Visitor<AuraDirectedGraph.Node>() {
+                AuraGraph.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new AuraGraph.Visitor<AuraGraph.Node>() {
 
                     @Override
-                    public void visit(final AuraDirectedGraph.Node element) {
+                    public void visit(final AuraGraph.Node element) {
 
-                        for (final AuraDirectedGraph.ExecutionNode en : element.getExecutionNodes()) {
+                        for (final AuraGraph.ExecutionNode en : element.getExecutionNodes()) {
 
                             final IOEvents.TaskControlIOEvent transitionUpdate =
                                     new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
 
                             transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_RUN));
-                            transitionUpdate.setTaskID(en.getTaskDescriptor().taskID);
-                            transitionUpdate.setTopologyID(en.getTaskDescriptor().topologyID);
+                            transitionUpdate.setTaskID(en.getNodeDescriptor().taskID);
+                            transitionUpdate.setTopologyID(en.getNodeDescriptor().topologyID);
 
-                            ioManager.sendEvent(en.getTaskDescriptor().getMachineDescriptor(), transitionUpdate);
+                            ioManager.sendEvent(en.getNodeDescriptor().getMachineDescriptor(), transitionUpdate);
                         }
                     }
                 });
@@ -338,21 +338,21 @@ public final class TopologyController extends EventDispatcher {
 
                 ioManager.sendEvent(topologyContainer.executingTopology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE));
 
-                AuraDirectedGraph.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new AuraDirectedGraph.Visitor<AuraDirectedGraph.Node>() {
+                AuraGraph.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new AuraGraph.Visitor<AuraGraph.Node>() {
 
                     @Override
-                    public void visit(final AuraDirectedGraph.Node element) {
-                        for (final AuraDirectedGraph.ExecutionNode en : element.getExecutionNodes()) {
+                    public void visit(final AuraGraph.Node element) {
+                        for (final AuraGraph.ExecutionNode en : element.getExecutionNodes()) {
 
                             final IOEvents.TaskControlIOEvent transitionUpdate =
                                     new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
 
                             transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_CANCEL));
-                            transitionUpdate.setTaskID(en.getTaskDescriptor().taskID);
-                            transitionUpdate.setTopologyID(en.getTaskDescriptor().topologyID);
+                            transitionUpdate.setTaskID(en.getNodeDescriptor().taskID);
+                            transitionUpdate.setTopologyID(en.getNodeDescriptor().topologyID);
 
                             if (en.getState().equals(TaskStates.TaskState.TASK_STATE_RUNNING)) {
-                                ioManager.sendEvent(en.getTaskDescriptor().getMachineDescriptor(), transitionUpdate);
+                                ioManager.sendEvent(en.getNodeDescriptor().getMachineDescriptor(), transitionUpdate);
                             }
                         }
                     }

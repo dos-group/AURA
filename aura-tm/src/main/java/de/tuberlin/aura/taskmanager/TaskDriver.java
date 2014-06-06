@@ -5,7 +5,9 @@ import java.lang.reflect.Constructor;
 import java.util.List;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
+import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.spi.*;
+import de.tuberlin.aura.storage.DataStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,22 +38,26 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
     private final ITaskManager taskManager;
 
-    private final Descriptors.TaskDescriptor taskDescriptor;
+    private final Descriptors.AbstractNodeDescriptor nodeDescriptor;
 
-    private final Descriptors.TaskBindingDescriptor taskBindingDescriptor;
+    private final Descriptors.NodeBindingDescriptor bindingDescriptor;
 
     private final QueueManager<IOEvents.DataIOEvent> queueManager;
 
     private final StateMachine.FiniteStateMachine<TaskState, TaskTransition> taskFSM;
 
 
-    private IDataProducer dataProducer;
+    private final IDataProducer dataProducer;
 
-    private IDataConsumer dataConsumer;
+    private final IDataConsumer dataConsumer;
 
-    private Class<? extends AbstractTaskInvokeable> invokeableClazz;
+    private Class<? extends AbstractInvokeable> invokeableClazz;
 
-    private AbstractTaskInvokeable invokeable;
+    private AbstractInvokeable invokeable;
+
+    private IAllocator inputAllocator;
+
+    private IAllocator outputAllocator;
 
 
     // Measurement stuff...
@@ -66,8 +72,8 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDriver(final ITaskManager taskManager, final Descriptors.TaskDeploymentDescriptor deploymentDescriptor) {
-        super(true, "TaskDriver-" + deploymentDescriptor.taskDescriptor.name + "-" + deploymentDescriptor.taskDescriptor.taskIndex
+    public TaskDriver(final ITaskManager taskManager, final Descriptors.DeploymentDescriptor deploymentDescriptor) {
+        super(true, "TaskDriver-" + deploymentDescriptor.nodeDescriptor.name + "-" + deploymentDescriptor.nodeDescriptor.taskIndex
                 + "-EventDispatcher");
 
         // sanity check.
@@ -78,24 +84,30 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         this.taskManager = taskManager;
 
-        this.taskDescriptor = deploymentDescriptor.taskDescriptor;
+        this.nodeDescriptor = deploymentDescriptor.nodeDescriptor;
 
-        this.taskBindingDescriptor = deploymentDescriptor.taskBindingDescriptor;
+        this.bindingDescriptor = deploymentDescriptor.nodeBindingDescriptor;
 
         this.taskFSM = createTaskFSM();
 
-        this.taskFSM.setName("FSM-" + taskDescriptor.name + "-" + taskDescriptor.taskIndex + "-EventDispatcher");
+        this.taskFSM.setName("FSM-" + nodeDescriptor.name + "-" + nodeDescriptor.taskIndex + "-EventDispatcher");
 
-        this.measurementManager = MeasurementManager.getInstance("/tm/" + taskDescriptor.name + "_" + taskDescriptor.taskIndex, "Task");
-        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + taskDescriptor.taskID + "-" + taskDescriptor.name + "-"
-                + taskDescriptor.taskIndex, measurementManager);
+
+        dataConsumer = new TaskDataConsumer(this);
+
+        dataProducer = new TaskDataProducer(this);
+
+
+        this.measurementManager = MeasurementManager.getInstance("/tm/" + nodeDescriptor.name + "_" + nodeDescriptor.taskIndex, "Task");
+        MeasurementManager.registerListener(MeasurementManager.TASK_FINISHED + "-" + nodeDescriptor.taskID + "-" + nodeDescriptor.name + "-"
+                + nodeDescriptor.taskIndex, measurementManager);
 
         this.recordReader = new RecordReader();
 
         this.recordWriter = new RecordWriter();
 
         this.queueManager =
-                QueueManager.newInstance(taskDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), measurementManager);
+                QueueManager.newInstance(nodeDescriptor.taskID, new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(), measurementManager);
     }
 
     // ---------------------------------------------------
@@ -115,17 +127,28 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
         if (outputAllocator == null)
             throw new IllegalArgumentException("outputAllocator == null");
 
-        dataConsumer = new TaskDataConsumer(this, inputAllocator);
+        this.inputAllocator = inputAllocator;
 
-        dataProducer = new TaskDataProducer(this, outputAllocator);
+        this.outputAllocator = outputAllocator;
 
-        // TODO: A Task can in future contain a list of associated user code.
-        invokeableClazz = implantInvokeableCode(taskDescriptor.userCodeList.get(0));
+        dataConsumer.bind(bindingDescriptor.inputGateBindings, inputAllocator);
 
-        invokeable = createInvokeable(invokeableClazz, this, dataProducer, dataConsumer, LOG);
+        dataProducer.bind(bindingDescriptor.outputGateBindings, outputAllocator);
 
-        if (invokeable == null)
-            throw new IllegalStateException("invokeable == null");
+        if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor) {
+
+            // TODO: A Task can in future contain a list of associated user code.
+            invokeableClazz = implantInvokeableCode(nodeDescriptor.userCodeList.get(0));
+
+            invokeable = createInvokeable(invokeableClazz, this, dataProducer, dataConsumer, LOG);
+
+            if (invokeable == null)
+                throw new IllegalStateException("invokeable == null");
+
+        } else {
+
+            invokeable = new DataStorage(this, dataProducer, dataConsumer, LOG);
+        }
     }
 
     /**
@@ -155,15 +178,17 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             return;
         }
 
-        // TODO: Wait until all gates are closed? -> invokeable.close() emits all
-        // DATA_EVENT_SOURCE_EXHAUSTED events
-        taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
+        if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor) {
+            // TODO: Wait until all gates are closed? -> invokeable.close() emits all DATA_EVENT_SOURCE_EXHAUSTED events
+            taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
+        }
 
         if(dataProducer.hasStoredBuffers()) {
-
-            LOG.info("BUFFERS ARE STORED AND CAN BE CONSUMED");
-
-            joinDispatcherThread();
+            try {
+                ((DataStorage)dataProducer.getStorage()).close();
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }
         }
     }
 
@@ -173,7 +198,9 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     @Override
     public void teardownDriver(boolean awaitExhaustion) {
 
-        invokeable.stopInvokeable();
+        if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor) {
+            invokeable.stopInvokeable();
+        }
 
         if(!dataProducer.hasStoredBuffers())
             dataProducer.shutdownProducer(awaitExhaustion);
@@ -181,33 +208,44 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
         dataConsumer.shutdownConsumer();
     }
 
-    /**
-     *
-     * @param outputBinding
-     */
-    @Override
-    public void createOutputBinding(final List<List<Descriptors.TaskDescriptor>> outputBinding) {
+
+    /*@Override
+    public void createOutputBinding(final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding) {
         // sanity check.
         if(outputBinding == null)
             throw new IllegalArgumentException("outputBinding == null");
 
         taskFSM.reset();
 
-        taskBindingDescriptor.addOutputGateBinding(outputBinding);
+        bindingDescriptor.addOutputGateBinding(outputBinding);
 
-        dataProducer.bind();
-    }
+        dataConsumer.bind(bindingDescriptor.inputGateBindings, inputAllocator);
+
+        dataProducer.bind(bindingDescriptor.outputGateBindings, outputAllocator);
+
+        taskFSM.addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
+                new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+
+                    @Override
+                    public void stateAction(TaskStates.TaskState previousState,
+                                            TaskStates.TaskTransition transition,
+                                            TaskStates.TaskState state) {
+
+                        dataProducer.emitStoredBuffers(0);
+                    }
+                });
+    }*/
 
     // ---------------------------------------------------
 
     @Override
-    public Descriptors.TaskDescriptor getTaskDescriptor() {
-        return taskDescriptor;
+    public Descriptors.AbstractNodeDescriptor getNodeDescriptor() {
+        return nodeDescriptor;
     }
 
     @Override
-    public Descriptors.TaskBindingDescriptor getTaskBindingDescriptor() {
-        return taskBindingDescriptor;
+    public Descriptors.NodeBindingDescriptor getBindingDescriptor() {
+        return bindingDescriptor;
     }
 
     @Override
@@ -221,17 +259,17 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     }
 
     @Override
-    public void connectDataChannel(final Descriptors.TaskDescriptor dstTaskDescriptor, final IAllocator allocator) {
+    public void connectDataChannel(final Descriptors.AbstractNodeDescriptor dstNodeDescriptor, final IAllocator allocator) {
         // sanity check.
-        if(dstTaskDescriptor == null)
-            throw new IllegalArgumentException("dstTaskDescriptor == null");
+        if(dstNodeDescriptor == null)
+            throw new IllegalArgumentException("dstNodeDescriptor == null");
         if(allocator == null)
             throw new IllegalArgumentException("allocator == null");
 
         taskManager.getIOManager().connectDataChannel(
-                taskDescriptor.taskID,
-                dstTaskDescriptor.taskID,
-                dstTaskDescriptor.getMachineDescriptor(),
+                nodeDescriptor.taskID,
+                dstNodeDescriptor.taskID,
+                dstNodeDescriptor.getMachineDescriptor(),
                 allocator
         );
     }
@@ -262,8 +300,18 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     }
 
     @Override
+    public Logger getLOG() {
+        return LOG;
+    }
+
+    @Override
     public ITaskManager getTaskManager() {
         return taskManager;
+    }
+
+    @Override
+    public AbstractInvokeable getInvokeable() {
+        return invokeable;
     }
 
     // ---------------------------------------------------
@@ -274,11 +322,11 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
      * @param userCode
      * @return
      */
-    private Class<? extends AbstractTaskInvokeable> implantInvokeableCode(final UserCode userCode) {
+    private Class<? extends AbstractInvokeable> implantInvokeableCode(final UserCode userCode) {
         // Try to register the bytecode as a class in the JVM.
         final UserCodeImplanter codeImplanter = new UserCodeImplanter(this.getClass().getClassLoader());
         @SuppressWarnings("unchecked")
-        final Class<? extends AbstractTaskInvokeable> userCodeClazz = (Class<? extends AbstractTaskInvokeable>) codeImplanter.implantUserCodeClass(userCode);
+        final Class<? extends AbstractInvokeable> userCodeClazz = (Class<? extends AbstractInvokeable>) codeImplanter.implantUserCodeClass(userCode);
         // sanity check.
         if (userCodeClazz == null)
             throw new IllegalArgumentException("userCodeClazz == null");
@@ -290,17 +338,17 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
      * @param invokableClazz
      * @return
      */
-    private AbstractTaskInvokeable createInvokeable(final Class<? extends AbstractTaskInvokeable> invokableClazz,
+    private AbstractInvokeable createInvokeable(final Class<? extends AbstractInvokeable> invokableClazz,
                                             final ITaskDriver taskDriver,
                                             final IDataProducer dataProducer,
                                             final IDataConsumer dataConsumer,
                                             final Logger LOG) {
         try {
 
-            final Constructor<? extends AbstractTaskInvokeable> invokeableCtor =
+            final Constructor<? extends AbstractInvokeable> invokeableCtor =
                     invokableClazz.getConstructor(ITaskDriver.class, IDataProducer.class, IDataConsumer.class, Logger.class);
 
-            final AbstractTaskInvokeable invokeable = invokeableCtor.newInstance(taskDriver, dataProducer, dataConsumer, LOG);
+            final AbstractInvokeable invokeable = invokeableCtor.newInstance(taskDriver, dataProducer, dataConsumer, LOG);
 
             return invokeable;
 
@@ -356,15 +404,15 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
 
                 try {
-                    LOG.info("CHANGE STATE OF TASK " + taskDescriptor.name + " [" + taskDescriptor.taskID + "] FROM " + previousState + " TO "
+                    LOG.info("CHANGE STATE OF TASK " + nodeDescriptor.name + " [" + nodeDescriptor.taskID + "] FROM " + previousState + " TO "
                             + state + "  [" + transition.toString() + "]");
 
                     final IOEvents.TaskControlIOEvent stateUpdate =
                             new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE);
 
                     stateUpdate.setPayload(state);
-                    stateUpdate.setTaskID(taskDescriptor.taskID);
-                    stateUpdate.setTopologyID(taskDescriptor.topologyID);
+                    stateUpdate.setTaskID(nodeDescriptor.taskID);
+                    stateUpdate.setTopologyID(nodeDescriptor.topologyID);
 
                     taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), stateUpdate);
                 } catch (Throwable t) {
@@ -380,7 +428,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
-                throw new IllegalStateException("task " + taskDescriptor.name + " [" + taskDescriptor.taskID + "] from state " + previousState
+                throw new IllegalStateException("task " + nodeDescriptor.name + " [" + nodeDescriptor.taskID + "] from state " + previousState
                         + " to " + state + " is not defined  [" + transition.toString() + "]");
             }
         });
@@ -396,8 +444,8 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                         new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
 
                 transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_RUN));
-                transitionUpdate.setTaskID(taskDescriptor.taskID);
-                transitionUpdate.setTopologyID(taskDescriptor.topologyID);
+                transitionUpdate.setTaskID(nodeDescriptor.taskID);
+                transitionUpdate.setTopologyID(nodeDescriptor.topologyID);
 
                 taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), transitionUpdate);
             }
@@ -414,8 +462,8 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                         new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
 
                 transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
-                transitionUpdate.setTaskID(taskDescriptor.taskID);
-                transitionUpdate.setTopologyID(taskDescriptor.topologyID);
+                transitionUpdate.setTaskID(nodeDescriptor.taskID);
+                transitionUpdate.setTopologyID(nodeDescriptor.topologyID);
 
                 taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), transitionUpdate);
             }
@@ -432,8 +480,8 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                         new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
 
                 transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FAIL));
-                transitionUpdate.setTaskID(taskDescriptor.taskID);
-                transitionUpdate.setTopologyID(taskDescriptor.topologyID);
+                transitionUpdate.setTaskID(nodeDescriptor.taskID);
+                transitionUpdate.setTopologyID(nodeDescriptor.topologyID);
 
                 taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), transitionUpdate);
             }
@@ -442,3 +490,89 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
         return taskFSM;
     }
 }
+
+
+/*
+    @Override
+    public void executeDriver() {
+
+        if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor) {
+
+            try {
+
+                invokeable.create();
+
+                invokeable.open();
+
+                invokeable.run();
+
+                invokeable.close();
+
+                invokeable.release();
+
+            } catch (final Throwable t) {
+
+                LOG.error(t.getLocalizedMessage(), t);
+
+                taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FAIL));
+
+                return;
+            }
+
+            // TODO: Wait until all gates are closed? -> invokeable.close() emits all DATA_EVENT_SOURCE_EXHAUSTED events
+            taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
+
+            if(dataProducer.hasStoredBuffers()) {
+
+                bindingDescriptor.inputGateBindings.clear();
+
+                bindingDescriptor.outputGateBindings.clear();
+
+                LOG.info("BUFFERS ARE STORED AND CAN BE CONSUMED");
+
+                joinDispatcherThread();
+            }
+
+        } else { // nodeDescriptor instanceof Descriptors.StorageNodeDescriptor
+
+            try {
+
+                dataConsumer.openGate(0);
+
+                while (!dataConsumer.isExhausted()) {
+
+                    final IOEvents.TransferBufferEvent inEvent = dataConsumer.absorb(0);
+
+                    if (inEvent != null) {
+
+                        dataProducer.store(inEvent.buffer);
+                    }
+                }
+
+                dataConsumer.closeGate(0);
+
+                taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
+
+                if(dataProducer.hasStoredBuffers()) {
+
+                    bindingDescriptor.inputGateBindings.clear();
+
+                    bindingDescriptor.outputGateBindings.clear();
+
+                    LOG.info("BUFFERS ARE STORED AND CAN BE CONSUMED");
+
+                    joinDispatcherThread();
+                }
+
+            } catch (Throwable t) {
+
+                LOG.error(t.getLocalizedMessage(), t);
+
+                taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FAIL));
+
+                return;
+            }
+        }
+    }
+
+ */

@@ -99,7 +99,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
     public void scheduleTask(final ITaskDriver taskDriver) {
         // sanity check.
         if (taskDriver == null)
-            throw new IllegalArgumentException("taskDriver == null");
+            throw new IllegalArgumentException("driver == null");
 
         int tmpMin, tmpMinOld;
         tmpMinOld = executionUnit[0].getNumberOfEnqueuedTasks();
@@ -115,7 +115,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
 
         executionUnit[selectedEU].enqueueTask(taskDriver);
 
-        LOG.info("EXECUTE TASK " + taskDriver.getTaskDescriptor().name + " [" + taskDriver.getTaskDescriptor().taskID + "]" + " ON EXECUTION UNIT ("
+        LOG.info("EXECUTE TASK " + taskDriver.getNodeDescriptor().name + " [" + taskDriver.getNodeDescriptor().taskID + "]" + " ON EXECUTION UNIT ("
                 + executionUnit[selectedEU].getExecutionUnitID() + ") ON MACHINE [" + machineDescriptor.uid + "]");
     }
 
@@ -131,7 +131,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
         for (int i = 0; i < numberOfCores; ++i) {
             final ITaskExecutionUnit eu = executionUnit[i];
             final ITaskDriver taskDriver = eu.getCurrentTaskDriver();
-            if (taskDriver != null && taskID.equals(taskDriver.getTaskDescriptor().taskID)) {
+            if (taskDriver != null && taskID.equals(taskDriver.getNodeDescriptor().taskID)) {
                 return eu;
             }
         }
@@ -216,7 +216,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
                                     // Change event loop group.
                                     eventLoopGroup.register(channel,
                                                             event.srcTaskID,
-                                                            executionUnit.getCurrentTaskDriver().getTaskBindingDescriptor().inputGateBindings)
+                                                            executionUnit.getCurrentTaskDriver().getBindingDescriptor().inputGateBindings)
                                                   .sync();
                                 } else {
                                     ExecutionUnitNetworkInputEventLoopGroup eventLoopGroup =
@@ -225,7 +225,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
                                     // Change event loop group.
                                     eventLoopGroup.register(channel,
                                                             event.srcTaskID,
-                                                            executionUnit.getCurrentTaskDriver().getTaskBindingDescriptor().inputGateBindings)
+                                                            executionUnit.getCurrentTaskDriver().getBindingDescriptor().inputGateBindings)
                                                   .sync();
                                 }
 

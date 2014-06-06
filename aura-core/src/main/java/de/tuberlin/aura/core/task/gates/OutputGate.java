@@ -38,7 +38,7 @@ public final class OutputGate extends AbstractGate {
      * @param producer
      */
     public OutputGate(final ITaskDriver taskDriver, int gateIndex, final IDataProducer producer) {
-        super(taskDriver, gateIndex, taskDriver.getTaskBindingDescriptor().outputGateBindings.get(gateIndex).size());
+        super(taskDriver, gateIndex, taskDriver.getBindingDescriptor().outputGateBindings.get(gateIndex).size());
 
         this.producer = producer;
 

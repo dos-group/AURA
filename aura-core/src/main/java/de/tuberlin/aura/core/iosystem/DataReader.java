@@ -423,10 +423,10 @@ public class DataReader {
 
                 // -------------------- STUPID HOT FIX --------------------
 
-                if (taskDriver.getTaskBindingDescriptor().inputGateBindings.size() == 1) {
+                if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 1) {
                     allocator = allocatorGroup;
                 } else {
-                    if (taskDriver.getTaskBindingDescriptor().inputGateBindings.size() == 2) {
+                    if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 2) {
                         if (gateIndex == 0) {
                             allocator =
                                     new BufferAllocatorGroup(allocatorGroup.getBufferSize(),

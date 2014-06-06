@@ -57,13 +57,13 @@ public class ExecutionUnitLocalInputEventLoopGroup extends LocalEventLoopGroup {
     // Public Methods.
     // ---------------------------------------------------
 
-    private EventLoop next(final UUID srcTaskID, final List<List<Descriptors.TaskDescriptor>> inputGateBindings) {
+    private EventLoop next(final UUID srcTaskID, final List<List<Descriptors.AbstractNodeDescriptor>> inputGateBindings) {
         // Find the corresponding gate for the given channel
         String desc = "";
         int gateIndex = 0;
         boolean found = false;
         for (int g = 0; g < inputGateBindings.size(); ++g) {
-            for (Descriptors.TaskDescriptor descriptor : inputGateBindings.get(g)) {
+            for (Descriptors.AbstractNodeDescriptor descriptor : inputGateBindings.get(g)) {
                 if (descriptor.taskID.equals(srcTaskID)) {
                     desc = descriptor.name + "-" + descriptor.taskIndex;
                     gateIndex = g;
@@ -86,7 +86,7 @@ public class ExecutionUnitLocalInputEventLoopGroup extends LocalEventLoopGroup {
         return (EventLoop) children[index];
     }
 
-    public ChannelFuture register(Channel channel, final UUID srcTaskID, final List<List<Descriptors.TaskDescriptor>> inputGateBindings) {
+    public ChannelFuture register(Channel channel, final UUID srcTaskID, final List<List<Descriptors.AbstractNodeDescriptor>> inputGateBindings) {
         return next(srcTaskID, inputGateBindings).register(channel);
     }
 

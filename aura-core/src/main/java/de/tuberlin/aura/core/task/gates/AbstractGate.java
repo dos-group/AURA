@@ -26,7 +26,7 @@ public abstract class AbstractGate {
     public AbstractGate(final ITaskDriver taskDriver, int gateIndex, int numChannels) {
         // sanity check.
         if (taskDriver == null)
-            throw new IllegalArgumentException("taskDriver == null");
+            throw new IllegalArgumentException("driver == null");
 
         this.taskDriver = taskDriver;
 

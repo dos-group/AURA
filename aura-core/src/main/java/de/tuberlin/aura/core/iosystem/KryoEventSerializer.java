@@ -4,6 +4,8 @@ package de.tuberlin.aura.core.iosystem;
 import java.util.Arrays;
 import java.util.UUID;
 
+import com.esotericsoftware.kryo.Registration;
+import com.esotericsoftware.kryo.serializers.FieldSerializer;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
 import de.tuberlin.aura.core.memory.MemoryView;
@@ -100,7 +102,7 @@ public final class KryoEventSerializer {
     // Kryo Serializer.
     // ---------------------------------------------------
 
-    private static class BaseIOEventSerializer extends Serializer<IOEvents.BaseIOEvent> {
+    private static final class BaseIOEventSerializer extends Serializer<IOEvents.BaseIOEvent> {
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.BaseIOEvent baseIOEvent) {
@@ -114,7 +116,7 @@ public final class KryoEventSerializer {
         }
     }
 
-    public static class DataIOEventSerializer extends Serializer<IOEvents.DataIOEvent> {
+    public static final class DataIOEventSerializer extends Serializer<IOEvents.DataIOEvent> {
 
         public DataIOEventSerializer() {}
 
@@ -123,6 +125,8 @@ public final class KryoEventSerializer {
 
             // TODO: Use UUIDSerializer
 
+            kryo.writeClass(output, (dataIOEvent.getPayload() != null) ? dataIOEvent.getPayload().getClass() : Object.class);
+            kryo.writeObjectOrNull(output, dataIOEvent.getPayload(), (dataIOEvent.getPayload() != null) ? dataIOEvent.getPayload().getClass() : Object.class);
             output.writeString(dataIOEvent.type);
             output.writeLong(dataIOEvent.srcTaskID.getMostSignificantBits());
             output.writeLong(dataIOEvent.srcTaskID.getLeastSignificantBits());
@@ -133,14 +137,19 @@ public final class KryoEventSerializer {
 
         @Override
         public IOEvents.DataIOEvent read(Kryo kryo, Input input, Class<IOEvents.DataIOEvent> type) {
+            final Registration reg = kryo.readClass(input);
+            final Object payload = kryo.readObjectOrNull(input, reg.getType());
             final String eventType = input.readString();
             final UUID src = new UUID(input.readLong(), input.readLong());
             final UUID dst = new UUID(input.readLong(), input.readLong());
-            return new IOEvents.DataIOEvent(eventType, src, dst);
+
+            final IOEvents.DataIOEvent event = new IOEvents.DataIOEvent(eventType, src, dst);
+            event.setPayload(payload);
+            return event;
         }
     }
 
-    public static class TransferBufferEventSerializer extends Serializer<IOEvents.TransferBufferEvent> {
+    public static final class TransferBufferEventSerializer extends Serializer<IOEvents.TransferBufferEvent> {
 
         private IAllocator allocator;
 
@@ -184,10 +193,10 @@ public final class KryoEventSerializer {
 
                 // -------------------- STUPID HOT FIX --------------------
 
-                if (taskDriver.getTaskBindingDescriptor().inputGateBindings.size() == 1) {
+                if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 1) {
                     allocator = allocatorGroup;
                 } else {
-                    if (taskDriver.getTaskBindingDescriptor().inputGateBindings.size() == 2) {
+                    if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 2) {
                         if (gateIndex == 0) {
                             allocator =
                                     new BufferAllocatorGroup(allocatorGroup.getBufferSize(),

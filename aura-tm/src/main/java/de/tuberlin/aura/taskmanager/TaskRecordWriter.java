@@ -1,38 +1,110 @@
 package de.tuberlin.aura.taskmanager;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.io.FastOutput;
-import com.esotericsoftware.kryo.io.Output;
-import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.task.spi.IRecordWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
-public class TaskRecordWriter implements IRecordWriter {
+import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.Output;
+
+import de.tuberlin.aura.core.memory.BufferStream;
+import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.MemoryView;
+import de.tuberlin.aura.core.record.RowRecordModel;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
+
+public class TaskRecordWriter {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
+    private final ITaskDriver driver;
+
     private final int bufferSize;
+
+    private final RowRecordModel.Partitioner partitioner;
 
     private final Kryo kryo;
 
-    private final Output output;
+    private final List<BufferStream.ContinuousByteOutputStream> outputStreams;
 
-    private byte[] buffer;
+    private final List<Output> kryoOutputs;
 
-    private int memoryBaseOffset;
+    private final List<Descriptors.AbstractNodeDescriptor> outputBinding;
+
+    private final Class<?> recordType;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskRecordWriter(final int bufferSize) {
+    /**
+     * 
+     * @param driver
+     * @param partitioner
+     */
+    public TaskRecordWriter(final ITaskDriver driver, final Class<?> recordType, final RowRecordModel.Partitioner partitioner) {
+        // sanity check.
+        if (driver == null)
+            throw new IllegalArgumentException("driver == null");
+        if (recordType == null)
+            throw new IllegalArgumentException("recordType == null");
+        if (partitioner == null)
+            throw new IllegalArgumentException("partitioner == null");
 
-        this.bufferSize = bufferSize;
+        this.driver = driver;
+
+        this.recordType = recordType;
+
+        this.partitioner = partitioner;
+
+        this.bufferSize = driver.getDataProducer().getAllocator().getBufferSize();
 
         this.kryo = new Kryo();
 
-        this.output = new FastOutput();
+        this.outputStreams = new ArrayList<>();
+
+        this.kryoOutputs = new ArrayList<>();
+
+        this.outputBinding = driver.getBindingDescriptor().outputGateBindings.get(0);
+
+        for (int i = 0; i < outputBinding.size(); ++i) {
+
+            final int index = i;
+            
+            final BufferStream.ContinuousByteOutputStream os = new BufferStream.ContinuousByteOutputStream();
+
+            outputStreams.add(os);
+
+            final Output kryoOutput = new Output(os, bufferSize);
+
+            kryoOutputs.add(kryoOutput);
+
+            os.setBufferInput(new BufferStream.BufferInput() {
+
+                @Override
+                public MemoryView get() {
+                    return driver.getDataProducer().alloc();
+                }
+            });
+
+            os.setBufferOutput(new BufferStream.BufferOutput() {
+
+                @Override
+                public void put(MemoryView buffer) {
+
+                    final UUID srcTaskID = driver.getNodeDescriptor().taskID;
+
+                    final UUID dstTaskID = driver.getInvokeable().getTaskID(0, index);
+
+                    final IOEvents.TransferBufferEvent outEvent = new IOEvents.TransferBufferEvent(srcTaskID, dstTaskID, buffer);
+
+                    driver.getDataProducer().emit(0, index, outEvent);
+                }
+            });
+        }
     }
 
     // ---------------------------------------------------
@@ -41,35 +113,45 @@ public class TaskRecordWriter implements IRecordWriter {
 
     /**
      *
-     * @param memView
      */
-    public void selectBuffer(final MemoryView memView) {
-        // sanity check.
-        if(memView == null)
-            throw new IllegalArgumentException("memView == null");
+    public void begin() {
 
-        buffer = memView.memory;
+        final UUID srcTaskID = driver.getNodeDescriptor().taskID;
 
-        memoryBaseOffset = memView.baseOffset;
+        for (int i = 0; i < outputBinding.size(); ++i) {
 
-        // TODO: do we need to flush before we select a new buffer?
+            final UUID dstTaskID = driver.getInvokeable().getTaskID(0, i);
 
-        output.setBuffer(buffer, bufferSize);
-
-        output.setPosition(memoryBaseOffset);
+            //driver.getDataProducer().emit(0, i, new IOEvents.RecordTypeEvent(srcTaskID, dstTaskID));
+        }
     }
 
     /**
-     *
+     * 
      * @param record
      */
-    public void writeRecord(final Object record) {
+    public void writeRecord(final RowRecordModel.Record record) {
         // sanity check.
         if(record == null)
             throw new IllegalArgumentException("record == null");
-        if(buffer == null)
-            throw new IllegalStateException("buffer == null");
 
-        kryo.writeObject(output, record);
+        final int channelIndex = partitioner.partition(record, outputBinding.size());
+
+        kryo.writeObject(kryoOutputs.get(channelIndex), record.instance());
+    }
+
+    /**
+     * 
+     */
+    public void end() {
+        try {
+            for (int i = 0; i < outputBinding.size(); ++i) {
+                //kryo.writeObject(kryoOutputs.get(i), RowRecordModel.RECORD_STREAM_END.instance());
+                kryoOutputs.get(i).close();
+                outputStreams.get(i).close();
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

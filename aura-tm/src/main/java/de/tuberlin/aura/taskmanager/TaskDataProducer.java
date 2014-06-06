@@ -4,6 +4,8 @@ import java.util.*;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.MemoryView;
+import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
+import de.tuberlin.aura.storage.DataStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,50 +37,46 @@ public final class TaskDataProducer implements IDataProducer {
 
     private final ITaskDriver taskDriver;
 
-    private List<OutputGate> outputGates;
+    private final List<OutputGate> outputGates;
 
-    private Map<UUID, Integer> taskIDToGateIndex;
+    private final Map<UUID, Integer> taskIDToGateIndex;
 
-    private Map<Integer, UUID> channelIndexToTaskID;
+    private final Map<Integer, UUID> channelIndexToTaskID;
 
     private final IEventHandler producerEventHandler;
 
-    private final IAllocator outputAllocator;
+    private IAllocator allocator;
 
 
-    private final List<MemoryView> bufferStorage;
+    //private final List<MemoryView> bufferStorage;
+
+    private List<List<Descriptors.AbstractNodeDescriptor>> outputBinding;
+
+    private DataStorage dataStorage = null;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDataProducer(final ITaskDriver taskDriver, final IAllocator outputAllocator) {
+    public TaskDataProducer(final ITaskDriver taskDriver) {
         // sanity check.
         if (taskDriver == null)
-            throw new IllegalArgumentException("taskDriver == null");
-        if (outputAllocator == null)
-            throw new IllegalArgumentException("outputAllocator == null");
+            throw new IllegalArgumentException("driver == null");
 
         this.taskDriver = taskDriver;
-
-        this.outputAllocator = outputAllocator;
 
         // event handling.
         this.producerEventHandler = new ProducerEventHandler();
 
         this.taskDriver.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, producerEventHandler);
 
-        this.bufferStorage = new ArrayList<MemoryView>();
+        //this.bufferStorage = new ArrayList<MemoryView>();
+
+        this.outputGates = new ArrayList<>();
 
         this.taskIDToGateIndex = new HashMap<>();
 
         this.channelIndexToTaskID = new HashMap<>();
-
-        createOutputMappings();
-
-        this.outputGates = createOutputGates();
-
-        connectOutputDataChannels();
     }
 
     // ---------------------------------------------------
@@ -86,25 +84,92 @@ public final class TaskDataProducer implements IDataProducer {
     // ---------------------------------------------------
 
     /**
+     *
+     * @param outputBinding
+     * @param allocator
+     */
+    @Override
+    public void bind(final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding, final IAllocator allocator) {
+        // sanity check.
+        if (outputBinding == null)
+            throw new IllegalArgumentException("outputBinding == null");
+        if(allocator == null)
+            throw new IllegalArgumentException("allocator == null");
+
+        this.outputBinding = outputBinding; // TODO: copy binding?
+
+        this.allocator = allocator;
+
+        this.taskIDToGateIndex.clear();
+
+        this.channelIndexToTaskID.clear();
+
+        createOutputMappings(outputBinding);
+
+        createOutputGates(outputBinding);
+
+        connectOutputDataChannels(outputBinding);
+
+        if (outputBinding.size() == 0 && dataStorage == null) {
+            dataStorage = new DataStorage(taskDriver, this, taskDriver.getDataConsumer(), taskDriver.getLOG());
+        }
+    }
+
+    /**
      * @param gateIndex
      * @param channelIndex
      * @param event
      */
     public void emit(int gateIndex, int channelIndex, IOEvents.DataIOEvent event) {
+
+        if(outputBinding.size() == 0)
+            throw new IllegalStateException("no output binding");
+
         outputGates.get(gateIndex).writeDataToChannel(channelIndex, event);
+    }
+
+    /**
+     *
+     * @param buffer
+     */
+    @Override
+    public void store(final MemoryView buffer) {
+        // sanity check.
+        if(buffer == null)
+            throw new IllegalArgumentException("buffer == null");
+
+        dataStorage.store(buffer);
+    }
+
+    /**
+     *
+     * @return
+     */
+    @Override
+    public boolean hasStoredBuffers() {
+        return dataStorage != null && dataStorage.hasStoredBuffers();
+    }
+
+    /**
+     *
+     * @return
+     */
+    @Override
+    public AbstractInvokeable getStorage() {
+        return dataStorage;
     }
 
     /**
      *
      */
     public void done() {
-        final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+        final List<Descriptors.AbstractNodeDescriptor> outputs = taskDriver.getBindingDescriptor().outputGateBindings.get(0);
 
         for (int index = 0; index < outputs.size(); ++index) {
-            final UUID outputTaskID = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0).get(index).taskID;
+            final UUID outputTaskID = taskDriver.getBindingDescriptor().outputGateBindings.get(0).get(index).taskID;
 
             final IOEvents.DataIOEvent exhaustedEvent =
-                    new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskDriver.getTaskDescriptor().taskID, outputTaskID);
+                    new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, taskDriver.getNodeDescriptor().taskID, outputTaskID);
 
             emit(0, index, exhaustedEvent);
         }
@@ -151,78 +216,43 @@ public final class TaskDataProducer implements IDataProducer {
      */
     @Override
     public MemoryView alloc() {
-        return outputAllocator.alloc();
-    }
-
-    /**
-     *
-     * @param buffer
-     */
-    @Override
-    public void store(final MemoryView buffer) {
-        // sanity check.
-        if(buffer == null)
-            throw new IllegalArgumentException("buffer == null");
-
-        bufferStorage.add(buffer);
+        return allocator.alloc();
     }
 
     /**
      *
      * @return
      */
-    @Override
+    /*@Override
     public boolean hasStoredBuffers() {
         return bufferStorage.size() > 0;
-    }
+    }*/
+
 
     /**
      *
+     * @return
      */
     @Override
-    public void bind() {
-
-        taskDriver.getTaskStateMachine().dispatchEvent(
-                new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED)
-        );
-
-        this.taskIDToGateIndex.clear();
-
-        this.channelIndexToTaskID.clear();
-
-        createOutputMappings();
-
-        this.outputGates = createOutputGates();
-
-        connectOutputDataChannels();
-
-        taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
-                new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                    @Override
-                    public void stateAction(TaskStates.TaskState previousState,
-                                            TaskStates.TaskTransition transition,
-                                            TaskStates.TaskState state) {
-                        emitStoredBuffers(0);
-                    }
-                });
+    public IAllocator getAllocator() {
+        return allocator;
     }
 
     /**
      *
      * @param gateIdx
      */
-    @Override
+   /* @Override
     public void emitStoredBuffers(final int gateIdx) {
 
-        final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(gateIdx);
+        final List<Descriptors.AbstractNodeDescriptor> outputs = taskDriver.getBindingDescriptor().outputGateBindings.get(gateIdx);
         for (int channelIdx = 0; channelIdx < outputs.size(); ++channelIdx) {
-            final UUID outputTaskID = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(gateIdx).get(channelIdx).taskID;;
+            final UUID outputTaskID = taskDriver.getBindingDescriptor().outputGateBindings.get(gateIdx).get(channelIdx).taskID;;
 
             for(final MemoryView buffer : bufferStorage) {
 
                 final IOEvents.TransferBufferEvent outputBuffer =
-                        new IOEvents.TransferBufferEvent(taskDriver.getTaskDescriptor().taskID, outputTaskID, buffer);
+                        new IOEvents.TransferBufferEvent(taskDriver.getNodeDescriptor().taskID, outputTaskID, buffer);
 
                 emit(gateIdx, channelIdx, outputBuffer);
             }
@@ -231,7 +261,7 @@ public final class TaskDataProducer implements IDataProducer {
         done();
 
         taskDriver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
-    }
+    }*/
 
     // ---------------------------------------------------
     // Private Methods.
@@ -240,12 +270,12 @@ public final class TaskDataProducer implements IDataProducer {
     /**
      *
      */
-    private void connectOutputDataChannels() {
+    private void connectOutputDataChannels(final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding) {
         // Connect outputs, if we have some...
-        if (taskDriver.getTaskBindingDescriptor().outputGateBindings.size() > 0) {
-            for (final List<Descriptors.TaskDescriptor> outputGate : taskDriver.getTaskBindingDescriptor().outputGateBindings) {
-                for (final Descriptors.TaskDescriptor outputTask : outputGate) {
-                    taskDriver.connectDataChannel(outputTask, outputAllocator);
+        if (taskDriver.getBindingDescriptor().outputGateBindings.size() > 0) {
+            for (final List<Descriptors.AbstractNodeDescriptor> outputGate : outputBinding) {
+                for (final Descriptors.AbstractNodeDescriptor outputTask : outputGate) {
+                    taskDriver.connectDataChannel(outputTask, allocator);
                 }
             }
         }
@@ -256,33 +286,32 @@ public final class TaskDataProducer implements IDataProducer {
      * 
      * @return The list of output gates or null if no the task has no outputs.
      */
-    private List<OutputGate> createOutputGates() {
+    private void createOutputGates(final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding) {
 
-        if (taskDriver.getTaskBindingDescriptor().outputGateBindings.size() <= 0) {
+        outputGates.clear();
+
+        if (outputBinding.size() <= 0) {
 
             taskDriver.getTaskStateMachine().dispatchEvent(
                     new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED)
             );
 
-            return null;
+            return;
         }
 
-        final List<OutputGate> outputGates = new ArrayList<>(taskDriver.getTaskBindingDescriptor().outputGateBindings.size());
-        for (int gateIndex = 0; gateIndex < taskDriver.getTaskBindingDescriptor().outputGateBindings.size(); ++gateIndex) {
+        for (int gateIndex = 0; gateIndex < outputBinding.size(); ++gateIndex) {
             outputGates.add(new OutputGate(taskDriver, gateIndex, this));
         }
-
-        return outputGates;
     }
 
     /**
      * Create the mapping between task ID and corresponding gate index and between the channel index
      * and the corresponding task ID.
      */
-    private void createOutputMappings() {
+    private void createOutputMappings(final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding) {
         int channelIndex = 0;
-        for (final List<Descriptors.TaskDescriptor> outputGate : taskDriver.getTaskBindingDescriptor().outputGateBindings) {
-            for (final Descriptors.TaskDescriptor outputTask : outputGate) {
+        for (final List<Descriptors.AbstractNodeDescriptor> outputGate : outputBinding) {
+            for (final Descriptors.AbstractNodeDescriptor outputTask : outputGate) {
                 taskIDToGateIndex.put(outputTask.taskID, channelIndex);
                 channelIndexToTaskID.put(channelIndex, outputTask.taskID);
             }
@@ -300,12 +329,12 @@ public final class TaskDataProducer implements IDataProducer {
         private void handleTaskOutputDataChannelConnect(final IOEvents.GenericIOEvent event) {
             int gateIndex = 0;
             boolean allOutputGatesConnected = true;
-            for (final List<Descriptors.TaskDescriptor> outputGate : taskDriver.getTaskBindingDescriptor().outputGateBindings) {
+            for (final List<Descriptors.AbstractNodeDescriptor> outputGate : taskDriver.getBindingDescriptor().outputGateBindings) {
 
                 int channelIndex = 0;
                 boolean allOutputChannelsPerGateConnected = true;
 
-                for (final Descriptors.TaskDescriptor outputTask : outputGate) {
+                for (final Descriptors.AbstractNodeDescriptor outputTask : outputGate) {
 
                     // Set the channel on right position.
                     if (outputTask.taskID.equals(event.dstTaskID)) {
@@ -318,7 +347,7 @@ public final class TaskDataProducer implements IDataProducer {
                         final OutputGate og = outputGates.get(gateIndex);
                         og.setChannelWriter(channelIndex, channelWriter);
 
-                        LOG.info("OUTPUT CONNECTION FROM " + taskDriver.getTaskDescriptor().name + " [" + taskDriver.getTaskDescriptor().taskID
+                        LOG.info("OUTPUT CONNECTION FROM " + taskDriver.getNodeDescriptor().name + " [" + taskDriver.getNodeDescriptor().taskID
                                 + "] TO TASK " + outputTask.name + " [" + outputTask.taskID + "] IS ESTABLISHED");
                     }
 

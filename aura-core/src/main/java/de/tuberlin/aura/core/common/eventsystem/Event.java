@@ -15,13 +15,20 @@ public class Event implements Serializable {
 
     private static final long serialVersionUID = -1L;
 
-    public final String type;
+    public  String type;
 
     private Object payload;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
+
+    /**
+     *
+     */
+    public Event() {
+
+    }
 
     /**
      * @param type

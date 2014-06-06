@@ -30,7 +30,7 @@ public final class InputGate extends AbstractGate {
      * @param gateIndex
      */
     public InputGate(final ITaskDriver taskDriver, int gateIndex) {
-        super(taskDriver, gateIndex, taskDriver.getTaskBindingDescriptor().inputGateBindings.get(gateIndex).size());
+        super(taskDriver, gateIndex, taskDriver.getBindingDescriptor().inputGateBindings.get(gateIndex).size());
     }
 
     // ---------------------------------------------------
@@ -42,11 +42,11 @@ public final class InputGate extends AbstractGate {
      */
     public void openGate() {
         for (int i = 0; i < numChannels; ++i) {
-            final UUID srcID = taskDriver.getTaskBindingDescriptor().inputGateBindings.get(gateIndex).get(i).taskID;
+            final UUID srcID = taskDriver.getBindingDescriptor().inputGateBindings.get(gateIndex).get(i).taskID;
 
-            final DataIOEvent event = new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, taskDriver.getTaskDescriptor().taskID);
+            final DataIOEvent event = new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, taskDriver.getNodeDescriptor().taskID);
 
-            channelReader.write(taskDriver.getTaskDescriptor().taskID, gateIndex, i, event);
+            channelReader.write(taskDriver.getNodeDescriptor().taskID, gateIndex, i, event);
         }
     }
 
@@ -55,11 +55,11 @@ public final class InputGate extends AbstractGate {
      */
     public void closeGate() {
         for (int i = 0; i < numChannels; ++i) {
-            final UUID srcID = taskDriver.getTaskBindingDescriptor().inputGateBindings.get(gateIndex).get(i).taskID;
+            final UUID srcID = taskDriver.getBindingDescriptor().inputGateBindings.get(gateIndex).get(i).taskID;
 
-            final DataIOEvent event = new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, taskDriver.getTaskDescriptor().taskID);
+            final DataIOEvent event = new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, taskDriver.getNodeDescriptor().taskID);
 
-            channelReader.write(taskDriver.getTaskDescriptor().taskID, gateIndex, i, event);
+            channelReader.write(taskDriver.getNodeDescriptor().taskID, gateIndex, i, event);
         }
     }
 
@@ -67,7 +67,7 @@ public final class InputGate extends AbstractGate {
      * @return
      */
     public BufferQueue<DataIOEvent> getInputQueue() {
-        return channelReader.getInputQueue(taskDriver.getTaskDescriptor().taskID, gateIndex);
+        return channelReader.getInputQueue(taskDriver.getNodeDescriptor().taskID, gateIndex);
     }
 
     /**

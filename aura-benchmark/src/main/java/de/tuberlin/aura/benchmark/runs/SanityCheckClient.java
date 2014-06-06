@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.memory.MemoryView;
+import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,14 +22,13 @@ import de.tuberlin.aura.core.measurement.MeasurementType;
 import de.tuberlin.aura.core.measurement.NumberMeasurement;
 import de.tuberlin.aura.core.measurement.record.BenchmarkRecord.SanityBenchmarkRecord;
 import de.tuberlin.aura.core.measurement.record.Record;
-import de.tuberlin.aura.core.task.spi.AbstractTaskInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataConsumer;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraGraph;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraGraph.Edge;
+import de.tuberlin.aura.core.topology.AuraGraph.Node;
 
 public final class SanityCheckClient {
 
@@ -43,7 +43,7 @@ public final class SanityCheckClient {
     /**
      *
      */
-    public static class Source extends AbstractTaskInvokeable {
+    public static class Source extends AbstractInvokeable {
 
         private static final int RECORDS = 100;
 
@@ -53,14 +53,14 @@ public final class SanityCheckClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
+            final UUID taskID = driver.getNodeDescriptor().taskID;
 
             long send = 0l;
 
             int i = 0;
             while (i++ < RECORDS && isInvokeableRunning()) {
 
-                final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+                final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
 
@@ -69,19 +69,19 @@ public final class SanityCheckClient {
 
                     final Record<SanityBenchmarkRecord> record = new Record<>(new SanityBenchmarkRecord(outputTaskID));
 
-                    taskDriver.getRecordWriter().writeRecord(record, event);
+                    driver.getRecordWriter().writeRecord(record, event);
                     producer.emit(0, index, event);
 
                     ++send;
                 }
             }
 
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
         }
 
         @Override
         public void close() throws Throwable {
-            LOG.debug("{} {} done", taskDriver.getTaskDescriptor().name, taskDriver.getTaskDescriptor().taskIndex);
+            LOG.debug("{} {} done", driver.getNodeDescriptor().name, driver.getNodeDescriptor().taskIndex);
             producer.done();
         }
     }
@@ -89,7 +89,7 @@ public final class SanityCheckClient {
     /**
      *
      */
-    public static class ForwardWithOneInput extends AbstractTaskInvokeable {
+    public static class ForwardWithOneInput extends AbstractInvokeable {
 
         public ForwardWithOneInput(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
@@ -102,8 +102,8 @@ public final class SanityCheckClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
-            final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+            final UUID taskID = driver.getNodeDescriptor().taskID;
+            final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(0);
 
             long bufferCount = 0l;
             long correct = 0l;
@@ -112,12 +112,12 @@ public final class SanityCheckClient {
                 final IOEvents.TransferBufferEvent event = consumer.absorb(0);
 
                 if (event != null) {
-                    final Record<SanityBenchmarkRecord> record = taskDriver.getRecordReader().readRecord(event);
+                    final Record<SanityBenchmarkRecord> record = driver.getRecordReader().readRecord(event);
                     ++bufferCount;
 
-                    if (!record.getData().nextTask.equals(taskDriver.getTaskDescriptor().taskID)) {
+                    if (!record.getData().nextTask.equals(driver.getNodeDescriptor().taskID)) {
                         LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found "
-                                + taskDriver.getTaskDescriptor().taskID + " Task: " + taskDriver.getTaskDescriptor().name);
+                                + driver.getNodeDescriptor().taskID + " Task: " + driver.getNodeDescriptor().name);
                     } else {
                         ++correct;
                     }
@@ -130,7 +130,7 @@ public final class SanityCheckClient {
 
                         record.getData().nextTask = outputTaskID;
 
-                        taskDriver.getRecordWriter().writeRecord(record, outputBuffer);
+                        driver.getRecordWriter().writeRecord(record, outputBuffer);
                         producer.emit(0, index, outputBuffer);
                     }
 
@@ -138,18 +138,18 @@ public final class SanityCheckClient {
                 }
             }
 
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
         }
 
         @Override
         public void close() throws Throwable {
-            LOG.debug("{} {} done", taskDriver.getTaskDescriptor().name, taskDriver.getTaskDescriptor().taskIndex);
+            LOG.debug("{} {} done", driver.getNodeDescriptor().name, driver.getNodeDescriptor().taskIndex);
             producer.done();
         }
     }
 
-    public static class ForwardWithTwoInputs extends AbstractTaskInvokeable {
+    public static class ForwardWithTwoInputs extends AbstractInvokeable {
 
         public ForwardWithTwoInputs(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
@@ -163,8 +163,8 @@ public final class SanityCheckClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
-            final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+            final UUID taskID = driver.getNodeDescriptor().taskID;
+            final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(0);
 
             long bufferCount = 0l;
             long correct = 0l;
@@ -174,12 +174,12 @@ public final class SanityCheckClient {
                 final IOEvents.TransferBufferEvent rightEvent = consumer.absorb(1);
 
                 if (leftEvent != null) {
-                    final Record<SanityBenchmarkRecord> leftRecord = taskDriver.getRecordReader().readRecord(leftEvent);
+                    final Record<SanityBenchmarkRecord> leftRecord = driver.getRecordReader().readRecord(leftEvent);
                     ++bufferCount;
 
-                    if (!leftRecord.getData().nextTask.equals(taskDriver.getTaskDescriptor().taskID)) {
+                    if (!leftRecord.getData().nextTask.equals(driver.getNodeDescriptor().taskID)) {
                         LOG.error("Buffer expected taskID: " + leftRecord.getData().nextTask.toString() + " but found "
-                                + taskDriver.getTaskDescriptor().taskID + " Task: " + taskDriver.getTaskDescriptor().name);
+                                + driver.getNodeDescriptor().taskID + " Task: " + driver.getNodeDescriptor().name);
                     } else {
                         ++correct;
                     }
@@ -192,7 +192,7 @@ public final class SanityCheckClient {
 
                         leftRecord.getData().nextTask = outputTaskID;
 
-                        taskDriver.getRecordWriter().writeRecord(leftRecord, outputBuffer);
+                        driver.getRecordWriter().writeRecord(leftRecord, outputBuffer);
                         producer.emit(0, index, outputBuffer);
                     }
 
@@ -200,12 +200,12 @@ public final class SanityCheckClient {
                 }
 
                 if (rightEvent != null) {
-                    final Record<SanityBenchmarkRecord> rightRecord = taskDriver.getRecordReader().readRecord(leftEvent);
+                    final Record<SanityBenchmarkRecord> rightRecord = driver.getRecordReader().readRecord(leftEvent);
                     ++bufferCount;
 
-                    if (!rightRecord.getData().nextTask.equals(taskDriver.getTaskDescriptor().taskID)) {
+                    if (!rightRecord.getData().nextTask.equals(driver.getNodeDescriptor().taskID)) {
                         LOG.error("Buffer expected taskID: " + rightRecord.getData().nextTask.toString() + " but found "
-                                + taskDriver.getTaskDescriptor().taskID + " Task: " + taskDriver.getTaskDescriptor().name);
+                                + driver.getNodeDescriptor().taskID + " Task: " + driver.getNodeDescriptor().name);
                     } else {
                         ++correct;
                     }
@@ -218,7 +218,7 @@ public final class SanityCheckClient {
 
                         rightRecord.getData().nextTask = outputTaskID;
 
-                        taskDriver.getRecordWriter().writeRecord(rightRecord, outputBuffer);
+                        driver.getRecordWriter().writeRecord(rightRecord, outputBuffer);
                         producer.emit(0, index, outputBuffer);
                     }
 
@@ -226,13 +226,13 @@ public final class SanityCheckClient {
                 }
             }
 
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "BUFFERS", bufferCount));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "CORRECT_BUFFERS", correct));
         }
 
         @Override
         public void close() throws Throwable {
-            LOG.debug("{} {} done", taskDriver.getTaskDescriptor().name, taskDriver.getTaskDescriptor().taskIndex);
+            LOG.debug("{} {} done", driver.getNodeDescriptor().name, driver.getNodeDescriptor().taskIndex);
             producer.done();
         }
     }
@@ -240,7 +240,7 @@ public final class SanityCheckClient {
     /**
      *
      */
-    public static class Sink extends AbstractTaskInvokeable {
+    public static class Sink extends AbstractInvokeable {
 
         public Sink(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
@@ -253,17 +253,17 @@ public final class SanityCheckClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
+            final UUID taskID = driver.getNodeDescriptor().taskID;
             long receivedRecords = 0l;
 
             while (!consumer.isExhausted() && isInvokeableRunning()) {
                 final IOEvents.TransferBufferEvent event = consumer.absorb(0);
 
                 if (event != null) {
-                    final Record<SanityBenchmarkRecord> record = taskDriver.getRecordReader().readRecord(event);
-                    if (!record.getData().nextTask.equals(taskDriver.getTaskDescriptor().taskID)) {
+                    final Record<SanityBenchmarkRecord> record = driver.getRecordReader().readRecord(event);
+                    if (!record.getData().nextTask.equals(driver.getNodeDescriptor().taskID)) {
                         LOG.error("Buffer expected taskID: " + record.getData().nextTask.toString() + " but found "
-                                + taskDriver.getTaskDescriptor().taskID + " Task: " + taskDriver.getTaskDescriptor().name);
+                                + driver.getNodeDescriptor().taskID + " Task: " + driver.getNodeDescriptor().name);
                     }
 
                     ++receivedRecords;
@@ -271,7 +271,7 @@ public final class SanityCheckClient {
                 }
             }
 
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SINK", receivedRecords));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SINK", receivedRecords));
         }
     }
 
@@ -327,7 +327,7 @@ public final class SanityCheckClient {
         List<AuraTopology> topologies = new ArrayList<>();
 
         int executionUnits = machines * tasksPerMaschine;
-        AuraDirectedGraph.AuraTopologyBuilder atb;
+        AuraGraph.AuraTopologyBuilder atb;
 
         // 2 layered - point2point connection
         atb = client.createTopologyBuilder();

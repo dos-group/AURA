@@ -1,9 +1,12 @@
 package de.tuberlin.aura.core.task.spi;
 
 
+import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
+import de.tuberlin.aura.core.memory.spi.IAllocator;
 
 public interface IDataConsumer {
 
@@ -22,4 +25,9 @@ public interface IDataConsumer {
     public abstract int getInputGateIndexFromTaskID(final UUID taskID);
 
     public abstract boolean isExhausted();
+
+
+    public abstract void bind(final List<List<Descriptors.AbstractNodeDescriptor>> inputBinding, final IAllocator allocator);
+
+    public abstract IAllocator getAllocator();
 }

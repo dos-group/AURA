@@ -259,6 +259,7 @@ public class EventDispatcher implements IEventDispatcher {
      *
      * @return
      */
+    @Override
     public void joinDispatcherThread() {
         if(useDispatchThread) {
             try {

@@ -30,6 +30,7 @@
         <dependency>
             <groupId>com.esotericsoftware.kryo</groupId>
             <artifactId>kryo</artifactId>
+            <version>2.22</version>
         </dependency>
         <dependency>
             <groupId>bcel</groupId>
@@ -65,6 +66,16 @@
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-assistedinject</artifactId>
             <version>3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware.reflectasm</groupId>
+            <artifactId>reflectasm</artifactId>
+            <version>1.09</version>
         </dependency>
     </dependencies>
 

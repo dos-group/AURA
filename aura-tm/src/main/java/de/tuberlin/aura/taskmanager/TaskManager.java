@@ -6,6 +6,8 @@ import java.util.*;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.BufferMemoryManager;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
+import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
+import de.tuberlin.aura.storage.DataStorage;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -16,7 +18,6 @@ import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
@@ -163,15 +164,15 @@ public final class TaskManager implements ITaskManager {
     // ------------- Workload Manager Protocol ---------------
 
     /**
-     * @param taskDeploymentDescriptor
+     * @param deploymentDescriptor
      */
     @Override
-    public void installTask(final TaskDeploymentDescriptor taskDeploymentDescriptor) {
+    public void installTask(final Descriptors.DeploymentDescriptor deploymentDescriptor) {
         // sanity check.
-        if (taskDeploymentDescriptor == null)
-            throw new IllegalArgumentException("taskDescriptor == null");
+        if (deploymentDescriptor == null)
+            throw new IllegalArgumentException("nodeDescriptor == null");
 
-        final ITaskDriver taskDriver = registerTask(taskDeploymentDescriptor);
+        final ITaskDriver taskDriver = registerTask(deploymentDescriptor);
         executionManager.scheduleTask(taskDriver);
     }
 
@@ -179,12 +180,12 @@ public final class TaskManager implements ITaskManager {
      * @param deploymentDescriptors
      */
     @Override
-    public void installTasks(final List<TaskDeploymentDescriptor> deploymentDescriptors) {
+    public void installTasks(final List<Descriptors.DeploymentDescriptor> deploymentDescriptors) {
         // sanity check.
         if (deploymentDescriptors == null)
             throw new IllegalArgumentException("deploymentDescriptors == null");
 
-        for (final TaskDeploymentDescriptor tdd : deploymentDescriptors) {
+        for (final Descriptors.DeploymentDescriptor tdd : deploymentDescriptors) {
             final ITaskDriver taskDriver = registerTask(tdd);
             executionManager.scheduleTask(taskDriver);
         }
@@ -196,7 +197,7 @@ public final class TaskManager implements ITaskManager {
      * @param outputBinding
      */
     @Override
-    public void addOutputBinding(final UUID taskID, final List<List<Descriptors.TaskDescriptor>> outputBinding) {
+    public void addOutputBinding(final UUID taskID, final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding) {
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
@@ -206,9 +207,22 @@ public final class TaskManager implements ITaskManager {
         final ITaskDriver taskDriver = deployedTasks.get(taskID);
 
         if(taskDriver == null)
-            throw new IllegalArgumentException("taskDriver == null");
+            throw new IllegalArgumentException("driver == null");
 
-        taskDriver.createOutputBinding(outputBinding);
+        if (taskDriver.getInvokeable() instanceof DataStorage) {
+            final DataStorage ds = (DataStorage)taskDriver.getInvokeable();
+            ds.createOutputBinding(outputBinding);
+        } else {
+
+            final AbstractInvokeable ai = taskDriver.getDataProducer().getStorage();
+
+            if (ai == null) {
+                throw new IllegalStateException("node has no storage");
+            } else {
+                final DataStorage ds = (DataStorage)ai;
+                ds.createOutputBinding(outputBinding);
+            }
+        }
     }
 
     // ---------------------------------------------------
@@ -250,21 +264,21 @@ public final class TaskManager implements ITaskManager {
     }
 
     /**
-     * @param taskDeploymentDescriptor
+     * @param deploymentDescriptor
      * @return
      */
-    private ITaskDriver registerTask(final TaskDeploymentDescriptor taskDeploymentDescriptor) {
+    private ITaskDriver registerTask(final Descriptors.DeploymentDescriptor deploymentDescriptor) {
 
-        final UUID taskID = taskDeploymentDescriptor.taskDescriptor.taskID;
+        final UUID taskID = deploymentDescriptor.nodeDescriptor.taskID;
 
         if (deployedTasks.containsKey(taskID))
             throw new IllegalStateException("task already deployed");
 
         // Create an task driver for the submitted task.
-        final ITaskDriver taskDriver = new TaskDriver(this, taskDeploymentDescriptor);
+        final ITaskDriver taskDriver = new TaskDriver(this, deploymentDescriptor);
         deployedTasks.put(taskID, taskDriver);
 
-        final UUID topologyID = taskDeploymentDescriptor.taskDescriptor.topologyID;
+        final UUID topologyID = deploymentDescriptor.nodeDescriptor.topologyID;
         List<ITaskDriver> contexts = deployedTopologyTasks.get(topologyID);
 
         if (contexts == null) {
@@ -282,12 +296,12 @@ public final class TaskManager implements ITaskManager {
     private void unregisterTask(final ITaskDriver taskDriver) {
         // sanity check.
         if (taskDriver == null)
-            throw new IllegalArgumentException("taskDriver == null");
+            throw new IllegalArgumentException("driver == null");
 
-        if (deployedTasks.remove(taskDriver.getTaskDescriptor().taskID) == null)
+        if (deployedTasks.remove(taskDriver.getNodeDescriptor().taskID) == null)
             throw new IllegalStateException("task is not deployed");
 
-        final List<ITaskDriver> taskList = deployedTopologyTasks.get(taskDriver.getTaskDescriptor().topologyID);
+        final List<ITaskDriver> taskList = deployedTopologyTasks.get(taskDriver.getNodeDescriptor().topologyID);
 
         if (taskList == null)
             throw new IllegalStateException();
@@ -296,7 +310,7 @@ public final class TaskManager implements ITaskManager {
             throw new IllegalStateException();
 
         if (taskList.size() == 0)
-            deployedTopologyTasks.remove(taskDriver.getTaskDescriptor().topologyID);
+            deployedTopologyTasks.remove(taskDriver.getNodeDescriptor().topologyID);
 
         LOG.trace("Shutdown event dispatchers");
         taskDriver.shutdown();
@@ -319,7 +333,7 @@ public final class TaskManager implements ITaskManager {
             LOG.info("Task driver context for topology [" + event.getTopologyID() + "] is removed");
         } else {
             for (final ITaskDriver taskDriver : taskList) {
-                if (taskDriver.getTaskDescriptor().taskID.equals(event.getTaskID())) {
+                if (taskDriver.getNodeDescriptor().taskID.equals(event.getTaskID())) {
                     taskDriver.getTaskStateMachine().dispatchEvent((Event) event.getPayload());
                 }
             }

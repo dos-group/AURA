@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.memory.MemoryView;
+import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,14 +22,13 @@ import de.tuberlin.aura.core.measurement.MeasurementType;
 import de.tuberlin.aura.core.measurement.MedianHelper;
 import de.tuberlin.aura.core.measurement.record.BenchmarkRecord;
 import de.tuberlin.aura.core.measurement.record.Record;
-import de.tuberlin.aura.core.task.spi.AbstractTaskInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataConsumer;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.topology.AuraGraph.Edge;
+import de.tuberlin.aura.core.topology.AuraGraph.Node;
 
 public final class BenchmarkClient {
 
@@ -43,7 +43,7 @@ public final class BenchmarkClient {
     /**
      *
      */
-    public static class Task1Exe extends AbstractTaskInvokeable {
+    public static class Task1Exe extends AbstractInvokeable {
 
         private static final int RECORDS = 10000;
 
@@ -53,13 +53,13 @@ public final class BenchmarkClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
+            final UUID taskID = driver.getNodeDescriptor().taskID;
 
             long start = System.nanoTime();
 
             int i = 0;
             while (i++ < RECORDS && isInvokeableRunning()) {
-                final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+                final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(0);
                 for (int index = 0; index < outputs.size(); ++index) {
                     final UUID outputTaskID = getTaskID(0, index);
 
@@ -68,7 +68,7 @@ public final class BenchmarkClient {
 
                     final Record<BenchmarkRecord> record = new Record<>(new BenchmarkRecord());
 
-                    taskDriver.getRecordWriter().writeRecord(record, outputBuffer);
+                    driver.getRecordWriter().writeRecord(record, outputBuffer);
                     producer.emit(0, index, outputBuffer);
 
                     // LOG.debug("Emit at: " + record.getData().time + " " + outputBuffer);
@@ -88,7 +88,7 @@ public final class BenchmarkClient {
     /**
      *
      */
-    public static class Task2Exe extends AbstractTaskInvokeable {
+    public static class Task2Exe extends AbstractInvokeable {
 
         public Task2Exe(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
@@ -101,7 +101,7 @@ public final class BenchmarkClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
+            final UUID taskID = driver.getNodeDescriptor().taskID;
             int bufNum = 0;
 
             while (!consumer.isExhausted() && isInvokeableRunning()) {
@@ -110,8 +110,8 @@ public final class BenchmarkClient {
                 // LOG.debug("received: " + buffer + " number " + Integer.toString(++bufNum));
 
                 if (buffer != null) {
-                    final Record<BenchmarkRecord> record = taskDriver.getRecordReader().readRecord(buffer);
-                    final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+                    final Record<BenchmarkRecord> record = driver.getRecordReader().readRecord(buffer);
+                    final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(0);
 
                     for (int index = 0; index < outputs.size(); ++index) {
                         final UUID outputTaskID = getTaskID(0, index);
@@ -119,7 +119,7 @@ public final class BenchmarkClient {
                         final MemoryView sendBuffer = producer.alloc();
                         final IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
-                        taskDriver.getRecordWriter().writeRecord(record, outputBuffer);
+                        driver.getRecordWriter().writeRecord(record, outputBuffer);
                         producer.emit(0, index, outputBuffer);
 
                         // LOG.debug("Emit at: " + record.getData().time);
@@ -139,7 +139,7 @@ public final class BenchmarkClient {
     /**
      *
      */
-    public static class Task3Exe extends AbstractTaskInvokeable {
+    public static class Task3Exe extends AbstractInvokeable {
 
         public Task3Exe(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
@@ -153,7 +153,7 @@ public final class BenchmarkClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
+            final UUID taskID = driver.getNodeDescriptor().taskID;
 
             while (!consumer.isExhausted() && isInvokeableRunning()) {
 
@@ -161,13 +161,13 @@ public final class BenchmarkClient {
                 final IOEvents.TransferBufferEvent right = consumer.absorb(1);
 
                 if (left != null || right != null) {
-                    final Record<BenchmarkRecord> leftRecord = taskDriver.getRecordReader().readRecord(left);
-                    final Record<BenchmarkRecord> rightRecord = taskDriver.getRecordReader().readRecord(right);
+                    final Record<BenchmarkRecord> leftRecord = driver.getRecordReader().readRecord(left);
+                    final Record<BenchmarkRecord> rightRecord = driver.getRecordReader().readRecord(right);
 
                     left.buffer.free();
                     right.buffer.free();
 
-                    final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+                    final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(0);
 
                     for (int index = 0; index < outputs.size(); ++index) {
 
@@ -177,14 +177,14 @@ public final class BenchmarkClient {
                         MemoryView sendBuffer = producer.alloc();
                         IOEvents.TransferBufferEvent outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
-                        taskDriver.getRecordWriter().writeRecord(leftRecord, outputBuffer);
+                        driver.getRecordWriter().writeRecord(leftRecord, outputBuffer);
                         producer.emit(0, index, outputBuffer);
 
                         // Send left record
                         sendBuffer = producer.alloc();
                         outputBuffer = new IOEvents.TransferBufferEvent(taskID, outputTaskID, sendBuffer);
 
-                        taskDriver.getRecordWriter().writeRecord(rightRecord, outputBuffer);
+                        driver.getRecordWriter().writeRecord(rightRecord, outputBuffer);
                         producer.emit(0, index, outputBuffer);
                     }
                 }
@@ -200,7 +200,7 @@ public final class BenchmarkClient {
     /**
      *
      */
-    public static class Task4Exe extends AbstractTaskInvokeable {
+    public static class Task4Exe extends AbstractInvokeable {
 
         public Task4Exe(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
@@ -213,7 +213,7 @@ public final class BenchmarkClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
+            final UUID taskID = driver.getNodeDescriptor().taskID;
 
             List<Long> latencies = new LinkedList<>();
             while (!consumer.isExhausted() && isInvokeableRunning()) {
@@ -222,7 +222,7 @@ public final class BenchmarkClient {
                 // LOG.debug("received: " + buffer);
 
                 if (buffer != null) {
-                    final Record<BenchmarkRecord> record = taskDriver.getRecordReader().readRecord(buffer);
+                    final Record<BenchmarkRecord> record = driver.getRecordReader().readRecord(buffer);
 
                     long latency = System.currentTimeMillis() - record.getData().time;
                     latencies.add(latency);
@@ -253,7 +253,7 @@ public final class BenchmarkClient {
             // LOG.info("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) +
             // "|" + Long.toString(maxLatency) + "|"
             // + Long.toString(medianLatency));
-            taskDriver.getMeasurementManager().add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
+            driver.getMeasurementManager().add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
                     "Buffer latency",
                     minLatency,
                     maxLatency,

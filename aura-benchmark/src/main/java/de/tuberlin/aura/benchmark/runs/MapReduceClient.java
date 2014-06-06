@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.*;
 
 import de.tuberlin.aura.core.memory.MemoryView;
+import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,14 +16,13 @@ import de.tuberlin.aura.core.measurement.*;
 import de.tuberlin.aura.core.measurement.record.BenchmarkRecord;
 import de.tuberlin.aura.core.measurement.record.BenchmarkRecord.WordCountBenchmarkRecord;
 import de.tuberlin.aura.core.measurement.record.Record;
-import de.tuberlin.aura.core.task.spi.AbstractTaskInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataConsumer;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Edge;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.topology.AuraGraph.Edge;
+import de.tuberlin.aura.core.topology.AuraGraph.Node;
 
 public final class MapReduceClient {
 
@@ -37,7 +37,7 @@ public final class MapReduceClient {
     /**
      *
      */
-    public static class Mapper extends AbstractTaskInvokeable {
+    public static class Mapper extends AbstractInvokeable {
 
         private static final String DATA_PATH = "/data/chwuertz/aura/input/";
 
@@ -49,17 +49,17 @@ public final class MapReduceClient {
 
         @Override
         public void run() throws Throwable {
-            final UUID taskID = taskDriver.getTaskDescriptor().taskID;
+            final UUID taskID = driver.getNodeDescriptor().taskID;
 
             long send = 0l;
             long accumulatedBufferSize = 0l;
 
-            final List<Descriptors.TaskDescriptor> outputs = taskDriver.getTaskBindingDescriptor().outputGateBindings.get(0);
+            final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(0);
 
             File dir = new File(DATA_PATH);
             File[] files = dir.listFiles();
-            File dataFile = files[taskDriver.getTaskDescriptor().taskIndex % files.length];
-            taskDriver.getMeasurementManager().add(new InformationMeasurement(MeasurementType.INFORMATION, "FILE", dataFile.getName()));
+            File dataFile = files[driver.getNodeDescriptor().taskIndex % files.length];
+            driver.getMeasurementManager().add(new InformationMeasurement(MeasurementType.INFORMATION, "FILE", dataFile.getName()));
 
             Map<Integer, Integer> indexMap = new TreeMap<>();
             for (int i = 0; i < outputs.size(); ++i) {
@@ -93,7 +93,7 @@ public final class MapReduceClient {
 
                     final Record<WordCountBenchmarkRecord> record = new Record<>(new WordCountBenchmarkRecord(word, 1));
 
-                    taskDriver.getRecordWriter().writeRecord(record, event);
+                    driver.getRecordWriter().writeRecord(record, event);
                     producer.emit(0, index, event);
 
                     accumulatedBufferSize += buffer.size();
@@ -101,11 +101,11 @@ public final class MapReduceClient {
                 }
             }
 
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "TOTAL_BUFFER_SIZE", accumulatedBufferSize));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SOURCE", send));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "TOTAL_BUFFER_SIZE", accumulatedBufferSize));
 
             for (Map.Entry<Integer, Integer> entry : indexMap.entrySet()) {
-                taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER,
+                driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER,
                         "INDEX " + Integer.toString(entry.getKey()),
                         entry.getValue()));
             }
@@ -120,7 +120,7 @@ public final class MapReduceClient {
     /**
      *
      */
-    public static class Reducer extends AbstractTaskInvokeable {
+    public static class Reducer extends AbstractInvokeable {
 
         public Reducer(final ITaskDriver taskDriver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
@@ -145,7 +145,7 @@ public final class MapReduceClient {
                 // LOG.debug("received: " + buffer);
 
                 if (event != null) {
-                    final Record<BenchmarkRecord> record = taskDriver.getRecordReader().readRecord(event);
+                    final Record<BenchmarkRecord> record = driver.getRecordReader().readRecord(event);
 
                     long now = System.currentTimeMillis();
                     long latency = now - record.getData().time;
@@ -184,21 +184,21 @@ public final class MapReduceClient {
             // LOG.info("RESULTS|" + Double.toString(avgLatency) + "|" + Long.toString(minLatency) +
             // "|" + Long.toString(maxLatency) + "|"
             // + Long.toString(medianLatency));
-            taskDriver.getMeasurementManager().add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
+            driver.getMeasurementManager().add(new AccumulatedLatencyMeasurement(MeasurementType.LATENCY,
                     "Buffer latency",
                     minLatency,
                     maxLatency,
                     avgLatency,
                     medianLatency));
             for (Map.Entry<Long, Long> entry : dataArrival.entrySet()) {
-                taskDriver.getMeasurementManager().add(new ThroughputMeasurement(MeasurementType.THROUGHPUT,
+                driver.getMeasurementManager().add(new ThroughputMeasurement(MeasurementType.THROUGHPUT,
                         "Throughput",
                         entry.getValue(),
                         entry.getKey()));
             }
 
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SINK", received));
-            taskDriver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "TOTAL_BUFFER_SIZE", accumulatedBufferSize));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "SINK", received));
+            driver.getMeasurementManager().add(new NumberMeasurement(MeasurementType.NUMBER, "TOTAL_BUFFER_SIZE", accumulatedBufferSize));
         }
     }
 

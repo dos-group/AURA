@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.*;
+import de.tuberlin.aura.core.topology.AuraGraph.*;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
 public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology> {
@@ -72,12 +72,12 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
                     if (!en.logicalNode.isAlreadyDeployed) {
-                        en.getTaskDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
+                        en.getNodeDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
                     }
 
-                    LOG.debug(en.getTaskDescriptor().getMachineDescriptor().address.toString()
-                            + " -> " + en.getTaskDescriptor().name + "_"
-                            + en.getTaskDescriptor().taskIndex);
+                    LOG.debug(en.getNodeDescriptor().getMachineDescriptor().address.toString()
+                            + " -> " + en.getNodeDescriptor().name + "_"
+                            + en.getNodeDescriptor().taskIndex);
                 }
             }
         });

@@ -46,6 +46,8 @@ public final class IOEvents {
         public static final String DATA_EVENT_BUFFER = "DATA_EVENT_BUFFER";
 
         public static final String DATA_EVENT_SOURCE_EXHAUSTED = "DATA_EVENT_SOURCE_EXHAUSTED";
+
+        public static final String DATA_EVENT_RECORD_TYPE = "DATA_EVENT_RECORD_TYPE";
     }
 
     /**
@@ -79,7 +81,7 @@ public final class IOEvents {
 
         private static final long serialVersionUID = -1L;
 
-        private Channel channel;
+        transient private Channel channel;
 
         public BaseIOEvent(final String type) {
             super(type);

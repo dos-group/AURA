@@ -8,13 +8,13 @@ import org.slf4j.Logger;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.measurement.MeasurementManager;
 
-public abstract class AbstractTaskInvokeable implements ITaskLifecycle {
+public abstract class AbstractInvokeable implements IExecutionLifecycle {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    protected final ITaskDriver taskDriver;
+    protected final ITaskDriver driver;
 
     protected final IDataProducer producer;
 
@@ -28,10 +28,10 @@ public abstract class AbstractTaskInvokeable implements ITaskLifecycle {
     // Constructors.
     // ---------------------------------------------------
 
-    public AbstractTaskInvokeable(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+    public AbstractInvokeable(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
         // sanity check.
         if (taskDriver == null)
-            throw new IllegalArgumentException("taskDriver == null");
+            throw new IllegalArgumentException("driver == null");
         if (producer == null)
             throw new IllegalArgumentException("producer == null");
         if (consumer == null)
@@ -39,7 +39,7 @@ public abstract class AbstractTaskInvokeable implements ITaskLifecycle {
         if (LOG == null)
             throw new IllegalArgumentException("LOG == null");
 
-        this.taskDriver = taskDriver;
+        this.driver = taskDriver;
 
         this.producer = producer;
 
@@ -57,8 +57,8 @@ public abstract class AbstractTaskInvokeable implements ITaskLifecycle {
                                             TaskStates.TaskTransition transition,
                                             TaskStates.TaskState state) {
                         MeasurementManager.fireEvent(MeasurementManager.TASK_FINISHED + "-"
-                                + taskDriver.getTaskDescriptor().taskID + "-" + taskDriver.getTaskDescriptor().name + "-"
-                                + taskDriver.getTaskDescriptor().taskIndex);
+                                + taskDriver.getNodeDescriptor().taskID + "-" + taskDriver.getNodeDescriptor().name + "-"
+                                + taskDriver.getNodeDescriptor().taskIndex);
                     }
                 });
     }
@@ -76,7 +76,7 @@ public abstract class AbstractTaskInvokeable implements ITaskLifecycle {
     public void release() throws Throwable {}
 
     public UUID getTaskID(int gateIndex, int channelIndex) {
-        return taskDriver.getTaskBindingDescriptor().outputGateBindings.get(gateIndex).get(channelIndex).taskID;
+        return driver.getBindingDescriptor().outputGateBindings.get(gateIndex).get(channelIndex).taskID;
     }
 
     public void stopInvokeable() {

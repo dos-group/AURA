@@ -6,7 +6,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import de.tuberlin.aura.core.topology.AuraDirectedGraph;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -18,7 +17,7 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.measurement.MeasurementManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
 

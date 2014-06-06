@@ -4,17 +4,20 @@ import java.io.Serializable;
 import java.util.*;
 
 import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology.DeploymentType;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology.DeploymentType;
 
-public class AuraDirectedGraph {
+public class AuraGraph {
 
     // Disallow instantiation.
-    private AuraDirectedGraph() {}
+    private AuraGraph() {}
+
+    //---------------------------------------------------------------------------------------------------------------
 
     /**
      *
@@ -184,26 +187,6 @@ public class AuraDirectedGraph {
 
             this.executionNodeMap = Collections.unmodifiableMap(executionNodeMap);
         }
-
-
-        /*public void expandTopology(final AuraTopology topology) {
-            // sanity check.
-            if(topology == null)
-                throw new IllegalArgumentException("topology == null");
-
-            //
-            this.nodeMap.putAll(topology.nodeMap);
-
-            this.sourceMap.putAll(topology.sourceMap);
-
-            this.sinkMap.putAll(topology.sinkMap);
-
-            this.edges.putAll(topology.edges);
-
-            this.userCodeMap.putAll(topology.userCodeMap);
-
-            this.uidNodeMap.putAll(topology.uidNodeMap);
-        }*/
     }
 
     /**
@@ -336,6 +319,26 @@ public class AuraDirectedGraph {
             return nodeConnector.currentSource(node);
         }
 
+
+        public NodeConnector addStorageNode(final StorageNode node) {
+            // sanity check.
+            if (node == null)
+                throw new IllegalArgumentException("node == null");
+            if (nodeMap.containsKey(node.name))
+                throw new IllegalStateException("node already exists");
+
+            nodeMap.put(node.name, node);
+
+            sourceMap.put(node.name, node);
+
+            sinkMap.put(node.name, node);
+
+            uidNodeMap.put(node.uid, node);
+
+            return nodeConnector.currentSource(node);
+        }
+
+
         public NodeConnector and() {
             return nodeConnector;
         }
@@ -395,16 +398,20 @@ public class AuraDirectedGraph {
                 }
 
                 for (final Node n : nodeMap.values()) {
-                    final List<Class<?>> userCodeClazzList = userCodeClazzMap.get(n.name);
 
-                    final List<UserCode> userCodeList = new ArrayList<>();
+                    if (n instanceof ComputationNode) {
 
-                    for(final Class<?> userCodeClazz : userCodeClazzList) {
-                        final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
-                        userCodeList.add(uc);
+                        final List<Class<?>> userCodeClazzList = userCodeClazzMap.get(n.name);
+
+                        final List<UserCode> userCodeList = new ArrayList<>();
+
+                        for(final Class<?> userCodeClazz : userCodeClazzList) {
+                            final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
+                            userCodeList.add(uc);
+                        }
+
+                        userCodeMap.put(n.name, userCodeList);
                     }
-
-                    userCodeMap.put(n.name, userCodeList);
                 }
 
                 isBuilt = true;
@@ -517,31 +524,14 @@ public class AuraDirectedGraph {
                 return Collections.unmodifiableMap(edgeProperties);
             }
         }
-
-        /*private final class ExternalEdge implements Serializable {
-
-            public final Pair<Pair<String,String>,Edge> externalEdge;
-
-            public ExternalEdge(final String srcNodeName, final String dstNodeName, final Edge edge) {
-                // sanity check.
-                if(srcNodeName == null)
-                    throw new IllegalArgumentException("srcNodeName == null");
-                if(dstNodeName == null)
-                    throw new IllegalArgumentException("dstNodeName == null");
-                if(edge == null)
-                    throw new IllegalArgumentException("edge == null");
-
-                final Pair<String,String> stringEdge =  new Pair<>(srcNodeName, dstNodeName);
-
-                this.externalEdge = new Pair<>(stringEdge, edge);
-            }
-        }*/
     }
+
+    //---------------------------------------------------------------------------------------------------------------
 
     /**
      *
      */
-    public static final class Node implements Visitable<Node>, Serializable {
+    public static class Node implements Visitable<Node>, Serializable {
 
         private static final long serialVersionUID = -1L;
 
@@ -729,6 +719,30 @@ public class AuraDirectedGraph {
     /**
      *
      */
+    public static final class StorageNode extends Node {
+
+        public StorageNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.PERSISTED_IN_MEMORY, ExecutionType.BLOCKING);
+        }
+
+    }
+
+    /**
+     *
+     */
+    public static final class ComputationNode extends Node {
+
+        public ComputationNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+        }
+
+    }
+
+    //---------------------------------------------------------------------------------------------------------------
+
+    /**
+     *
+     */
     public static final class ExecutionNode implements Visitable<ExecutionNode> {
 
         // ---------------------------------------------------
@@ -741,9 +755,9 @@ public class AuraDirectedGraph {
 
         public final int taskIndex;
 
-        private TaskDescriptor taskDescriptor;
+        private AbstractNodeDescriptor nodeDescriptor;
 
-        private TaskBindingDescriptor taskBindingDescriptor;
+        private NodeBindingDescriptor nodeBindingDescriptor;
 
         private TaskState currentState;
 
@@ -783,40 +797,40 @@ public class AuraDirectedGraph {
             return currentState;
         }
 
-        public void setTaskDescriptor(final TaskDescriptor taskDescriptor) {
+        public void setNodeDescriptor(final AbstractNodeDescriptor nodeDescriptor) {
             // sanity check.
-            if (taskDescriptor == null)
-                throw new IllegalArgumentException("taskDescriptor == null");
-            if (this.taskDescriptor != null)
-                throw new IllegalStateException("taskDescriptor is already set");
+            if (nodeDescriptor == null)
+                throw new IllegalArgumentException("nodeDescriptor == null");
+            if (this.nodeDescriptor != null)
+                throw new IllegalStateException("nodeDescriptor is already set");
 
-            this.taskDescriptor = taskDescriptor;
+            this.nodeDescriptor = nodeDescriptor;
         }
 
-        public TaskDescriptor getTaskDescriptor() {
-            return this.taskDescriptor;
+        public AbstractNodeDescriptor getNodeDescriptor() {
+            return this.nodeDescriptor;
         }
 
-        public void setTaskBindingDescriptor(final TaskBindingDescriptor taskBindingDescriptor) {
+        public void setNodeBindingDescriptor(final Descriptors.NodeBindingDescriptor nodeBindingDescriptor) {
             // sanity check.
-            if (taskBindingDescriptor == null)
-                throw new IllegalArgumentException("taskBindingDescriptor == null");
-            //if (this.taskBindingDescriptor != null)
-            //    throw new IllegalStateException("taskBindingDescriptor is already set");
+            if (nodeBindingDescriptor == null)
+                throw new IllegalArgumentException("nodeBindingDescriptor == null");
+            //if (this.nodeBindingDescriptor != null)
+            //    throw new IllegalStateException("nodeBindingDescriptor is already set");
 
-            this.taskBindingDescriptor = taskBindingDescriptor;
+            this.nodeBindingDescriptor = nodeBindingDescriptor;
         }
 
-        public TaskBindingDescriptor getTaskBindingDescriptor() {
-            return this.taskBindingDescriptor;
+        public Descriptors.NodeBindingDescriptor getNodeBindingDescriptor() {
+            return this.nodeBindingDescriptor;
         }
 
         @Override
         public String toString() {
             return (new StringBuilder()).append("ExecutionNode = {")
                                         .append(" uid = " + uid.toString() + ", ")
-                                        .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-                                        .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
+                                        .append(" nodeDescriptor = " + nodeDescriptor.toString() + ", ")
+                                        .append(" nodeBindingDescriptor = " + nodeBindingDescriptor.toString())
                                         .append(" }")
                                         .toString();
         }

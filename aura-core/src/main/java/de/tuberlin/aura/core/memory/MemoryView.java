@@ -34,8 +34,8 @@ public final class MemoryView {
 
     public MemoryView(final IAllocator allocator, final byte[] memory, int baseOffset, int size) {
         // sanity check.
-        if (allocator == null)
-            throw new IllegalArgumentException("allocator == null");
+        //if (allocator == null)
+        //    throw new IllegalArgumentException("allocator == null");
         if (memory == null)
             throw new IllegalArgumentException("memory == null");
         if (baseOffset < 0 && baseOffset >= memory.length)
