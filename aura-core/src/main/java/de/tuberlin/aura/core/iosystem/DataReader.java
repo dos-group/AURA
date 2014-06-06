@@ -251,7 +251,6 @@ public class DataReader {
                     // send acknowledge
                     IOEvents.DataIOEvent acknowledge =
                             new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED_ACK, event.dstTaskID, event.srcTaskID);
-                    acknowledge.setPayload(new Dummy());
                     ctx.channel().writeAndFlush(acknowledge);
                     break;
 
@@ -265,13 +264,6 @@ public class DataReader {
                     break;
             }
         }
-    }
-
-    public static class Dummy {
-
-        final byte[] by = new byte[] {1, 2, 3};
-
-        final Class<?> clazz = Integer.class;
     }
 
     // ---------------------------------------------------
