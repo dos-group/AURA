@@ -4,17 +4,20 @@ import java.io.Serializable;
 import java.util.*;
 
 import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskBindingDescriptor;
-import de.tuberlin.aura.core.descriptors.Descriptors.TaskDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology.DeploymentType;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology.DeploymentType;
 
-public class AuraDirectedGraph {
+public class AuraGraph {
 
     // Disallow instantiation.
-    private AuraDirectedGraph() {}
+    private AuraGraph() {}
+
+    //---------------------------------------------------------------------------------------------------------------
 
     /**
      *
@@ -51,7 +54,7 @@ public class AuraDirectedGraph {
 
         public final String name;
 
-        public final UUID topologyID;
+        public UUID topologyID;
 
         public final Map<String, Node> nodeMap;
 
@@ -61,7 +64,7 @@ public class AuraDirectedGraph {
 
         public final Map<Pair<String, String>, Edge> edges;
 
-        public final Map<String, UserCode> userCodeMap;
+        public final Map<String, List<UserCode>> userCodeMap;
 
         public final Map<UUID, Node> uidNodeMap;
 
@@ -70,6 +73,9 @@ public class AuraDirectedGraph {
         public final EnumSet<MonitoringType> monitoringProperties;
 
         public Map<UUID, ExecutionNode> executionNodeMap;
+
+
+        public final Map<Pair<String, String>, Edge.TransferType> externalEdges;
 
         // ---------------------------------------------------
         // Constructor.
@@ -82,10 +88,11 @@ public class AuraDirectedGraph {
                             final Map<String, Node> sourceMap,
                             final Map<String, Node> sinkMap,
                             final Map<Pair<String, String>, Edge> edges,
-                            final Map<String, UserCode> userCodeMap,
+                            final Map<String, List<UserCode>> userCodeMap,
                             final Map<UUID, Node> uidNodeMap,
                             final DeploymentType deploymentType,
-                            final EnumSet<MonitoringType> monitoringProperties) {
+                            final EnumSet<MonitoringType> monitoringProperties,
+                            final Map<Pair<String, String>, Edge.TransferType> externalEdges) {
 
             // sanity check.
             if (machineID == null)
@@ -110,8 +117,10 @@ public class AuraDirectedGraph {
                 throw new IllegalArgumentException("deploymentType == null");
             if (monitoringProperties == null)
                 throw new IllegalArgumentException("monitoringType == null");
+            if (externalEdges == null)
+                throw new IllegalArgumentException("externalEdges == null");
 
-            this.machineID = machineID;
+            /*this.machineID = machineID;
 
             this.name = name;
 
@@ -134,6 +143,35 @@ public class AuraDirectedGraph {
             this.monitoringProperties = EnumSet.copyOf(monitoringProperties);
 
             this.executionNodeMap = null;
+
+            this.externalEdges = Collections.unmodifiableMap(externalEdges);*/
+
+
+            this.machineID = machineID;
+
+            this.name = name;
+
+            this.topologyID = topologyID;
+
+            this.nodeMap = nodeMap;
+
+            this.sourceMap = sourceMap;
+
+            this.sinkMap = sinkMap;
+
+            this.edges = edges;
+
+            this.userCodeMap = userCodeMap;
+
+            this.uidNodeMap = uidNodeMap;
+
+            this.deploymentType = deploymentType;
+
+            this.monitoringProperties = EnumSet.copyOf(monitoringProperties);
+
+            this.executionNodeMap = null;
+
+            this.externalEdges = externalEdges;
         }
 
         // ---------------------------------------------------
@@ -174,13 +212,16 @@ public class AuraDirectedGraph {
 
         private final UserCodeExtractor codeExtractor;
 
-        private final Map<String, UserCode> userCodeMap;
+        private final Map<String, List<UserCode>> userCodeMap;
 
-        private final Map<String, Class<?>> userCodeClazzMap;
+        private final Map<String, List<Class<?>>> userCodeClazzMap;
 
         private final Map<UUID, Node> uidNodeMap;
 
-        private boolean isBuilded = false;
+        private boolean isBuilt = false;
+
+
+        private final Map<Pair<String, String>, Edge.TransferType> externalEdges;
 
         // ---------------------------------------------------
         // Constructor.
@@ -212,11 +253,21 @@ public class AuraDirectedGraph {
             this.userCodeClazzMap = new HashMap<>();
 
             this.uidNodeMap = new HashMap<>();
+
+
+            this.externalEdges = new HashMap<>();
         }
 
         // ---------------------------------------------------
         // Public Methods.
         // ---------------------------------------------------
+
+        public AuraTopologyBuilder connectFrom(final String srcNodeName, final String dstNodeName, final Edge.TransferType transferType) {
+
+            externalEdges.put(new Pair<>(srcNodeName, dstNodeName), transferType);
+
+            return this;
+        }
 
         public NodeConnector addNode(final Node node, Class<?> userCodeClazz) {
             // sanity check.
@@ -229,13 +280,64 @@ public class AuraDirectedGraph {
                 throw new IllegalStateException("node already exists");
 
             nodeMap.put(node.name, node);
+
             sourceMap.put(node.name, node);
+
             sinkMap.put(node.name, node);
+
             uidNodeMap.put(node.uid, node);
-            userCodeClazzMap.put(node.name, userCodeClazz);
+
+            final List<Class<?>> userCodeClazzList = new ArrayList<>();
+
+            userCodeClazzList.add(userCodeClazz);
+
+            userCodeClazzMap.put(node.name, userCodeClazzList);
 
             return nodeConnector.currentSource(node);
         }
+
+        public NodeConnector addNode(final Node node, List<Class<?>> userCodeClazzList) {
+            // sanity check.
+            if (node == null)
+                throw new IllegalArgumentException("node == null");
+            if (userCodeClazzList == null)
+                throw new IllegalArgumentException("userCodeClazzList == null");
+
+            if (nodeMap.containsKey(node.name))
+                throw new IllegalStateException("node already exists");
+
+            nodeMap.put(node.name, node);
+
+            sourceMap.put(node.name, node);
+
+            sinkMap.put(node.name, node);
+
+            uidNodeMap.put(node.uid, node);
+
+            userCodeClazzMap.put(node.name, userCodeClazzList);
+
+            return nodeConnector.currentSource(node);
+        }
+
+
+        public NodeConnector addStorageNode(final StorageNode node) {
+            // sanity check.
+            if (node == null)
+                throw new IllegalArgumentException("node == null");
+            if (nodeMap.containsKey(node.name))
+                throw new IllegalStateException("node already exists");
+
+            nodeMap.put(node.name, node);
+
+            sourceMap.put(node.name, node);
+
+            sinkMap.put(node.name, node);
+
+            uidNodeMap.put(node.uid, node);
+
+            return nodeConnector.currentSource(node);
+        }
+
 
         public NodeConnector and() {
             return nodeConnector;
@@ -263,7 +365,7 @@ public class AuraDirectedGraph {
             if (monitoringProperties.contains(AuraTopology.MonitoringType.NO_MONITORING) && monitoringProperties.size() > 1)
                 throw new IllegalStateException();
 
-            if (!isBuilded) {
+            if (!isBuilt) {
 
                 final Map<Pair<String, String>, List<Object>> edgeProperties = nodeConnector.getEdgeProperties();
 
@@ -296,12 +398,23 @@ public class AuraDirectedGraph {
                 }
 
                 for (final Node n : nodeMap.values()) {
-                    final Class<?> userCodeClazz = userCodeClazzMap.get(n.name);
-                    final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
-                    userCodeMap.put(n.name, uc);
+
+                    if (n instanceof ComputationNode) {
+
+                        final List<Class<?>> userCodeClazzList = userCodeClazzMap.get(n.name);
+
+                        final List<UserCode> userCodeList = new ArrayList<>();
+
+                        for(final Class<?> userCodeClazz : userCodeClazzList) {
+                            final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
+                            userCodeList.add(uc);
+                        }
+
+                        userCodeMap.put(n.name, userCodeList);
+                    }
                 }
 
-                isBuilded = true;
+                isBuilt = true;
             }
 
             // Every call to build gives us the same topology with a new id.
@@ -317,7 +430,8 @@ public class AuraDirectedGraph {
                                     userCodeMap,
                                     uidNodeMap,
                                     deploymentType,
-                                    monitoringProperties);
+                                    monitoringProperties,
+                                    externalEdges);
         }
 
         private boolean validateBackCouplingEdge(final Set<Node> visitedNodes, final Node currentNode, final Node destNode) {
@@ -412,10 +526,12 @@ public class AuraDirectedGraph {
         }
     }
 
+    //---------------------------------------------------------------------------------------------------------------
+
     /**
      *
      */
-    public static final class Node implements Visitable<Node>, Serializable {
+    public static class Node implements Visitable<Node>, Serializable {
 
         private static final long serialVersionUID = -1L;
 
@@ -462,11 +578,14 @@ public class AuraDirectedGraph {
 
         public final ExecutionType executionType;
 
-        private final List<Node> inputs;
+        public final List<Node> inputs;
 
-        private final List<Node> outputs;
+        public final List<Node> outputs;
 
         private final Map<UUID, ExecutionNode> executionNodes;
+
+
+        public boolean isAlreadyDeployed = false;
 
         // ---------------------------------------------------
         // Constructors.
@@ -517,6 +636,30 @@ public class AuraDirectedGraph {
             this.dataPersistenceType = dataPersistenceType;
 
             this.executionType = executionType;
+        }
+
+        public Node(final Node node) {
+            // sanity check.
+            if (node == null)
+                throw new IllegalArgumentException("node == null");
+
+            this.uid = UUID.fromString(node.uid.toString());
+
+            this.name = node.name;
+
+            this.degreeOfParallelism = node.degreeOfParallelism;
+
+            this.perWorkerParallelism = node.perWorkerParallelism;
+
+            this.inputs = new ArrayList<>(node.inputs);
+
+            this.outputs = new ArrayList<>(node.inputs);
+
+            this.executionNodes = new HashMap<>(node.executionNodes);
+
+            this.dataPersistenceType = node.dataPersistenceType;
+
+            this.executionType = node.executionType;
         }
 
         // ---------------------------------------------------
@@ -576,6 +719,30 @@ public class AuraDirectedGraph {
     /**
      *
      */
+    public static final class StorageNode extends Node {
+
+        public StorageNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.PERSISTED_IN_MEMORY, ExecutionType.BLOCKING);
+        }
+
+    }
+
+    /**
+     *
+     */
+    public static final class ComputationNode extends Node {
+
+        public ComputationNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+        }
+
+    }
+
+    //---------------------------------------------------------------------------------------------------------------
+
+    /**
+     *
+     */
     public static final class ExecutionNode implements Visitable<ExecutionNode> {
 
         // ---------------------------------------------------
@@ -588,9 +755,9 @@ public class AuraDirectedGraph {
 
         public final int taskIndex;
 
-        private TaskDescriptor taskDescriptor;
+        private AbstractNodeDescriptor nodeDescriptor;
 
-        private TaskBindingDescriptor taskBindingDescriptor;
+        private NodeBindingDescriptor nodeBindingDescriptor;
 
         private TaskState currentState;
 
@@ -630,40 +797,40 @@ public class AuraDirectedGraph {
             return currentState;
         }
 
-        public void setTaskDescriptor(final TaskDescriptor taskDescriptor) {
+        public void setNodeDescriptor(final AbstractNodeDescriptor nodeDescriptor) {
             // sanity check.
-            if (taskDescriptor == null)
-                throw new IllegalArgumentException("taskDescriptor == null");
-            if (this.taskDescriptor != null)
-                throw new IllegalStateException("taskDescriptor is already set");
+            if (nodeDescriptor == null)
+                throw new IllegalArgumentException("nodeDescriptor == null");
+            if (this.nodeDescriptor != null)
+                throw new IllegalStateException("nodeDescriptor is already set");
 
-            this.taskDescriptor = taskDescriptor;
+            this.nodeDescriptor = nodeDescriptor;
         }
 
-        public TaskDescriptor getTaskDescriptor() {
-            return this.taskDescriptor;
+        public AbstractNodeDescriptor getNodeDescriptor() {
+            return this.nodeDescriptor;
         }
 
-        public void setTaskBindingDescriptor(final TaskBindingDescriptor taskBindingDescriptor) {
+        public void setNodeBindingDescriptor(final Descriptors.NodeBindingDescriptor nodeBindingDescriptor) {
             // sanity check.
-            if (taskBindingDescriptor == null)
-                throw new IllegalArgumentException("taskBindingDescriptor == null");
-            if (this.taskBindingDescriptor != null)
-                throw new IllegalStateException("taskBindingDescriptor is already set");
+            if (nodeBindingDescriptor == null)
+                throw new IllegalArgumentException("nodeBindingDescriptor == null");
+            //if (this.nodeBindingDescriptor != null)
+            //    throw new IllegalStateException("nodeBindingDescriptor is already set");
 
-            this.taskBindingDescriptor = taskBindingDescriptor;
+            this.nodeBindingDescriptor = nodeBindingDescriptor;
         }
 
-        public TaskBindingDescriptor getTaskBindingDescriptor() {
-            return this.taskBindingDescriptor;
+        public Descriptors.NodeBindingDescriptor getNodeBindingDescriptor() {
+            return this.nodeBindingDescriptor;
         }
 
         @Override
         public String toString() {
             return (new StringBuilder()).append("ExecutionNode = {")
                                         .append(" uid = " + uid.toString() + ", ")
-                                        .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-                                        .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
+                                        .append(" nodeDescriptor = " + nodeDescriptor.toString() + ", ")
+                                        .append(" nodeBindingDescriptor = " + nodeBindingDescriptor.toString())
                                         .append(" }")
                                         .toString();
         }

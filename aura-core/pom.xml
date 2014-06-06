@@ -56,15 +56,16 @@
             <artifactId>javassist</artifactId>
             <version>3.12.1.GA</version>
         </dependency>
-
-        <!--<dependency>
-            <groupId>io.jaq</groupId>
-            <artifactId>jaq-inabox</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <
-            <systemPath>/home/akunft/dev/JAQ-InABox/jaq-inabox/target/jaq-inabox-1.0-SNAPSHOT.jar</systemPath>
-            <scope>system</scope>
-        </dependency>-->
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware.reflectasm</groupId>
+            <artifactId>reflectasm</artifactId>
+            <version>1.09</version>
+        </dependency>
     </dependencies>
 
     <!-- ================================= -->

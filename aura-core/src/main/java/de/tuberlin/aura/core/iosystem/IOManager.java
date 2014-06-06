@@ -8,6 +8,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,6 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -74,7 +74,7 @@ public final class IOManager extends EventDispatcher {
     // Constructors.
     // ---------------------------------------------------
 
-    public IOManager(final MachineDescriptor machine, final TaskExecutionManager executionManager) {
+    public IOManager(final MachineDescriptor machine, final ITaskExecutionManager executionManager) {
 
         // Event dispatcher doesn't use an own thread.
         super(true, "IOManager");

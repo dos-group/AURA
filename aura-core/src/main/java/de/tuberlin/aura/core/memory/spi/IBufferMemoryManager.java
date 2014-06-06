@@ -1,4 +1,6 @@
-package de.tuberlin.aura.core.memory;
+package de.tuberlin.aura.core.memory.spi;
+
+import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
 
 /**
  *

@@ -78,7 +78,7 @@ public final class RPCManager {
      * @param protocolImplementation
      * @param protocolInterface
      */
-    public void registerRPCProtocolImpl(Object protocolImplementation, Class<?> protocolInterface) {
+    public void registerRPCProtocolImpl(final Object protocolImplementation, final Class<?> protocolInterface) {
         // sanity check.
         if (protocolImplementation == null)
             throw new IllegalArgumentException("protocolImplementation == null");

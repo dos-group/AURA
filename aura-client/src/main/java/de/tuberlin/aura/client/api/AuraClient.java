@@ -20,8 +20,8 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopologyBuilder;
 import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
@@ -146,6 +146,22 @@ public final class AuraClient {
     public void closeSession() {
         clientProtocol.closeSession(clientSessionID);
     }
+
+    /**
+     *
+     * @param topologyID
+     * @param topology
+     */
+    public void submitToTopology(final UUID topologyID, final AuraTopology topology) {
+        // sanity check.
+        if (topologyID == null)
+            throw new IllegalArgumentException("topologyID == null");
+        if (topology == null)
+            throw new IllegalArgumentException("topology == null");
+
+        clientProtocol.submitToTopology(clientSessionID, topologyID, topology);
+    }
+
 
     // ---------------------------------------------------
     // Inner Classes.

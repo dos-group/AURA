@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.Node;
+import de.tuberlin.aura.core.topology.AuraGraph.Node;
 
 public final class Descriptors {
 
@@ -267,7 +267,7 @@ public final class Descriptors {
     /**
      *
      */
-    public static final class TaskDescriptor implements Serializable {
+    public static class AbstractNodeDescriptor implements Serializable {
 
         // ---------------------------------------------------
         // Fields.
@@ -283,7 +283,7 @@ public final class Descriptors {
 
         public final String name;
 
-        public final UserCode userCode;
+        public final List<UserCode> userCodeList;
 
         private MachineDescriptor machine;
 
@@ -291,7 +291,7 @@ public final class Descriptors {
         // Constructors.
         // ---------------------------------------------------
 
-        public TaskDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final UserCode userCode) {
+        public AbstractNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
             // sanity check.
             if (topologyID == null)
                 throw new IllegalArgumentException("topologyID == null");
@@ -301,8 +301,8 @@ public final class Descriptors {
                 throw new IllegalArgumentException("taskIndex < 0");
             if (name == null)
                 throw new IllegalArgumentException("name == null");
-            if (userCode == null)
-                throw new IllegalArgumentException("userCode == null");
+            //if (userCodeList == null)
+            //    throw new IllegalArgumentException("userCodeList == null");
 
             this.topologyID = topologyID;
 
@@ -312,7 +312,7 @@ public final class Descriptors {
 
             this.name = name;
 
-            this.userCode = userCode;
+            this.userCodeList = userCodeList;
         }
 
         // ---------------------------------------------------
@@ -342,18 +342,18 @@ public final class Descriptors {
             if (other.getClass() != getClass())
                 return false;
 
-            if ((machine == null && ((TaskDescriptor) other).machine == null) || !(machine.equals(((TaskDescriptor) other).machine)))
+            if ((machine == null && ((AbstractNodeDescriptor) other).machine == null) || !(machine.equals(((AbstractNodeDescriptor) other).machine)))
                 return false;
-            if (!(taskID.equals(((TaskDescriptor) other).taskID)))
+            if (!(taskID.equals(((AbstractNodeDescriptor) other).taskID)))
                 return false;
-            if (!(name.equals(((TaskDescriptor) other).name)))
+            if (!(name.equals(((AbstractNodeDescriptor) other).name)))
                 return false;
             return true;
         }
 
         @Override
         public String toString() {
-            return (new StringBuilder()).append("TaskDescriptor = {")
+            return (new StringBuilder()).append("AbstractNodeDescriptor = {")
                                         .append(" machine = " + machine.toString() + ", ")
                                         .append(" uid = " + taskID.toString() + ", ")
                                         .append(" name = " + name)
@@ -365,7 +365,7 @@ public final class Descriptors {
     /**
      *
      */
-    public static final class TaskBindingDescriptor implements Serializable {
+    public static final class StorageNodeDescriptor extends AbstractNodeDescriptor {
 
         // ---------------------------------------------------
         // Fields.
@@ -373,19 +373,59 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
-        public final TaskDescriptor task;
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
 
-        public final List<List<TaskDescriptor>> inputGateBindings;
+        public StorageNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name) {
+            super(topologyID, taskID, taskIndex, name, null);
+        }
+    }
 
-        public final List<List<TaskDescriptor>> outputGateBindings;
+    /**
+     *
+     */
+    public static final class ComputationNodeDescriptor extends AbstractNodeDescriptor {
+
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
+        private static final long serialVersionUID = -1L;
 
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
 
-        public TaskBindingDescriptor(final TaskDescriptor task,
-                                     final List<List<TaskDescriptor>> inputGateBindings,
-                                     final List<List<TaskDescriptor>> outputGateBindings) {
+        public ComputationNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
+            super(topologyID, taskID, taskIndex, name, userCodeList);
+        }
+    }
+
+    /**
+     *
+     */
+    public static final class NodeBindingDescriptor implements Serializable {
+
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
+        private static final long serialVersionUID = -1L;
+
+        public final AbstractNodeDescriptor task;
+
+        public final List<List<AbstractNodeDescriptor>> inputGateBindings;
+
+        public final List<List<AbstractNodeDescriptor>> outputGateBindings;
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
+
+        public NodeBindingDescriptor(final AbstractNodeDescriptor task,
+                                     final List<List<AbstractNodeDescriptor>> inputGateBindings,
+                                     final List<List<AbstractNodeDescriptor>> outputGateBindings) {
             // sanity check.
             if (task == null)
                 throw new IllegalArgumentException("taskID == null");
@@ -396,14 +436,22 @@ public final class Descriptors {
 
             this.task = task;
 
-            this.inputGateBindings = Collections.unmodifiableList(inputGateBindings);
+            this.inputGateBindings = inputGateBindings;
 
-            this.outputGateBindings = Collections.unmodifiableList(outputGateBindings);
+            this.outputGateBindings = outputGateBindings;
         }
 
         // ---------------------------------------------------
         // Public Methods.
         // ---------------------------------------------------
+
+        public void addOutputGateBinding(final List<List<AbstractNodeDescriptor>> outputGateBindings) {
+            // sanity check.
+            if (outputGateBindings == null)
+                throw new IllegalArgumentException("outputGateBindings == null");
+
+            this.outputGateBindings.addAll(outputGateBindings);
+        }
 
         @Override
         public boolean equals(Object other) {
@@ -414,18 +462,18 @@ public final class Descriptors {
             if (other.getClass() != getClass())
                 return false;
 
-            if (!(task.equals(((TaskBindingDescriptor) other).task)))
+            if (!(task.equals(((NodeBindingDescriptor) other).task)))
                 return false;
-            if (!(inputGateBindings.equals(((TaskBindingDescriptor) other).inputGateBindings)))
+            if (!(inputGateBindings.equals(((NodeBindingDescriptor) other).inputGateBindings)))
                 return false;
-            if (!(outputGateBindings.equals(((TaskBindingDescriptor) other).outputGateBindings)))
+            if (!(outputGateBindings.equals(((NodeBindingDescriptor) other).outputGateBindings)))
                 return false;
             return true;
         }
 
         @Override
         public String toString() {
-            return (new StringBuilder()).append("TaskBindingDescriptor = {")
+            return (new StringBuilder()).append("NodeBindingDescriptor = {")
             // .append( " task = " + task.toString() + ", " )
                                         .append(" inputGates = " + inputGateBindings.toString() + ", ")
                                         .append(" outputGates = " + outputGateBindings.toString())
@@ -437,7 +485,7 @@ public final class Descriptors {
     /**
      *
      */
-    public static final class TaskDeploymentDescriptor implements Serializable {
+    public static final class DeploymentDescriptor implements Serializable {
 
         // ---------------------------------------------------
         // Fields.
@@ -445,9 +493,9 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
-        public final TaskDescriptor taskDescriptor;
+        public final AbstractNodeDescriptor nodeDescriptor;
 
-        public final TaskBindingDescriptor taskBindingDescriptor;
+        public final NodeBindingDescriptor nodeBindingDescriptor;
 
         public final Node.DataPersistenceType dataPersistenceType;
 
@@ -457,24 +505,24 @@ public final class Descriptors {
         // Constructors.
         // ---------------------------------------------------
 
-        public TaskDeploymentDescriptor(final TaskDescriptor taskDescriptor,
-                                        final TaskBindingDescriptor taskBindingDescriptor,
-                                        final Node.DataPersistenceType dataPersistenceType,
-                                        final Node.ExecutionType executionType) {
+        public DeploymentDescriptor(final AbstractNodeDescriptor nodeDescriptor,
+                                    final NodeBindingDescriptor nodeBindingDescriptor,
+                                    final Node.DataPersistenceType dataPersistenceType,
+                                    final Node.ExecutionType executionType) {
 
             // sanity check.
-            if (taskDescriptor == null)
-                throw new IllegalArgumentException("taskDescriptor == null");
-            if (taskBindingDescriptor == null)
-                throw new IllegalArgumentException("taskBindingDescriptor == null");
+            if (nodeDescriptor == null)
+                throw new IllegalArgumentException("nodeDescriptor == null");
+            if (nodeBindingDescriptor == null)
+                throw new IllegalArgumentException("nodeBindingDescriptor == null");
             if (dataPersistenceType == null)
                 throw new IllegalArgumentException("dataPersistenceType == null");
             if (executionType == null)
                 throw new IllegalArgumentException("executionType == null");
 
-            this.taskDescriptor = taskDescriptor;
+            this.nodeDescriptor = nodeDescriptor;
 
-            this.taskBindingDescriptor = taskBindingDescriptor;
+            this.nodeBindingDescriptor = nodeBindingDescriptor;
 
             this.dataPersistenceType = dataPersistenceType;
 
@@ -494,18 +542,18 @@ public final class Descriptors {
             if (other.getClass() != getClass())
                 return false;
 
-            if (!(taskDescriptor.equals(((TaskDeploymentDescriptor) other).taskDescriptor)))
+            if (!(nodeDescriptor.equals(((DeploymentDescriptor) other).nodeDescriptor)))
                 return false;
-            if (!(taskBindingDescriptor.equals(((TaskDeploymentDescriptor) other).taskBindingDescriptor)))
+            if (!(nodeBindingDescriptor.equals(((DeploymentDescriptor) other).nodeBindingDescriptor)))
                 return false;
             return true;
         }
 
         @Override
         public String toString() {
-            return (new StringBuilder()).append("TaskDeploymentDescriptor = {")
-                                        .append(" taskDescriptor = " + taskDescriptor.toString() + ", ")
-                                        .append(" taskBindingDescriptor = " + taskBindingDescriptor.toString())
+            return (new StringBuilder()).append("DeploymentDescriptor = {")
+                                        .append(" nodeDescriptor = " + nodeDescriptor.toString() + ", ")
+                                        .append(" nodeBindingDescriptor = " + nodeBindingDescriptor.toString())
                                         .append(" }")
                                         .toString();
         }

@@ -6,8 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -17,7 +16,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
 
@@ -29,7 +28,7 @@ public class WorkloadManager implements ClientWMProtocol {
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = LoggerFactory.getLogger(WorkloadManager.class);
+    private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
 
     private final MachineDescriptor machineDescriptor;
 
@@ -140,7 +139,7 @@ public class WorkloadManager implements ClientWMProtocol {
             throw new IllegalStateException("topology already submitted");
 
         LOG.info("TOPOLOGY '" + topology.name + "' SUBMITTED");
-        registerTopology(sessionID, topology).assembleTopology();
+        registerTopology(sessionID, topology).assembleTopology(topology);
     }
 
     /**
@@ -169,6 +168,59 @@ public class WorkloadManager implements ClientWMProtocol {
     }
 
     /**
+     *
+     * @param sessionID
+     * @param topologyID
+     * @param topology
+     */
+    @Override
+    public void submitToTopology(UUID sessionID, UUID topologyID, AuraTopology topology) {
+        // sanity check.
+        if(sessionID == null)
+            throw new IllegalArgumentException("sessionID == null");
+        if(topologyID == null)
+            throw new IllegalArgumentException("topologyID == null");
+        if(topology == null)
+            throw new IllegalArgumentException("topology == null");
+
+        final TopologyController topologyController = this.registeredTopologies.get(topologyID);
+
+        if(topologyController == null)
+            throw new IllegalStateException("topologyController == null");
+
+        topologyController.assembleTopology(topology);
+    }
+
+    /**
+     *
+     * @param sessionID
+     * @param topologyID1
+     * @param taskNodeID1
+     * @param topologyID2
+     * @param taskNodeID2
+     */
+    /*@Override
+    public void connectTopologies(final UUID sessionID, final UUID topologyID1, final UUID taskNodeID1, final UUID topologyID2, final UUID taskNodeID2) {
+        // sanity check.
+        if(topologyID1 == null)
+            throw new IllegalArgumentException("topologyID1 == null");
+        if(taskNodeID1 == null)
+            throw new IllegalArgumentException("taskNodeID1 == null");
+        if(topologyID2 == null)
+            throw new IllegalArgumentException("topologyID2 == null");
+        if(taskNodeID2 == null)
+            throw new IllegalArgumentException("taskNodeID2 == null");
+
+
+        final TopologyController topologyControllerSrc = this.registeredTopologies.get(topologyID1);
+
+        if(topologyController == null)
+            throw new IllegalStateException("topologyController == null");
+
+        topologyController.createOutputGateAndConnect(taskNodeID1);
+    }*/
+
+    /**
      * @param sessionID
      * @param topology
      * @return
@@ -178,7 +230,7 @@ public class WorkloadManager implements ClientWMProtocol {
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
-        final TopologyController topologyController = new TopologyController(managerContext, topology);
+        final TopologyController topologyController = new TopologyController(managerContext, topology.topologyID);
         registeredTopologies.put(topology.topologyID, topologyController);
         return topologyController;
     }

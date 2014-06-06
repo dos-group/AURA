@@ -1,6 +1,6 @@
-package de.tuberlin.aura.core.task.common;
+package de.tuberlin.aura.core.task.spi;
 
-public interface TaskLifecycle {
+public interface IExecutionLifecycle {
 
     public abstract void create() throws Throwable;
 

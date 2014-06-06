@@ -7,6 +7,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.task.spi.IDataConsumer;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,12 +24,9 @@ import com.esotericsoftware.kryo.io.UnsafeMemoryOutput;
 
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
 import de.tuberlin.aura.core.memory.BufferCallback;
-import de.tuberlin.aura.core.memory.IAllocator;
+import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.task.common.DataConsumer;
-import de.tuberlin.aura.core.task.common.TaskDriverContext;
-import de.tuberlin.aura.core.task.common.TaskExecutionManager;
-import de.tuberlin.aura.core.task.common.TaskExecutionUnit;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -54,7 +55,7 @@ public final class SerializationHandler {
      * @return inbound de-serialization handler for
      *         {@link de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent}
      */
-    public static ChannelInboundHandlerAdapter KRYO_INBOUND_HANDLER(final TaskExecutionManager taskExecutionManager) {
+    public static ChannelInboundHandlerAdapter KRYO_INBOUND_HANDLER(final ITaskExecutionManager taskExecutionManager) {
         return new KryoDeserializationHandler(taskExecutionManager);
     }
 
@@ -96,7 +97,7 @@ public final class SerializationHandler {
 
         private IAllocator allocator;
 
-        private final TaskExecutionManager executionManager;
+        private final ITaskExecutionManager executionManager;
 
         private MemoryView deseralizationBuffer;
 
@@ -106,7 +107,7 @@ public final class SerializationHandler {
 
         private final LinkedList<PendingEvent> pendingObjects = new LinkedList<>();
 
-        public KryoDeserializationHandler(TaskExecutionManager executionManager) {
+        public KryoDeserializationHandler(ITaskExecutionManager executionManager) {
             kryo = new Kryo();
             kryo.register(IOEvents.DataIOEvent.class, new DataIOEventSerializer(), IOConfig.KRYO_IO_DATA_EVENT_ID);
             kryo.register(IOEvents.TransferBufferEvent.class, new TransferBufferEventSerializer(this), IOConfig.KRYO_IO_TRANSFER_EVENT_ID);
@@ -220,19 +221,19 @@ public final class SerializationHandler {
         }
 
         private void bindAllocator(UUID src, UUID dst) {
-            final TaskExecutionManager tem = executionManager;
-            final TaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
-            final TaskDriverContext taskDriverContext = executionUnit.getCurrentTaskDriverContext();
-            final DataConsumer dataConsumer = taskDriverContext.getDataConsumer();
+            final ITaskExecutionManager tem = executionManager;
+            final ITaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
+            final ITaskDriver taskDriver = executionUnit.getCurrentTaskDriver();
+            final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
             IAllocator allocatorGroup = executionUnit.getInputAllocator();
 
             // -------------------- STUPID HOT FIX --------------------
 
-            if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 1) {
+            if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 1) {
                 allocator = allocatorGroup;
             } else {
-                if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
+                if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 2) {
                     if (gateIndex == 0) {
                         allocator =
                                 new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
@@ -283,7 +284,7 @@ public final class SerializationHandler {
 
         private IAllocator allocator;
 
-        private final TaskExecutionManager executionManager;
+        private final ITaskExecutionManager executionManager;
 
         private int pendingCallbacks = 0;
 
@@ -291,7 +292,7 @@ public final class SerializationHandler {
 
         private final LinkedList<PendingEvent> pendingObjects = new LinkedList<>();
 
-        public LocalTransferBufferCopyHandler(TaskExecutionManager executionManager) {
+        public LocalTransferBufferCopyHandler(ITaskExecutionManager executionManager) {
             this.executionManager = executionManager;
         }
 
@@ -387,19 +388,19 @@ public final class SerializationHandler {
         }
 
         private void bindAllocator(UUID src, UUID dst) {
-            final TaskExecutionManager tem = executionManager;
-            final TaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
-            final TaskDriverContext taskDriverContext = executionUnit.getCurrentTaskDriverContext();
-            final DataConsumer dataConsumer = taskDriverContext.getDataConsumer();
+            final ITaskExecutionManager tem = executionManager;
+            final ITaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
+            final ITaskDriver taskDriver = executionUnit.getCurrentTaskDriver();
+            final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
             IAllocator allocatorGroup = executionUnit.getInputAllocator();
 
             // -------------------- STUPID HOT FIX --------------------
 
-            if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 1) {
+            if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 1) {
                 allocator = allocatorGroup;
             } else {
-                if (taskDriverContext.taskBindingDescriptor.inputGateBindings.size() == 2) {
+                if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 2) {
                     if (gateIndex == 0) {
                         allocator =
                                 new BufferAllocatorGroup(allocatorGroup.getBufferSize(),

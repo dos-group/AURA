@@ -8,7 +8,7 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 
 /**
- * Created by teots on 3/6/14.
+ *
  */
 public class UUIDSerializer extends Serializer<UUID> {
 

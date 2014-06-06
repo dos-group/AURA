@@ -1,5 +1,7 @@
 package de.tuberlin.aura.core.memory;
 
+import de.tuberlin.aura.core.memory.spi.IAllocator;
+
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 

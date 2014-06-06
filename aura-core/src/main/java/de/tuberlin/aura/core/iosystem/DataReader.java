@@ -5,13 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
-import de.tuberlin.aura.core.task.common.TaskExecutionManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -63,18 +63,18 @@ public class DataReader {
 
 
     /**
-     * The {@link de.tuberlin.aura.core.task.common.TaskExecutionManager} the data reader is bound.
+     * The {@link de.tuberlin.aura.core.task.spi.ITaskExecutionManager} the data reader is bound.
      */
-    public final TaskExecutionManager executionManager;
+    public final ITaskExecutionManager executionManager;
 
     /**
      * Creates a new DataReader. A DataReader is always bound to a
-     * {@link de.tuberlin.aura.core.task.common.TaskExecutionManager}.
+     * {@link de.tuberlin.aura.core.task.spi.ITaskExecutionManager}.
      * 
      * @param dispatcher the dispatcher used for events
      * @param executionManager the execution manager the data reader is bound to
      */
-    public DataReader(IEventDispatcher dispatcher, final TaskExecutionManager executionManager) {
+    public DataReader(IEventDispatcher dispatcher, final ITaskExecutionManager executionManager) {
         this.dispatcher = dispatcher;
         this.executionManager = executionManager;
         inputQueues = new HashMap<>();

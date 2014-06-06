@@ -2,13 +2,18 @@ package de.tuberlin.aura.core.protocols;
 
 import java.util.UUID;
 
-import de.tuberlin.aura.core.topology.AuraDirectedGraph.AuraTopology;
+import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
 
 public interface ClientWMProtocol {
 
-    public void openSession(final UUID sessionID);
+    public abstract void openSession(final UUID sessionID);
 
-    public void submitTopology(final UUID sessionID, final AuraTopology topology);
+    public abstract void submitTopology(final UUID sessionID, final AuraTopology topology);
 
-    public void closeSession(final UUID sessionID);
+    public abstract void closeSession(final UUID sessionID);
+
+
+    public abstract void submitToTopology(final UUID sessionID, final UUID topologyID, final AuraTopology topology);
+
+    //public abstract void connectTopologies(final UUID sessionID, final UUID topologyID1, final UUID taskNodeID1, final UUID topologyID2, final UUID taskNodeID2);
 }

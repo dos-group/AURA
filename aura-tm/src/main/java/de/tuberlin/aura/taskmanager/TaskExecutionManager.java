@@ -1,8 +1,12 @@
-package de.tuberlin.aura.core.task.common;
+package de.tuberlin.aura.taskmanager;
 
 
 import java.util.UUID;
 
+import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,9 +14,8 @@ import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
-import de.tuberlin.aura.core.memory.IBufferMemoryManager;
 
-public final class TaskExecutionManager extends EventDispatcher {
+public final class TaskExecutionManager extends EventDispatcher implements ITaskExecutionManager {
 
     // ---------------------------------------------------
     // Execution Manager Events.
@@ -40,7 +43,7 @@ public final class TaskExecutionManager extends EventDispatcher {
 
     private final int numberOfCores;
 
-    private final TaskExecutionUnit[] executionUnit;
+    private final ITaskExecutionUnit[] executionUnit;
 
     private final IBufferMemoryManager bufferMemoryManager;
 
@@ -78,12 +81,12 @@ public final class TaskExecutionManager extends EventDispatcher {
     // ---------------------------------------------------
 
     /**
-     * @param driverContext
+     * @param driver
      */
-    public void scheduleTask(final TaskDriverContext driverContext) {
+    public void scheduleTask(final ITaskDriver driver) {
         // sanity check.
-        if (driverContext == null)
-            throw new IllegalArgumentException("driverContext == null");
+        if (driver == null)
+            throw new IllegalArgumentException("driver == null");
 
         int tmpMin, tmpMinOld;
         tmpMinOld = executionUnit[0].getNumberOfEnqueuedTasks();
@@ -97,13 +100,13 @@ public final class TaskExecutionManager extends EventDispatcher {
             }
         }
 
-        driverContext.setAssignedExecutionUnitIndex(selectedEU);
-        executionUnit[selectedEU].enqueueTask(driverContext);
+        //driver.setAssignedExecutionUnitIndex(selectedEU);
+        executionUnit[selectedEU].enqueueTask(driver);
 
         LOG.info("EXECUTE TASK {}-{} [{}] ON EXECUTION UNIT ({}) ON MACHINE [{}]",
-                 driverContext.taskDescriptor.name,
-                 driverContext.taskDescriptor.taskIndex,
-                 driverContext.taskDescriptor.taskID,
+                 driver.getNodeDescriptor().name,
+                 driver.getNodeDescriptor().taskIndex,
+                 driver.getNodeDescriptor().taskID,
                  executionUnit[selectedEU].getExecutionUnitID(),
                  machineDescriptor.uid);
     }
@@ -112,15 +115,15 @@ public final class TaskExecutionManager extends EventDispatcher {
      * @param taskID
      * @return
      */
-    public TaskExecutionUnit findTaskExecutionUnitByTaskID(final UUID taskID) {
+    public ITaskExecutionUnit findTaskExecutionUnitByTaskID(final UUID taskID) {
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
 
         for (int i = 0; i < numberOfCores; ++i) {
-            final TaskExecutionUnit eu = executionUnit[i];
-            final TaskDriverContext taskCtx = eu.getCurrentTaskDriverContext();
-            if (taskCtx != null && taskID.equals(taskCtx.taskDescriptor.taskID)) {
+            final ITaskExecutionUnit eu = executionUnit[i];
+            final ITaskDriver taskCtx = eu.getCurrentTaskDriver();
+            if (taskCtx != null && taskID.equals(taskCtx.getNodeDescriptor().taskID)) {
                 return eu;
             }
         }
