@@ -77,7 +77,7 @@ public final class IOEvents {
 
         private static final long serialVersionUID = -1L;
 
-        private Channel channel;
+        transient private Channel channel;
 
         public BaseIOEvent(final String type) {
             super(type);
@@ -110,6 +110,12 @@ public final class IOEvents {
         public final UUID srcTaskID;
 
         public final UUID dstTaskID;
+
+        public DataIOEvent() {
+            super(null, false);
+            this.srcTaskID = null;
+            this.dstTaskID = null;
+        }
 
         public DataIOEvent(final String type, final UUID srcTaskID, final UUID dstTaskID) {
             this(type, srcTaskID, dstTaskID, false);

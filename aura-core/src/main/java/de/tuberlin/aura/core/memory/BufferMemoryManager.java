@@ -20,9 +20,9 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
 
     public static final int BUFFER_SIZE = BufferAllocator._64K;
 
-    public static final double BUFFER_LOAD_FACTOR = 0.4;
+    public static final double BUFFER_LOAD_FACTOR = 0.1;
 
-    public static final int NUM_OF_ALLOCATORS_PER_GROUP = 4;
+    public static final int NUM_OF_ALLOCATORS_PER_GROUP = 2;
 
     // ---------------------------------------------------
     // Fields.

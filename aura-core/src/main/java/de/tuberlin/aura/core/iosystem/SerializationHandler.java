@@ -102,7 +102,7 @@ public final class SerializationHandler {
 
         private int pendingCallbacks = 0;
 
-        private final Object lock = new Object();
+        // private final Object lock = new Object();
 
         private final LinkedList<PendingEvent> pendingObjects = new LinkedList<>();
 
@@ -128,32 +128,32 @@ public final class SerializationHandler {
                         if (allocator == null && executionManager != null) {
                             bindAllocator(((IOEvents.DataIOEvent) event).srcTaskID, ((IOEvents.DataIOEvent) event).dstTaskID);
                         }
-                        synchronized (lock) {
-                            if (pendingCallbacks >= 1) {
-                                pendingObjects.offer(new PendingEvent(callbackID, event));
-                            } else {
-                                ctx.fireChannelRead(event);
-                            }
+                        // synchronized (lock) {
+                        if (pendingCallbacks >= 1) {
+                            pendingObjects.offer(new PendingEvent(callbackID, event));
+                        } else {
+                            ctx.fireChannelRead(event);
                         }
+ //}
                         break;
                     }
                     case IOConfig.KRYO_IO_TRANSFER_EVENT_ID: {
                         // get buffer
-                        synchronized (lock) {
-                            MemoryView view = allocator.alloc(new Callback(ioBuffer, ctx));
-                            if (view == null) {
-                                if (++pendingCallbacks == 1) {
-                                    ctx.channel().config().setAutoRead(false);
-                                }
-                                ReferenceCountUtil.retain(ioBuffer);
-                            } else {
-                                deseralizationBuffer = view;
-                                Object event = kryo.readObject(input, reg.getType());
-                                ctx.fireChannelRead(event);
-                            }
+                        // synchronized (lock) {
+                        MemoryView view = allocator.alloc(new Callback(ioBuffer, ctx));
+                        if (view == null) {
+                            if (++pendingCallbacks == 1) {
+                                ctx.channel().config().setAutoRead(false);
+          }
+                            ReferenceCountUtil.retain(ioBuffer);
+                        } else {
+                            deseralizationBuffer = view;
+                            Object event = kryo.readObject(input, reg.getType());
+                            ctx.fireChannelRead(event);
                         }
+               //}
                         break;
-                    }
+       }
 
                     default:
                         throw new IllegalStateException("Unregistered Class.");
@@ -183,33 +183,33 @@ public final class SerializationHandler {
 
                     @Override
                     public void run() {
-                        synchronized (lock) {
-                            try {
-                                deseralizationBuffer = buffer;
-                                final Input input = new UnsafeMemoryInput(pendingBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
-                                Object event = kryo.readClassAndObject(input);
-                                ctx.fireChannelRead(event);
-                                for (Iterator<PendingEvent> itr = pendingObjects.iterator(); itr.hasNext();) {
-                                    PendingEvent obj = itr.next();
-                                    if (obj.index == index) {
-                                        ctx.fireChannelRead(obj.event);
-                                        itr.remove();
-                                    } else if (obj.index <= index) {
-                                        LOG.warn("obj.index < index " + obj.event);
-                                        ctx.fireChannelRead(obj.event);
-                                        itr.remove();
-                                    } else {
-                                        break;
-                                    }
+                        //synchronized (lock) {
+                        try {
+                            deseralizationBuffer = buffer;
+                            final Input input = new UnsafeMemoryInput(pendingBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
+                            Object event = kryo.readClassAndObject(input);
+                            ctx.fireChannelRead(event);
+                            for (Iterator<PendingEvent> itr = pendingObjects.iterator(); itr.hasNext();) {
+                                PendingEvent obj = itr.next();
+                                if (obj.index == index) {
+                                    ctx.fireChannelRead(obj.event);
+                                    itr.remove();
+                                } else if (obj.index <= index) {
+                                    LOG.warn("obj.index < index " + obj.event);
+                                    ctx.fireChannelRead(obj.event);
+                                    itr.remove();
+                                } else {
+                                    break;
                                 }
-                            } finally {
-                                pendingBuffer.release();
-                            }
-                            if (--pendingCallbacks == 0) {
-                                ctx.channel().config().setAutoRead(true);
-                                ctx.pipeline().read();
-                            }
+     }
+                        } finally {
+                            pendingBuffer.release();
                         }
+                        if (--pendingCallbacks == 0) {
+                            ctx.channel().config().setAutoRead(true);
+                            ctx.pipeline().read();
+                        }
+                        // }
                     }
                 });
             }
@@ -236,13 +236,11 @@ public final class SerializationHandler {
                     if (gateIndex == 0) {
                         allocator =
                                 new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0),
-                                                                       ((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
+                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0)));
                     } else {
                         allocator =
-                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(2),
-      ((BufferAllocatorGroup) allocatorGroup).getAllocator(3)));
+              new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
                     }
                 } else {
                     throw new IllegalStateException("Not supported more than two input gates.");
@@ -287,9 +285,9 @@ public final class SerializationHandler {
 
         private final TaskExecutionManager executionManager;
 
-      private int pendingCallbacks = 0;
+        private int pendingCallbacks = 0;
 
-        private final Object lock = new Object();
+        // private final Object lock = new Object();
 
         private final LinkedList<PendingEvent> pendingObjects = new LinkedList<>();
 
@@ -302,34 +300,34 @@ public final class SerializationHandler {
 
             switch (msg.type) {
                 case IOEvents.DataEventType.DATA_EVENT_BUFFER: {
-                    synchronized (lock) {
-                        MemoryView view = allocator.alloc(new Callback((IOEvents.TransferBufferEvent) msg, ctx));
-                        if (view == null) {
-       if (++pendingCallbacks == 1) {
-                                ctx.channel().config().setAutoRead(false);
-                            }
-                        } else {
-                            IOEvents.TransferBufferEvent event = (IOEvents.TransferBufferEvent) msg;
-                            System.arraycopy(event.buffer.memory, event.buffer.baseOffset, view.memory, view.baseOffset, event.buffer.size());
-                            event.buffer.free();
-                            IOEvents.TransferBufferEvent copy = new IOEvents.TransferBufferEvent(event.srcTaskID, event.dstTaskID, view);
-                            ctx.fireChannelRead(copy);
+                    //synchronized (lock) {
+                    MemoryView view = allocator.alloc(new Callback((IOEvents.TransferBufferEvent) msg, ctx));
+                    if (view == null) {
+                        if (++pendingCallbacks == 1) {
+                            ctx.channel().config().setAutoRead(false);
                         }
+                    } else {
+                        IOEvents.TransferBufferEvent event = (IOEvents.TransferBufferEvent) msg;
+                        System.arraycopy(event.buffer.memory, event.buffer.baseOffset, view.memory, view.baseOffset, event.buffer.size());
+                        event.buffer.free();
+                        IOEvents.TransferBufferEvent copy = new IOEvents.TransferBufferEvent(event.srcTaskID, event.dstTaskID, view);
+                        ctx.fireChannelRead(copy);
                     }
+                    // }
                     break;
-                }
+            }
 
                 default: {
                     if (allocator == null && executionManager != null) {
                         bindAllocator(msg.srcTaskID, msg.dstTaskID);
                     }
-                    synchronized (lock) {
-                        if (pendingCallbacks >= 1) {
-                            pendingObjects.offer(new PendingEvent(callbackID, msg));
-                        } else {
-                            ctx.fireChannelRead(msg);
-                        }
+                    //synchronized (lock) {
+                    if (pendingCallbacks >= 1) {
+                        pendingObjects.offer(new PendingEvent(callbackID, msg));
+                    } else {
+                        ctx.fireChannelRead(msg);
                     }
+                    // }
                     break;
                 }
             }
@@ -355,37 +353,37 @@ public final class SerializationHandler {
 
                     @Override
                     public void run() {
-                        synchronized (lock) {
-                            System.arraycopy(transferBufferEvent.buffer.memory,
-                                             transferBufferEvent.buffer.baseOffset,
-                                             buffer.memory,
-                                             buffer.baseOffset,
-                                             transferBufferEvent.buffer.size());
-                            transferBufferEvent.buffer.free();
-                            IOEvents.TransferBufferEvent copy =
-                                    new IOEvents.TransferBufferEvent(transferBufferEvent.srcTaskID, transferBufferEvent.dstTaskID, buffer);
-                            ctx.fireChannelRead(copy);
-                            for (Iterator<PendingEvent> itr = pendingObjects.iterator(); itr.hasNext();) {
-                                PendingEvent obj = itr.next();
-                                if (obj.index == index) {
-                                    ctx.fireChannelRead(obj.event);
-                                    itr.remove();
-                                } else if (obj.index <= index) {
-                                    LOG.warn("obj.index < index " + obj.event);
-                                    ctx.fireChannelRead(obj.event);
-                                    itr.remove();
-                                } else {
-                                    break;
-                                }
-                            }
-                            if (--pendingCallbacks == 0) {
-                                ctx.channel().config().setAutoRead(true);
-                                ctx.pipeline().read();
+                        //synchronized (lock) {
+                        System.arraycopy(transferBufferEvent.buffer.memory,
+                                         transferBufferEvent.buffer.baseOffset,
+                                         buffer.memory,
+                                         buffer.baseOffset,
+                                         transferBufferEvent.buffer.size());
+                        transferBufferEvent.buffer.free();
+                        IOEvents.TransferBufferEvent copy =
+                                new IOEvents.TransferBufferEvent(transferBufferEvent.srcTaskID, transferBufferEvent.dstTaskID, buffer);
+                        ctx.fireChannelRead(copy);
+                        for (Iterator<PendingEvent> itr = pendingObjects.iterator(); itr.hasNext();) {
+                            PendingEvent obj = itr.next();
+                            if (obj.index == index) {
+                                ctx.fireChannelRead(obj.event);
+                                itr.remove();
+                            } else if (obj.index <= index) {
+                                LOG.warn("obj.index < index " + obj.event);
+                                ctx.fireChannelRead(obj.event);
+                                itr.remove();
+                            } else {
+                                break;
                             }
                         }
+                        if (--pendingCallbacks == 0) {
+                            ctx.channel().config().setAutoRead(true);
+                            ctx.pipeline().read();
+                        }
+                        // }
                     }
                 });
-            }
+          }
         }
 
         private void bindAllocator(UUID src, UUID dst) {
@@ -405,15 +403,13 @@ public final class SerializationHandler {
                     if (gateIndex == 0) {
                         allocator =
                                 new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0),
-                                                                       ((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
+                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0)));
                     } else {
-                        allocator =
+                allocator =
                                 new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(2),
-                                                                       ((BufferAllocatorGroup) allocatorGroup).getAllocator(3)));
+                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
                     }
-                } else {
+          } else {
                     throw new IllegalStateException("Not supported more than two input gates.");
                 }
             }
@@ -448,6 +444,10 @@ public final class SerializationHandler {
         @Override
         public void write(Kryo kryo, Output output, IOEvents.DataIOEvent dataIOEvent) {
             output.writeString(dataIOEvent.type);
+            kryo.writeClass(output, (dataIOEvent.getPayload() != null) ? dataIOEvent.getPayload().getClass() : Object.class);
+            kryo.writeObjectOrNull(output, dataIOEvent.getPayload(), (dataIOEvent.getPayload() != null)
+                    ? dataIOEvent.getPayload().getClass()
+                    : Object.class);
             output.writeLong(dataIOEvent.srcTaskID.getMostSignificantBits());
             output.writeLong(dataIOEvent.srcTaskID.getLeastSignificantBits());
             output.writeLong(dataIOEvent.dstTaskID.getMostSignificantBits());
@@ -457,9 +457,13 @@ public final class SerializationHandler {
         @Override
         public IOEvents.DataIOEvent read(Kryo kryo, Input input, Class<IOEvents.DataIOEvent> type) {
             final String eventType = input.readString();
+            Registration reg = kryo.readClass(input);
+            final Object payload = kryo.readObjectOrNull(input, reg.getType());
             final UUID src = new UUID(input.readLong(), input.readLong());
             final UUID dst = new UUID(input.readLong(), input.readLong());
-            return new IOEvents.DataIOEvent(eventType, src, dst);
+            IOEvents.DataIOEvent event = new IOEvents.DataIOEvent(eventType, src, dst);
+            event.setPayload(payload);
+         return event;
         }
     }
 

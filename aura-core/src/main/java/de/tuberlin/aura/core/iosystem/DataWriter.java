@@ -208,11 +208,11 @@ public class DataWriter {
                 if (awaitExhaustion) {
                     while (!waitForExhaustedAcknowledge.await(1, TimeUnit.MINUTES)) {
                         LOG.warn("Latch reached timelimit " + outboundQueue.size() + " " + channel + "(" + channel.getClass() + ")");
-                        // channel.pipeline().fireChannelWritabilityChanged();
-                        IOEvents.DataIOEvent event = outboundQueue.poll();
-                        if (event != null) {
-                            channel.writeAndFlush(event);
-                        }
+                        channel.pipeline().fireChannelWritabilityChanged();
+                        // IOEvents.DataIOEvent event = outboundQueue.poll();
+                        // if (event != null) {
+                        // channel.writeAndFlush(event);
+                        // }
                     }
                 }
             } catch (InterruptedException e) {
