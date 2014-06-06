@@ -1,4 +1,4 @@
-package de.tuberlin.aura.benchmark.runs;
+package de.tuberlin.aura.demo.examples;
 
 import java.io.BufferedReader;
 import java.io.IOException;
