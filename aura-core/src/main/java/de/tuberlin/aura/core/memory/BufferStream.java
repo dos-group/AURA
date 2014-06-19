@@ -93,7 +93,7 @@ public final class BufferStream {
                 nextBuf();
             }
 
-            if (count + len > buf.size) {
+            //if (count + len > buf.size) {
 
                 int copiedLen = 0;
 
@@ -110,6 +110,8 @@ public final class BufferStream {
 
                     System.arraycopy(b, off, buf.memory, count, len);
 
+                    off += len;
+
                     copiedLen += len;
 
                     if (!(originalLen == copiedLen)) {
@@ -121,7 +123,7 @@ public final class BufferStream {
 
                 return;
 
-            } else {
+            /*} else {
 
                 System.arraycopy(b, off, buf.memory, count, len);
 
@@ -130,7 +132,7 @@ public final class BufferStream {
                 if (count >= buf.size) {
                     nextBuf();
                 }
-            }
+            }*/
         }
 
         public synchronized void writeTo(OutputStream out) throws IOException {
@@ -182,6 +184,10 @@ public final class BufferStream {
                 bufferOutput.put(buf);
 
             buf = bufferInput.get();
+
+            if(buf == null) {
+                System.out.println("STOP");
+            }
 
             count = buf.baseOffset;
         }
@@ -263,7 +269,7 @@ public final class BufferStream {
                 nextBuf();
             }
 
-            if ((pos - buf.baseOffset) >= count) {
+            if ((pos - buf.baseOffset) > count) {
                 nextBuf();
             }
 
@@ -292,7 +298,10 @@ public final class BufferStream {
 
                     if (!(originalLen == copiedLen)) {
 
-                        nextBuf();
+                        int res = nextBuf();
+
+                        if(res == -1)
+                            return -1;
 
                         avail = count - (pos - buf.baseOffset);
                     }
@@ -368,6 +377,7 @@ public final class BufferStream {
         }
 
         public void close() throws IOException {
+            flush();
         }
 
         public void flush() throws IOException {
@@ -379,16 +389,21 @@ public final class BufferStream {
         // Private Methods.
         // ---------------------------------------------------
 
-        private void nextBuf() {
+        private int nextBuf() {
 
             if (buf != null && bufferOutput != null)
                 bufferOutput.put(buf);
 
             buf = bufferInput.get();
 
+            if(buf == null)
+                return -1;
+
             pos = buf.baseOffset;
 
             count = buf.size;
+
+            return 0;
         }
     }
 }

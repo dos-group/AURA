@@ -1,18 +1,20 @@
 package de.tuberlin.aura.taskmanager;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.io.Serializable;
+import java.util.*;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.FastOutput;
 import com.esotericsoftware.kryo.io.Output;
 
+import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.memory.BufferStream;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.record.RowRecordModel;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import org.apache.commons.lang3.ArrayUtils;
 
 public class TaskRecordWriter {
 
@@ -86,7 +88,11 @@ public class TaskRecordWriter {
 
                 @Override
                 public MemoryView get() {
-                    return driver.getDataProducer().alloc();
+                    try {
+                        return driver.getDataProducer().getAllocator().allocBlocking();
+                    } catch (InterruptedException e) {
+                        throw new IllegalStateException(e);
+                    }
                 }
             });
 
@@ -122,7 +128,13 @@ public class TaskRecordWriter {
 
             final UUID dstTaskID = driver.getInvokeable().getTaskID(0, i);
 
-            //driver.getDataProducer().emit(0, i, new IOEvents.RecordTypeEvent(srcTaskID, dstTaskID));
+            final IOEvents.DataIOEvent event = new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_RECORD_TYPE, srcTaskID, dstTaskID);
+
+            final byte[] tmp = RowRecordModel.RecordTypeBuilder.getRecordByteCode(recordType);
+
+            event.setPayload(new Pair<String, Byte[]>(recordType.getName(), ArrayUtils.toObject(tmp)));
+
+            driver.getDataProducer().emit(0, i, event);
         }
     }
 
@@ -141,14 +153,27 @@ public class TaskRecordWriter {
     }
 
     /**
+     *
+     * @param object
+     */
+    public void writeObject(final Object object) {
+        // sanity check.
+        if(object == null)
+            throw new IllegalArgumentException("object == null");
+
+        final int channelIndex = partitioner.partition(object, outputBinding.size());
+
+        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
+    }
+
+    /**
      * 
      */
     public void end() {
         try {
             for (int i = 0; i < outputBinding.size(); ++i) {
-                //kryo.writeObject(kryoOutputs.get(i), RowRecordModel.RECORD_STREAM_END.instance());
+                kryo.writeClassAndObject(kryoOutputs.get(i), new RowRecordModel.RECORD_CLASS_STREAM_END());
                 kryoOutputs.get(i).close();
-                outputStreams.get(i).close();
             }
         } catch (Exception e) {
             throw new IllegalStateException(e);

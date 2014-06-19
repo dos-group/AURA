@@ -34,4 +34,12 @@ public abstract class AbstractGate {
 
         this.gateIndex = gateIndex;
     }
+
+    /**
+     *
+     * @return
+     */
+    public int getNumOfChannels() {
+        return numChannels;
+    }
 }

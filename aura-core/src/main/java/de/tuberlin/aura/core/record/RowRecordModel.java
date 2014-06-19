@@ -3,7 +3,9 @@ package de.tuberlin.aura.core.record;
 import static org.objectweb.asm.Opcodes.*;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Vector;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
@@ -22,17 +24,43 @@ public final class RowRecordModel {
     /**
      *
      */
-    public static interface Partitioner {
+    public static interface KeySelector {
 
-        public abstract int partition(final RowRecordModel.Record record, final int receiver);
+        public abstract int[] key();
     }
 
     /**
      *
      */
-    public static class HashPartitioner implements Partitioner {
+    public static interface Partitioner {
+
+        public abstract int partition(final RowRecordModel.Record record, final int receiver);
+
+        public abstract int partition(final Object object, final int receiver);
+    }
+
+    /**
+     *
+     */
+    private static abstract class AbstractPartitioner implements Partitioner {
+
+        public int partition(final RowRecordModel.Record record, final int receiver) {
+            throw new NotImplementedException();
+        }
+
+        public int partition(final Object object, final int receiver) {
+            throw new NotImplementedException();
+        }
+    }
+
+    /**
+     *
+     */
+    public static class HashPartitioner extends AbstractPartitioner {
 
         private final int[] partitionFields;
+
+        private FieldAccess fieldAccessor;
 
         public HashPartitioner(final int[] partitionFields) {
             // sanity check.
@@ -42,6 +70,14 @@ public final class RowRecordModel {
             this.partitionFields = partitionFields;
         }
 
+        public HashPartitioner(final KeySelector keySelector) {
+            // sanity check.
+            if (keySelector == null)
+                throw new IllegalArgumentException("keySelector == null");
+
+            this.partitionFields = keySelector.key();
+        }
+
         @Override
         public int partition(final Record record, final int receiver) {
             int result = 17;
@@ -49,30 +85,38 @@ public final class RowRecordModel {
                 result = 31 * result + record.get(fieldIndex).hashCode();
             return (result & Integer.MAX_VALUE) % receiver;
         }
-    }
-
-    /**
-     *
-     */
-    public static class RangePartitioner implements Partitioner {
 
         @Override
-        public int partition(final Record record, final int receiver) {
-            throw new NotImplementedException();
+        public int partition(final Object object, final int receiver) {
+
+            if(fieldAccessor == null) {
+                fieldAccessor = FieldAccess.get(object.getClass());
+            }
+
+            int result = 17;
+            for(final int fieldIndex : partitionFields)
+                result = 31 * result + fieldAccessor.get(object, fieldIndex).hashCode();
+            return (result & Integer.MAX_VALUE) % receiver;
         }
     }
 
     /**
      *
      */
-    public static class RoundRobinPartitioner implements Partitioner {
+    public static class RangePartitioner extends AbstractPartitioner {
+    }
+
+    /**
+     *
+     */
+    public static class RoundRobinPartitioner extends AbstractPartitioner {
 
         private int channelIndex = 0;
 
         @Override
         public int partition(final Record record, final int receiver) {
 
-            channelIndex = channelIndex++ % receiver;
+            channelIndex = ++channelIndex % receiver;
 
             return channelIndex;
         }
@@ -96,7 +140,7 @@ public final class RowRecordModel {
         private static final Map<Class<?>, byte[]> byteCodeRepository
                 = new HashMap<>();
 
-        private static final ClassLoader clazzLoader = Thread.currentThread().getContextClassLoader();
+        private static final ClassLoader clazzLoader = ClassLoader.getSystemClassLoader();
 
         private static int typeCounter = 0;
 
@@ -146,7 +190,8 @@ public final class RowRecordModel {
 
             final Class<?> clazz = new ClassLoader(clazzLoader) {
                 public Class<?> defineClass() {
-                    return defineClass(recordTypeName, byteCode, 0, byteCode.length);
+                    final Class<?> recordType = defineClass(recordTypeName, byteCode, 0, byteCode.length);
+                    return recordType;
                 }
             }.defineClass();
 
@@ -165,6 +210,28 @@ public final class RowRecordModel {
             byteCodeRepository.put(clazz, byteCode);
 
             return clazz;
+        }
+
+        public static synchronized void addRecordType(final Class<?> clazz, final byte[] byteCode) {
+            // sanity check.
+            if (clazz == null)
+                throw new IllegalArgumentException("clazz == null");
+            if (byteCode == null)
+                throw new IllegalArgumentException("byteCode == null");
+
+            FieldAccess fieldAccessor = fieldAccessorRegistry.get(clazz);
+            if (fieldAccessor == null) {
+                fieldAccessor = FieldAccess.get(clazz);
+                fieldAccessorRegistry.put(clazz, fieldAccessor);
+            }
+
+            ConstructorAccess<?> constructorAccessor = constructorAccessRegistry.get(clazz);
+            if (constructorAccessor == null) {
+                constructorAccessor = ConstructorAccess.get(clazz);
+                constructorAccessRegistry.put(clazz, constructorAccessor);
+            }
+
+            byteCodeRepository.put(clazz, byteCode);
         }
 
         public static Record createRecord(final Class<?> clazz) {
@@ -319,7 +386,7 @@ public final class RowRecordModel {
     /**
      *
      */
-    private static final class RECORD_CLASS_STREAM_END {
+    public static final class RECORD_CLASS_STREAM_END {
        public final int marker = -1;
     }
 

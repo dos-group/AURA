@@ -1,5 +1,7 @@
 package de.tuberlin.aura.core.task.gates;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
@@ -17,7 +19,7 @@ public final class InputGate extends AbstractGate {
     // Fields.
     // ---------------------------------------------------
 
-    private DataReader channelReader;
+    private DataReader dataReader;
 
     private static final Logger LOG = LoggerFactory.getLogger(InputGate.class);
 
@@ -46,7 +48,7 @@ public final class InputGate extends AbstractGate {
 
             final DataIOEvent event = new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, srcID, taskDriver.getNodeDescriptor().taskID);
 
-            channelReader.write(taskDriver.getNodeDescriptor().taskID, gateIndex, i, event);
+            dataReader.write(taskDriver.getNodeDescriptor().taskID, gateIndex, i, event);
         }
     }
 
@@ -59,28 +61,28 @@ public final class InputGate extends AbstractGate {
 
             final DataIOEvent event = new DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, srcID, taskDriver.getNodeDescriptor().taskID);
 
-            channelReader.write(taskDriver.getNodeDescriptor().taskID, gateIndex, i, event);
+            dataReader.write(taskDriver.getNodeDescriptor().taskID, gateIndex, i, event);
         }
     }
 
     /**
      * @return
      */
-    public BufferQueue<DataIOEvent> getInputQueue() {
-        return channelReader.getInputQueue(taskDriver.getNodeDescriptor().taskID, gateIndex);
+    public BufferQueue<DataIOEvent> getInputQueue(final int channelIndex) {
+        return dataReader.getInputQueue(taskDriver.getNodeDescriptor().taskID, gateIndex, channelIndex);
     }
 
     /**
-     * @param channelReader
+     * @param dataReader
      */
-    public void setChannelReader(final DataReader channelReader) {
-        this.channelReader = channelReader;
+    public void setDataReader(final DataReader dataReader) {
+        this.dataReader = dataReader;
     }
 
     /**
      * @return
      */
-    public DataReader getChannelReader() {
-        return channelReader;
+    public DataReader getDataReader() {
+        return dataReader;
     }
 }

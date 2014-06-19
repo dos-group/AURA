@@ -1,7 +1,11 @@
 package de.tuberlin.aura.core.task.spi;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.common.utils.ClassByteCode;
+import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.task.common.TaskStates;
 import org.slf4j.Logger;
 
@@ -47,19 +51,6 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
         this.LOG = LOG;
 
         this.isRunning = true;
-
-        /*taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
-                new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                    @Override
-                    public void stateAction(TaskStates.TaskState previousState,
-                                            TaskStates.TaskTransition transition,
-                                            TaskStates.TaskState state) {
-                        MeasurementManager.fireEvent(MeasurementManager.TASK_FINISHED + "-"
-                                + taskDriver.getNodeDescriptor().taskID + "-" + taskDriver.getNodeDescriptor().name + "-"
-                                + taskDriver.getNodeDescriptor().taskIndex);
-                    }
-                });*/
     }
 
     // ---------------------------------------------------
@@ -81,6 +72,10 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
     public void stopInvokeable() {
         isRunning = false;
     }
+
+    //public List<Class<?>> defineDependencies() {
+    //    return new ArrayList<>();
+    //}
 
     // ---------------------------------------------------
     // Protected Methods.

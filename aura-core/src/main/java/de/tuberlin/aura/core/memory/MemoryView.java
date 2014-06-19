@@ -75,7 +75,8 @@ public final class MemoryView {
 
     public void free() {
         if (refCount.decrementAndGet() <= 0) {
-            allocator.free(this);
+            if(allocator != null)
+                allocator.free(this);
             refCount.set(0);
         }
     }

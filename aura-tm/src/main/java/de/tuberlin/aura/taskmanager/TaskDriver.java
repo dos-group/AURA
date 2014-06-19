@@ -3,6 +3,7 @@ package de.tuberlin.aura.taskmanager;
 
 import java.lang.reflect.Constructor;
 
+import de.tuberlin.aura.core.iosystem.queues.BlockingSignalQueue;
 import de.tuberlin.aura.core.task.spi.*;
 import de.tuberlin.aura.storage.DataStorage;
 import org.slf4j.Logger;
@@ -85,8 +86,8 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         this.queueManager =
                 QueueManager.newInstance(nodeDescriptor.taskID,
-                        new BlockingBufferQueue.Factory<IOEvents.DataIOEvent>(),
-                        new SignalSpscLinkedQueue.Factory<IOEvents.DataIOEvent>());
+                        new BlockingSignalQueue.Factory<IOEvents.DataIOEvent>(),
+                        new BlockingSignalQueue.Factory<IOEvents.DataIOEvent>());
     }
 
     // ---------------------------------------------------
@@ -116,16 +117,20 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor) {
 
-            // TODO: A Task can in future contain a list of associated user code.
-            invokeableClazz = implantInvokeableCode(nodeDescriptor.userCodeList.get(0));
+            for (final UserCode uc : nodeDescriptor.userCodeList) {
 
-            invokeable = createInvokeable(invokeableClazz, this, dataProducer, dataConsumer, LOG);
+                invokeableClazz = implantInvokeableCode(uc);
 
-            if (invokeable == null)
-                throw new IllegalStateException("invokeable == null");
+                if (AbstractInvokeable.class.isAssignableFrom(invokeableClazz)) {
+
+                    invokeable = createInvokeable(invokeableClazz, this, dataProducer, dataConsumer, LOG);
+
+                    if (invokeable == null)
+                        throw new IllegalStateException("invokeable == null");
+                }
+            }
 
         } else {
-
             invokeable = new DataStorage(this, dataProducer, dataConsumer, LOG);
         }
     }

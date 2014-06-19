@@ -204,7 +204,7 @@ public final class TaskManager implements ITaskManager {
         final ITaskDriver taskDriver = deployedTasks.get(taskID);
 
         if(taskDriver == null)
-            throw new IllegalArgumentException("driver == null");
+            throw new IllegalStateException("driver == null");
 
         if (taskDriver.getInvokeable() instanceof DataStorage) {
             final DataStorage ds = (DataStorage)taskDriver.getInvokeable();
@@ -376,6 +376,10 @@ public final class TaskManager implements ITaskManager {
     // Entry Point.
     // ---------------------------------------------------
 
+    /**
+     * TaskManager entry point.
+     * @param args
+     */
     public static void main(final String[] args) {
 
         int dataPort = -1;

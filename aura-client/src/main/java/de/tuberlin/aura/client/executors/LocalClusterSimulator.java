@@ -59,8 +59,8 @@ public final class LocalClusterSimulator {
      * @param zkServer
      * @param numNodes
      */
-    public LocalClusterSimulator(final ExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes, String measurementPath) {
-        this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000, measurementPath);
+    public LocalClusterSimulator(final ExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes) {
+        this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000);
     }
 
     /**
@@ -71,7 +71,6 @@ public final class LocalClusterSimulator {
      * @param zkClientPort
      * @param numConnections
      * @param tickTime
-     * @param measurementPath
      */
     public LocalClusterSimulator(final ExecutionMode mode,
                                  boolean startupZookeeper,
@@ -79,8 +78,7 @@ public final class LocalClusterSimulator {
                                  int numNodes,
                                  int zkClientPort,
                                  int numConnections,
-                                 int tickTime,
-                                 String measurementPath) {
+                                 int tickTime) {
         // sanity check.
         ZookeeperHelper.checkConnectionString(zkServer);
         if (numNodes < 1)

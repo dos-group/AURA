@@ -109,6 +109,7 @@ public final class SerializationHandler {
 
         public KryoDeserializationHandler(ITaskExecutionManager executionManager) {
             kryo = new Kryo();
+            kryo.register(byte[].class);
             kryo.register(IOEvents.DataIOEvent.class, new DataIOEventSerializer(), IOConfig.KRYO_IO_DATA_EVENT_ID);
             kryo.register(IOEvents.TransferBufferEvent.class, new TransferBufferEventSerializer(this), IOConfig.KRYO_IO_TRANSFER_EVENT_ID);
             this.executionManager = executionManager;
@@ -117,8 +118,11 @@ public final class SerializationHandler {
         @Override
         public void channelRead(final ChannelHandlerContext ctx, Object msg) throws Exception {
             final ByteBuf ioBuffer = (ByteBuf) msg;
+            //final ByteBuf ioBuffer = ioBufferTMP.copy();
             try {
                 final Input input = new UnsafeMemoryInput(ioBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
+                //final Input input = new Input(ioBuffer.array());//, IOConfig.MAX_EVENT_SIZE);
+
                 ioBuffer.order(ByteOrder.nativeOrder());
                 final Registration reg = kryo.readClass(input);
 
@@ -135,7 +139,7 @@ public final class SerializationHandler {
                         } else {
                             ctx.fireChannelRead(event);
                         }
- //}
+                        //}
                         break;
                     }
                     case IOConfig.KRYO_IO_TRANSFER_EVENT_ID: {
@@ -145,16 +149,17 @@ public final class SerializationHandler {
                         if (view == null) {
                             if (++pendingCallbacks == 1) {
                                 ctx.channel().config().setAutoRead(false);
-          }
+                            }
                             ReferenceCountUtil.retain(ioBuffer);
                         } else {
+                            callbackID--;
                             deseralizationBuffer = view;
                             Object event = kryo.readObject(input, reg.getType());
                             ctx.fireChannelRead(event);
                         }
-               //}
+                        //}
                         break;
-       }
+                    }
 
                     default:
                         throw new IllegalStateException("Unregistered Class.");
@@ -188,6 +193,7 @@ public final class SerializationHandler {
                         try {
                             deseralizationBuffer = buffer;
                             final Input input = new UnsafeMemoryInput(pendingBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
+                            //final Input input = new Input(pendingBuffer.array());
                             Object event = kryo.readClassAndObject(input);
                             ctx.fireChannelRead(event);
                             for (Iterator<PendingEvent> itr = pendingObjects.iterator(); itr.hasNext();) {
@@ -258,6 +264,7 @@ public final class SerializationHandler {
 
         public KryoOutboundHandler() {
             kryo = new Kryo();
+            kryo.register(byte[].class);
             kryo.register(IOEvents.DataIOEvent.class, new DataIOEventSerializer(), IOConfig.KRYO_IO_DATA_EVENT_ID);
             kryo.register(IOEvents.TransferBufferEvent.class, new TransferBufferEventSerializer(null), IOConfig.KRYO_IO_TRANSFER_EVENT_ID);
         }
@@ -267,6 +274,7 @@ public final class SerializationHandler {
             // LOG.warn("write");
             final ByteBuf ioBuffer = ctx.alloc().buffer(IOConfig.MAX_EVENT_SIZE, IOConfig.MAX_EVENT_SIZE);
             UnsafeMemoryOutput output = new UnsafeMemoryOutput(ioBuffer.memoryAddress(), IOConfig.MAX_EVENT_SIZE);
+            //Output output = new Output(ioBuffer.array());
             output.order(ByteOrder.nativeOrder());
             // leave space for size info
             output.setPosition(4);
@@ -308,6 +316,7 @@ public final class SerializationHandler {
                             ctx.channel().config().setAutoRead(false);
                         }
                     } else {
+                        callbackID--;
                         IOEvents.TransferBufferEvent event = (IOEvents.TransferBufferEvent) msg;
                         System.arraycopy(event.buffer.memory, event.buffer.baseOffset, view.memory, view.baseOffset, event.buffer.size());
                         event.buffer.free();
@@ -444,11 +453,13 @@ public final class SerializationHandler {
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.DataIOEvent dataIOEvent) {
-            output.writeString(dataIOEvent.type);
+
             kryo.writeClass(output, (dataIOEvent.getPayload() != null) ? dataIOEvent.getPayload().getClass() : Object.class);
             kryo.writeObjectOrNull(output, dataIOEvent.getPayload(), (dataIOEvent.getPayload() != null)
                     ? dataIOEvent.getPayload().getClass()
                     : Object.class);
+
+            output.writeString(dataIOEvent.type);
             output.writeLong(dataIOEvent.srcTaskID.getMostSignificantBits());
             output.writeLong(dataIOEvent.srcTaskID.getLeastSignificantBits());
             output.writeLong(dataIOEvent.dstTaskID.getMostSignificantBits());
@@ -457,13 +468,16 @@ public final class SerializationHandler {
 
         @Override
         public IOEvents.DataIOEvent read(Kryo kryo, Input input, Class<IOEvents.DataIOEvent> type) {
-            final String eventType = input.readString();
             Registration reg = kryo.readClass(input);
             final Object payload = kryo.readObjectOrNull(input, reg.getType());
+
+            final String eventType = input.readString();
             final UUID src = new UUID(input.readLong(), input.readLong());
             final UUID dst = new UUID(input.readLong(), input.readLong());
+
             IOEvents.DataIOEvent event = new IOEvents.DataIOEvent(eventType, src, dst);
             event.setPayload(payload);
+
          return event;
         }
     }
@@ -478,16 +492,15 @@ public final class SerializationHandler {
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.TransferBufferEvent transferBufferEvent) {
+
+            output.writeBytes(transferBufferEvent.buffer.memory, transferBufferEvent.buffer.baseOffset, transferBufferEvent.buffer.size());
+
             output.writeLong(transferBufferEvent.srcTaskID.getMostSignificantBits());
             output.writeLong(transferBufferEvent.srcTaskID.getLeastSignificantBits());
             output.writeLong(transferBufferEvent.dstTaskID.getMostSignificantBits());
             output.writeLong(transferBufferEvent.dstTaskID.getLeastSignificantBits());
             output.writeLong(transferBufferEvent.messageID.getMostSignificantBits());
             output.writeLong(transferBufferEvent.messageID.getLeastSignificantBits());
-            // ((UnsafeMemoryOutput) output).writeBytes((Object) transferBufferEvent.buffer.memory,
-            // transferBufferEvent.buffer.baseOffset,
-            // transferBufferEvent.buffer.size());
-            output.writeBytes(transferBufferEvent.buffer.memory, transferBufferEvent.buffer.baseOffset, transferBufferEvent.buffer.size());
 
             transferBufferEvent.buffer.free();
             // LOG.info("free");
@@ -496,12 +509,13 @@ public final class SerializationHandler {
         @Override
         public IOEvents.TransferBufferEvent read(Kryo kryo, Input input, Class<IOEvents.TransferBufferEvent> type) {
 
-            final UUID src = new UUID(input.readLong(), input.readLong());
-            final UUID dst = new UUID(input.readLong(), input.readLong());
-            final UUID msgID = new UUID(input.readLong(), input.readLong());
-
             final MemoryView buffer = handler.getBuffer();
             input.readBytes(buffer.memory, buffer.baseOffset, buffer.size());
+
+            final UUID src = new UUID(input.readLong(false), input.readLong(false));
+            final UUID dst = new UUID(input.readLong(false), input.readLong(false));
+            final UUID msgID = new UUID(input.readLong(false), input.readLong(false));
+
             return new IOEvents.TransferBufferEvent(msgID, src, dst, buffer);
         }
     }

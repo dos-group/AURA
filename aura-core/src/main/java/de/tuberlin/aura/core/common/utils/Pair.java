@@ -23,6 +23,15 @@ public class Pair<A, B> implements Serializable {
     // ---------------------------------------------------
 
     /**
+     *
+     */
+    public Pair() {
+        super();
+        this.first = null;
+        this.second = null;
+    }
+
+    /**
      * @param first
      * @param second
      */

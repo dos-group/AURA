@@ -95,9 +95,11 @@ public final class IOManager extends EventDispatcher {
 
         // TODO: Make the number of thread configurable
         this.tcpInboundELG = new NioEventLoopGroup(12);
+
         this.tcpOutboundELG = new NioEventLoopGroup(12);
 
         this.localInboundELG = new LocalEventLoopGroup(2);
+
         this.localOutboundELG = new LocalEventLoopGroup(2);
 
         startNetworkConnectionSetupServer(this.machine, tcpInboundELG);

@@ -12,6 +12,8 @@ public interface IDataConsumer {
 
     public abstract IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException;
 
+    public abstract IOEvents.TransferBufferEvent absorb(int gateIndex, int channelIndex) throws InterruptedException;
+
     public abstract void shutdownConsumer();
 
     public abstract void openGate(int gateIndex);
@@ -30,4 +32,9 @@ public interface IDataConsumer {
     public abstract void bind(final List<List<Descriptors.AbstractNodeDescriptor>> inputBinding, final IAllocator allocator);
 
     public abstract IAllocator getAllocator();
+
+    public abstract boolean isInputChannelExhausted(final int gateIndex, final UUID srcTaskID);
+
+
+    public abstract int getChannelIndexFromTaskID(final UUID taskID);
 }

@@ -18,7 +18,7 @@ public class QueueManager<T> {
 
     public static Map<UUID, QueueManager> BINDINGS = new HashMap<UUID, QueueManager>();
 
-    private final Map<Integer, BufferQueue<T>> inboundQueues;
+    private final Map<LongKey, BufferQueue<T>> inboundQueues;
 
     private final Map<LongKey, BufferQueue<T>> outboundQueues;
 
@@ -31,10 +31,13 @@ public class QueueManager<T> {
     private int outputQueuesCounter;
 
     private QueueManager(BufferQueue.FACTORY<T> inboundFactory, BufferQueue.FACTORY<T> outboundFactory) {
+
         this.inboundQueues = new HashMap<>();
+
         this.inboundFactory = inboundFactory;
 
         this.outboundQueues = new HashMap<>();
+
         this.outboundFactory = outboundFactory;
     }
 
@@ -62,14 +65,15 @@ public class QueueManager<T> {
      * @param gateIndex
      * @return
      */
-    public synchronized BufferQueue<T> getInboundQueue(int gateIndex) {
+    public synchronized BufferQueue<T> getInboundQueue(int gateIndex, int channelIndex) {
 
-        if (inboundQueues.containsKey(gateIndex)) {
-            return inboundQueues.get(gateIndex);
+        final LongKey key = new LongKey(gateIndex, channelIndex);
+        if (inboundQueues.containsKey(key)) {
+            return inboundQueues.get(key);
         }
 
         final BufferQueue<T> queue = inboundFactory.newInstance();
-        inboundQueues.put(gateIndex, queue);
+        inboundQueues.put(key, queue);
         ++this.inputQueuesCounter;
 
         return queue;
