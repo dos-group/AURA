@@ -3,10 +3,6 @@ package de.tuberlin.aura.taskmanager;
 
 import java.util.UUID;
 
-import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +10,10 @@ import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
+import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
 
 public final class TaskExecutionManager extends EventDispatcher implements ITaskExecutionManager {
 

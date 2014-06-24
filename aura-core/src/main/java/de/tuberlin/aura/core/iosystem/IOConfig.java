@@ -28,7 +28,7 @@ public final class IOConfig {
     /**
      * The size netty tries to set the system receive buffer to.
      */
-    public static final int NETTY_RECEIVE_BUFFER_SIZE = TRANSFER_BUFFER_SIZE;
+    //public static final int NETTY_RECEIVE_BUFFER_SIZE = TRANSFER_BUFFER_SIZE;
 
     // TODO: replace with static event size analysis
     /**
@@ -40,7 +40,7 @@ public final class IOConfig {
             4; // length field
 
 
-    public static final int KRYO_IO_EVENT_ID = 10;
+    //public static final int KRYO_IO_EVENT_ID = 10;
 
     public static final int KRYO_IO_DATA_EVENT_ID = 11;
 

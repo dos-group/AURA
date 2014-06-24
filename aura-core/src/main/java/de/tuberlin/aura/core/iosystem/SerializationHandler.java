@@ -7,10 +7,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.task.spi.IDataConsumer;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,9 +20,12 @@ import com.esotericsoftware.kryo.io.UnsafeMemoryOutput;
 
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
 import de.tuberlin.aura.core.memory.BufferCallback;
-import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.MemoryView;
-
+import de.tuberlin.aura.core.memory.spi.IAllocator;
+import de.tuberlin.aura.core.task.spi.IDataConsumer;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -89,6 +88,9 @@ public final class SerializationHandler {
         }
     }
 
+    /**
+     *
+     */
     private static final class KryoDeserializationHandler extends ChannelInboundHandlerAdapter {
 
         private long callbackID = 0;
@@ -169,6 +171,9 @@ public final class SerializationHandler {
             }
         }
 
+        /**
+         *
+         */
         private class Callback implements BufferCallback {
 
             private final ByteBuf pendingBuffer;
@@ -258,6 +263,9 @@ public final class SerializationHandler {
         }
     }
 
+    /**
+     *
+     */
     private static final class KryoOutboundHandler extends ChannelOutboundHandlerAdapter {
 
         private Kryo kryo;
@@ -286,6 +294,9 @@ public final class SerializationHandler {
         }
     }
 
+    /**
+     *
+     */
     public static final class LocalTransferBufferCopyHandler extends SimpleChannelInboundHandler<IOEvents.DataIOEvent> {
 
         private long callbackID = 0;
@@ -343,6 +354,9 @@ public final class SerializationHandler {
             }
         }
 
+        /**
+         *
+         */
         private class Callback implements BufferCallback {
 
             private final IOEvents.TransferBufferEvent transferBufferEvent;
@@ -433,8 +447,10 @@ public final class SerializationHandler {
     // Kryo Serializer.
     // ---------------------------------------------------
 
-
-    private static class BaseIOEventSerializer extends Serializer<IOEvents.BaseIOEvent> {
+    /**
+     *
+     */
+    /*private static class BaseIOEventSerializer extends Serializer<IOEvents.BaseIOEvent> {
 
         @Override
         public void write(Kryo kryo, Output output, IOEvents.BaseIOEvent baseIOEvent) {
@@ -445,8 +461,11 @@ public final class SerializationHandler {
         public IOEvents.BaseIOEvent read(Kryo kryo, Input input, Class<IOEvents.BaseIOEvent> type) {
             return new IOEvents.BaseIOEvent(input.readString());
         }
-    }
+    }*/
 
+    /**
+     *
+     */
     private static class DataIOEventSerializer extends Serializer<IOEvents.DataIOEvent> {
 
         public DataIOEventSerializer() {}
@@ -482,6 +501,9 @@ public final class SerializationHandler {
         }
     }
 
+    /**
+     *
+     */
     private static class TransferBufferEventSerializer extends Serializer<IOEvents.TransferBufferEvent> {
 
         private final KryoDeserializationHandler handler;
@@ -503,7 +525,6 @@ public final class SerializationHandler {
             output.writeLong(transferBufferEvent.messageID.getLeastSignificantBits());
 
             transferBufferEvent.buffer.free();
-            // LOG.info("free");
         }
 
         @Override

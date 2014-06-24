@@ -1,10 +1,10 @@
 package de.tuberlin.aura.workloadmanager;
 
-import de.tuberlin.aura.core.descriptors.Descriptors;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
+import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.DeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;

@@ -3,31 +3,29 @@ package de.tuberlin.aura.taskmanager;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
-import de.tuberlin.aura.core.memory.spi.IAllocator;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.task.spi.IDataConsumer;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
+import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.gates.InputGate;
+import de.tuberlin.aura.core.task.spi.IDataConsumer;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
 
 /**
  * The TaskDataConsumer is responsible for receiving data from connected TaskDataProducers and
  * provide this data (in form of buffers) to the task.
  */
 public final class TaskDataConsumer implements IDataConsumer {
-
 
     private final class RoundRobinAbsorber {
 
@@ -246,7 +244,6 @@ public final class TaskDataConsumer implements IDataConsumer {
      * @throws InterruptedException
      */
     public IOEvents.TransferBufferEvent absorb(int gateIndex, int channelIndex) throws InterruptedException {
-
 
         if (activeGates.get(gateIndex).size() == 0)
             return null;

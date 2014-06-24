@@ -3,9 +3,7 @@ package de.tuberlin.aura.core.record;
 import static org.objectweb.asm.Opcodes.*;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Vector;
 
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.MethodVisitor;
@@ -14,7 +12,6 @@ import org.objectweb.asm.Type;
 
 import com.esotericsoftware.reflectasm.ConstructorAccess;
 import com.esotericsoftware.reflectasm.FieldAccess;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  *
@@ -27,99 +24,6 @@ public final class RowRecordModel {
     public static interface KeySelector {
 
         public abstract int[] key();
-    }
-
-    /**
-     *
-     */
-    public static interface Partitioner {
-
-        public abstract int partition(final RowRecordModel.Record record, final int receiver);
-
-        public abstract int partition(final Object object, final int receiver);
-    }
-
-    /**
-     *
-     */
-    private static abstract class AbstractPartitioner implements Partitioner {
-
-        public int partition(final RowRecordModel.Record record, final int receiver) {
-            throw new NotImplementedException();
-        }
-
-        public int partition(final Object object, final int receiver) {
-            throw new NotImplementedException();
-        }
-    }
-
-    /**
-     *
-     */
-    public static class HashPartitioner extends AbstractPartitioner {
-
-        private final int[] partitionFields;
-
-        private FieldAccess fieldAccessor;
-
-        public HashPartitioner(final int[] partitionFields) {
-            // sanity check.
-            if (partitionFields == null)
-                throw new IllegalArgumentException("partitionFields == null");
-
-            this.partitionFields = partitionFields;
-        }
-
-        public HashPartitioner(final KeySelector keySelector) {
-            // sanity check.
-            if (keySelector == null)
-                throw new IllegalArgumentException("keySelector == null");
-
-            this.partitionFields = keySelector.key();
-        }
-
-        @Override
-        public int partition(final Record record, final int receiver) {
-            int result = 17;
-            for(final int fieldIndex : partitionFields)
-                result = 31 * result + record.get(fieldIndex).hashCode();
-            return (result & Integer.MAX_VALUE) % receiver;
-        }
-
-        @Override
-        public int partition(final Object object, final int receiver) {
-
-            if(fieldAccessor == null) {
-                fieldAccessor = FieldAccess.get(object.getClass());
-            }
-
-            int result = 17;
-            for(final int fieldIndex : partitionFields)
-                result = 31 * result + fieldAccessor.get(object, fieldIndex).hashCode();
-            return (result & Integer.MAX_VALUE) % receiver;
-        }
-    }
-
-    /**
-     *
-     */
-    public static class RangePartitioner extends AbstractPartitioner {
-    }
-
-    /**
-     *
-     */
-    public static class RoundRobinPartitioner extends AbstractPartitioner {
-
-        private int channelIndex = 0;
-
-        @Override
-        public int partition(final Record record, final int receiver) {
-
-            channelIndex = ++channelIndex % receiver;
-
-            return channelIndex;
-        }
     }
 
     /**
@@ -147,7 +51,12 @@ public final class RowRecordModel {
         // ---------------------------------------------------
         // Public Methods.
         // ---------------------------------------------------
-        
+
+        /**
+         *
+         * @param clazz
+         * @return
+         */
         public static FieldAccess getFieldAccessor(final Class<?> clazz) {
             // sanity check.
             if (clazz == null)
@@ -161,6 +70,11 @@ public final class RowRecordModel {
             return fa;
         }
 
+        /**
+         *
+         * @param clazz
+         * @return
+         */
         public static byte[] getRecordByteCode(final Class<?> clazz) {
             // sanity check.
             if (clazz == null)
@@ -169,6 +83,11 @@ public final class RowRecordModel {
             return byteCodeRepository.get(clazz);
         }
 
+        /**
+         *
+         * @param fieldTypes
+         * @return
+         */
         public static synchronized Class<?> buildRecordType(final Class<?>[] fieldTypes) {
             // sanity check.
             if (fieldTypes == null)
@@ -212,6 +131,11 @@ public final class RowRecordModel {
             return clazz;
         }
 
+        /**
+         *
+         * @param clazz
+         * @param byteCode
+         */
         public static synchronized void addRecordType(final Class<?> clazz, final byte[] byteCode) {
             // sanity check.
             if (clazz == null)
@@ -234,6 +158,11 @@ public final class RowRecordModel {
             byteCodeRepository.put(clazz, byteCode);
         }
 
+        /**
+         *
+         * @param clazz
+         * @return
+         */
         public static Record createRecord(final Class<?> clazz) {
             // sanity check.
             if (clazz == null)
@@ -283,7 +212,11 @@ public final class RowRecordModel {
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
-        
+
+        /**
+         *
+         * @param instance
+         */
         public Record(final Object instance) {
             // sanity check.
             if (instance == null)
@@ -393,7 +326,19 @@ public final class RowRecordModel {
     /**
      *
      */
+    public static final class RECORD_CLASS_BLOCK_END {
+        public final int marker = -2;
+    }
+
+    /**
+     *
+     */
     public static final Class<?> RECORD_TYPE_STREAM_END = RECORD_CLASS_STREAM_END.class;
+
+    /**
+     *
+     */
+    public static final Class<?> RECORD_TYPE_BLOCK_END = RECORD_CLASS_BLOCK_END.class;
 
     /**
      *

@@ -1,13 +1,19 @@
 package de.tuberlin.aura.core.task.spi;
 
-import de.tuberlin.aura.core.memory.MemoryView;
+import de.tuberlin.aura.core.record.RowRecordModel;
 
 /**
  *
  */
 public interface IRecordReader {
 
-    public abstract void selectBuffer(final MemoryView memView);
+    public abstract void begin();
 
-    public abstract <T> T readRecord(final Class<T> recordType);
+    public abstract RowRecordModel.Record readRecord();
+
+    public abstract Object readObject();
+
+    public abstract void end();
+
+    public abstract boolean finished();
 }

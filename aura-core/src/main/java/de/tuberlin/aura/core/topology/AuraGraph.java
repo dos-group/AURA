@@ -5,8 +5,8 @@ import java.util.*;
 
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
+import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
@@ -29,15 +29,6 @@ public class AuraGraph {
         // ---------------------------------------------------
         // Aura Topology Properties.
         // ---------------------------------------------------
-
-        public static enum MonitoringType {
-
-            NO_MONITORING,
-
-            TASK_MONITORING,
-
-            TOPOLOGY_MONITORING
-        }
 
         public static enum DeploymentType {
 
@@ -70,8 +61,6 @@ public class AuraGraph {
 
         public final DeploymentType deploymentType;
 
-        public final EnumSet<MonitoringType> monitoringProperties;
-
         public Map<UUID, ExecutionNode> executionNodeMap;
 
 
@@ -91,7 +80,6 @@ public class AuraGraph {
                             final Map<String, List<UserCode>> userCodeMap,
                             final Map<UUID, Node> uidNodeMap,
                             final DeploymentType deploymentType,
-                            final EnumSet<MonitoringType> monitoringProperties,
                             final Map<Pair<String, String>, Edge.TransferType> externalEdges) {
 
             // sanity check.
@@ -115,8 +103,6 @@ public class AuraGraph {
                 throw new IllegalArgumentException("uidNodeMap == null");
             if (deploymentType == null)
                 throw new IllegalArgumentException("deploymentType == null");
-            if (monitoringProperties == null)
-                throw new IllegalArgumentException("monitoringType == null");
             if (externalEdges == null)
                 throw new IllegalArgumentException("externalEdges == null");
 
@@ -166,8 +152,6 @@ public class AuraGraph {
             this.uidNodeMap = uidNodeMap;
 
             this.deploymentType = deploymentType;
-
-            this.monitoringProperties = EnumSet.copyOf(monitoringProperties);
 
             this.executionNodeMap = null;
 
@@ -338,32 +322,21 @@ public class AuraGraph {
             return nodeConnector.currentSource(node);
         }
 
-
         public NodeConnector and() {
             return nodeConnector;
         }
 
         public AuraTopology build(final String name) {
-            return build(name, EnumSet.of(AuraTopology.MonitoringType.NO_MONITORING), DeploymentType.EAGER);
-        }
-
-        public AuraTopology build(final String name, final EnumSet<AuraTopology.MonitoringType> monitoringProperties) {
-            return build(name, monitoringProperties, DeploymentType.EAGER);
+            return build(name, DeploymentType.EAGER);
         }
 
         public AuraTopology build(final String name,
-                                  final EnumSet<AuraTopology.MonitoringType> monitoringProperties,
                                   final DeploymentType deploymentType) {
             // sanity check.
             if (name == null)
                 throw new IllegalArgumentException("name == null");
-            if (monitoringProperties == null)
-                throw new IllegalArgumentException("monitoringProperties == null");
             if (deploymentType == null)
                 throw new IllegalArgumentException("deploymentType == null");
-            // sanity check of monitoring properties.
-            if (monitoringProperties.contains(AuraTopology.MonitoringType.NO_MONITORING) && monitoringProperties.size() > 1)
-                throw new IllegalStateException();
 
             if (!isBuilt) {
 
@@ -430,7 +403,6 @@ public class AuraGraph {
                                     userCodeMap,
                                     uidNodeMap,
                                     deploymentType,
-                                    monitoringProperties,
                                     externalEdges);
         }
 

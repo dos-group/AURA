@@ -5,14 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
-import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -48,7 +47,12 @@ public class DataReader {
      * @param dispatcher the dispatcher used for events
      * @param executionManager the execution manager the data reader is bound to
      */
-    public DataReader(IEventDispatcher dispatcher, final ITaskExecutionManager executionManager) {
+    public DataReader(final IEventDispatcher dispatcher, final ITaskExecutionManager executionManager) {
+        // sanity check.
+        if (dispatcher == null)
+            throw new IllegalArgumentException("dispatcher == null");
+//        if (executionManager == null)
+//            throw new IllegalArgumentException("executionManager == null");
 
         this.dispatcher = dispatcher;
 
@@ -71,13 +75,20 @@ public class DataReader {
      * @param <T> the type of channel this connection uses
      */
     public <T extends Channel> void bind(final InboundConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
+        // sanity check.
+        if (type == null)
+            throw new IllegalArgumentException("type == null");
+        if (address == null)
+            throw new IllegalArgumentException("address == null");
+        if (workerGroup == null)
+            throw new IllegalArgumentException("workerGroup == null");
 
         final ServerBootstrap bootstrap = type.bootStrap(workerGroup);
         bootstrap.childHandler(type.getPipeline(this));
 
         try {
             // Bind and start to accept incoming connections.
-            final ChannelFuture f = bootstrap.bind(address).addListener(new ChannelFutureListener() {
+            bootstrap.bind(address).addListener(new ChannelFutureListener() {
 
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -138,9 +149,6 @@ public class DataReader {
      * @return true if the channel is already bound to this data reader, false otherwise
      */
     public boolean isConnected(final UUID taskID, final int gateIndex, final int channelIndex) {
-        //final Pair<UUID, Integer> index = new Pair<>(taskID, gateIndex);
-        //return connectedChannels.containsKey(index) && connectedChannels.get(index).containsKey(channelIndex);
-
         return gateKeyToChannel.containsKey(Triple.of(taskID, gateIndex, channelIndex));
     }
 
@@ -226,9 +234,7 @@ public class DataReader {
      * @param <T> the channel type used by the connection
      */
     public interface InboundConnectionType<T extends Channel> {
-
         ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup);
-
         ChannelInitializer<T> getPipeline(final DataReader dataReader);
     }
 
@@ -278,7 +284,6 @@ public class DataReader {
                             // set keep alive, so idle connections are persistent
                     .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
-
             return b;
         }
 

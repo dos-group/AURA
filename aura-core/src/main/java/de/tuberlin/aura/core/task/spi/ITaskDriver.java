@@ -1,12 +1,13 @@
 package de.tuberlin.aura.core.task.spi;
 
+import org.slf4j.Logger;
+
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
-import org.slf4j.Logger;
 
 /**
  *

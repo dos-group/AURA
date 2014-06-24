@@ -5,16 +5,16 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.memory.spi.IAllocator;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
+import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.task.common.TaskStates;
+import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
 
 public final class TaskExecutionUnit implements ITaskExecutionUnit {
 

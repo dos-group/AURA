@@ -3,7 +3,6 @@ package de.tuberlin.aura.demo.examples;
 import java.util.Arrays;
 import java.util.UUID;
 
-import de.tuberlin.aura.taskmanager.TaskRecordReader;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
@@ -11,24 +10,25 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
-import de.tuberlin.aura.core.record.RowRecordModel;
+import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.record.RowRecordReader;
+import de.tuberlin.aura.core.record.RowRecordWriter;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataConsumer;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.topology.AuraGraph;
-import de.tuberlin.aura.taskmanager.TaskRecordWriter;
 
 
-public final class SimpleClient2 {
+public final class RecordModelTest {
 
     /**
      * Logger.
      */
-    private static final Logger LOG = LoggerFactory.getLogger(SimpleClient2.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RecordModelTest.class);
 
     // Disallow Instantiation.
-    private SimpleClient2() {}
+    private RecordModelTest() {}
 
     public static final class TestRecord {
 
@@ -49,14 +49,14 @@ public final class SimpleClient2 {
      */
     public static class TaskMap1 extends AbstractInvokeable {
 
-        private final TaskRecordWriter recordWriter;
+        private final RowRecordWriter recordWriter;
 
         public TaskMap1(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
 
-            final RowRecordModel.Partitioner partitioner = new RowRecordModel.HashPartitioner(new int[] {0});
+            final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
 
-            this.recordWriter = new TaskRecordWriter(driver, TestRecord.class, partitioner);
+            this.recordWriter = new RowRecordWriter(driver, TestRecord.class, 0, partitioner);
         }
 
         @Override
@@ -64,8 +64,7 @@ public final class SimpleClient2 {
 
             recordWriter.begin();
 
-
-            if(driver.getNodeDescriptor().taskIndex == 0) {
+            //if(driver.getNodeDescriptor().taskIndex == 0) {
                 for(int i = 0; i < 10000; ++i) {
                     final TestRecord tr = new TestRecord();
                     tr.a = i;
@@ -74,18 +73,7 @@ public final class SimpleClient2 {
                     tr.d = "TASK 0";
                     recordWriter.writeObject(tr);
                 }
-            }
-
-            if(driver.getNodeDescriptor().taskIndex == 1) {
-                for(int i = 0; i < 20000; ++i) {
-                    final TestRecord tr = new TestRecord();
-                    tr.a = i;
-                    tr.b = 101;
-                    tr.c = 102;
-                    tr.d = "TASK 1";
-                    recordWriter.writeObject(tr);
-                }
-            }
+            //}
 
             recordWriter.end();
         }
@@ -101,13 +89,13 @@ public final class SimpleClient2 {
      */
     public static class TaskMap2 extends AbstractInvokeable {
 
-        private TaskRecordReader recordReader;
+        private final RowRecordReader recordReader;
 
         public TaskMap2(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
 
             super(taskDriver, producer, consumer, LOG);
 
-            this.recordReader = new TaskRecordReader(taskDriver, 0);
+            this.recordReader = new RowRecordReader(taskDriver, 0);
         }
 
         @Override
@@ -119,7 +107,7 @@ public final class SimpleClient2 {
         public void run() throws Throwable {
 
             recordReader.begin();
-            while (!recordReader.isReaderFinished()) {
+            while (!recordReader.finished()) {
                 final TestRecord obj = (TestRecord)recordReader.readObject();
                 if (obj != null) {
                     String value3 = obj.d;
@@ -127,6 +115,7 @@ public final class SimpleClient2 {
                     if(driver.getNodeDescriptor().taskIndex == 0) {
                        System.out.println(driver.getNodeDescriptor().taskID + " -- value3: " + value3 + "   value0:" + value0);
                     }
+
                 }
             }
             recordReader.end();
@@ -162,9 +151,13 @@ public final class SimpleClient2 {
 
         final AuraGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
-        atb1.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap1", 2, 1), Arrays.asList(TaskMap1.class, TestRecord.class)).
+        atb1.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap1", 1, 1), Arrays.asList(TaskMap1.class, TestRecord.class)).
                 connectTo("TaskMap2", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-            .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap2", 2, 1), TaskMap2.class);
+            .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap2", 1, 1), TaskMap2.class);
+
+
+
+
 
         final AuraGraph.AuraTopology at1 = atb1.build("JOB 1");
 

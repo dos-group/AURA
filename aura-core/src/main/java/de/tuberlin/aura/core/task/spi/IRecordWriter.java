@@ -1,13 +1,17 @@
 package de.tuberlin.aura.core.task.spi;
 
-import de.tuberlin.aura.core.memory.MemoryView;
+import de.tuberlin.aura.core.record.RowRecordModel;
 
 /**
  *
  */
 public interface IRecordWriter {
 
-    public abstract void selectBuffer(final MemoryView memView);
+    public abstract void begin();
 
-    public abstract void writeRecord(final Object record);
+    public abstract void writeRecord(final RowRecordModel.Record record);
+
+    public abstract void writeObject(final Object object);
+
+    public abstract void end();
 }

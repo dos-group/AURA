@@ -1,9 +1,11 @@
 package de.tuberlin.aura.core.memory;
 
-import de.tuberlin.aura.core.memory.spi.IAllocator;
-
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import de.tuberlin.aura.core.memory.spi.IAllocator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -13,6 +15,8 @@ public final class MemoryView {
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
+
+    private final static Logger LOG = LoggerFactory.getLogger(MemoryView.class);
 
     public final IAllocator allocator;
 
@@ -28,10 +32,22 @@ public final class MemoryView {
     // Constructors.
     // ---------------------------------------------------
 
+    /**
+     *
+     * @param allocator
+     * @param memory
+     */
     public MemoryView(final IAllocator allocator, final byte[] memory) {
         this(allocator, memory, 0, memory.length);
     }
 
+    /**
+     *
+     * @param allocator
+     * @param memory
+     * @param baseOffset
+     * @param size
+     */
     public MemoryView(final IAllocator allocator, final byte[] memory, int baseOffset, int size) {
         // sanity check.
         if (allocator == null)
@@ -58,14 +74,26 @@ public final class MemoryView {
     // Public Methods.
     // ---------------------------------------------------
 
+    /**
+     *
+     * @return
+     */
     public int size() {
         return size;
     }
 
+    /**
+     *
+     * @return
+     */
     public byte[] copy() {
         return Arrays.copyOfRange(memory, baseOffset, baseOffset + size);
     }
 
+    /**
+     *
+     * @param dst
+     */
     public void copy(byte[] dst) {
         // sanity check.
         if (dst == null)
@@ -73,28 +101,61 @@ public final class MemoryView {
         System.arraycopy(memory, baseOffset, dst, 0, baseOffset + size);
     }
 
+    /**
+     *
+     */
     public void free() {
-        if (refCount.decrementAndGet() <= 0) {
+        if (refCount.decrementAndGet() == 0) {
             if(allocator != null)
                 allocator.free(this);
-            refCount.set(0);
+            //refCount.set(0);
+        }
+
+        if (refCount.get() < 0) {
+            LOG.error("--> FAILURE: refCount(" + refCount.get() + ")" + " < 0");
         }
     }
 
+    /**
+     *
+     * @return
+     */
     public MemoryView weakCopy() {
         retain();
         return this;
     }
 
+    /**
+     *
+     */
     public void retain() {
         refCount.getAndIncrement();
     }
 
+    /**
+     *
+     */
     public void release() {
         refCount.getAndDecrement();
     }
 
+    /**
+     *
+     * @return
+     */
     public int getRefCount() {
         return refCount.get();
+    }
+
+    /**
+     *
+     * @param refCount
+     */
+    public void setRefCount(final int refCount) {
+        // sanity check.
+        if (refCount < 0)
+            throw new IllegalArgumentException("refCount < 0");
+
+        this.refCount.set(refCount);
     }
 }

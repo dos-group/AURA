@@ -139,45 +139,13 @@ public class DataWriter {
             }
         }
 
-        /*
-         * public final class ConnectListener implements ChannelFutureListener {
-         * 
-         * private final Bootstrap bootstrap;
-         * 
-         * private final SocketAddress address;
-         * 
-         * public ConnectListener(Bootstrap bootstrap, SocketAddress address) { this.bootstrap =
-         * bootstrap; this.address = address; }
-         * 
-         * @Override public void operationComplete(ChannelFuture future) throws Exception { if
-         * (future.isSuccess()) {
-         * 
-         * channel = future.channel(); LOG.debug("Channel successfully connected.");
-         * 
-         * future.channel().writeAndFlush(new
-         * IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, srcID,
-         * dstID));
-         * 
-         * LOG.error("connected");
-         * 
-         * // Dispatch OUTPUT_CHANNEL_CONNECTED event. final IOEvents.DataIOEvent connected = new
-         * IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, srcID,
-         * dstID); connected.setPayload(ChannelWriter.this); connected.setChannel(channel);
-         * dispatcher.dispatchEvent(connected);
-         * 
-         * } else { if (connectionRetries.incrementAndGet() > maxConnectionRetries) {
-         * LOG.error("Connection attempt failed: ", future.cause()); throw new
-         * IllegalStateException("connection attempt failed.", future.cause()); } else {
-         * LOG.info("Connection retry (" + connectionRetries.get() + ") ...");
-         * bootstrap.connect(address).addListener(this); } } } }
-         */
-
         /**
-         * Writes the event to the channel.
-         * 
+         * Writes an event to the channel.
+         *
          * If the gate is not yet open, this method will block until the gate is open.
+         * Only the endpoint of the channel can open gate.
          * 
-         * @param event
+         * @param event The event that is written on the channel.
          */
         public void write(IOEvents.DataIOEvent event) {
             try {
@@ -185,7 +153,7 @@ public class DataWriter {
                     waitForGateOpen.await();
                 }
 
-  this.outboundQueue.offer(event);
+                this.outboundQueue.offer(event);
             } catch (InterruptedException e) {
                 LOG.error("Write of event " + event + " was interrupted.", e);
             }
@@ -285,7 +253,7 @@ public class DataWriter {
                         LOG.debug("RECEIVED EXHAUSTED ACK EVENT");
                         waitForExhaustedAcknowledge.countDown();
                         break;
-     default:
+                    default:
                         LOG.error("RECEIVED UNKNOWN EVENT TYPE: " + gateEvent.type);
                         break;
                 }
@@ -317,8 +285,8 @@ public class DataWriter {
                             // goes to WriteHandler
                             ctx.fireChannelWritabilityChanged();
                         } else {
-                            if (future.cause() != null)
-                                throw new IllegalStateException(future.cause());
+                            //if (future.cause() != null)
+                            throw new IllegalStateException(future.cause());
                         }
                     }
                 });

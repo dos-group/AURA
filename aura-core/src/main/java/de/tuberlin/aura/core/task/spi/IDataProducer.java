@@ -11,7 +11,11 @@ import de.tuberlin.aura.core.memory.spi.IAllocator;
 
 public interface IDataProducer {
 
-    public abstract void emit(int gateIndex, int channelIndex, IOEvents.DataIOEvent event);
+    public abstract void emit(final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event);
+
+    public abstract void emit(final int gateIndex, final int channelIndex, final MemoryView buffer);
+
+    public abstract void broadcast(final int gateIndex, final MemoryView buffer);
 
     public abstract void done();
 
@@ -20,8 +24,6 @@ public interface IDataProducer {
     public abstract UUID getOutputTaskIDFromChannelIndex(int channelIndex);
 
     public abstract int getOutputGateIndexFromTaskID(final UUID taskID);
-
-    public abstract MemoryView alloc();
 
 
     public abstract void store(final MemoryView buffer);

@@ -1,16 +1,14 @@
 package de.tuberlin.aura.core.task.gates;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
+import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 
 public final class InputGate extends AbstractGate {

@@ -3,9 +3,6 @@ package de.tuberlin.aura.taskmanager;
 
 import java.lang.reflect.Constructor;
 
-import de.tuberlin.aura.core.iosystem.queues.BlockingSignalQueue;
-import de.tuberlin.aura.core.task.spi.*;
-import de.tuberlin.aura.storage.DataStorage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,13 +11,14 @@ import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
-import de.tuberlin.aura.core.iosystem.queues.BlockingBufferQueue;
-import de.tuberlin.aura.core.iosystem.queues.SignalSpscLinkedQueue;
+import de.tuberlin.aura.core.iosystem.queues.BlockingSignalQueue;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskTransition;
+import de.tuberlin.aura.core.task.spi.*;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
+import de.tuberlin.aura.storage.DataStorage;
 
 /**
  *
@@ -190,6 +188,9 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             dataProducer.shutdownProducer(awaitExhaustion);
 
         dataConsumer.shutdownConsumer();
+
+        dataConsumer.getAllocator().checkForMemoryLeaks();
+        dataProducer.getAllocator().checkForMemoryLeaks();
     }
 
     // ---------------------------------------------------

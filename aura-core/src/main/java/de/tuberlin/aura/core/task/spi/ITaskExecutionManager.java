@@ -3,7 +3,6 @@ package de.tuberlin.aura.core.task.spi;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
-import de.tuberlin.aura.core.iosystem.IOManager;
 
 /**
  *

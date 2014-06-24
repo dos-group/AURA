@@ -5,20 +5,21 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import de.tuberlin.aura.core.memory.spi.IAllocator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import de.tuberlin.aura.core.memory.spi.IAllocator;
 
 /**
  *
  */
 public final class BufferAllocator implements IAllocator {
 
-    private final static Logger LOG = LoggerFactory.getLogger(BufferAllocator.class);
-
     // ---------------------------------------------------
     // Constants.
     // ---------------------------------------------------
+
+    private final static Logger LOG = LoggerFactory.getLogger(BufferAllocator.class);
 
     public static final int _8K = 1024 * 8;
 
@@ -79,24 +80,11 @@ public final class BufferAllocator implements IAllocator {
 
     @Override
     public MemoryView alloc() {
-        final MemoryView memory = freeList.poll();
-        return memory;
-    }
-
-    @Override
-    public MemoryView allocBlocking() throws InterruptedException {
-        MemoryView view = freeList.poll(10, TimeUnit.SECONDS);
-        if (view == null) {
-            logStatus();
-            view = freeList.take();
+        final MemoryView buffer = freeList.poll();
+        if (buffer != null) {
+            buffer.retain();
         }
-        return view;
-    }
-
-    private void logStatus() {
-        LOG.info("buffer count :" + bufferCount);
-        LOG.info("freelist size: " + freeList.size());
-        LOG.info("callbacks    : " + callbackList.size());
+        return buffer;
     }
 
     @Override
@@ -106,26 +94,42 @@ public final class BufferAllocator implements IAllocator {
             throw new IllegalArgumentException("callback == null");
 
         synchronized (callbackLock) {
-            final MemoryView memory = freeList.poll();
-            if (memory == null) {
+            final MemoryView buffer = freeList.poll();
+            if (buffer == null) {
                 callbackList.add(callback);
+            } else {
+                buffer.retain();
             }
-            return memory;
+            return buffer;
         }
     }
 
     @Override
-    public void free(final MemoryView memory) {
+    public MemoryView allocBlocking() throws InterruptedException {
+        MemoryView buffer = freeList.poll(10, TimeUnit.SECONDS);
+        if (buffer == null) {
+            logStatus();
+            buffer = freeList.take();
+        }
+        if (buffer != null) {
+            buffer.retain();
+        }
+        return buffer;
+    }
+
+    @Override
+    public void free(final MemoryView buffer) {
         // sanity check.
-        if (memory == null)
-            throw new IllegalArgumentException("memory == null");
+        if (buffer == null)
+            throw new IllegalArgumentException("buffer == null");
 
         synchronized (callbackLock) {
             if (!callbackList.isEmpty()) {
                 final BufferCallback bufferCallback = callbackList.poll();
-                bufferCallback.bufferReader(memory);
+                buffer.retain();
+                bufferCallback.bufferReader(buffer);
             } else {
-                freeList.add(memory);
+                freeList.add(buffer);
             }
         }
     }
@@ -143,5 +147,27 @@ public final class BufferAllocator implements IAllocator {
     @Override
     public boolean isNotUsed() {
         return false;
+    }
+
+    @Override
+    public void checkForMemoryLeaks() {
+        if (freeList.size() != bufferCount) {
+            throw new IllegalStateException( (bufferCount - freeList.size()) + " buffers are not freed.");
+        }
+        for (final MemoryView buffer : freeList) {
+            if (buffer.getRefCount() != 0 ) {
+                throw new IllegalStateException("Reference count of buffer is not zero.");
+            }
+        }
+    }
+
+    // ---------------------------------------------------
+    // Private Methods.
+    // ---------------------------------------------------
+
+    private void logStatus() {
+        LOG.info("buffer count :" + bufferCount);
+        LOG.info("freelist size: " + freeList.size());
+        LOG.info("callbacks    : " + callbackList.size());
     }
 }

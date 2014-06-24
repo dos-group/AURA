@@ -156,8 +156,6 @@ public final class IOEvents {
 
         public final UUID messageID;
 
-        // public final byte[] data;
-
         public final MemoryView buffer;
 
         public TransferBufferEvent(final UUID srcTaskID, final UUID dstTaskID, final MemoryView buffer) {
@@ -342,7 +340,4 @@ public final class IOEvents {
             this.result = result;
         }
     }
-
-    // --------------------------------------------------
-    // KRYO
 }

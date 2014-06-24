@@ -3,11 +3,6 @@ package de.tuberlin.aura.taskmanager;
 import java.io.IOException;
 import java.util.*;
 
-import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.memory.BufferMemoryManager;
-import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
-import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
-import de.tuberlin.aura.storage.DataStorage;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -17,18 +12,23 @@ import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
+import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
+import de.tuberlin.aura.core.memory.BufferMemoryManager;
+import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
+import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.task.spi.ITaskManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import de.tuberlin.aura.storage.DataStorage;
 
 public final class TaskManager implements ITaskManager {
 
@@ -279,7 +279,7 @@ public final class TaskManager implements ITaskManager {
         List<ITaskDriver> contexts = deployedTopologyTasks.get(topologyID);
 
         if (contexts == null) {
-            contexts = new ArrayList<>();
+            contexts = Collections.synchronizedList(new ArrayList<ITaskDriver>());
             deployedTopologyTasks.put(topologyID, contexts);
         }
 

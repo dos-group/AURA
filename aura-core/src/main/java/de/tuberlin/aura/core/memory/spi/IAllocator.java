@@ -21,4 +21,6 @@ public interface IAllocator {
     public abstract int getBufferSize();
 
     public abstract boolean isNotUsed();
+
+    public abstract void checkForMemoryLeaks();
 }

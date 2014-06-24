@@ -1,9 +1,9 @@
 package de.tuberlin.aura.core.memory;
 
-import de.tuberlin.aura.core.memory.spi.IAllocator;
-
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import de.tuberlin.aura.core.memory.spi.IAllocator;
 
 /**
  *
@@ -16,9 +16,9 @@ public final class BufferAllocatorGroup implements IAllocator {
 
     private final int bufferSize;
 
-    final List<IAllocator> assignedAllocators;
+    private final List<IAllocator> assignedAllocators;
 
-    final AtomicInteger allocCounter;
+    private final AtomicInteger allocCounter;
 
     // ---------------------------------------------------
     // Constants.
@@ -148,5 +148,12 @@ public final class BufferAllocatorGroup implements IAllocator {
     @Override
     public boolean isNotUsed() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void checkForMemoryLeaks() {
+        for (final IAllocator allocator : assignedAllocators) {
+            allocator.checkForMemoryLeaks();
+        }
     }
 }

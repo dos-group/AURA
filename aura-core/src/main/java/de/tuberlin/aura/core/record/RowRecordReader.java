@@ -1,4 +1,4 @@
-package de.tuberlin.aura.taskmanager;
+package de.tuberlin.aura.core.record;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,10 +6,10 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.esotericsoftware.kryo.io.FastInput;
 import org.apache.commons.lang3.ArrayUtils;
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.io.FastInput;
 import com.esotericsoftware.kryo.io.Input;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -19,13 +19,13 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.BufferStream;
 import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.record.RowRecordModel;
+import de.tuberlin.aura.core.task.spi.IRecordReader;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 
 /**
  *
  */
-public class TaskRecordReader {
+public class RowRecordReader implements IRecordReader {
 
     public class RecordTypeEventHandler implements IEventHandler {
 
@@ -93,7 +93,7 @@ public class TaskRecordReader {
     // ---------------------------------------------------
 
 
-    public TaskRecordReader(final ITaskDriver driver, final int gateIndex) {
+    public RowRecordReader(final ITaskDriver driver, final int gateIndex) {
         // sanity check.
         if (driver == null)
             throw new IllegalArgumentException("driver == null");
@@ -141,7 +141,7 @@ public class TaskRecordReader {
 
             inputStreams.add(inputStream);
 
-            kryoInputs.add(new Input(inputStream, bufferSize));
+            kryoInputs.add(new FastInput(inputStream, bufferSize));
         }
 
         driver.getTaskManager().getIOManager().addEventListener(IOEvents.DataEventType.DATA_EVENT_RECORD_TYPE, new RecordTypeEventHandler());
@@ -165,6 +165,41 @@ public class TaskRecordReader {
      *
      * @return
      */
+    public RowRecordModel.Record readRecord() {
+
+        Object object = null;
+
+        try {
+
+            object = kryo.readClassAndObject(kryoInputs.get(selectedChannel));;
+
+            if(object != null && object.getClass() == RowRecordModel.RECORD_CLASS_STREAM_END.class) {
+
+                kryoInputs.remove(selectedChannel);
+
+                inputStreams.remove(selectedChannel);
+
+                if (kryoInputs.size() == 0) {
+                    isFinished = true;
+                    return null;
+                }
+
+                selectedChannel = ++selectedChannel % kryoInputs.size();
+
+                return null;
+            }
+
+        } catch (Exception e) {
+            isFinished = true;
+        }
+
+        return new RowRecordModel.Record(object);
+    }
+
+    /**
+     *
+     * @return
+     */
     public Object readObject() {
 
         Object object = null;
@@ -173,6 +208,8 @@ public class TaskRecordReader {
             object = kryo.readClassAndObject(kryoInputs.get(selectedChannel));
 
             if(object != null && object.getClass() == RowRecordModel.RECORD_CLASS_STREAM_END.class) {
+
+                kryoInputs.get(selectedChannel).close();
 
                 kryoInputs.remove(selectedChannel);
 
@@ -205,7 +242,7 @@ public class TaskRecordReader {
      *
      * @return
      */
-    public boolean isReaderFinished() {
+    public boolean finished() {
         return isFinished;
     }
 }
