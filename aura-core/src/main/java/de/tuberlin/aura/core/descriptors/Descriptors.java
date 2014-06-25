@@ -3,9 +3,12 @@ package de.tuberlin.aura.core.descriptors;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.operators.Operators;
+import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.topology.AuraGraph.Node;
 
@@ -286,6 +289,8 @@ public final class Descriptors {
 
         private MachineDescriptor machine;
 
+        private List<Class<?>> userCodeClasses;
+
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
@@ -312,6 +317,8 @@ public final class Descriptors {
             this.name = name;
 
             this.userCodeList = userCodeList;
+
+            this.userCodeClasses = null;
         }
 
         // ---------------------------------------------------
@@ -330,6 +337,18 @@ public final class Descriptors {
 
         public MachineDescriptor getMachineDescriptor() {
             return machine;
+        }
+
+        public void setUserCodeClasses(final List<Class<?>> userCodeClasses) {
+            // sanity check.
+            if (userCodeClasses == null)
+                throw new IllegalArgumentException("userCodeClasses == null");
+
+            this.userCodeClasses = userCodeClasses;
+        }
+
+        public List<Class<?>> getUserCodeClasses() {
+            return Collections.unmodifiableList(userCodeClasses);
         }
 
         @Override
@@ -398,6 +417,46 @@ public final class Descriptors {
 
         public ComputationNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
             super(topologyID, taskID, taskIndex, name, userCodeList);
+        }
+    }
+
+    /**
+     *
+     */
+    public static final class OperatorNodeDescriptor extends AbstractNodeDescriptor {
+
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
+        private static final long serialVersionUID = -1L;
+
+        public final Operators.OperatorType operatorType;
+
+        public final int[] keys;
+
+        public final Partitioner.PartitioningStrategy strategy;
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
+
+        public OperatorNodeDescriptor(final UUID topologyID,
+                                      final UUID taskID,
+                                      final int taskIndex,
+                                      final String name,
+                                      final List<UserCode> userCodeList,
+                                      final Operators.OperatorType operatorType,
+                                      final int[] keys,
+                                      final Partitioner.PartitioningStrategy strategy) {
+
+            super(topologyID, taskID, taskIndex, name, userCodeList);
+
+            this.operatorType = operatorType;
+
+            this.keys = keys;
+
+            this.strategy = strategy;
         }
     }
 

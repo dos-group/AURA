@@ -15,6 +15,49 @@ public final class Partitioner {
     /**
      *
      */
+    public static enum PartitioningStrategy {
+
+        HASH_PARTITIONER,
+
+        RANGE_PARTITIONER,
+
+        ROUND_ROBIN_PARTITIONER
+    }
+
+    /**
+     *
+     */
+    public static final class PartitionerFactory {
+
+        public static IPartitioner createPartitioner(final PartitioningStrategy strategy, final int keys[]) {
+            // sanity check.
+            if (strategy == null)
+                throw new IllegalArgumentException("strategy == null");
+
+            switch(strategy) {
+
+                case HASH_PARTITIONER: {
+                    return new HashPartitioner(keys);
+                }
+
+                case RANGE_PARTITIONER: {
+                    return new RangePartitioner();
+                }
+
+                case ROUND_ROBIN_PARTITIONER: {
+                    return new RoundRobinPartitioner();
+                }
+
+                default: {
+                    throw new IllegalStateException("partitioner not supported");
+                }
+            }
+        }
+    }
+
+    /**
+     *
+     */
     public static interface IPartitioner {
 
         public abstract int partition(final RowRecordModel.Record record, final int receiver);

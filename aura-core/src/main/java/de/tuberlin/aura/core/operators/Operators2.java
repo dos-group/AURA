@@ -1,19 +1,73 @@
 package de.tuberlin.aura.core.operators;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.google.common.collect.Lists;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.task.spi.IRecordReader;
+
+import java.io.Serializable;
+import java.util.*;
 
 /**
  *
  */
-public final class Operators {
+public class Operators2 {
 
     // Disallow instantiation.
-    private Operators() {}
+    private Operators2() {}
+
+    /**
+     *
+     */
+    public static interface Visitor<T> {
+
+        public abstract void visit(final T element);
+    }
+
+    /**
+     *
+     */
+    public static interface Visitable<T> {
+
+        public abstract void accept(final Visitor<T> visitor);
+    }
+
+    /**
+     *
+     */
+    public static final class TopologyBreadthFirstTraverser {
+
+        private static void traverse(final AbstractOperator operator, final Visitor<IOperator> visitor) {
+            // sanity check.
+            if (operator == null)
+                throw new IllegalArgumentException("operator == null");
+            if (visitor == null)
+                throw new IllegalArgumentException("visitor == null");
+
+            final Set<IOperator> visitedNodes = new HashSet<>();
+            final Queue<IOperator> q = new LinkedList<>();
+
+            final Collection<IOperator> startNodes = new ArrayList<>();
+            startNodes.add(operator);
+
+            for (final IOperator node : startNodes)
+                q.add(node);
+
+            while (!q.isEmpty()) {
+                final IOperator node = q.remove();
+                node.accept(visitor);
+
+                final Collection<IOperator> nextVisitedNodes;
+                    nextVisitedNodes = ((AbstractOperator)node).getChildren();
+
+                for (final IOperator nextNode : nextVisitedNodes) {
+                    if (!visitedNodes.contains(nextNode)) {
+                        q.add(nextNode);
+                        visitedNodes.add(nextNode);
+                    }
+                }
+            }
+        }
+    }
 
     /**
      *
@@ -65,7 +119,7 @@ public final class Operators {
     /**
      *
      */
-    public static interface IOperator extends Serializable {
+    public static interface IOperator extends Serializable, Visitable<IOperator> {
 
         public abstract void open() throws Throwable;
 
@@ -109,6 +163,14 @@ public final class Operators {
         // Public Methods.
         // ---------------------------------------------------
 
+        @Override
+        public void open() throws Throwable {
+        }
+
+        @Override
+        public void close() throws Throwable {
+        }
+
         public void addChild(final IOperator operator) {
             // sanity check.
             if (operator == null)
@@ -117,14 +179,17 @@ public final class Operators {
             childOperators.add(operator);
         }
 
-        public void open() throws Throwable {
-        }
-
-        public void close() throws Throwable {
+        public List<IOperator> getChildren() {
+            return Collections.unmodifiableList(childOperators);
         }
 
         public Descriptors.OperatorNodeDescriptor getOperatorDescriptor() {
             return operatorDescriptor;
+        }
+
+        @Override
+        public void accept(final Visitor<IOperator> visitor) {
+            visitor.visit(this);
         }
     }
 
@@ -157,6 +222,10 @@ public final class Operators {
             this.udfFunction = udfFunction;
         }
     }
+
+    // ------------------------------------------------------------------------------------------------
+    // Concrete Operator Implementations.
+    // ------------------------------------------------------------------------------------------------
 
     /**
      *
@@ -243,5 +312,78 @@ public final class Operators {
         public void close() throws Throwable{
             childOperators.get(0).close();
         }
+    }
+
+    // ------------------------------------------------------------------------------------------------
+    // Testing.
+    // ------------------------------------------------------------------------------------------------
+
+    public static final class Record1 {
+
+        public Record1() {}
+
+        public int a;
+    }
+
+    public static final class Record2 {
+
+        public Record2() {}
+
+        public int a;
+    }
+
+    public static final class Record3 {
+
+        public Record3() {}
+
+        public int a;
+    }
+
+    public static final class Record4 {
+
+        public Record4() {}
+
+        public int a;
+    }
+
+    public static final class MapUDF1 implements UnaryUDFFunction<Record3, Record4> {
+
+        @Override
+        public Record4 apply(Record3 in) {
+            final Record4 r = new Record4();
+            r.a = in.a;
+            return r;
+        }
+    }
+
+    public static final class MapUDF2 implements UnaryUDFFunction<Record2, Record3> {
+
+        @Override
+        public Record3 apply(Record2 in) {
+            final Record3 r = new Record3();
+            r.a = in.a;
+            return r;
+        }
+    }
+
+    public static final class MapUDF3 implements UnaryUDFFunction<Record1, Record2> {
+
+        @Override
+        public Record2 apply(Record1 in) {
+            final Record2 r = new Record2();
+            r.a = in.a;
+            return r;
+        }
+    }
+
+    public static void main(final String[] args) {
+
+        final IOperator map3 = new MapOperator<>(null, null, new MapUDF3());
+
+        final IOperator map2 = new MapOperator<>(null, Lists.newArrayList(map3), new MapUDF2());
+
+        final IOperator map1 = new MapOperator<>(null, Lists.newArrayList(map2), new MapUDF1());
+
+
     }
 }

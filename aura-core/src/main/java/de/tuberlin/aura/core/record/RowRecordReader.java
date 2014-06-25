@@ -27,40 +27,6 @@ import de.tuberlin.aura.core.task.spi.ITaskDriver;
  */
 public class RowRecordReader implements IRecordReader {
 
-    public class RecordTypeEventHandler implements IEventHandler {
-
-        @Override
-        public void handleEvent(Event event) {
-
-            final IOEvents.DataIOEvent rte = (IOEvents.DataIOEvent)event;
-
-            final Pair<String, Byte[]> recordTypeDesc = (Pair<String, Byte[]>)rte.getPayload();
-
-            try {
-
-                recordType = Class.forName(recordTypeDesc.getFirst());
-
-            } catch (ClassNotFoundException e) {
-
-                final byte[] byteCode = ArrayUtils.toPrimitive(recordTypeDesc.getSecond());
-
-                recordType = new ClassLoader(this.getClass().getClassLoader()) {
-
-                    public Class<?> defineClass() {
-                        return defineClass(recordTypeDesc.getFirst(), byteCode, 0, byteCode.length);
-                    }
-
-                }.defineClass();
-
-                RowRecordModel.RecordTypeBuilder.addRecordType(recordType, byteCode);
-            }
-
-            threadLock.lock();
-            condition.signal();
-            threadLock.unlock();
-        }
-    }
-
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
@@ -245,4 +211,46 @@ public class RowRecordReader implements IRecordReader {
     public boolean finished() {
         return isFinished;
     }
+
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
+
+    /**
+     *
+     */
+    public class RecordTypeEventHandler implements IEventHandler {
+
+        @Override
+        public void handleEvent(Event event) {
+
+            final IOEvents.DataIOEvent rte = (IOEvents.DataIOEvent)event;
+
+            final Pair<String, Byte[]> recordTypeDesc = (Pair<String, Byte[]>)rte.getPayload();
+
+            try {
+
+                recordType = Class.forName(recordTypeDesc.getFirst());
+
+            } catch (ClassNotFoundException e) {
+
+                final byte[] byteCode = ArrayUtils.toPrimitive(recordTypeDesc.getSecond());
+
+                recordType = new ClassLoader(this.getClass().getClassLoader()) {
+
+                    public Class<?> defineClass() {
+                        return defineClass(recordTypeDesc.getFirst(), byteCode, 0, byteCode.length);
+                    }
+
+                }.defineClass();
+
+                RowRecordModel.RecordTypeBuilder.addRecordType(recordType, byteCode);
+            }
+
+            threadLock.lock();
+                condition.signal();
+            threadLock.unlock();
+        }
+    }
+
 }

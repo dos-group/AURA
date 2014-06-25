@@ -628,6 +628,14 @@ public final class StateMachine {
         public void reset() {
             currentState = initialState;
         }
+
+        /**
+         *
+         * @return
+         */
+        public S getCurrentState() {
+            return currentState;
+        }
     }
 
     // --------------------- TESTING ---------------------

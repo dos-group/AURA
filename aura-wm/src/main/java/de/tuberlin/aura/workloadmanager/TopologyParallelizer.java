@@ -60,10 +60,26 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                     final UUID taskID = UUID.randomUUID();
 
                     final Descriptors.AbstractNodeDescriptor nodeDescriptor;
+
                     if (element instanceof ComputationNode)
                         nodeDescriptor = new Descriptors.ComputationNodeDescriptor(topology.topologyID, taskID, index, element.name, userCodeList);
-                    else
+                    else if (element instanceof OperatorNode)
+                        nodeDescriptor = new Descriptors.OperatorNodeDescriptor(
+                                topology.topologyID,
+                                taskID,
+                                index,
+                                element.name,
+                                userCodeList,
+                                ((OperatorNode)element).operatorType,
+                                ((OperatorNode)element).keys,
+                                ((OperatorNode)element).strategy
+                        );
+                    else if (element instanceof StorageNode)
                         nodeDescriptor = new Descriptors.StorageNodeDescriptor(topology.topologyID, taskID, index, element.name);
+                    else if (element instanceof Node)
+                        nodeDescriptor = new Descriptors.AbstractNodeDescriptor(topology.topologyID, taskID, index, element.name, userCodeList);
+                    else
+                        throw new IllegalStateException();
 
                     final UUID executionNodeID = UUID.randomUUID();
                     final ExecutionNode executionNode = new ExecutionNode(executionNodeID, index, element);

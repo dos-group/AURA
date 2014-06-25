@@ -6,7 +6,6 @@ import java.util.UUID;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
@@ -22,17 +21,12 @@ import de.tuberlin.aura.core.topology.AuraGraph;
 
 public final class RecordModelTest {
 
-    /**
-     * Logger.
-     */
-    private static final Logger LOG = LoggerFactory.getLogger(RecordModelTest.class);
-
     // Disallow Instantiation.
     private RecordModelTest() {}
 
-    public static final class TestRecord {
+    public static final class Record1 {
 
-        public TestRecord() {
+        public Record1() {
         }
 
         public int a;
@@ -47,39 +41,44 @@ public final class RecordModelTest {
     /**
      *
      */
-    public static class TaskMap1 extends AbstractInvokeable {
+    public static class Source extends AbstractInvokeable {
 
         private final RowRecordWriter recordWriter;
 
-        public TaskMap1(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+        public Source(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
             super(taskDriver, producer, consumer, LOG);
 
             final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
 
-            this.recordWriter = new RowRecordWriter(driver, TestRecord.class, 0, partitioner);
+            this.recordWriter = new RowRecordWriter(driver, Record1.class, 0, partitioner);
         }
+
+        public void open() throws Throwable {
+
+            recordWriter.begin();
+        }
+
 
         @Override
         public void run() throws Throwable {
 
-            recordWriter.begin();
+            for(int i = 0; i < 10000; ++i) {
 
-            //if(driver.getNodeDescriptor().taskIndex == 0) {
-                for(int i = 0; i < 10000; ++i) {
-                    final TestRecord tr = new TestRecord();
-                    tr.a = i;
-                    tr.b = 101;
-                    tr.c = 102;
-                    tr.d = "TASK 0";
-                    recordWriter.writeObject(tr);
-                }
-            //}
+                final Record1 tr = new Record1();
+                tr.a = i;
+                tr.b = 101;
+                tr.c = 102;
+                tr.d = "TASK 0";
 
-            recordWriter.end();
+                recordWriter.writeObject(tr);
+            }
         }
 
         @Override
         public void close() throws Throwable {
+
+            recordWriter.end();
+
             producer.done();
         }
     }
@@ -87,11 +86,11 @@ public final class RecordModelTest {
     /**
      *
      */
-    public static class TaskMap2 extends AbstractInvokeable {
+    public static class Sink extends AbstractInvokeable {
 
         private final RowRecordReader recordReader;
 
-        public TaskMap2(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
+        public Sink(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
 
             super(taskDriver, producer, consumer, LOG);
 
@@ -107,32 +106,26 @@ public final class RecordModelTest {
         public void run() throws Throwable {
 
             recordReader.begin();
-            while (!recordReader.finished()) {
-                final TestRecord obj = (TestRecord)recordReader.readObject();
-                if (obj != null) {
-                    String value3 = obj.d;
-                    int value0 = obj.a;
-                    if(driver.getNodeDescriptor().taskIndex == 0) {
-                       System.out.println(driver.getNodeDescriptor().taskID + " -- value3: " + value3 + "   value0:" + value0);
-                    }
 
+            while (!recordReader.finished()) {
+
+                final Record1 obj = (Record1)recordReader.readObject();
+
+                if (obj != null) {
+                    double value0 = obj.a;
+                    if(driver.getNodeDescriptor().taskIndex == 0) {
+                       System.out.println(driver.getNodeDescriptor().taskID + " value0:" + value0);
+                    }
                 }
             }
-            recordReader.end();
 
-            /*while (!consumer.isExhausted() && isInvokeableRunning()) {
-                final IOEvents.TransferBufferEvent inEvent = consumer.absorb(0);
-                if (inEvent != null) {
-                    inEvent.buffer.free();
-                }
-            }*/
+            recordReader.end();
         }
 
         @Override
         public void close() throws Throwable {
         }
     }
-
 
     // ---------------------------------------------------
     // Main.
@@ -141,23 +134,19 @@ public final class RecordModelTest {
     public static void main(String[] args) {
 
         final SimpleLayout layout = new SimpleLayout();
-        final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
+        new ConsoleAppender(layout);
 
         // Local
         final String zookeeperAddress = "localhost:2181";
-        final LocalClusterSimulator lce = new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+        new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
         final AuraGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
-        atb1.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap1", 1, 1), Arrays.asList(TaskMap1.class, TestRecord.class)).
-                connectTo("TaskMap2", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-            .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap2", 1, 1), TaskMap2.class);
-
-
-
-
+        atb1.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Arrays.asList(Source.class, Record1.class))
+                .connectTo("Sink", AuraGraph.Edge.TransferType.ALL_TO_ALL)
+            .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
 
         final AuraGraph.AuraTopology at1 = atb1.build("JOB 1");
 

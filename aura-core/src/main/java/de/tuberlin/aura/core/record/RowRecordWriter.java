@@ -28,7 +28,7 @@ public class RowRecordWriter implements IRecordWriter {
 
     private final int bufferSize;
 
-    private final Partitioner.IPartitioner partitioner;
+    private Partitioner.IPartitioner partitioner;
 
     private final Kryo kryo;
 
@@ -220,5 +220,17 @@ public class RowRecordWriter implements IRecordWriter {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /**
+     *
+     * @param partitioner
+     */
+    public void setPartitioner(final Partitioner.IPartitioner partitioner) {
+        // sanity check.
+        if (partitioner == null)
+            throw new IllegalArgumentException("partitioner == null");
+
+        this.partitioner = partitioner;
     }
 }

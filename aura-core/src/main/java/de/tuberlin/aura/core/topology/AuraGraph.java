@@ -7,6 +7,8 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
+import de.tuberlin.aura.core.operators.Operators;
+import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
@@ -280,7 +282,15 @@ public class AuraGraph {
             return nodeConnector.currentSource(node);
         }
 
-        public NodeConnector addNode(final Node node, List<Class<?>> userCodeClazzList) {
+        public NodeConnector addNode(final Pair<AuraGraph.Node,List<Class<?>>> nodeAndUserClazzList) {
+            // sanity check.
+            if (nodeAndUserClazzList == null)
+                throw new IllegalArgumentException("nodeAndUserClazzList == null");
+
+            return addNode(nodeAndUserClazzList.getFirst(), nodeAndUserClazzList.getSecond());
+        }
+
+        public NodeConnector addNode(final Node node, final List<Class<?>> userCodeClazzList) {
             // sanity check.
             if (node == null)
                 throw new IllegalArgumentException("node == null");
@@ -302,7 +312,6 @@ public class AuraGraph {
 
             return nodeConnector.currentSource(node);
         }
-
 
         public NodeConnector addStorageNode(final StorageNode node) {
             // sanity check.
@@ -372,7 +381,7 @@ public class AuraGraph {
 
                 for (final Node n : nodeMap.values()) {
 
-                    if (n instanceof ComputationNode) {
+                    if (n instanceof ComputationNode || n instanceof Node) {
 
                         final List<Class<?>> userCodeClazzList = userCodeClazzMap.get(n.name);
 
@@ -688,15 +697,16 @@ public class AuraGraph {
         }
     }
 
+    //---------------------------------------------------------------------------------------------------------------
+
     /**
      *
      */
     public static final class StorageNode extends Node {
 
-        public StorageNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
+        public StorageNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
             super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.PERSISTED_IN_MEMORY, ExecutionType.BLOCKING);
         }
-
     }
 
     /**
@@ -704,10 +714,38 @@ public class AuraGraph {
      */
     public static final class ComputationNode extends Node {
 
-        public ComputationNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
+        public ComputationNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
             super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
         }
+    }
 
+    /**
+     *
+     */
+    public static final class OperatorNode extends Node {
+
+        public final Operators.OperatorType operatorType;
+
+        public final int[] keys;
+
+        public final Partitioner.PartitioningStrategy strategy;
+
+        public OperatorNode(final UUID uid,
+                            final String name,
+                            final int degreeOfParallelism,
+                            final int perWorkerParallelism,
+                            final Operators.OperatorType operatorType,
+                            final int[] keys,
+                            final Partitioner.PartitioningStrategy strategy) {
+
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+
+            this.operatorType = operatorType;
+
+            this.keys = keys;
+
+            this.strategy = strategy;
+        }
     }
 
     //---------------------------------------------------------------------------------------------------------------

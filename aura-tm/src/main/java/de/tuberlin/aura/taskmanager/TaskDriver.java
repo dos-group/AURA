@@ -2,7 +2,11 @@ package de.tuberlin.aura.taskmanager;
 
 
 import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.List;
 
+import de.tuberlin.aura.computation.ExecutionPlanDriver;
+import de.tuberlin.aura.core.operators.Operators;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,23 +117,62 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         dataProducer.bind(bindingDescriptor.outputGateBindings, outputAllocator);
 
+        // --------------------------------------
+
+        final List<Class<?>> userClasses = new ArrayList<>();
+
+        for (final UserCode uc : nodeDescriptor.userCodeList) {
+
+            final Class<?> userClass = implantInvokeableCode(uc);
+
+            userClasses.add(userClass);
+
+            if (AbstractInvokeable.class.isAssignableFrom(userClass)) {
+
+                invokeableClazz = (Class<? extends AbstractInvokeable>)userClass;
+            }
+        }
+
+        nodeDescriptor.setUserCodeClasses(userClasses);
+
+        // --------------------------------------
+
         if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor) {
 
-            for (final UserCode uc : nodeDescriptor.userCodeList) {
+            if (invokeableClazz != null) {
 
-                invokeableClazz = implantInvokeableCode(uc);
+                invokeable = createInvokeable(invokeableClazz, this, dataProducer, dataConsumer, LOG);
 
-                if (AbstractInvokeable.class.isAssignableFrom(invokeableClazz)) {
-
-                    invokeable = createInvokeable(invokeableClazz, this, dataProducer, dataConsumer, LOG);
-
-                    if (invokeable == null)
-                        throw new IllegalStateException("invokeable == null");
+                if (invokeable == null) {
+                    throw new IllegalStateException("invokeable == null");
                 }
+
+            } else {
+                throw new IllegalStateException();
             }
 
-        } else {
+        } else if (nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
+
+            if (invokeableClazz != null)
+                throw new IllegalStateException();
+
+            final ExecutionPlanDriver epd = new ExecutionPlanDriver(this, dataProducer, dataConsumer, LOG);
+
+            invokeable = epd;
+
+            final Operators.IOperator operator = Operators.OperatorFactory.createOperator(
+                    ((Descriptors.OperatorNodeDescriptor) nodeDescriptor)
+            );
+
+            epd.setOperator(operator);
+
+        } else if (nodeDescriptor instanceof Descriptors.StorageNodeDescriptor) {
+
             invokeable = new DataStorage(this, dataProducer, dataConsumer, LOG);
+
+        } else {
+
+            throw new IllegalStateException();
         }
     }
 
@@ -160,14 +203,16 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             return;
         }
 
-        if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor) {
+        if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor
+            || nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
+
             // TODO: Wait until all gates are closed? -> invokeable.close() emits all DATA_EVENT_SOURCE_EXHAUSTED events
             taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
         }
 
         if(dataProducer.hasStoredBuffers()) {
             try {
-                ((DataStorage)dataProducer.getStorage()).close();
+                dataProducer.getStorage().close();
             } catch (Throwable throwable) {
                 throwable.printStackTrace();
             }
@@ -180,17 +225,25 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     @Override
     public void teardownDriver(boolean awaitExhaustion) {
 
-        if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor) {
+        if (nodeDescriptor instanceof Descriptors.ComputationNodeDescriptor
+            || nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
+
             invokeable.stopInvokeable();
         }
 
-        if(!dataProducer.hasStoredBuffers())
+        if(!dataProducer.hasStoredBuffers()) {
             dataProducer.shutdownProducer(awaitExhaustion);
+        }
 
         dataConsumer.shutdownConsumer();
 
-        dataConsumer.getAllocator().checkForMemoryLeaks();
-        dataProducer.getAllocator().checkForMemoryLeaks();
+        // Check for memory leaks in the input/output allocator.
+        if (taskFSM.isInFinalState()
+            && taskFSM.getCurrentState() == TaskState.TASK_STATE_FINISHED) {
+
+            dataConsumer.getAllocator().checkForMemoryLeaks();
+            dataProducer.getAllocator().checkForMemoryLeaks();
+        }
     }
 
     // ---------------------------------------------------
@@ -264,11 +317,14 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
      * @param userCode
      * @return
      */
-    private Class<? extends AbstractInvokeable> implantInvokeableCode(final UserCode userCode) {
+    private Class<?> implantInvokeableCode(final UserCode userCode) {
         // Try to register the bytecode as a class in the JVM.
+
         final UserCodeImplanter codeImplanter = new UserCodeImplanter(this.getClass().getClassLoader());
+
         @SuppressWarnings("unchecked")
-        final Class<? extends AbstractInvokeable> userCodeClazz = (Class<? extends AbstractInvokeable>) codeImplanter.implantUserCodeClass(userCode);
+        final Class<?> userCodeClazz = codeImplanter.implantUserCodeClass(userCode);
+
         // sanity check.
         if (userCodeClazz == null)
             throw new IllegalArgumentException("userCodeClazz == null");
@@ -310,8 +366,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
         final StateMachine.FiniteStateMachine<TaskState, TaskTransition> taskFSM =
                 taskFSMBuilder.defineState(TaskState.TASK_STATE_CREATED)
                         .addTransition(TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED, TaskState.TASK_STATE_INPUTS_CONNECTED)
-                        .and()
-                        .addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, TaskState.TASK_STATE_OUTPUTS_CONNECTED)
+                        .and().addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, TaskState.TASK_STATE_OUTPUTS_CONNECTED)
                         .defineState(TaskState.TASK_STATE_INPUTS_CONNECTED)
                         .addTransition(TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED, TaskState.TASK_STATE_READY)
                         .defineState(TaskState.TASK_STATE_OUTPUTS_CONNECTED)
@@ -320,13 +375,9 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                         .addTransition(TaskTransition.TASK_TRANSITION_RUN, TaskState.TASK_STATE_RUNNING)
                         .defineState(TaskState.TASK_STATE_RUNNING)
                         .addTransition(TaskTransition.TASK_TRANSITION_FINISH, TaskState.TASK_STATE_FINISHED)
-                        .and()
-                        .addTransition(TaskTransition.TASK_TRANSITION_CANCEL, TaskState.TASK_STATE_CANCELED)
-                        .and()
-                        .addTransition(TaskTransition.TASK_TRANSITION_FAIL, TaskState.TASK_STATE_FAILURE)
-                        .and()
-                        .addTransition(TaskTransition.TASK_TRANSITION_SUSPEND, TaskState.TASK_STATE_PAUSED)
-                                // .nestFSM(TaskState.TASK_STATE_RUNNING, operatorFSM)
+                        .and().addTransition(TaskTransition.TASK_TRANSITION_CANCEL, TaskState.TASK_STATE_CANCELED)
+                        .and().addTransition(TaskTransition.TASK_TRANSITION_FAIL, TaskState.TASK_STATE_FAILURE)
+                        .and().addTransition(TaskTransition.TASK_TRANSITION_SUSPEND, TaskState.TASK_STATE_PAUSED)
                         .defineState(TaskState.TASK_STATE_FINISHED)
                         .noTransition()
                         .defineState(TaskState.TASK_STATE_CANCELED)
