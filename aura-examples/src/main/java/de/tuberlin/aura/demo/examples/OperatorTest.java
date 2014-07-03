@@ -38,12 +38,12 @@ public class OperatorTest {
         }
     }
 
-    public static final class MapUDF1 implements UnaryUDFFunction<Tuple1<Tuple3<Integer,Integer,Tuple1<Integer>>>, Tuple2<Integer,String>> {
+    public static final class MapUDF1 implements UnaryUDFFunction<Tuple1<Integer>, Tuple2<Integer,String>> {
 
 
         @Override
-        public Tuple2<Integer,String> apply(final Tuple1<Tuple3<Integer,Integer,Tuple1<Integer>>> in) {
-            return null;//new Tuple2<>(in._0, in._0.toString());
+        public Tuple2<Integer,String> apply(final Tuple1<Integer> in) {
+            return new Tuple2<>(in._0, in._0.toString());
         }
     }
 
