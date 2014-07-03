@@ -60,7 +60,7 @@ public final class LocalClusterSimulator {
      * @param numNodes
      */
     public LocalClusterSimulator(final ExecutionMode mode, boolean startupZookeeper, final String zkServer, int numNodes) {
-        this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 2000);
+        this(mode, startupZookeeper, zkServer, numNodes, 2181, 5000, 1);
     }
 
     /**
@@ -94,6 +94,9 @@ public final class LocalClusterSimulator {
 
         if (startupZookeeper) {
             final File dir = new File(System.getProperty("java.io.tmpdir"), "zookeeper").getAbsoluteFile();
+
+            LOG.info("CREATE TMP DIRECTORY: '" + dir + "'");
+
             if (dir.exists()) {
                 try {
                     FileUtils.deleteDirectory(dir);
@@ -105,6 +108,7 @@ public final class LocalClusterSimulator {
             try {
                 this.zookeeperServer = new ZooKeeperServer(dir, dir, tickTime);
                 this.zookeeperServer.setMaxSessionTimeout(10000000);
+                this.zookeeperServer.setMinSessionTimeout(10000000);
                 this.zookeeperCNXNFactory = new NIOServerCnxnFactory();
                 this.zookeeperCNXNFactory.configure(new InetSocketAddress(zkClientPort), numConnections);
                 this.zookeeperCNXNFactory.startup(zookeeperServer);
@@ -131,14 +135,24 @@ public final class LocalClusterSimulator {
 
             case EXECUTION_MODE_MULTIPLE_PROCESSES: {
                 try {
-                    peList.add(new ProcessExecutor(WorkloadManager.class).execute(zkServer,
-                                                                                  Integer.toString(getFreePort()),
-                                                                                  Integer.toString(getFreePort())));
-                    Thread.sleep(1000);
+                    peList.add(
+                            new ProcessExecutor(WorkloadManager.class).execute(
+                                    zkServer,
+                                    Integer.toString(getFreePort()),
+                                    Integer.toString(getFreePort())
+                            )
+                    );
+
                     for (int i = 0; i < numNodes; ++i) {
-                        peList.add(new ProcessExecutor(TaskManager.class).execute(zkServer,
-                                                                                  Integer.toString(getFreePort()),
-                                                                                  Integer.toString(getFreePort())));
+
+                        peList.add(
+                                new ProcessExecutor(TaskManager.class).execute(
+                                        zkServer,
+                                        Integer.toString(getFreePort()),
+                                        Integer.toString(getFreePort())
+                                )
+                        );
+
                         Thread.sleep(1000);
                     }
                 } catch (InterruptedException e) {

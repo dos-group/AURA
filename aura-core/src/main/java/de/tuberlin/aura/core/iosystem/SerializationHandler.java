@@ -233,7 +233,7 @@ public final class SerializationHandler {
 
         private void bindAllocator(UUID src, UUID dst) {
             final ITaskExecutionManager tem = executionManager;
-            final ITaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
+            final ITaskExecutionUnit executionUnit = tem.findExecutionUnitByTaskID(dst);
             final ITaskDriver taskDriver = executionUnit.getCurrentTaskDriver();
             final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
@@ -412,7 +412,7 @@ public final class SerializationHandler {
 
         private void bindAllocator(UUID src, UUID dst) {
             final ITaskExecutionManager tem = executionManager;
-            final ITaskExecutionUnit executionUnit = tem.findTaskExecutionUnitByTaskID(dst);
+            final ITaskExecutionUnit executionUnit = tem.findExecutionUnitByTaskID(dst);
             final ITaskDriver taskDriver = executionUnit.getCurrentTaskDriver();
             final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);

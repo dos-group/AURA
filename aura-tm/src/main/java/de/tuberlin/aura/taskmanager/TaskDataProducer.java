@@ -2,6 +2,7 @@ package de.tuberlin.aura.taskmanager;
 
 import java.util.*;
 
+import de.tuberlin.aura.storage.DataStorageDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,6 @@ import de.tuberlin.aura.core.task.gates.OutputGate;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.storage.DataStorage;
 
 /**
  *
@@ -52,7 +52,7 @@ public final class TaskDataProducer implements IDataProducer {
 
     private List<List<Descriptors.AbstractNodeDescriptor>> outputBinding;
 
-    private DataStorage dataStorage = null;
+    private DataStorageDriver dataStorage = null;
 
     // ---------------------------------------------------
     // Constructors.
@@ -111,7 +111,7 @@ public final class TaskDataProducer implements IDataProducer {
         connectOutputDataChannels(outputBinding);
 
         if (outputBinding.size() == 0 && dataStorage == null) {
-            dataStorage = new DataStorage(driver, this, driver.getDataConsumer(), driver.getLOG());
+            dataStorage = new DataStorageDriver(driver, this, driver.getDataConsumer(), driver.getLOG());
         }
     }
 

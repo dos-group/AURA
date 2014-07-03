@@ -3,6 +3,9 @@ package de.tuberlin.aura.demo.examples;
 import java.util.Arrays;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.record.tuples.AbstractTuple;
+import de.tuberlin.aura.core.record.tuples.Tuple3;
+import de.tuberlin.aura.core.topology.Topology;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
@@ -16,7 +19,6 @@ import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataConsumer;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.topology.AuraGraph;
 
 
 public final class RecordModelTest {
@@ -50,7 +52,7 @@ public final class RecordModelTest {
 
             final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
 
-            this.recordWriter = new RowRecordWriter(driver, Record1.class, 0, partitioner);
+            this.recordWriter = new RowRecordWriter(driver, AbstractTuple.class, 0, partitioner);
         }
 
         public void open() throws Throwable {
@@ -64,13 +66,7 @@ public final class RecordModelTest {
 
             for(int i = 0; i < 10000; ++i) {
 
-                final Record1 tr = new Record1();
-                tr.a = i;
-                tr.b = 101;
-                tr.c = 102;
-                tr.d = "TASK 0";
-
-                recordWriter.writeObject(tr);
+                recordWriter.writeObject(new Tuple3<>("Hans" + i, i, i));
             }
         }
 
@@ -109,10 +105,12 @@ public final class RecordModelTest {
 
             while (!recordReader.finished()) {
 
-                final Record1 obj = (Record1)recordReader.readObject();
+                //final Record1 obj = (Record1)recordReader.readObject();
 
-                if (obj != null) {
-                    double value0 = obj.a;
+                final Tuple3<String,Integer,Integer> t = (Tuple3)recordReader.readObject();
+
+                if (t != null) {
+                    double value0 = t._2;
                     if(driver.getNodeDescriptor().taskIndex == 0) {
                        System.out.println(driver.getNodeDescriptor().taskID + " value0:" + value0);
                     }
@@ -142,13 +140,13 @@ public final class RecordModelTest {
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
-        final AuraGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        final Topology.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
-        atb1.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Arrays.asList(Source.class, Record1.class))
-                .connectTo("Sink", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-            .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
+        atb1.addNode(new Topology.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Arrays.asList(Source.class, Record1.class))
+                .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
+            .addNode(new Topology.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
 
-        final AuraGraph.AuraTopology at1 = atb1.build("JOB 1");
+        final Topology.AuraTopology at1 = atb1.build("JOB 1");
 
         ac.submitTopology(at1, null);
     }

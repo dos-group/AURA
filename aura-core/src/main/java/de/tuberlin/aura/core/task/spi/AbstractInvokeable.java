@@ -60,10 +60,6 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
         isRunning = false;
     }
 
-    //public List<Class<?>> defineDependencies() {
-    //    return new ArrayList<>();
-    //}
-
     // ---------------------------------------------------
     // Protected Methods.
     // ---------------------------------------------------

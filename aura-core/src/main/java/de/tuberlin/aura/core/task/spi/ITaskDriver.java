@@ -22,8 +22,6 @@ public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
 
     public abstract StateMachine.FiniteStateMachine getTaskStateMachine();
 
-    public abstract void connectDataChannel(final Descriptors.AbstractNodeDescriptor dstNodeDescriptor, final IAllocator allocator);
-
     public abstract IDataProducer getDataProducer();
 
     public abstract IDataConsumer getDataConsumer();
@@ -33,4 +31,6 @@ public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
     public abstract Logger getLOG();
 
     public abstract AbstractInvokeable getInvokeable();
+
+    public abstract void connectDataChannel(final Descriptors.AbstractNodeDescriptor dstNodeDescriptor, final IAllocator allocator);
 }

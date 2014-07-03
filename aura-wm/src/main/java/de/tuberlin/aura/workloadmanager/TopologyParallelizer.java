@@ -5,12 +5,13 @@ import java.util.*;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
+import de.tuberlin.aura.core.common.utils.Visitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
 import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.core.topology.AuraGraph.*;
+import de.tuberlin.aura.core.topology.Topology.*;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
 public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopology> {
@@ -70,9 +71,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                 index,
                                 element.name,
                                 userCodeList,
-                                ((OperatorNode)element).operatorType,
-                                ((OperatorNode)element).keys,
-                                ((OperatorNode)element).strategy
+                                ((OperatorNode)element).properties
                         );
                     else if (element instanceof StorageNode)
                         nodeDescriptor = new Descriptors.StorageNodeDescriptor(topology.topologyID, taskID, index, element.name);

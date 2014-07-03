@@ -19,7 +19,7 @@ import de.tuberlin.aura.core.task.spi.ITaskDriver;
 /**
  *
  */
-public class DataStorage extends AbstractInvokeable {
+public class DataStorageDriver extends AbstractInvokeable {
 
     // ---------------------------------------------------
     // Fields.
@@ -31,7 +31,7 @@ public class DataStorage extends AbstractInvokeable {
     // Constructors.
     // ---------------------------------------------------
 
-    public DataStorage(ITaskDriver taskDriver, IDataProducer producer, IDataConsumer consumer, Logger LOG) {
+    public DataStorageDriver(ITaskDriver taskDriver, IDataProducer producer, IDataConsumer consumer, Logger LOG) {
         super(taskDriver, producer, consumer, LOG);
 
         this.bufferStorage = new ArrayList<MemoryView>();

@@ -4,20 +4,22 @@ import java.io.Serializable;
 import java.util.*;
 
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.common.utils.Visitable;
+import de.tuberlin.aura.core.common.utils.Visitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
-import de.tuberlin.aura.core.operators.Operators;
-import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.operators.OperatorProperties;
+import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
-import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology.DeploymentType;
+import de.tuberlin.aura.core.topology.Topology.AuraTopology.DeploymentType;
 
-public class AuraGraph {
+public class Topology {
 
     // Disallow instantiation.
-    private AuraGraph() {}
+    private Topology() {}
 
     //---------------------------------------------------------------------------------------------------------------
 
@@ -282,7 +284,7 @@ public class AuraGraph {
             return nodeConnector.currentSource(node);
         }
 
-        public NodeConnector addNode(final Pair<AuraGraph.Node,List<Class<?>>> nodeAndUserClazzList) {
+        public NodeConnector addNode(final Pair<Topology.Node,List<Class<?>>> nodeAndUserClazzList) {
             // sanity check.
             if (nodeAndUserClazzList == null)
                 throw new IllegalArgumentException("nodeAndUserClazzList == null");
@@ -388,8 +390,12 @@ public class AuraGraph {
                         final List<UserCode> userCodeList = new ArrayList<>();
 
                         for(final Class<?> userCodeClazz : userCodeClazzList) {
-                            final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
-                            userCodeList.add(uc);
+
+                            if(!AbstractTuple.class.isAssignableFrom(userCodeClazz)) { // TODO: shit hack...
+
+                                final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
+                                userCodeList.add(uc);
+                            }
                         }
 
                         userCodeMap.put(n.name, userCodeList);
@@ -724,27 +730,13 @@ public class AuraGraph {
      */
     public static final class OperatorNode extends Node {
 
-        public final Operators.OperatorType operatorType;
+        public final OperatorProperties properties;
 
-        public final int[] keys;
+        public OperatorNode(final OperatorProperties properties) {
 
-        public final Partitioner.PartitioningStrategy strategy;
+            super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
 
-        public OperatorNode(final UUID uid,
-                            final String name,
-                            final int degreeOfParallelism,
-                            final int perWorkerParallelism,
-                            final Operators.OperatorType operatorType,
-                            final int[] keys,
-                            final Partitioner.PartitioningStrategy strategy) {
-
-            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
-
-            this.operatorType = operatorType;
-
-            this.keys = keys;
-
-            this.strategy = strategy;
+            this.properties = properties;
         }
     }
 
@@ -942,22 +934,6 @@ public class AuraGraph {
     // ---------------------------------------------------
     // Utility Classes.
     // ---------------------------------------------------
-
-    /**
-     *
-     */
-    public static interface Visitor<T> {
-
-        public abstract void visit(final T element);
-    }
-
-    /**
-     *
-     */
-    public static interface Visitable<T> {
-
-        public abstract void accept(final Visitor<T> visitor);
-    }
 
     /**
      *

@@ -7,10 +7,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.operators.Operators;
-import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.operators.OperatorProperties;
 import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.core.topology.AuraGraph.Node;
+import de.tuberlin.aura.core.topology.Topology.Node;
 
 public final class Descriptors {
 
@@ -431,11 +430,7 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
-        public final Operators.OperatorType operatorType;
-
-        public final int[] keys;
-
-        public final Partitioner.PartitioningStrategy strategy;
+        public final OperatorProperties properties;
 
         // ---------------------------------------------------
         // Constructors.
@@ -446,17 +441,11 @@ public final class Descriptors {
                                       final int taskIndex,
                                       final String name,
                                       final List<UserCode> userCodeList,
-                                      final Operators.OperatorType operatorType,
-                                      final int[] keys,
-                                      final Partitioner.PartitioningStrategy strategy) {
+                                      final OperatorProperties properties) {
 
             super(topologyID, taskID, taskIndex, name, userCodeList);
 
-            this.operatorType = operatorType;
-
-            this.keys = keys;
-
-            this.strategy = strategy;
+            this.properties = properties;
         }
     }
 

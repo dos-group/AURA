@@ -20,8 +20,8 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
-import de.tuberlin.aura.core.topology.AuraGraph.AuraTopology;
-import de.tuberlin.aura.core.topology.AuraGraph.AuraTopologyBuilder;
+import de.tuberlin.aura.core.topology.Topology.AuraTopology;
+import de.tuberlin.aura.core.topology.Topology.AuraTopologyBuilder;
 import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
@@ -103,6 +103,7 @@ public final class AuraClient {
         ioManager.addEventListener(ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE, ioHandler);
 
         ioManager.connectMessageChannelBlocking(wmMachineDescriptor);
+
         clientProtocol = rpcManager.getRPCProtocolProxy(ClientWMProtocol.class, wmMachineDescriptor);
 
         this.registeredTopologyMonitors = new HashMap<>();

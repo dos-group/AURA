@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.tuberlin.aura.computation.ExecutionPlanDriver;
-import de.tuberlin.aura.core.operators.Operators;
+import de.tuberlin.aura.storage.DataStorageDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +22,6 @@ import de.tuberlin.aura.core.task.common.TaskStates.TaskTransition;
 import de.tuberlin.aura.core.task.spi.*;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.task.usercode.UserCodeImplanter;
-import de.tuberlin.aura.storage.DataStorage;
 
 /**
  *
@@ -156,19 +155,11 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             if (invokeableClazz != null)
                 throw new IllegalStateException();
 
-            final ExecutionPlanDriver epd = new ExecutionPlanDriver(this, dataProducer, dataConsumer, LOG);
-
-            invokeable = epd;
-
-            final Operators.IOperator operator = Operators.OperatorFactory.createOperator(
-                    ((Descriptors.OperatorNodeDescriptor) nodeDescriptor)
-            );
-
-            epd.setOperator(operator);
+            invokeable = new ExecutionPlanDriver(this, dataProducer, dataConsumer, LOG, (Descriptors.OperatorNodeDescriptor) nodeDescriptor);
 
         } else if (nodeDescriptor instanceof Descriptors.StorageNodeDescriptor) {
 
-            invokeable = new DataStorage(this, dataProducer, dataConsumer, LOG);
+            invokeable = new DataStorageDriver(this, dataProducer, dataConsumer, LOG);
 
         } else {
 

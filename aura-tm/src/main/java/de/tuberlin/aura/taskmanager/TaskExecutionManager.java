@@ -115,7 +115,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
      * @param taskID
      * @return
      */
-    public ITaskExecutionUnit findTaskExecutionUnitByTaskID(final UUID taskID) {
+    public ITaskExecutionUnit findExecutionUnitByTaskID(final UUID taskID) {
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");

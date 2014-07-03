@@ -8,6 +8,7 @@ import java.util.UUID;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
+import de.tuberlin.aura.core.topology.Topology;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
@@ -16,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.task.spi.*;
-import de.tuberlin.aura.core.topology.AuraGraph;
 
 public final class LazyUnrollingTest {
 
@@ -289,14 +289,14 @@ public final class LazyUnrollingTest {
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
-        final AuraGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        final Topology.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
-        atb1.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap1", 2, 1), TaskMap1.class).
-                connectTo("LeftStorage", AuraGraph.Edge.TransferType.POINT_TO_POINT)
-                .addStorageNode(new AuraGraph.StorageNode(UUID.randomUUID(), "LeftStorage", 2, 1));
-        //.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskLeftInput", 2, 1), TaskLeftInput.class);
+        atb1.addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskMap1", 2, 1), TaskMap1.class).
+                connectTo("LeftStorage", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addStorageNode(new Topology.StorageNode(UUID.randomUUID(), "LeftStorage", 2, 1));
+        //.addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskLeftInput", 2, 1), TaskLeftInput.class);
 
-        final AuraGraph.AuraTopology at1 = atb1.build("JOB 1");
+        final Topology.AuraTopology at1 = atb1.build("JOB 1");
 
         ac.submitTopology(at1, null);
 
@@ -306,16 +306,16 @@ public final class LazyUnrollingTest {
             e.printStackTrace();
         }
 
-        final AuraGraph.AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
+        final Topology.AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
 
-        atb2.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskRightInput", 2, 1), TaskRightInput.class)
-                .connectTo("TaskBinaryInput", AuraGraph.Edge.TransferType.POINT_TO_POINT)
-                .connectFrom("LeftStorage", "TaskBinaryInput", AuraGraph.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskBinaryInput", 2, 1), TaskBinaryInput.class)
-                .connectTo("TaskMap3", AuraGraph.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap3", 2, 1), TaskMap3.class);
+        atb2.addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskRightInput", 2, 1), TaskRightInput.class)
+                .connectTo("TaskBinaryInput", Topology.Edge.TransferType.POINT_TO_POINT)
+                .connectFrom("LeftStorage", "TaskBinaryInput", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskBinaryInput", 2, 1), TaskBinaryInput.class)
+                .connectTo("TaskMap3", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskMap3", 2, 1), TaskMap3.class);
 
-        final AuraGraph.AuraTopology at2 = atb2.build("JOB 2");
+        final Topology.AuraTopology at2 = atb2.build("JOB 2");
 
         ac.submitToTopology(at1.topologyID, at2);
 
@@ -327,13 +327,13 @@ public final class LazyUnrollingTest {
 
         ac.closeSession();
 
-        //atb1.addNode(new AuraGraph.Node(taskNodeID, "Task1", 4, 1), TaskMap1.class);
-        //.connectTo("Task3", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-        //.addNode(new AuraGraph.Node(UUID.randomUUID(), "Task2", 4, 1), TaskLeftInput.class)
-        //.connectTo("Task3", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-        //.addNode(new AuraGraph.Node(UUID.randomUUID(), "Task3", 4, 1), TaskBinaryInput.class)
-        //.connectTo("Task4", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-        //.addNode(new AuraGraph.Node(UUID.randomUUID(), "Task4", 4, 1), TaskMap3.class);
+        //atb1.addNode(new Topology.Node(taskNodeID, "Task1", 4, 1), TaskMap1.class);
+        //.connectTo("Task3", Topology.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new Topology.Node(UUID.randomUUID(), "Task2", 4, 1), TaskLeftInput.class)
+        //.connectTo("Task3", Topology.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new Topology.Node(UUID.randomUUID(), "Task3", 4, 1), TaskBinaryInput.class)
+        //.connectTo("Task4", Topology.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new Topology.Node(UUID.randomUUID(), "Task4", 4, 1), TaskMap3.class);
         // lce.shutdown();
     }
 }
@@ -361,7 +361,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.record.RowRecordModel;
 import de.tuberlin.aura.core.task.spi.*;
-import de.tuberlin.aura.core.topology.AuraGraph;
+import de.tuberlin.aura.core.topology.Topology;
 
 public final class LazyUnrollingTest {
 
@@ -635,14 +635,14 @@ public static class TaskMap3 extends AbstractInvokeable {
 
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
 
-        final AuraGraph.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
+        final Topology.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
-        atb1.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap1", 2, 1), TaskMap1.class).
-                connectTo("LeftStorage", AuraGraph.Edge.TransferType.POINT_TO_POINT)
-                .addStorageNode(new AuraGraph.StorageNode(UUID.randomUUID(), "LeftStorage", 2, 1));
-        //.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskLeftInput", 2, 1), TaskLeftInput.class);
+        atb1.addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskMap1", 2, 1), TaskMap1.class).
+                connectTo("LeftStorage", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addStorageNode(new Topology.StorageNode(UUID.randomUUID(), "LeftStorage", 2, 1));
+        //.addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskLeftInput", 2, 1), TaskLeftInput.class);
 
-        final AuraGraph.AuraTopology at1 = atb1.build("JOB 1");
+        final Topology.AuraTopology at1 = atb1.build("JOB 1");
 
         ac.submitTopology(at1, null);
 
@@ -652,16 +652,16 @@ public static class TaskMap3 extends AbstractInvokeable {
             e.printStackTrace();
         }
 
-        final AuraGraph.AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
+        final Topology.AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
 
-        atb2.addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskRightInput", 2, 1), TaskRightInput.class)
-                .connectTo("TaskBinaryInput", AuraGraph.Edge.TransferType.POINT_TO_POINT)
-                .connectFrom("LeftStorage", "TaskBinaryInput", AuraGraph.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskBinaryInput", 2, 1), TaskBinaryInput.class)
-                .connectTo("TaskMap3", AuraGraph.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new AuraGraph.ComputationNode(UUID.randomUUID(), "TaskMap3", 2, 1), TaskMap3.class);
+        atb2.addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskRightInput", 2, 1), TaskRightInput.class)
+                .connectTo("TaskBinaryInput", Topology.Edge.TransferType.POINT_TO_POINT)
+                .connectFrom("LeftStorage", "TaskBinaryInput", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskBinaryInput", 2, 1), TaskBinaryInput.class)
+                .connectTo("TaskMap3", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskMap3", 2, 1), TaskMap3.class);
 
-        final AuraGraph.AuraTopology at2 = atb2.build("JOB 2");
+        final Topology.AuraTopology at2 = atb2.build("JOB 2");
 
         ac.submitToTopology(at1.topologyID, at2);
 
@@ -673,13 +673,13 @@ public static class TaskMap3 extends AbstractInvokeable {
 
         ac.closeSession();
 
-        //atb1.addNode(new AuraGraph.Node(taskNodeID, "Task1", 4, 1), TaskMap1.class);
-        //.connectTo("Task3", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-        //.addNode(new AuraGraph.Node(UUID.randomUUID(), "Task2", 4, 1), TaskLeftInput.class)
-        //.connectTo("Task3", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-        //.addNode(new AuraGraph.Node(UUID.randomUUID(), "Task3", 4, 1), TaskBinaryInput.class)
-        //.connectTo("Task4", AuraGraph.Edge.TransferType.ALL_TO_ALL)
-        //.addNode(new AuraGraph.Node(UUID.randomUUID(), "Task4", 4, 1), TaskMap3.class);
+        //atb1.addNode(new Topology.Node(taskNodeID, "Task1", 4, 1), TaskMap1.class);
+        //.connectTo("Task3", Topology.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new Topology.Node(UUID.randomUUID(), "Task2", 4, 1), TaskLeftInput.class)
+        //.connectTo("Task3", Topology.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new Topology.Node(UUID.randomUUID(), "Task3", 4, 1), TaskBinaryInput.class)
+        //.connectTo("Task4", Topology.Edge.TransferType.ALL_TO_ALL)
+        //.addNode(new Topology.Node(UUID.randomUUID(), "Task4", 4, 1), TaskMap3.class);
         // lce.shutdown();
     }
 }
