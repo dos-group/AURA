@@ -158,8 +158,8 @@ public final class Descriptors {
                 throw new IllegalArgumentException("uid == null");
             if (cpuCores < 1)
                 throw new IllegalArgumentException("cpuCores < 1");
-            if (sizeOfRAM < 1024 * 1024 * 1024)
-                throw new IllegalArgumentException("Less than one GB of RAM");
+            if (sizeOfRAM < 1)
+                throw new IllegalArgumentException("sizeOfRAM < 1");
             if (hdd == null)
                 throw new IllegalArgumentException("hdd == null");
 
