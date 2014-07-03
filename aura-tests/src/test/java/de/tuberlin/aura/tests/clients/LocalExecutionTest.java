@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.*;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.slf4j.Logger;
@@ -14,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.topology.Topology;
@@ -25,40 +26,48 @@ import de.tuberlin.aura.core.task.spi.ITaskDriver;
 
 public class LocalExecutionTest {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private static final Logger LOG = LoggerFactory.getLogger(LocalExecutionTest.class);
+
+    private static final String zookeeperAddress = "localhost:2181";
+    private static final int machines = 2;
+
+    private static LocalClusterSimulator lce;
+    private static AuraClient ac;
 
     // ---------------------------------------------------
     // Tests.
     // ---------------------------------------------------
 
-    @Test
-    public void testMinimalTopology() {
-
-        int machines = 2;
-        int cores = 4;
-        int runs = 1;
-
-        // Local execution
-        final String measurementPath = System.getProperty("user.home") + File.separator + "local_measurements";
-        final String zookeeperAddress = "localhost:2181";
-        final LocalClusterSimulator lce =
-                new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+    @BeforeClass
+    public static void setupClusterSimulatorAndClient() {
+        lce = new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
                         true,
                         zookeeperAddress,
                         machines);
 
-        final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
-        List<Topology.AuraTopology> topologies = Collections.singletonList(minimalTestTopology(ac, machines, cores));
-        SubmissionHandler handler = new SubmissionHandler(ac, topologies, runs);
+        ac = new AuraClient(zookeeperAddress, 10000, 11111);
+    }
+
+    @Test
+    public void testMinimalTopology() {
+        List<Topology.AuraTopology> topologies = Collections.singletonList(minimalTestTopology(ac, machines, 4));
+        SubmissionHandler handler = new SubmissionHandler(ac, topologies, 1);
 
         ac.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, handler);
 
         handler.handleTopologyFinished(null);
+    }
 
+    @AfterClass
+    public static void shutdown() {
+        ac.awaitSubmissionResult();
         ac.closeSession();
 
-        ac.awaitSubmissionResult();
-
+        lce.shutdown();
     }
 
     // ---------------------------------------------------
