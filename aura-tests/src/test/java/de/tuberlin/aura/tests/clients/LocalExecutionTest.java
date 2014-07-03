@@ -54,20 +54,19 @@ public class LocalExecutionTest {
 
     @Test
     public void testMinimalTopology() {
-        List<Topology.AuraTopology> topologies = Collections.singletonList(minimalTestTopology(ac, machines, 4));
+        List<Topology.AuraTopology> topologies = Collections.singletonList(minimalTestTopology(ac, machines, 2));
         SubmissionHandler handler = new SubmissionHandler(ac, topologies, 1);
 
         ac.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, handler);
 
         handler.handleTopologyFinished(null);
+
+        ac.awaitSubmissionResult();
     }
 
     @AfterClass
-    public static void shutdown() {
-        ac.awaitSubmissionResult();
+    public static void tearDown() {
         ac.closeSession();
-
-        lce.shutdown();
     }
 
     // ---------------------------------------------------
