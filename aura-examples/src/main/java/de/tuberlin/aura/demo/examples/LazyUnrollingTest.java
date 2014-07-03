@@ -5,10 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.record.Partitioner;
-import de.tuberlin.aura.core.record.RowRecordReader;
-import de.tuberlin.aura.core.record.RowRecordWriter;
-import de.tuberlin.aura.core.topology.Topology;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
@@ -16,7 +12,11 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
+import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.record.RowRecordReader;
+import de.tuberlin.aura.core.record.RowRecordWriter;
 import de.tuberlin.aura.core.task.spi.*;
+import de.tuberlin.aura.core.topology.Topology;
 
 public final class LazyUnrollingTest {
 
@@ -339,30 +339,6 @@ public final class LazyUnrollingTest {
 }
 
 /*
-package de.tuberlin.aura.demo.examples;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.List;
-import java.util.UUID;
-
-import de.tuberlin.aura.core.record.RowRecordReader;
-import de.tuberlin.aura.core.record.RowRecordWriter;
-import org.apache.log4j.ConsoleAppender;
-import org.apache.log4j.SimpleLayout;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.client.executors.LocalClusterSimulator;
-import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.record.RowRecordModel;
-import de.tuberlin.aura.core.task.spi.*;
-import de.tuberlin.aura.core.topology.Topology;
-
 public final class LazyUnrollingTest {
 
 

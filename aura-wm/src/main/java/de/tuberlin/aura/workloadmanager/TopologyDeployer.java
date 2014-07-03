@@ -1,15 +1,18 @@
 package de.tuberlin.aura.workloadmanager;
 
-import de.tuberlin.aura.core.common.utils.Visitor;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
+import de.tuberlin.aura.core.common.utils.Visitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.DeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.WM2TMProtocol;
-import de.tuberlin.aura.core.topology.Topology.*;
+import de.tuberlin.aura.core.topology.Topology.AuraTopology;
+import de.tuberlin.aura.core.topology.Topology.ExecutionNode;
+import de.tuberlin.aura.core.topology.Topology.Node;
+import de.tuberlin.aura.core.topology.Topology.TopologyBreadthFirstTraverser;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
 public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> {

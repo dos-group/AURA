@@ -1,6 +1,5 @@
 package de.tuberlin.aura.demo.examples;
 
-import com.google.common.reflect.TypeToken;
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.operators.OperatorAPI;
@@ -10,11 +9,7 @@ import de.tuberlin.aura.core.operators.UnaryUDFFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.tuples.Tuple1;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
-import de.tuberlin.aura.core.record.tuples.Tuple3;
 import de.tuberlin.aura.core.topology.Topology;
-
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 
 /**
  *
@@ -56,53 +51,7 @@ public class OperatorTest {
         }
     }
 
-
-    public static void resolveTypeParameter(final Class<?> clazz) {
-
-        final Type[] types = clazz.getGenericInterfaces();
-
-        if (types.length > 0) {
-
-            for (final Type type : types) {
-
-                System.out.println(((Class<?>)type).getSimpleName());
-
-                resolve(type);
-            }
-        }
-    }
-
-
-    public static void resolve(final Type type) {
-
-        if (type instanceof ParameterizedType) {
-
-            final ParameterizedType parameterizedType = (ParameterizedType)type;
-
-            final Type[] typeArguments = parameterizedType.getActualTypeArguments();
-
-            for (final Type typeArgument : typeArguments) {
-
-                if (typeArgument instanceof ParameterizedType) {
-
-                    System.out.println(typeArgument);
-
-                    resolve(typeArgument);
-
-                } else {
-
-                    System.out.println(((Class<?>)typeArgument).getSimpleName());
-                }
-            }
-        }
-    }
-
-
-
-
     public static void main(final String[] args) {
-
-        resolveTypeParameter(MapUDF1.class);
 
         final OperatorAPI.Operator source1 = new OperatorAPI.Operator(
                 new OperatorProperties(
@@ -150,9 +99,14 @@ public class OperatorTest {
 
         // Local
         final String zookeeperAddress = "localhost:2181";
-        new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
+        final LocalClusterSimulator lcs = new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
         final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
         final Topology.AuraTopology topology = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
+        
         ac.submitTopology(topology, null);
+        ac.awaitSubmissionResult();
+        ac.closeSession();
+        
+        lcs.shutdown();
     }
 }

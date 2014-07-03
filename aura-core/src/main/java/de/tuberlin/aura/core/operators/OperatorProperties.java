@@ -1,9 +1,9 @@
 package de.tuberlin.aura.core.operators;
 
-import de.tuberlin.aura.core.record.Partitioner;
-
 import java.io.Serializable;
 import java.util.UUID;
+
+import de.tuberlin.aura.core.record.Partitioner;
 
 /**
  *

@@ -1,11 +1,11 @@
 package de.tuberlin.aura.core.operators;
 
-import de.tuberlin.aura.core.common.utils.Visitor;
-import de.tuberlin.aura.core.topology.Topology;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import de.tuberlin.aura.core.common.utils.Visitor;
+import de.tuberlin.aura.core.topology.Topology;
 
 /**
  *

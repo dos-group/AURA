@@ -2,8 +2,6 @@ package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
 
-import de.tuberlin.aura.core.common.utils.Visitor;
-import de.tuberlin.aura.core.topology.Topology;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -13,9 +11,11 @@ import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPipeline;
+import de.tuberlin.aura.core.common.utils.Visitor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.task.common.TaskStates;
+import de.tuberlin.aura.core.topology.Topology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyState;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;

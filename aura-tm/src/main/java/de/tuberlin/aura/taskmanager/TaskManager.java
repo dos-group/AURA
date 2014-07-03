@@ -3,7 +3,6 @@ package de.tuberlin.aura.taskmanager;
 import java.io.IOException;
 import java.util.*;
 
-import de.tuberlin.aura.storage.DataStorageDriver;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -29,6 +28,7 @@ import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.task.spi.ITaskManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import de.tuberlin.aura.storage.DataStorageDriver;
 
 public final class TaskManager implements ITaskManager {
 

@@ -1,5 +1,10 @@
 package de.tuberlin.aura.computation;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.slf4j.Logger;
+
 import de.tuberlin.aura.core.common.utils.Visitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.operators.PhysicalOperatorFactory;
@@ -8,10 +13,6 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
 import de.tuberlin.aura.core.task.spi.*;
-import org.slf4j.Logger;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  *

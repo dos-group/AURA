@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.topology.Topology;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +19,7 @@ import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataConsumer;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.topology.Topology;
 
 public final class IntegrationTests {
 
@@ -472,7 +472,7 @@ public final class IntegrationTests {
 
         int cores = 4;
 
-        int runs = 15;
+        int runs = 1;
 
         // Local
         final String zookeeperAddress = "localhost:2181";

@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
@@ -163,6 +166,44 @@ public final class AuraClient {
         clientProtocol.submitToTopology(clientSessionID, topologyID, topology);
     }
 
+    /**
+     *
+     */
+    public void awaitSubmissionResult() {
+
+        final Lock threadLock = new ReentrantLock();
+        final Condition condition = threadLock.newCondition();
+
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, new IEventHandler() {
+
+            @Override
+            public void handleEvent(Event event) {
+                threadLock.lock();
+                condition.signal();
+                threadLock.unlock();
+            }
+        });
+
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE, new IEventHandler() {
+
+            @Override
+            public void handleEvent(Event event) {
+                threadLock.lock();
+                condition.signal();
+                threadLock.unlock();
+            }
+        });
+
+        threadLock.lock();
+
+        try {
+            condition.await();
+        } catch (InterruptedException e) {
+            // do nothing...
+        } finally {
+            threadLock.unlock();
+        }
+    }
 
     // ---------------------------------------------------
     // Inner Classes.

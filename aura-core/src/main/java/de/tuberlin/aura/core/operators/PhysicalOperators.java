@@ -1,10 +1,9 @@
 package de.tuberlin.aura.core.operators;
 
+import java.io.Serializable;
+
 import de.tuberlin.aura.core.common.utils.Visitable;
 import de.tuberlin.aura.core.common.utils.Visitor;
-import de.tuberlin.aura.core.descriptors.Descriptors;
-
-import java.io.Serializable;
 
 /**
  *

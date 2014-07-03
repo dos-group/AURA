@@ -2,7 +2,6 @@ package de.tuberlin.aura.taskmanager;
 
 import java.util.*;
 
-import de.tuberlin.aura.storage.DataStorageDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,6 +19,7 @@ import de.tuberlin.aura.core.task.gates.OutputGate;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.storage.DataStorageDriver;
 
 /**
  *

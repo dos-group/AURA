@@ -1,9 +1,9 @@
 package de.tuberlin.aura.core.record.tuples;
 
-import com.google.common.collect.ComparisonChain;
-
 import java.util.Arrays;
 import java.util.Iterator;
+
+import com.google.common.collect.ComparisonChain;
 
 /**
  *
