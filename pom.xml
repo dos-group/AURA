@@ -2,17 +2,22 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-    <!-- ================================= -->
-    <!-- MAVEN HEADER. -->
-    <!-- ================================= -->
-
     <modelVersion>4.0.0</modelVersion>
+
     <groupId>de.tuberlin.aura</groupId>
     <artifactId>aura</artifactId>
-    <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
+
     <name>aura</name>
-    <url>http://maven.apache.org</url>
+    <packaging>pom</packaging>
+    <url>http://github.com/citlab/AURA</url>
+
+    <scm>
+        <url>https://github.com/citlab/AURA</url>
+        <connection>scm:git:git@github.com:citlab/AURA.git</connection>
+        <developerConnection>scm:git:git@github.com:citlab/AURA.git</developerConnection>
+    </scm>
+
 
     <!-- ================================= -->
     <!-- AURA PROJECT CONFIGURATION. -->
@@ -167,7 +172,7 @@
         <pluginManagement>
             <plugins>
 
-                <!-- enable speciific JVM version -->
+                <!-- enable specific JVM version -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
