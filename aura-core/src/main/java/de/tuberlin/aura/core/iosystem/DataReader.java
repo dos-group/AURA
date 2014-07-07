@@ -279,9 +279,11 @@ public class DataReader {
             ServerBootstrap b = new ServerBootstrap();
             b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
                     // sets the max. number of pending, not yet fully connected (handshake) channels
+                    // TODO [config]: IO.NETTY.SO_BACKLOG
                     .option(ChannelOption.SO_BACKLOG, 1024)
                             // .option(ChannelOption.SO_RCVBUF, IOConfig.NETTY_RECEIVE_BUFFER_SIZE)
                             // set keep alive, so idle connections are persistent
+                    // TODO [config]: IO.NETTY.SO_KEEPALIVE
                     .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
             return b;

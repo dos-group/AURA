@@ -81,6 +81,7 @@ public class DataWriter {
 
         // connection
 
+        // TODO [config]: IO.MAX_CONNECTION_RETRIES
         final int maxConnectionRetries = 5;
 
         int connectionRetries = 0;
@@ -113,6 +114,7 @@ public class DataWriter {
 
                     ChannelFuture future = bootstrap.connect(address);
 
+                    // TODO [config]: IO.CONNECTION_RETRY_TIMEOUT
                     boolean await = future.await(30, TimeUnit.SECONDS);
                     if (await) {
                         channel = future.channel();
@@ -174,6 +176,7 @@ public class DataWriter {
             try {
                 // wait for the receivers acknowledge before shutdown
                 if (awaitExhaustion) {
+                    // TODO [config]: IO.AWAIT_EXHAUSTION_TIMEOUT
                     while (!waitForExhaustedAcknowledge.await(1, TimeUnit.MINUTES)) {
                         LOG.warn("Latch reached timelimit " + outboundQueue.size() + " " + channel + "(" + channel.getClass() + ")");
                         channel.pipeline().fireChannelWritabilityChanged();
@@ -361,9 +364,11 @@ public class DataWriter {
             return new Bootstrap().group(eventLoopGroup).channel(LocalChannel.class)
             // the mark the outbound bufferQueue has to reach in order
             // to change the writable state of a channel true
+                                  // TODO [config]: IO.NETTY.WRITE_BUFFER_LOW_WATER_MARK
                                   .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, IOConfig.NETTY_LOW_WATER_MARK)
                                   // the mark the outbound bufferQueue has to reach in order
                                   // to change the writable state of a channel false
+                                  // TODO [config]: IO.NETTY.WRITE_BUFFER_HIGH_WATER_MARK
                                   .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, IOConfig.TRANSFER_BUFFER_SIZE)
                                   .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         }
@@ -390,24 +395,29 @@ public class DataWriter {
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             return new Bootstrap().group(eventLoopGroup).channel(NioSocketChannel.class)
             // true, periodically heartbeats from tcp
+                                  // TODO [config]: IO.NETTY.SO_KEEPALIVE
                                   .option(ChannelOption.SO_KEEPALIVE, true)
                                   // false, means that messages get only sent if the size of the
                                   // data reached a relevant
                                   // amount.
+                                  // TODO [config]: IO.NETTY.TCP_NODELAY
                                   .option(ChannelOption.TCP_NODELAY, false)
                                   // size of the system lvl send bufferQueue PER SOCKET
                                   // -> bufferQueue size, as we always have only 1 channel per
                                   // socket in the client case
+                                  // TODO [config]: IO.NETTY.SO_SNDBUF
                                   .option(ChannelOption.SO_SNDBUF, IOConfig.TRANSFER_BUFFER_SIZE)
                                   // the mark the outbound bufferQueue has to reach in order to
                                   // change the writable
                                   // state of
                                   // a channel true
+                                  // TODO [config]: IO.NETTY.WRITE_BUFFER_LOW_WATER_MARK
                                   .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, IOConfig.NETTY_LOW_WATER_MARK)
                                   // the mark the outbound bufferQueue has to reach in order to
                                   // change the writable
                                   // state of
                                   // a channel false
+                                  // TODO [config]: IO.NETTY.WRITE_BUFFER_HIGH_WATER_MARK
                                   .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, IOConfig.NETTY_HIGH_WATER_MARK)
                                   .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         }

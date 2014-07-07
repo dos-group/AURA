@@ -140,7 +140,12 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
      *
      */
     private void initializeExecutionUnits() {
-        for (int i = 0; i < numberOfCores; ++i) {
+        // TODO [config]: numberOfExecutionUnits should be configurable, should be either the number of cores
+        // of the TaskManager machine (e.g. in a cluster setup) or a specific constant (e.g. with the cluster simulator)
+
+        int numberOfExecutionUnits = numberOfCores;
+
+        for (int i = 0; i < numberOfExecutionUnits; ++i) {
             final BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
             final BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
 

@@ -29,6 +29,7 @@ public final class RPCManager {
     // ---------------------------------------------------
 
     // for debugging use -1.
+    // TODO [config]: IO.RPC.RESPONSE_TIMEOUT
     private static final long RPC_RESPONSE_TIMEOUT = -1; // 5000; // in ms
 
     // ---------------------------------------------------

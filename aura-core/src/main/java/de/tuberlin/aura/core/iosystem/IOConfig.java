@@ -11,6 +11,7 @@ public final class IOConfig {
      * The size of the buffers hold by the
      * {@link de.tuberlin.aura.core.iosystem.IOEvents.TransferBufferEvent}.
      */
+    // TODO [config]: get from buffer memory manager
     public static final int TRANSFER_BUFFER_SIZE = 64 << 10;
 
     /**
@@ -34,6 +35,7 @@ public final class IOConfig {
     /**
      * The max. size a event an event sent can have.
      */
+    // TODO [config]: IO.MAX_EVENT_SIZE
     public final static int MAX_EVENT_SIZE = TRANSFER_BUFFER_SIZE + 8 * 6 + // max. event meta data
             // (in transferbuffer)
             4 + // kryo class identifier
@@ -42,7 +44,9 @@ public final class IOConfig {
 
     //public static final int KRYO_IO_EVENT_ID = 10;
 
+    // TODO [config]: IO.KRYO.DATA_EVENT_ID
     public static final int KRYO_IO_DATA_EVENT_ID = 11;
 
+    // TODO [config]: IO.KRYO.TRANSFER_EVENT_ID
     public static final int KRYO_IO_TRANSFER_EVENT_ID = 12;
 }

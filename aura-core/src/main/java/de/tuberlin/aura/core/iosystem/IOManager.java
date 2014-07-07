@@ -94,12 +94,13 @@ public final class IOManager extends EventDispatcher {
         this.dataWriter = new DataWriter(IOManager.this);
 
         // TODO: Make the number of thread configurable
+        // TODO [config]: IO.TCP.INBOUND_THREADS
         this.tcpInboundELG = new NioEventLoopGroup(12);
-
+        // TODO [config]: IO.TCP.OUTBOUND_THREADS
         this.tcpOutboundELG = new NioEventLoopGroup(12);
-
+        // TODO [config]: IO.LOCAL.INBOUND_THREADS
         this.localInboundELG = new LocalEventLoopGroup(2);
-
+        // TODO [config]: IO.LOCAL.OUTBOUND_THREADS
         this.localOutboundELG = new LocalEventLoopGroup(2);
 
         startNetworkConnectionSetupServer(this.machine, tcpInboundELG);
@@ -107,6 +108,7 @@ public final class IOManager extends EventDispatcher {
         startLocalDataConnectionSetupServer(localInboundELG);
 
         // Configure the control plane.
+        // TODO [config]: IO.RPC.INBOUND_THREADS
         this.controlPlaneEventLoopGroup = new NioEventLoopGroup();
 
         startNetworkControlMessageServer(this.machine, controlPlaneEventLoopGroup);
