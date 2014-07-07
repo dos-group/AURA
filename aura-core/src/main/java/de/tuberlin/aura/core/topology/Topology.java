@@ -1015,4 +1015,35 @@ public class Topology {
             return false;
         }
     }
+
+    /**
+     *
+     */
+    public static final class TopologyPrinter {
+
+        // ---------------------------------------------------
+        // Constructor.
+        // ---------------------------------------------------
+
+        private TopologyPrinter() {
+        }
+
+        // ---------------------------------------------------
+        // Public Static Methods.
+        // ---------------------------------------------------
+
+        public static void printTopology(final AuraTopology topology) {
+            // sanity check.
+            if (topology == null)
+                throw new IllegalArgumentException("topology == null");
+
+            TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
+
+                @Override
+                public void visit(Node element) {
+                    System.out.println(element.name);
+                }
+            });
+        }
+    }
 }

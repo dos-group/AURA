@@ -64,7 +64,7 @@ public final class OperatorAPI {
         // Fields.
         // ---------------------------------------------------
 
-        //private int indentation = 0;
+        private int level = 0;
 
         // ---------------------------------------------------
         // Constructor.
@@ -92,18 +92,41 @@ public final class OperatorAPI {
         @Override
         public void visit(final OperatorAPI.Operator element) {
 
+            for(int i = 0; i < level; ++i) {
+                System.out.print("  ");
+                System.out.print("|");
+            }
+
+            System.out.println();
+
+            for(int i = 0; i < level; ++i) {
+                System.out.print("  ");
+                System.out.print("|");
+            }
+
+            System.out.print("+-" + element.properties.operatorType);
+            System.out.print("[");
+            System.out.print(element.properties.instanceName);
+            System.out.print("]\n");
+
             if (element.properties.operatorType.operatorInputArity == OperatorProperties.OperatorInputArity.UNARY) {
 
-                visit(element.inputOp1);
+                level++;
+
+                    visit(element.inputOp1);
+
+                level--;
 
             } else if (element.properties.operatorType.operatorInputArity == OperatorProperties.OperatorInputArity.BINARY) {
 
-                visit(element.inputOp1);
+                level++;
 
-                visit(element.inputOp2);
+                    visit(element.inputOp1);
+
+                    visit(element.inputOp2);
+
+                level--;
             }
-
-            System.out.print(element.properties.operatorType + "(" + element.properties.instanceName + ")\n");
         }
     }
 }

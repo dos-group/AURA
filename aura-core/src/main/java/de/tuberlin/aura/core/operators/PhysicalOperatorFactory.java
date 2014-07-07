@@ -13,10 +13,6 @@ public final class PhysicalOperatorFactory {
         // sanity check.
         if (properties == null)
             throw new IllegalArgumentException("properties == null");
-        /*if (inputOp1 == null)
-            throw new IllegalArgumentException("inputOp1 == null");
-        if (inputOp2 == null)
-            throw new IllegalArgumentException("inputOp2 == null");*/
 
         switch(properties.operatorType) {
             case MAP_TUPLE_OPERATOR:
@@ -57,7 +53,20 @@ public final class PhysicalOperatorFactory {
                 break;
         }
 
-        throw new IllegalStateException();
+        throw new IllegalStateException("'" + properties.operatorType + "' is not defined.");
+    }
+
+    public static PhysicalOperators.AbstractPhysicalOperator<Object> createPhysicalOperator(
+            final OperatorProperties properties,
+            final PhysicalOperators.AbstractPhysicalOperator<Object> inputOp1) {
+
+        return createPhysicalOperator(properties, inputOp1, null);
+    }
+
+    public static PhysicalOperators.AbstractPhysicalOperator<Object> createPhysicalOperator(
+            final OperatorProperties properties) {
+
+        return createPhysicalOperator(properties, null, null);
     }
 
     private static UnaryUDFFunction<Object,Object> createUDF(final Class<?> udfType) {

@@ -112,7 +112,7 @@ public final class TopologyGenerator implements Visitor<OperatorAPI.Operator> {
     // ---------------------------------------------------
 
     private Topology.Edge.TransferType selectEdgeTransferType(final OperatorProperties srcOperator,
-                                                               final OperatorProperties dstOperator) {
+                                                              final OperatorProperties dstOperator) {
 
         if (Arrays.equals(srcOperator.keys, dstOperator.keys) // TODO: only subset of keys should be enough.. isPartOf()
                 && srcOperator.strategy == dstOperator.strategy) {
