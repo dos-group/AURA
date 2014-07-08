@@ -1,15 +1,17 @@
 package de.tuberlin.aura.core.common.utils;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
+import java.io.IOException;
+import java.net.*;
 import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class InetHelper {
+
+    private static final Set<Integer> reservedPorts = new HashSet<>();
 
     /**
      * Logger.
@@ -43,5 +45,20 @@ public class InetHelper {
         }
 
         return null;
+    }
+
+    public static int getFreePort() {
+        int freePort = -1;
+        do {
+            try {
+                final ServerSocket ss = new ServerSocket(0);
+                freePort = ss.getLocalPort();
+                ss.close();
+            } catch (IOException e) {
+                LOG.info(e.getLocalizedMessage(), e);
+            }
+        } while (reservedPorts.contains(freePort) || freePort < 1024 || freePort > 65535);
+        reservedPorts.add(freePort);
+        return freePort;
     }
 }

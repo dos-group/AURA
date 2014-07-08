@@ -3,6 +3,8 @@ package de.tuberlin.aura.demo.examples;
 import java.util.Arrays;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
@@ -28,8 +30,7 @@ public final class RecordModelTest {
 
     public static final class Record1 {
 
-        public Record1() {
-        }
+        public Record1() {}
 
         public int a;
 
@@ -60,7 +61,7 @@ public final class RecordModelTest {
 
         @Override
         public void run() throws Throwable {
-            for(int i = 0; i < 10000; ++i) {
+            for (int i = 0; i < 10000; ++i) {
                 recordWriter.writeObject(new Tuple3<>("Hans" + i, i, i));
             }
         }
@@ -95,11 +96,11 @@ public final class RecordModelTest {
         public void run() throws Throwable {
             recordReader.begin();
             while (!recordReader.finished()) {
-                final Tuple3<String,Integer,Integer> t = (Tuple3)recordReader.readObject();
+                final Tuple3<String, Integer, Integer> t = (Tuple3) recordReader.readObject();
                 if (t != null) {
                     double value0 = t._2;
-                    if(driver.getNodeDescriptor().taskIndex == 0) {
-                       System.out.println(driver.getNodeDescriptor().taskID + " value0:" + value0);
+                    if (driver.getNodeDescriptor().taskIndex == 0) {
+                        System.out.println(driver.getNodeDescriptor().taskID + " value0:" + value0);
                     }
                 }
             }
@@ -107,8 +108,7 @@ public final class RecordModelTest {
         }
 
         @Override
-        public void close() throws Throwable {
-        }
+        public void close() throws Throwable {}
     }
 
     // ---------------------------------------------------
@@ -120,16 +120,16 @@ public final class RecordModelTest {
         final SimpleLayout layout = new SimpleLayout();
         new ConsoleAppender(layout);
 
-        // Local
-        final String zookeeperAddress = "localhost:2181";
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
-
-        final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
+        final IConfig config = IConfigFactory.load();
+        final LocalClusterSimulator lcs = new LocalClusterSimulator(config);
+        final AuraClient ac = new AuraClient(config);
         final Topology.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
-        atb1.addNode(new Topology.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Arrays.asList(Source.class, Record1.class))
-                .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
+        //@formatter:off
+        atb1.addNode(new Topology.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Source.class, Record1.class)
+            .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
             .addNode(new Topology.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
+        //@formatter:on
 
         final Topology.AuraTopology at1 = atb1.build("JOB 1");
         ac.submitTopology(at1, null);

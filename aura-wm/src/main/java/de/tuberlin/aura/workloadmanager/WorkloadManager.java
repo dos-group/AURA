@@ -6,6 +6,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.config.IConfig;
+import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.impl.type.FileArgumentType;
+import net.sourceforge.argparse4j.inf.ArgumentParser;
+import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.internal.HelpScreenException;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -48,27 +55,13 @@ public class WorkloadManager implements ClientWMProtocol {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param zkServer
-     * @param dataPort
-     * @param controlPort
-     */
-    public WorkloadManager(final String zkServer, int dataPort, int controlPort) {
-        this(zkServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
-    }
+    public WorkloadManager(IConfig config) {
+        final String zkServer = config.getString("zookeeper.server.address");
 
-    /**
-     * 
-     * @param zkServer
-     * @param machineDescriptor
-     */
-    public WorkloadManager(final String zkServer, final MachineDescriptor machineDescriptor) {
         // sanity check.
         ZookeeperHelper.checkConnectionString(zkServer);
-        if (machineDescriptor == null)
-            throw new IllegalArgumentException("machineDescriptor == null");
 
-        this.machineDescriptor = machineDescriptor;
+        this.machineDescriptor = DescriptorFactory.createMachineDescriptor(config, "wm");
 
         this.ioManager = new IOManager(this.machineDescriptor, null);
 
@@ -258,46 +251,72 @@ public class WorkloadManager implements ClientWMProtocol {
     // ---------------------------------------------------
 
     /**
-     * 
+     * TaskManager entry point.
+     *
      * @param args
      */
     public static void main(final String[] args) {
+        // construct base argument parser
+        ArgumentParser parser = getArgumentParser();
 
-        // final Logger rootLOG = Logger.getRootLogger();
-        //
-        // final PatternLayout layout = new PatternLayout("%d %p - %m%n");
-        // final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-        // rootLOG.addAppender(consoleAppender);
-        // rootLOG.setLevel(Level.INFO);
-
-        int dataPort = -1;
-        int controlPort = -1;
-        String zkServer = null;
-        String measurementPath = null;
-        if (args.length == 4) {
-            try {
-                zkServer = args[0];
-                dataPort = Integer.parseInt(args[1]);
-                controlPort = Integer.parseInt(args[2]);
-                measurementPath = args[3];
-            } catch (NumberFormatException e) {
-                LOG.error("Argument" + " must be an integer", e);
-                System.exit(1);
+        try {
+            // parse the arguments and store them as system properties
+            for (Map.Entry<String, Object> e : parser.parseArgs(args).getAttrs().entrySet()) {
+                System.setProperty(e.getKey(), e.getValue().toString());
             }
-        } else {
-            StringBuilder builder = new StringBuilder();
-            builder.append("Args: ");
-            for (int i = 0; i < args.length; i++) {
-                builder.append(args[i]);
-                builder.append("|");
-            }
+            // load configuration
+            IConfig config = IConfigFactory.load();
 
-            LOG.error(builder.toString());
+            // start the workload manager
+            long start = System.nanoTime();
+            new WorkloadManager(config);
+            LOG.info("WM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
+        } catch (HelpScreenException e) {
+            parser.handleError(e);
+        } catch (ArgumentParserException e) {
+            parser.handleError(e);
+            System.exit(1);
+        } catch (Throwable e) {
+            System.err.println(String.format("Unexpected error: %s", e.getMessage()));
             System.exit(1);
         }
+    }
 
-        long start = System.nanoTime();
-        new WorkloadManager(zkServer, dataPort, controlPort);
-        LOG.info("WM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
+    private static ArgumentParser getArgumentParser() {
+        //@formatter:off
+        ArgumentParser parser = ArgumentParsers.newArgumentParser("aura-wm")
+                .defaultHelp(true)
+                .description("AURA WorkloadManager.");
+
+        parser.addArgument("--config")
+                .type(new FileArgumentType().verifyIsDirectory().verifyCanRead())
+                .dest("aura.path.config")
+                .setDefault("config")
+                .metavar("PATH")
+                .help("config folder");
+        parser.addArgument("--log")
+                .type(new FileArgumentType().verifyIsDirectory().verifyCanRead())
+                .dest("aura.path.log")
+                .setDefault("log")
+                .metavar("PATH")
+                .help("log folder");
+        parser.addArgument("--zookeeper-url")
+                .type(String.class)
+                .dest("zookeeper.server.address")
+                .metavar("URL")
+                .help("zookeeper server URL");
+        parser.addArgument("--data-port")
+                .type(Integer.class)
+                .dest("wm.io.tcp.port")
+                .metavar("PORT")
+                .help("port for data transfer");
+        parser.addArgument("--control-port")
+                .type(Integer.class)
+                .dest("wm.io.rpc.port")
+                .metavar("PORT")
+                .help("port for control messages");
+        //@formatter:on
+
+        return parser;
     }
 }

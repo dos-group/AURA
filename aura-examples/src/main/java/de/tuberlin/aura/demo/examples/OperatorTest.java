@@ -2,6 +2,8 @@ package de.tuberlin.aura.demo.examples;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.operators.OperatorAPI;
 import de.tuberlin.aura.core.operators.OperatorProperties;
 import de.tuberlin.aura.core.operators.TopologyGenerator;
@@ -10,9 +12,6 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.tuples.Tuple1;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
-
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 
 /**
  *
@@ -100,10 +99,9 @@ public class OperatorTest {
 
         //OperatorAPI.PlanPrinter.printPlan(sink1);
 
-        // Local
-        final String zookeeperAddress = "localhost:2181";
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true, zookeeperAddress, 4);
-        final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);
+        final IConfig config = IConfigFactory.load();
+        final LocalClusterSimulator lcs = new LocalClusterSimulator(config);
+        final AuraClient ac = new AuraClient(config);
         final Topology.AuraTopology topology = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
 
         //Topology.TopologyPrinter.printTopology(topology);

@@ -50,7 +50,7 @@ public final class ProcessExecutor {
      * @param params
      * @return
      */
-    public ProcessExecutor execute(String... params) {
+    public ProcessExecutor execute(String[] jvmOpts, String... params) {
 
         final String javaRuntime = System.getProperty("java.home") + "/bin/java";
         final String classpath =
@@ -62,6 +62,7 @@ public final class ProcessExecutor {
             commandList.add(javaRuntime);
             commandList.add("-cp");
             commandList.add(classpath);
+            commandList.addAll(Arrays.asList(jvmOpts));
             commandList.add(canonicalName);
             commandList.addAll(Arrays.asList(params));
 

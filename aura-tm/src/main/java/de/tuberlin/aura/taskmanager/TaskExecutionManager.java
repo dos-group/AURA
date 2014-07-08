@@ -41,7 +41,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
 
     private final Descriptors.MachineDescriptor machineDescriptor;
 
-    private final int numberOfCores;
+    private final int numberOfExecutionUnits;
 
     private final ITaskExecutionUnit[] executionUnit;
 
@@ -55,7 +55,9 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
      * @param machineDescriptor
      * @param bufferMemoryManager
      */
-    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor, final IBufferMemoryManager bufferMemoryManager) {
+    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor,
+                                final IBufferMemoryManager bufferMemoryManager,
+                                final int numberOfExecutionUnits) {
         // TODO: Cleanup
         super(true, "TaskExecutionManagerEventDispatcher");
 
@@ -69,9 +71,9 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
 
         this.bufferMemoryManager = bufferMemoryManager;
 
-        this.numberOfCores = machineDescriptor.hardware.cpuCores;
+        this.numberOfExecutionUnits = numberOfExecutionUnits;
 
-        this.executionUnit = new TaskExecutionUnit[numberOfCores];
+        this.executionUnit = new TaskExecutionUnit[numberOfExecutionUnits];
 
         initializeExecutionUnits();
     }
@@ -92,7 +94,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
         tmpMinOld = executionUnit[0].getNumberOfEnqueuedTasks();
         int selectedEU = 0;
 
-        for (int i = 1; i < numberOfCores; ++i) {
+        for (int i = 1; i < numberOfExecutionUnits; ++i) {
             tmpMin = executionUnit[i].getNumberOfEnqueuedTasks();
             if (tmpMin < tmpMinOld) {
                 tmpMinOld = tmpMin;
@@ -100,7 +102,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
             }
         }
 
-        //driver.setAssignedExecutionUnitIndex(selectedEU);
+        // driver.setAssignedExecutionUnitIndex(selectedEU);
         executionUnit[selectedEU].enqueueTask(driver);
 
         LOG.info("EXECUTE TASK {}-{} [{}] ON EXECUTION UNIT ({}) ON MACHINE [{}]",
@@ -120,7 +122,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
 
-        for (int i = 0; i < numberOfCores; ++i) {
+        for (int i = 0; i < numberOfExecutionUnits; ++i) {
             final ITaskExecutionUnit eu = executionUnit[i];
             final ITaskDriver taskCtx = eu.getCurrentTaskDriver();
             if (taskCtx != null && taskID.equals(taskCtx.getNodeDescriptor().taskID)) {
@@ -140,10 +142,7 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
      *
      */
     private void initializeExecutionUnits() {
-        // TODO [config]: numberOfExecutionUnits should be configurable, should be either the number of cores
-        // of the TaskManager machine (e.g. in a cluster setup) or a specific constant (e.g. with the cluster simulator)
-
-        int numberOfExecutionUnits = numberOfCores;
+        int numberOfExecutionUnits = this.numberOfExecutionUnits;
 
         for (int i = 0; i < numberOfExecutionUnits; ++i) {
             final BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
