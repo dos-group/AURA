@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import net.jcip.annotations.NotThreadSafe;
 
@@ -79,6 +82,9 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
 
         try {
 
+            final Lock threadLock = new ReentrantLock();
+            final Condition connectionEstablishedCondition = threadLock.newCondition();
+
             final IEventHandler eh = new IEventHandler() {
 
                 @Override
@@ -90,6 +96,12 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
                             } catch (InterruptedException e) {
                                 LOG.error("ZooKeeper operation was interrupted", e);
                             }
+                            break;
+                        case ZookeeperHelper.EVENT_TYPE_CONNECTION_ESTABLISHED:
+                            threadLock.lock();
+                            connectionEstablishedCondition.signal();
+                            threadLock.unlock();
+                            break;
                     }
                 }
             };
@@ -97,6 +109,16 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
             // Get a connection to ZooKeeper and initialize
             // the directories in ZooKeeper.
             this.zookeeper = new ZooKeeper(zkServers, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(eh));
+
+            threadLock.lock();
+            try {
+                connectionEstablishedCondition.await();
+            } catch (InterruptedException e) {
+                // do nothing...
+            } finally {
+                threadLock.unlock();
+            }
+
             ZookeeperHelper.initDirectories(this.zookeeper);
 
             // Store the workload manager machine descriptor.

@@ -32,7 +32,10 @@ public class ZookeeperHelper {
 
     public static final String EVENT_TYPE_NODE_REMOVED = "node_removed";
 
+    public static final String EVENT_TYPE_CONNECTION_ESTABLISHED = "connection_established";
+
     public static final String EVENT_TYPE_CONNECTION_EXPIRED = "connection_expired";
+
 
     // ---------------------------------------------------
     // Fields.

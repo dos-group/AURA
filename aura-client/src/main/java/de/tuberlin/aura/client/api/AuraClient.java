@@ -87,12 +87,33 @@ public final class AuraClient {
         final ZooKeeper zookeeper;
 
         final MachineDescriptor wmMachineDescriptor;
+
+        final Lock threadLock = new ReentrantLock();
+        final Condition connectionEstablishedCondition = threadLock.newCondition();
+
         try {
             zookeeper = new ZooKeeper(zkServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(new IEventHandler() {
 
                 @Override
-                public void handleEvent(Event event) {}
+                public void handleEvent(Event event) {
+
+                    if (event.type == ZookeeperHelper.EVENT_TYPE_CONNECTION_ESTABLISHED) {
+                        threadLock.lock();
+                        connectionEstablishedCondition.signal();
+                        threadLock.unlock();
+                    }
+
+                }
             }));
+
+            threadLock.lock();
+            try {
+                connectionEstablishedCondition.await();
+            } catch (InterruptedException e) {
+                // do nothing...
+            } finally {
+                threadLock.unlock();
+            }
 
             wmMachineDescriptor = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
         } catch (IOException e) {

@@ -2,6 +2,9 @@ package de.tuberlin.aura.taskmanager;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
@@ -233,12 +236,33 @@ public final class TaskManager implements ITaskManager {
      */
     private ZooKeeper setupZookeeper(final String zookeeperServer) {
         try {
+
+            final Lock threadLock = new ReentrantLock();
+            final Condition connectionEstablishedCondition = threadLock.newCondition();
+
             final ZooKeeper zookeeper =
                     new ZooKeeper(zookeeperServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(new IEventHandler() {
 
                         @Override
-                        public void handleEvent(Event event) {}
+                        public void handleEvent(Event event) {
+
+                            if (event.type == ZookeeperHelper.EVENT_TYPE_CONNECTION_ESTABLISHED) {
+                                threadLock.lock();
+                                connectionEstablishedCondition.signal();
+                                threadLock.unlock();
+                            }
+
+                        }
                     }));
+
+            threadLock.lock();
+            try {
+                connectionEstablishedCondition.await();
+            } catch (InterruptedException e) {
+                // do nothing...
+            } finally {
+                threadLock.unlock();
+            }
 
             ZookeeperHelper.initDirectories(zookeeper);
             final String zkTaskManagerDir = ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + taskManagerMachine.uid.toString();
