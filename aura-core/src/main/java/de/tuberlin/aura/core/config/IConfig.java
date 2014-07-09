@@ -6,6 +6,19 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public interface IConfig {
+
+    public static enum Type {
+        WM("wm"),
+        TM("tm"),
+        CLIENT("client");
+
+        protected final String name;
+
+        private Type(String name) {
+            this.name = name;
+        }
+    }
+
     boolean hasPath(String path);
 
     boolean isEmpty();
@@ -23,6 +36,8 @@ public interface IConfig {
     String getString(String path);
 
     ConfigObject getObject(String path);
+
+    IConfig getConfig(String path);
 
     Object getAnyRef(String path);
 

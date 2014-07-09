@@ -64,11 +64,11 @@ public final class AuraClient {
         // sanity check.
         ZookeeperHelper.checkConnectionString(zkServer);
 
-        final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(config, "client");
+        final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(config.getConfig("client"));
 
-        this.ioManager = new IOManager(md, null);
+        this.ioManager = new IOManager(md, null, config.getConfig("client.io"));
 
-        this.rpcManager = new RPCManager(ioManager);
+        this.rpcManager = new RPCManager(ioManager, config.getConfig("client.io.rpc"));
 
         this.codeExtractor = new UserCodeExtractor(false);
 

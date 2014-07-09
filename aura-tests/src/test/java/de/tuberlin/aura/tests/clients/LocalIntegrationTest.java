@@ -30,7 +30,6 @@ public class LocalIntegrationTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(LocalIntegrationTest.class);
 
-    private static final String zookeeperAddress = "localhost:2181";
     private static final int machines = 2;
 
     private static AuraClient auraClient;
@@ -42,9 +41,8 @@ public class LocalIntegrationTest {
 
     @BeforeClass
     public static void setupClusterSimulatorAndClient() {
-        final IConfig config = IConfigFactory.load();
-        new LocalClusterSimulator(config);
-        auraClient = new AuraClient(config);
+        new LocalClusterSimulator(IConfigFactory.load());
+        auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
     }
 
     @Test

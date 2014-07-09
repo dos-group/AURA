@@ -273,9 +273,8 @@ public final class LazyUnrollingTest {
         final SimpleLayout layout = new SimpleLayout();
         final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
 
-        final IConfig config = IConfigFactory.load();
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(config);
-        final AuraClient ac = new AuraClient(config);
+        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load());
+        final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
         final Topology.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
         //@formatter:off

@@ -23,23 +23,23 @@ public final class DescriptorFactory {
      * @param ns The namespace under which config values will be found (one of wm, tm, or client).
      * @return A {@link MachineDescriptor}.
      */
-    public static MachineDescriptor createMachineDescriptor(IConfig config, String ns) {
+    public static MachineDescriptor createMachineDescriptor(IConfig config) {
 
         // Get the IP address of this node.
         InetAddress address = InetHelper.getIPAddress();
 
         // Get information about the hardware of this machine.
-        int dataPort = config.getInt(String.format("%s.io.tcp.port", ns));
-        int controlPort = config.getInt(String.format("%s.io.rpc.port", ns));
-        int cpuCores = config.getInt(String.format("%s.machine.cpu.cores", ns));
-        long memoryMax = config.getLong(String.format("%s.machine.memory.max", ns));
-        long diskSize = config.getLong(String.format("%s.machine.disk.size", ns));
+        int dataPort = config.getInt("io.tcp.port");
+        int controlPort = config.getInt("io.rpc.port");
+        int cpuCores = config.getInt("machine.cpu.cores");
+        long memoryMax = config.getLong("machine.memory.max");
+        long diskSize = config.getLong("machine.disk.size");
 
         // Sanity check
         if (dataPort < 1024 || dataPort > 65535)
-            throw new IllegalArgumentException(String.format("Invalid value %d for '%s.io.tcp.port'", dataPort, ns));
+            throw new IllegalArgumentException(String.format("Invalid value %d for 'io.tcp.port'", dataPort));
         if (controlPort < 1024 || controlPort > 65535)
-            throw new IllegalArgumentException(String.format("Invalid value %d for '%s.io.rpc.port'", controlPort, ns));
+            throw new IllegalArgumentException(String.format("Invalid value %d for 'io.rpc.port'", controlPort));
 
         // Construct a new hardware descriptor
         HardwareDescriptor hardware = new HardwareDescriptor(cpuCores, memoryMax, new HDDDescriptor(diskSize));

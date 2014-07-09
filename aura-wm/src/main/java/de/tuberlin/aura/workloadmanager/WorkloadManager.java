@@ -61,11 +61,11 @@ public class WorkloadManager implements ClientWMProtocol {
         // sanity check.
         ZookeeperHelper.checkConnectionString(zkServer);
 
-        this.machineDescriptor = DescriptorFactory.createMachineDescriptor(config, "wm");
+        this.machineDescriptor = DescriptorFactory.createMachineDescriptor(config.getConfig("wm"));
 
-        this.ioManager = new IOManager(this.machineDescriptor, null);
+        this.ioManager = new IOManager(this.machineDescriptor, null, config.getConfig("wm.io"));
 
-        this.rpcManager = new RPCManager(ioManager);
+        this.rpcManager = new RPCManager(ioManager, config.getConfig("wm.io.rpc"));
 
         this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machineDescriptor);
 
@@ -265,7 +265,7 @@ public class WorkloadManager implements ClientWMProtocol {
                 System.setProperty(e.getKey(), e.getValue().toString());
             }
             // load configuration
-            IConfig config = IConfigFactory.load();
+            IConfig config = IConfigFactory.load(IConfig.Type.WM);
 
             // start the workload manager
             long start = System.nanoTime();

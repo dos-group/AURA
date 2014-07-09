@@ -114,9 +114,9 @@ public final class LocalClusterSimulator {
         switch (mode) {
 
             case EXECUTION_MODE_SINGLE_PROCESS: {
-                new WorkloadManager(IConfigFactory.load());
+                new WorkloadManager(IConfigFactory.load(IConfig.Type.WM));
                 for (int i = 0; i < numNodes; ++i) {
-                    tmList.add(new TaskManager(IConfigFactory.load()));
+                    tmList.add(new TaskManager(IConfigFactory.load(IConfig.Type.TM)));
                 }
             }
                 break;

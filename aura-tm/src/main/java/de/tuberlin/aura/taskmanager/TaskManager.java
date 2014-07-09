@@ -48,6 +48,7 @@ public final class TaskManager implements ITaskManager {
 
     private static final Logger LOG = Logger.getLogger(TaskManager.class);
 
+    private final IConfig config;
 
     private final IOManager ioManager;
 
@@ -80,14 +81,16 @@ public final class TaskManager implements ITaskManager {
         // sanity check.
         ZookeeperHelper.checkConnectionString(zkServer);
 
-        this.taskManagerMachine = DescriptorFactory.createMachineDescriptor(config, "tm");
+        this.config = config;
+
+        this.taskManagerMachine = DescriptorFactory.createMachineDescriptor(config.getConfig("tm"));
 
         this.deployedTasks = new HashMap<>();
 
         this.deployedTopologyTasks = new HashMap<>();
 
         // Setup buffer memory management.
-        this.bufferMemoryManager = new BufferMemoryManager(taskManagerMachine);
+        this.bufferMemoryManager = new BufferMemoryManager(taskManagerMachine, config.getConfig("tm"));
 
         // Setup execution manager.
         this.executionManager = new TaskExecutionManager(taskManagerMachine, this.bufferMemoryManager, config.getInt("tm.execution.units.number"));
@@ -100,10 +103,9 @@ public final class TaskManager implements ITaskManager {
             }
         });
 
-        // setup IO.
-        this.ioManager = setupIOManager(taskManagerMachine, executionManager);
+        this.ioManager = new IOManager(taskManagerMachine, executionManager, config.getConfig("tm.io"));
 
-        this.rpcManager = new RPCManager(ioManager);
+        this.rpcManager = new RPCManager(ioManager, config.getConfig("tm.io.rpc"));
 
         // setup IORedispatcher.
         this.ioHandler = new IORedispatcher();
@@ -278,15 +280,6 @@ public final class TaskManager implements ITaskManager {
     }
 
     /**
-     * @param machineDescriptor
-     * @return
-     */
-    private IOManager setupIOManager(final MachineDescriptor machineDescriptor, final ITaskExecutionManager executionManager) {
-        final IOManager ioManager = new IOManager(machineDescriptor, executionManager);
-        return ioManager;
-    }
-
-    /**
      * @param deploymentDescriptor
      * @return
      */
@@ -419,7 +412,7 @@ public final class TaskManager implements ITaskManager {
                 System.setProperty(e.getKey(), e.getValue().toString());
             }
             // load configuration
-            IConfig config = IConfigFactory.load();
+            IConfig config = IConfigFactory.load(IConfig.Type.TM);
 
             // start the task manager
             long start = System.nanoTime();

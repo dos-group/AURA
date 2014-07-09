@@ -7,6 +7,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import de.tuberlin.aura.core.config.IConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,8 @@ public class DataWriter {
 
     private static final Logger LOG = LoggerFactory.getLogger(DataWriter.class);
 
+    private final IConfig config;
+
     private final IEventDispatcher dispatcher;
 
     /**
@@ -34,9 +37,11 @@ public class DataWriter {
      * 
      * @param dispatcher the dispatcher used for the events dispatched by the channel writer created
      *        by this data writer.
+     * @param config The enclosing IO config
      */
-    public DataWriter(IEventDispatcher dispatcher) {
+    public DataWriter(IEventDispatcher dispatcher, IConfig config) {
 
+        this.config = config;
         this.dispatcher = dispatcher;
     }
 
@@ -81,8 +86,7 @@ public class DataWriter {
 
         // connection
 
-        // TODO [config]: IO.MAX_CONNECTION_RETRIES
-        final int maxConnectionRetries = 5;
+        final int maxConnectionRetries;
 
         int connectionRetries = 0;
 
@@ -102,6 +106,7 @@ public class DataWriter {
 
             this.srcID = srcTaskID;
             this.dstID = dstTaskID;
+            this.maxConnectionRetries = config.getInt("connection.retry.max");
             this.waitForGateOpen = new ResettableCountDownLatch(1);
 
             Bootstrap bootstrap = connectionType.bootStrap(eventLoopGroup);
@@ -114,8 +119,8 @@ public class DataWriter {
 
                     ChannelFuture future = bootstrap.connect(address);
 
-                    // TODO [config]: IO.CONNECTION_RETRY_TIMEOUT
-                    boolean await = future.await(30, TimeUnit.SECONDS);
+                    boolean await = future.await(config.getDuration("connection.retry.timeout", TimeUnit.SECONDS), TimeUnit.SECONDS);
+
                     if (await) {
                         channel = future.channel();
                         LOG.debug("Channel successfully connected.");
@@ -143,9 +148,9 @@ public class DataWriter {
 
         /**
          * Writes an event to the channel.
-         *
-         * If the gate is not yet open, this method will block until the gate is open.
-         * Only the endpoint of the channel can open gate.
+         * 
+         * If the gate is not yet open, this method will block until the gate is open. Only the
+         * endpoint of the channel can open gate.
          * 
          * @param event The event that is written on the channel.
          */
@@ -176,8 +181,7 @@ public class DataWriter {
             try {
                 // wait for the receivers acknowledge before shutdown
                 if (awaitExhaustion) {
-                    // TODO [config]: IO.AWAIT_EXHAUSTION_TIMEOUT
-                    while (!waitForExhaustedAcknowledge.await(1, TimeUnit.MINUTES)) {
+                    while (!waitForExhaustedAcknowledge.await(config.getDuration("connection.exhaustion.timeout", TimeUnit.SECONDS), TimeUnit.SECONDS)) {
                         LOG.warn("Latch reached timelimit " + outboundQueue.size() + " " + channel + "(" + channel.getClass() + ")");
                         channel.pipeline().fireChannelWritabilityChanged();
                         // IOEvents.DataIOEvent event = outboundQueue.poll();
@@ -288,7 +292,7 @@ public class DataWriter {
                             // goes to WriteHandler
                             ctx.fireChannelWritabilityChanged();
                         } else {
-                            //if (future.cause() != null)
+                            // if (future.cause() != null)
                             throw new IllegalStateException(future.cause());
                         }
                     }
@@ -359,17 +363,18 @@ public class DataWriter {
 
     public static class LocalConnection implements OutgoingConnectionType<LocalChannel> {
 
+        private final IConfig config;
+
+        public LocalConnection(final IConfig config) {
+            this.config = config;
+        }
+
         @Override
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
-            return new Bootstrap().group(eventLoopGroup).channel(LocalChannel.class)
-            // the mark the outbound bufferQueue has to reach in order
-            // to change the writable state of a channel true
-                                  // TODO [config]: IO.NETTY.WRITE_BUFFER_LOW_WATER_MARK
-                                  .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, IOConfig.NETTY_LOW_WATER_MARK)
-                                  // the mark the outbound bufferQueue has to reach in order
-                                  // to change the writable state of a channel false
-                                  // TODO [config]: IO.NETTY.WRITE_BUFFER_HIGH_WATER_MARK
-                                  .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, IOConfig.TRANSFER_BUFFER_SIZE)
+            return new Bootstrap().group(eventLoopGroup)
+                                  .channel(LocalChannel.class)
+                                  .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, config.getInt("netty.write_buffer_low_water_mark"))
+                                  .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, config.getInt("netty.write_buffer_high_water_mark"))
                                   .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         }
 
@@ -391,34 +396,21 @@ public class DataWriter {
 
     public static class NetworkConnection implements OutgoingConnectionType<SocketChannel> {
 
+        private final IConfig config;
+
+        public NetworkConnection(final IConfig config) {
+            this.config = config;
+        }
+
         @Override
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
-            return new Bootstrap().group(eventLoopGroup).channel(NioSocketChannel.class)
-            // true, periodically heartbeats from tcp
-                                  // TODO [config]: IO.NETTY.SO_KEEPALIVE
-                                  .option(ChannelOption.SO_KEEPALIVE, true)
-                                  // false, means that messages get only sent if the size of the
-                                  // data reached a relevant
-                                  // amount.
-                                  // TODO [config]: IO.NETTY.TCP_NODELAY
-                                  .option(ChannelOption.TCP_NODELAY, false)
-                                  // size of the system lvl send bufferQueue PER SOCKET
-                                  // -> bufferQueue size, as we always have only 1 channel per
-                                  // socket in the client case
-                                  // TODO [config]: IO.NETTY.SO_SNDBUF
-                                  .option(ChannelOption.SO_SNDBUF, IOConfig.TRANSFER_BUFFER_SIZE)
-                                  // the mark the outbound bufferQueue has to reach in order to
-                                  // change the writable
-                                  // state of
-                                  // a channel true
-                                  // TODO [config]: IO.NETTY.WRITE_BUFFER_LOW_WATER_MARK
-                                  .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, IOConfig.NETTY_LOW_WATER_MARK)
-                                  // the mark the outbound bufferQueue has to reach in order to
-                                  // change the writable
-                                  // state of
-                                  // a channel false
-                                  // TODO [config]: IO.NETTY.WRITE_BUFFER_HIGH_WATER_MARK
-                                  .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, IOConfig.NETTY_HIGH_WATER_MARK)
+            return new Bootstrap().group(eventLoopGroup)
+                                  .channel(NioSocketChannel.class)
+                                  .option(ChannelOption.SO_KEEPALIVE, config.getBoolean("netty.so_keepalive"))
+                                  .option(ChannelOption.TCP_NODELAY, config.getBoolean("netty.tcp_nodelay"))
+                                  .option(ChannelOption.SO_SNDBUF, config.getInt("netty.so_sndbuf"))
+                                  .option(ChannelOption.WRITE_BUFFER_LOW_WATER_MARK, config.getInt("netty.write_buffer_low_water_mark"))
+                                  .option(ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, config.getInt("netty.write_buffer_high_water_mark"))
                                   .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
         }
 
@@ -430,8 +422,8 @@ public class DataWriter {
                 protected void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline()
                       .addLast(SerializationHandler.LENGTH_FIELD_DECODER())
-                      .addLast(SerializationHandler.KRYO_OUTBOUND_HANDLER())
-                      .addLast(SerializationHandler.KRYO_INBOUND_HANDLER(null))
+                      .addLast(SerializationHandler.KRYO_OUTBOUND_HANDLER(config))
+                      .addLast(SerializationHandler.KRYO_INBOUND_HANDLER(null, config))
                       .addLast(channelWriter.new OpenCloseGateHandler())
                       .addLast(channelWriter.new ChannelActiveHandler())
                       .addLast(channelWriter.new WriteHandler());

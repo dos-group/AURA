@@ -8,6 +8,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import de.tuberlin.aura.core.config.IConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +47,8 @@ public final class IOManager extends EventDispatcher {
 
     public final MachineDescriptor machine;
 
+    public final IConfig config;
+
     private final Map<Pair<UUID, UUID>, Channel> controlIOConnections;
 
     private final ChannelBuilder channelBuilder;
@@ -74,7 +77,7 @@ public final class IOManager extends EventDispatcher {
     // Constructors.
     // ---------------------------------------------------
 
-    public IOManager(final MachineDescriptor machine, final ITaskExecutionManager executionManager) {
+    public IOManager(final MachineDescriptor machine, final ITaskExecutionManager executionManager, IConfig config) {
 
         // Event dispatcher doesn't use an own thread.
         super(true, "IOManager");
@@ -85,31 +88,27 @@ public final class IOManager extends EventDispatcher {
 
         this.machine = machine;
 
+        this.config = config;
+
         this.controlIOConnections = new ConcurrentHashMap<>();
 
         this.channelBuilder = new ChannelBuilder();
 
-        this.dataReader = new DataReader(IOManager.this, executionManager);
+        this.dataReader = new DataReader(IOManager.this, executionManager, config);
 
-        this.dataWriter = new DataWriter(IOManager.this);
+        this.dataWriter = new DataWriter(IOManager.this, config);
 
-        // TODO: Make the number of thread configurable
-        // TODO [config]: IO.TCP.INBOUND_THREADS
-        this.tcpInboundELG = new NioEventLoopGroup(12);
-        // TODO [config]: IO.TCP.OUTBOUND_THREADS
-        this.tcpOutboundELG = new NioEventLoopGroup(12);
-        // TODO [config]: IO.LOCAL.INBOUND_THREADS
-        this.localInboundELG = new LocalEventLoopGroup(2);
-        // TODO [config]: IO.LOCAL.OUTBOUND_THREADS
-        this.localOutboundELG = new LocalEventLoopGroup(2);
+        this.tcpInboundELG = new NioEventLoopGroup(config.getInt("tcp.threads.inbound"));
+        this.tcpOutboundELG = new NioEventLoopGroup(config.getInt("tcp.threads.outbound"));
+        this.localInboundELG = new LocalEventLoopGroup(config.getInt("local.threads.inbound"));
+        this.localOutboundELG = new LocalEventLoopGroup(config.getInt("local.threads.outbound"));
 
         startNetworkConnectionSetupServer(this.machine, tcpInboundELG);
 
         startLocalDataConnectionSetupServer(localInboundELG);
 
         // Configure the control plane.
-        // TODO [config]: IO.RPC.INBOUND_THREADS
-        this.controlPlaneEventLoopGroup = new NioEventLoopGroup();
+        this.controlPlaneEventLoopGroup = new NioEventLoopGroup(config.getInt("rpc.threads.inbound"));
 
         startNetworkControlMessageServer(this.machine, controlPlaneEventLoopGroup);
 
@@ -279,14 +278,14 @@ public final class IOManager extends EventDispatcher {
      * @param nelg
      */
     private void startNetworkConnectionSetupServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
-        dataReader.bind(new DataReader.NetworkConnection(), machine.dataAddress, nelg);
+        dataReader.bind(new DataReader.NetworkConnection(config), machine.dataAddress, nelg);
     }
 
     /**
      * @param lelg
      */
     private void startLocalDataConnectionSetupServer(final LocalEventLoopGroup lelg) {
-        dataReader.bind(new DataReader.LocalConnection(), localAddress, lelg);
+        dataReader.bind(new DataReader.LocalConnection(config), localAddress, lelg);
     }
 
     /**
@@ -372,7 +371,7 @@ public final class IOManager extends EventDispatcher {
             if (socketAddress == null)
                 throw new IllegalArgumentException("socketAddress == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(), socketAddress, tcpOutboundELG);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.NetworkConnection(config), socketAddress, tcpOutboundELG);
         }
 
         public void buildLocalDataChannel(final UUID srcTaskID, final UUID dstTaskID) {
@@ -382,7 +381,7 @@ public final class IOManager extends EventDispatcher {
             if (dstTaskID == null)
                 throw new IllegalArgumentException("dstTaskID == null");
 
-            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(), localAddress, localOutboundELG);
+            dataWriter.bind(srcTaskID, dstTaskID, new DataWriter.LocalConnection(config), localAddress, localOutboundELG);
         }
 
         public void buildNetworkControlChannel(final UUID srcMachineID, final UUID dstMachineID, final InetSocketAddress socketAddress) {

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import de.tuberlin.aura.core.config.IConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,8 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
 
     private final Descriptors.MachineDescriptor machineDescriptor;
 
+    private final IConfig config;
+
     private final Runtime runtime;
 
     private final long maxMemory;
@@ -49,12 +52,14 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
     // Constructors.
     // ---------------------------------------------------
 
-    public BufferMemoryManager(final Descriptors.MachineDescriptor machineDescriptor) {
+    public BufferMemoryManager(final Descriptors.MachineDescriptor machineDescriptor, IConfig config) {
         // sanity check.
         if (machineDescriptor == null)
             throw new IllegalArgumentException("machineDescriptor == null");
 
         this.machineDescriptor = machineDescriptor;
+
+        this.config = config;
 
         this.runtime = Runtime.getRuntime();
 

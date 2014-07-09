@@ -69,6 +69,11 @@ public class TypesafeConfig implements IConfig {
     }
 
     @Override
+    public IConfig getConfig(String path) {
+        return new TypesafeConfig(delegate.getConfig(path));
+    }
+
+    @Override
     public Object getAnyRef(String path) {
         return delegate.getAnyRef(path);
     }
