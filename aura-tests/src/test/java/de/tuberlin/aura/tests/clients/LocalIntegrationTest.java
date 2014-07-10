@@ -31,16 +31,16 @@ public class LocalIntegrationTest {
     private static final String zookeeperAddress = "localhost:2181";
     private static final int machines = 2;
 
-    private static LocalClusterSimulator clusterSimulator;
     private static AuraClient auraClient;
 
+
     // ---------------------------------------------------
-    // Tests.
+    // Test methods.
     // ---------------------------------------------------
 
     @BeforeClass
     public static void setupClusterSimulatorAndClient() {
-        clusterSimulator = new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
+        new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
                         true,
                         zookeeperAddress,
                         machines);
@@ -83,7 +83,7 @@ public class LocalIntegrationTest {
     @Test
     public void testMultipleQueries() {
         int executionUnits = machines * 4;
-        Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
+        Topology.AuraTopologyBuilder atb;
 
         List<Topology.AuraTopology> topologies = new ArrayList<>();
 
@@ -181,6 +181,7 @@ public class LocalIntegrationTest {
     public static void tearDown() {
         auraClient.closeSession();
     }
+
 
     // ---------------------------------------------------
     // Methods.
@@ -413,8 +414,7 @@ public class LocalIntegrationTest {
                 Thread t = new Thread() {
 
                     public void run() {
-                        // This break is only necessary to make it easier to distinguish jobs in
-                        // the log files.
+                        // This break makes jobs easier to distinguish in the logs.
                         try {
                             Thread.sleep(2000);
                         } catch (InterruptedException e) {
