@@ -1,25 +1,24 @@
 package de.tuberlin.aura.taskmanager;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.config.IConfig;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.internal.HelpScreenException;
+
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
+
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors;
@@ -36,7 +35,6 @@ import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.task.spi.ITaskManager;
-import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.storage.DataStorageDriver;
 
@@ -57,9 +55,6 @@ public final class TaskManager implements ITaskManager {
     private final ITaskExecutionManager executionManager;
 
     private final IBufferMemoryManager bufferMemoryManager;
-
-    private final ZooKeeper zookeeper;
-
 
     private final IORedispatcher ioHandler;
 
@@ -107,26 +102,21 @@ public final class TaskManager implements ITaskManager {
 
         this.rpcManager = new RPCManager(ioManager, config.getConfig("tm.io.rpc"));
 
-        // setup IORedispatcher.
         this.ioHandler = new IORedispatcher();
-
         this.ioManager.addEventListener(DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, ioHandler);
-
         this.ioManager.addEventListener(DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED, ioHandler);
-
         this.ioManager.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, ioHandler);
-
         this.ioManager.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, ioHandler);
-
         this.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, ioHandler);
 
-        // setup zookeeper.
-        this.zookeeper = setupZookeeper(zkServer);
+        CuratorFramework zookeeperClient = setupZookeeper(zkServer);
+        try {
+            this.workloadManagerMachine =
+                    (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeperClient, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
 
-        this.workloadManagerMachine =
-                (MachineDescriptor) ZookeeperHelper.readFromZookeeper(this.zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
-
-        // check postcondition.
         if (workloadManagerMachine == null)
             throw new IllegalStateException("workloadManagerMachine == null");
 
@@ -238,43 +228,17 @@ public final class TaskManager implements ITaskManager {
      * 
      * @return Zookeeper instance.
      */
-    private ZooKeeper setupZookeeper(final String zookeeperServer) {
+    private CuratorFramework setupZookeeper(final String zkServer) {
         try {
+            CuratorFramework client = CuratorFrameworkFactory.newClient(zkServer, new ExponentialBackoffRetry(1000, 3));
+            client.start();
 
-            final Lock threadLock = new ReentrantLock();
-            final Condition connectionEstablishedCondition = threadLock.newCondition();
-
-            final ZooKeeper zookeeper =
-                    new ZooKeeper(zookeeperServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(new IEventHandler() {
-
-                        @Override
-                        public void handleEvent(Event event) {
-
-                            if (event.type == ZookeeperHelper.EVENT_TYPE_CONNECTION_ESTABLISHED) {
-                                threadLock.lock();
-                                connectionEstablishedCondition.signal();
-                                threadLock.unlock();
-                            }
-
-                        }
-                    }));
-
-            threadLock.lock();
-            try {
-                connectionEstablishedCondition.await();
-            } catch (InterruptedException e) {
-                // do nothing...
-            } finally {
-                threadLock.unlock();
-            }
-
-            ZookeeperHelper.initDirectories(zookeeper);
+            ZookeeperHelper.initDirectories(client);
             final String zkTaskManagerDir = ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + taskManagerMachine.uid.toString();
-            ZookeeperHelper.storeInZookeeper(zookeeper, zkTaskManagerDir, taskManagerMachine);
+            ZookeeperHelper.storeInZookeeper(client, zkTaskManagerDir, taskManagerMachine);
 
-            return zookeeper;
-
-        } catch (IOException | KeeperException | InterruptedException e) {
+            return client;
+        } catch (Exception e) {
             throw new IllegalStateException(e);
         }
     }

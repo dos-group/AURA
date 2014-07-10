@@ -40,6 +40,7 @@
         <bcel.version>5.1</bcel.version>
         <commons-io.version>1.3.2</commons-io.version>
         <zookeeper.version>3.4.5</zookeeper.version>
+        <curator.version>2.5.0</curator.version>
         <jcip-annotations.version>1.0</jcip-annotations.version>
         <guava.version>15.0</guava.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
@@ -148,6 +149,11 @@
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
                 <version>${zookeeper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-framework</artifactId>
+                <version>${curator.version}</version>
             </dependency>
             <dependency>
                 <groupId>net.jcip</groupId>

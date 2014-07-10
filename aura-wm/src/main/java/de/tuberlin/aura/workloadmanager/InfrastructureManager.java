@@ -1,25 +1,20 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import net.jcip.annotations.NotThreadSafe;
 
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 
@@ -46,7 +41,7 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     /**
      * The connection to the ZooKeeper-cluster.
      */
-    private ZooKeeper zookeeper;
+    private CuratorFramework zookeeperClient;
 
     /**
      * Stores all task manager nodes.
@@ -66,12 +61,12 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     /**
      * Constructor.
      * 
-     * @param zkServers This string must contain the connection to the ZooKeeper-cluster.
+     * @param zkServer This string must contain the connection to the ZooKeeper-cluster.
      */
-    private InfrastructureManager(final String zkServers, final MachineDescriptor wmMachine) {
+    private InfrastructureManager(final String zkServer, final MachineDescriptor wmMachine) {
         super();
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zkServers);
+        ZookeeperHelper.checkConnectionString(zkServer);
         if (wmMachine == null)
             throw new IllegalArgumentException("wmMachine == null");
 
@@ -80,63 +75,31 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
         this.nodeMap = new HashMap<>();
 
         try {
+            zookeeperClient = CuratorFrameworkFactory.newClient(zkServer, new ExponentialBackoffRetry(1000, 3));
+            zookeeperClient.start();
 
-            final Lock threadLock = new ReentrantLock();
-            final Condition connectionEstablishedCondition = threadLock.newCondition();
+            ZookeeperHelper.initDirectories(this.zookeeperClient);
 
-            final IEventHandler eh = new IEventHandler() {
-
-                @Override
-                public synchronized void handleEvent(Event event) {
-                    switch (event.type) {
-                        case ZookeeperHelper.EVENT_TYPE_CONNECTION_EXPIRED:
-                            try {
-                                zookeeper.close();
-                            } catch (InterruptedException e) {
-                                LOG.error("ZooKeeper operation was interrupted", e);
-                            }
-                            break;
-                        case ZookeeperHelper.EVENT_TYPE_CONNECTION_ESTABLISHED:
-                            threadLock.lock();
-                            connectionEstablishedCondition.signal();
-                            threadLock.unlock();
-                            break;
-                    }
-                }
-            };
-
-            // Get a connection to ZooKeeper and initialize
-            // the directories in ZooKeeper.
-            this.zookeeper = new ZooKeeper(zkServers, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(eh));
-
-            threadLock.lock();
-            try {
-                connectionEstablishedCondition.await();
-            } catch (InterruptedException e) {
-                // do nothing...
-            } finally {
-                threadLock.unlock();
-            }
-
-            ZookeeperHelper.initDirectories(this.zookeeper);
-
-            // Store the workload manager machine descriptor.
-            ZookeeperHelper.storeInZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
+            ZookeeperHelper.storeInZookeeper(zookeeperClient, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
 
             // Get all available nodes.
             final ZkTaskManagerWatcher watcher = new ZkTaskManagerWatcher();
+
             synchronized (taskManagerMonitor) {
-                final List<String> nodes = this.zookeeper.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, watcher);
+                final List<String> nodes = zookeeperClient.getChildren().usingWatcher(watcher).forPath(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS);
+
                 for (final String node : nodes) {
-                    final MachineDescriptor descriptor =
-                            (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + node);
+                    final MachineDescriptor descriptor;
+                    try {
+                        descriptor = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeperClient, ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + node);
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
                     this.nodeMap.put(descriptor.uid, descriptor);
                 }
             }
-        } catch (IOException | KeeperException e) {
+        } catch (Exception e) {
             throw new IllegalStateException(e);
-        } catch (InterruptedException e) {
-            LOG.error("The connection to ZooKeeper was interrupted.", e);
         }
     }
 
@@ -181,8 +144,9 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
             LOG.debug("Received event - state: {} - type: {}", event.getState().toString(), event.getType().toString());
 
             try {
+
                 synchronized (taskManagerMonitor) {
-                    final List<String> nodeList = zookeeper.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, this);
+                    final List<String> nodeList = zookeeperClient.getChildren().forPath(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS);
 
                     // Find out whether a node was created or deleted.
                     if (nodeMap.values().size() < nodeList.size()) {
@@ -191,9 +155,10 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
                         for (final String node : nodeList) {
                             final UUID machineID = UUID.fromString(node);
                             if (!nodeMap.containsKey(machineID)) {
-                                newMachine = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, event.getPath() + "/" + node);
+                                newMachine = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeperClient, event.getPath() + "/" + node);
                                 nodeMap.put(machineID, newMachine);
                             }
+
                         }
 
                         dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_ADDED, newMachine));
@@ -219,10 +184,13 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
                     }
                 }
 
-            } catch (KeeperException e) {
-                LOG.error("ZooKeeper operation failed", e);
+                // keep watching
+                zookeeperClient.getChildren().usingWatcher(this).forPath(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS);
+
             } catch (InterruptedException e) {
                 LOG.error("Interaction with ZooKeeper was interrupted", e);
+            } catch (Exception e) {
+                LOG.error("ZooKeeper operation failed", e);
             }
         }
     }

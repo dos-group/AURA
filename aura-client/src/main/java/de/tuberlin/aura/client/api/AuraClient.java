@@ -1,6 +1,5 @@
 package de.tuberlin.aura.client.api;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -8,11 +7,13 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import de.tuberlin.aura.core.config.IConfig;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
@@ -26,7 +27,6 @@ import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopologyBuilder;
-import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
 public final class AuraClient {
@@ -77,39 +77,16 @@ public final class AuraClient {
                           .addStandardDependency("io/netty")
                           .addStandardDependency("de/tuberlin/aura/core");
 
-        final ZooKeeper zookeeper;
-
         final MachineDescriptor wmMachineDescriptor;
 
-        final Lock threadLock = new ReentrantLock();
-        final Condition connectionEstablishedCondition = threadLock.newCondition();
-
         try {
-            zookeeper = new ZooKeeper(zkServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(new IEventHandler() {
+            CuratorFramework client = CuratorFrameworkFactory.newClient(zkServer, new ExponentialBackoffRetry(1000, 3));
+            client.start();
 
-                @Override
-                public void handleEvent(Event event) {
+            wmMachineDescriptor = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(client, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
 
-                    if (event.type == ZookeeperHelper.EVENT_TYPE_CONNECTION_ESTABLISHED) {
-                        threadLock.lock();
-                        connectionEstablishedCondition.signal();
-                        threadLock.unlock();
-                    }
-
-                }
-            }));
-
-            threadLock.lock();
-            try {
-                connectionEstablishedCondition.await();
-            } catch (InterruptedException e) {
-                // do nothing...
-            } finally {
-                threadLock.unlock();
-            }
-
-            wmMachineDescriptor = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
-        } catch (IOException e) {
+            client.close();
+        } catch (Exception e) {
             throw new IllegalStateException(e);
         }
 
