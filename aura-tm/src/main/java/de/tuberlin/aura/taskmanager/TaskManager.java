@@ -8,10 +8,6 @@ import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.internal.HelpScreenException;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
-
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -23,6 +19,7 @@ import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
@@ -35,7 +32,6 @@ import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.task.spi.ITaskManager;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.storage.DataStorageDriver;
 
 public final class TaskManager implements ITaskManager {
@@ -74,7 +70,7 @@ public final class TaskManager implements ITaskManager {
         final String zkServer = config.getString("zookeeper.server.address");
 
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zkServer);
+        ZookeeperClient.checkConnectionString(zkServer);
 
         this.config = config;
 
@@ -109,10 +105,12 @@ public final class TaskManager implements ITaskManager {
         this.ioManager.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, ioHandler);
         this.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, ioHandler);
 
-        CuratorFramework zookeeperClient = setupZookeeper(zkServer);
+
+        ZookeeperClient zookeeperClient = setupZookeeper(zkServer);
+
         try {
             this.workloadManagerMachine =
-                    (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeperClient, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
+                    (MachineDescriptor) zookeeperClient.read(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER);
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -228,14 +226,14 @@ public final class TaskManager implements ITaskManager {
      * 
      * @return Zookeeper instance.
      */
-    private CuratorFramework setupZookeeper(final String zkServer) {
+    private ZookeeperClient setupZookeeper(final String zkServer) {
         try {
-            CuratorFramework client = CuratorFrameworkFactory.newClient(zkServer, new ExponentialBackoffRetry(1000, 3));
-            client.start();
 
-            ZookeeperHelper.initDirectories(client);
-            final String zkTaskManagerDir = ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + taskManagerMachine.uid.toString();
-            ZookeeperHelper.storeInZookeeper(client, zkTaskManagerDir, taskManagerMachine);
+            ZookeeperClient client = new ZookeeperClient(zkServer);
+            client.initDirectories();
+
+            final String zkTaskManagerDir = ZookeeperClient.ZOOKEEPER_TASKMANAGERS + "/" + taskManagerMachine.uid.toString();
+            client.store(zkTaskManagerDir, taskManagerMachine);
 
             return client;
         } catch (Exception e) {

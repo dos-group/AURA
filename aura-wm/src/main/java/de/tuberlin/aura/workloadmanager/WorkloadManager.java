@@ -6,8 +6,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.config.IConfig;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -24,7 +22,10 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
+
 
 
 // TODO: introduce the concept of a session, that allows to submit multiple queries...
@@ -59,7 +60,7 @@ public class WorkloadManager implements ClientWMProtocol {
         final String zkServer = config.getString("zookeeper.server.address");
 
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zkServer);
+        ZookeeperClient.checkConnectionString(zkServer);
 
         this.machineDescriptor = DescriptorFactory.createMachineDescriptor(config.getConfig("wm"));
 

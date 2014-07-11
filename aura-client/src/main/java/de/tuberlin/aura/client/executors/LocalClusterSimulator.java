@@ -6,8 +6,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.config.IConfig;
 import org.apache.commons.io.FileUtils;
 import org.apache.zookeeper.server.NIOServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
@@ -15,9 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.utils.ProcessExecutor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.taskmanager.TaskManager;
 import de.tuberlin.aura.workloadmanager.WorkloadManager;
+import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 
 public final class LocalClusterSimulator {
 
@@ -71,7 +71,7 @@ public final class LocalClusterSimulator {
         final int zkPort = config.getInt("zookeeper.server.port");
 
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zkServer);
+        ZookeeperClient.checkConnectionString(zkServer);
         if (numNodes < 1)
             throw new IllegalArgumentException("numNodes < 1");
 

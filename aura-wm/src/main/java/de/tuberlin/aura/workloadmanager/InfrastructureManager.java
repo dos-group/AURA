@@ -2,12 +2,14 @@ package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
+
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import net.jcip.annotations.NotThreadSafe;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
@@ -15,7 +17,6 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 
 /**
@@ -41,7 +42,7 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     /**
      * The connection to the ZooKeeper-cluster.
      */
-    private CuratorFramework zookeeperClient;
+    private ZookeeperClient zookeeperClient;
 
     /**
      * Stores all task manager nodes.
@@ -66,7 +67,7 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     private InfrastructureManager(final String zkServer, final MachineDescriptor wmMachine) {
         super();
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zkServer);
+        ZookeeperClient.checkConnectionString(zkServer);
         if (wmMachine == null)
             throw new IllegalArgumentException("wmMachine == null");
 
@@ -75,23 +76,21 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
         this.nodeMap = new HashMap<>();
 
         try {
-            zookeeperClient = CuratorFrameworkFactory.newClient(zkServer, new ExponentialBackoffRetry(1000, 3));
-            zookeeperClient.start();
+            zookeeperClient = new ZookeeperClient(zkServer);
+            zookeeperClient.initDirectories();
 
-            ZookeeperHelper.initDirectories(this.zookeeperClient);
-
-            ZookeeperHelper.storeInZookeeper(zookeeperClient, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
+            zookeeperClient.store(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
 
             // Get all available nodes.
             final ZkTaskManagerWatcher watcher = new ZkTaskManagerWatcher();
 
             synchronized (taskManagerMonitor) {
-                final List<String> nodes = zookeeperClient.getChildren().usingWatcher(watcher).forPath(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS);
+                final List<String> nodes = zookeeperClient.getChildrenForPathAndWatch(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, watcher);
 
                 for (final String node : nodes) {
                     final MachineDescriptor descriptor;
                     try {
-                        descriptor = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeperClient, ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + node);
+                        descriptor = (MachineDescriptor) zookeeperClient.read(ZookeeperClient.ZOOKEEPER_TASKMANAGERS + "/" + node);
                     } catch (Exception e) {
                         throw new IllegalStateException(e);
                     }
@@ -144,9 +143,8 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
             LOG.debug("Received event - state: {} - type: {}", event.getState().toString(), event.getType().toString());
 
             try {
-
                 synchronized (taskManagerMonitor) {
-                    final List<String> nodeList = zookeeperClient.getChildren().forPath(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS);
+                    final List<String> nodeList = zookeeperClient.getChildrenForPath(ZookeeperClient.ZOOKEEPER_TASKMANAGERS);
 
                     // Find out whether a node was created or deleted.
                     if (nodeMap.values().size() < nodeList.size()) {
@@ -155,13 +153,13 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
                         for (final String node : nodeList) {
                             final UUID machineID = UUID.fromString(node);
                             if (!nodeMap.containsKey(machineID)) {
-                                newMachine = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeperClient, event.getPath() + "/" + node);
+                                newMachine = (MachineDescriptor) zookeeperClient.read(event.getPath() + "/" + node);
                                 nodeMap.put(machineID, newMachine);
                             }
 
                         }
 
-                        dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_ADDED, newMachine));
+                        dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_ADDED, newMachine));
 
                     } else {
                         // A node has been removed.
@@ -180,12 +178,13 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
                         else
                             LOG.info("REMOVED MACHINE uid = " + machineID);
 
-                        dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_REMOVED, removedMachine));
+                        dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_REMOVED, removedMachine));
                     }
+
                 }
 
                 // keep watching
-                zookeeperClient.getChildren().usingWatcher(this).forPath(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS);
+                zookeeperClient.getChildrenForPathAndWatch(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, this);
 
             } catch (InterruptedException e) {
                 LOG.error("Interaction with ZooKeeper was interrupted", e);

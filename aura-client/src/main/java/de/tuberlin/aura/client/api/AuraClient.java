@@ -7,9 +7,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,11 +20,11 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopologyBuilder;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
 public final class AuraClient {
 
@@ -62,7 +59,7 @@ public final class AuraClient {
         final String zkServer = config.getString("zookeeper.server.address");
 
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zkServer);
+        ZookeeperClient.checkConnectionString(zkServer);
 
         final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(config.getConfig("client"));
 
@@ -80,10 +77,9 @@ public final class AuraClient {
         final MachineDescriptor wmMachineDescriptor;
 
         try {
-            CuratorFramework client = CuratorFrameworkFactory.newClient(zkServer, new ExponentialBackoffRetry(1000, 3));
-            client.start();
+            ZookeeperClient client = new ZookeeperClient(zkServer);
 
-            wmMachineDescriptor = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(client, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
+            wmMachineDescriptor = (MachineDescriptor) client.read(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER);
 
             client.close();
         } catch (Exception e) {

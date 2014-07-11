@@ -59,12 +59,12 @@ public class ZookeeperConnectionWatcher implements Watcher {
         // Check the state of the received event.
         switch (event.getState()) {
             case SyncConnected:
-                zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_CONNECTION_ESTABLISHED);
+                zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_CONNECTION_ESTABLISHED);
                 this.handler.handleEvent(zkEvent);
                 break;
             case Expired:
                 LOG.error("Session expired");
-                zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_CONNECTION_EXPIRED);
+                zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_CONNECTION_EXPIRED);
                 this.handler.handleEvent(zkEvent);
                 break;
             default:
