@@ -41,7 +41,7 @@ public class LocalIntegrationTest {
 
     @BeforeClass
     public static void setupClusterSimulatorAndClient() {
-        new LocalClusterSimulator(IConfigFactory.load());
+        new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
     }
 

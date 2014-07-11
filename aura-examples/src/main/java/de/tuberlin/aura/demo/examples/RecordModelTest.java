@@ -120,7 +120,7 @@ public final class RecordModelTest {
         final SimpleLayout layout = new SimpleLayout();
         new ConsoleAppender(layout);
 
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load());
+        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
         final Topology.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 

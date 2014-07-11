@@ -99,7 +99,7 @@ public class OperatorTest {
 
         //OperatorAPI.PlanPrinter.printPlan(sink1);
 
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load());
+        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
         final Topology.AuraTopology topology = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
 

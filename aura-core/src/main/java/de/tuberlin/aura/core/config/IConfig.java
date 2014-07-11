@@ -8,7 +8,8 @@ public interface IConfig {
     public static enum Type {
         WM("wm"),
         TM("tm"),
-        CLIENT("client");
+        CLIENT("client"),
+        SIMULATOR("simulator");
 
         protected final String name;
 

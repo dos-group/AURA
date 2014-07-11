@@ -17,16 +17,6 @@ public class IConfigFactory {
     /**
      * Factory method.
      * 
-     * @see IConfigFactory#load(de.tuberlin.aura.core.config.IConfig.Type)
-     * @return
-     */
-    public static IConfig load() {
-        return load(null);
-    }
-
-    /**
-     * Factory method.
-     * 
      * This will construct an resolve a TypesafeConfig delegate through a merge of the following
      * configuration layers (higher number in the list means higher priority):
      * 
@@ -38,8 +28,7 @@ public class IConfigFactory {
      * <li/>A config constructed from the current System properties.
      * </ol>
      * 
-     * @param type The configuration type to load. If <code>null</code>, only the base config is
-     *        loaded.
+     * @param type The configuration type to load.
      * @return A resolved config instance constructed according to the above guidelines.
      */
     public static IConfig load(IConfig.Type type) {
