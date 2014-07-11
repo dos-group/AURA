@@ -22,8 +22,8 @@ SET AURA_LOG_DIR=%AURA_ROOT_DIR%\log
 
 SET JVM_ARGS=-Xms768m -Xmx768m
 
-SET AURA_JM_CLASSPATH=%AURA_LIB_DIR%\*
+SET AURA_WM_CLASSPATH=%AURA_LIB_DIR%\*
 
-java %JVM_ARGS% -cp "%AURA_JM_CLASSPATH%" de.tuberlin.aura.workloadmanager.WorkloadManager -executionMode local -configDir "%AURA_CONF_DIR%"
+java %JVM_ARGS% -cp "%AURA_WM_CLASSPATH%" de.tuberlin.aura.workloadmanager.WorkloadManager -executionMode local -configDir "%AURA_CONF_DIR%"
 
 endlocal

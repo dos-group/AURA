@@ -604,7 +604,7 @@ public final class LazyUnrollingTest {
 // // Local
 // final String measurementPath = "/home/tobias/Desktop/logs";
 // final LocalClusterSimulator lce = new
-// LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS, true,
+// LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.local, true,
 // zookeeperAddress, 4);
 //
 // final AuraClient ac = new AuraClient(zookeeperAddress, 10000, 11111);

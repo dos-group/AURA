@@ -6,6 +6,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.io.*;
 import java.util.List;
 
+import de.tuberlin.aura.core.config.IConfig;
 import net.jcip.annotations.NotThreadSafe;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -148,4 +149,14 @@ public class ZookeeperClient {
         }
     }
 
+    public static String buildServersString(List<? extends IConfig> servers) {
+        StringBuilder sb = new StringBuilder();
+        for (IConfig server : servers) {
+            sb.append(server.getString("host"));
+            sb.append(':');
+            sb.append(server.getInt("port"));
+            sb.append(';');
+        }
+        return servers.isEmpty() ? "" : sb.substring(0, sb.length() - 1);
+    }
 }

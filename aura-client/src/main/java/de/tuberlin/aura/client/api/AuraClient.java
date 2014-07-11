@@ -56,7 +56,7 @@ public final class AuraClient {
     // ---------------------------------------------------
 
     public AuraClient(IConfig config) {
-        final String zkServer = config.getString("zookeeper.server.address");
+        final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
 
         // sanity check.
         ZookeeperClient.checkConnectionString(zkServer);

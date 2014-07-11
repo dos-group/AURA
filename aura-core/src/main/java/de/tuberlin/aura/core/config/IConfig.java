@@ -1,7 +1,5 @@
 package de.tuberlin.aura.core.config;
 
-import com.typesafe.config.ConfigObject;
-
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -35,7 +33,7 @@ public interface IConfig {
 
     String getString(String path);
 
-    ConfigObject getObject(String path);
+    IConfig getObject(String path);
 
     IConfig getConfig(String path);
 
@@ -57,7 +55,7 @@ public interface IConfig {
 
     List<String> getStringList(String path);
 
-    List<? extends ConfigObject> getObjectList(String path);
+    List<? extends IConfig> getObjectList(String path);
 
     List<? extends Object> getAnyRefList(String path);
 

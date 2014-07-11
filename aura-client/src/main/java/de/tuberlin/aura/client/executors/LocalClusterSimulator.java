@@ -67,8 +67,8 @@ public final class LocalClusterSimulator {
         final int tickTime = config.getInt("simulator.zookeeper.tick.time");
         final int numNodes = config.getInt("simulator.tm.number");
         final int numConnections = config.getInt("simulator.connections.number");
-        final String zkServer = config.getString("zookeeper.server.address");
-        final int zkPort = config.getInt("zookeeper.server.port");
+        final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
+        final int zkPort = config.getObjectList("zookeeper.servers").get(0).getInt("port");
 
         // sanity check.
         ZookeeperClient.checkConnectionString(zkServer);

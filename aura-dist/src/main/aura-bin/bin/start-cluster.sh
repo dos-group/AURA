@@ -17,7 +17,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/config.sh
+. "$bin"/env.sh
 
 HOSTLIST=$AURA_SLAVES
 
@@ -30,15 +30,15 @@ if [ ! -f $HOSTLIST ]; then
     exit 1
 fi
 
-# cluster mode, bring up job manager locally and a task manager on every slave host
-$AURA_BIN_DIR/workmanager.sh start cluster
+
+# cluster mode, bring up workload manager locally and a task manager on every slave host
+$AURA_BIN_DIR/wm.sh start cluster
 
 GOON=true
 while $GOON
 do
-    read line || GOON=false
-    if [ -n "$line" ]; then
-        HOST=$( extractHostName $line)
-        ssh -n $AURA_SSH_OPTS $HOST -- "nohup /bin/bash $AURA_BIN_DIR/taskmanager.sh start &"
+    read HOST || GOON=false
+    if [ -n "$HOST" ]; then
+        ssh -n $AURA_SSH_OPTS $HOST -- "nohup /bin/bash $AURA_BIN_DIR/tm.sh start &"
     fi
 done < $HOSTLIST

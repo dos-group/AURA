@@ -1,25 +1,30 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
+import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.internal.HelpScreenException;
-
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
-import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
@@ -32,6 +37,7 @@ import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.task.spi.ITaskManager;
+import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
 import de.tuberlin.aura.storage.DataStorageDriver;
 
 public final class TaskManager implements ITaskManager {
@@ -67,7 +73,7 @@ public final class TaskManager implements ITaskManager {
     // ---------------------------------------------------
 
     public TaskManager(IConfig config) {
-        final String zkServer = config.getString("zookeeper.server.address");
+        final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
 
         // sanity check.
         ZookeeperClient.checkConnectionString(zkServer);
@@ -371,14 +377,13 @@ public final class TaskManager implements ITaskManager {
         try {
             // parse the arguments and store them as system properties
             for (Map.Entry<String, Object> e : parser.parseArgs(args).getAttrs().entrySet()) {
-                System.setProperty(e.getKey(), e.getValue().toString());
+                if (e.getValue() != null)
+                    System.setProperty(e.getKey(), e.getValue().toString());
             }
-            // load configuration
-            IConfig config = IConfigFactory.load(IConfig.Type.TM);
 
             // start the task manager
             long start = System.nanoTime();
-            new TaskManager(config);
+            new TaskManager(IConfigFactory.load(IConfig.Type.TM));
             LOG.info("TM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
         } catch (HelpScreenException e) {
             parser.handleError(e);
@@ -386,7 +391,8 @@ public final class TaskManager implements ITaskManager {
             parser.handleError(e);
             System.exit(1);
         } catch (Throwable e) {
-            System.err.println(String.format("Unexpected error: %s", e.getMessage()));
+            System.err.println(String.format("Unexpected error: %s", e));
+            e.printStackTrace();
             System.exit(1);
         }
     }
@@ -403,27 +409,6 @@ public final class TaskManager implements ITaskManager {
                 .setDefault("config")
                 .metavar("PATH")
                 .help("config folder");
-        parser.addArgument("--log-dir")
-                .type(new FileArgumentType().verifyIsDirectory().verifyCanRead())
-                .dest("aura.path.log")
-                .setDefault("log")
-                .metavar("PATH")
-                .help("log folder");
-        parser.addArgument("--zookeeper-url")
-                .type(String.class)
-                .dest("zookeeper.server.address")
-                .metavar("URL")
-                .help("zookeeper server URL");
-        parser.addArgument("--data-port")
-                .type(Integer.class)
-                .dest("tm.io.tcp.port")
-                .metavar("PORT")
-                .help("port for data transfer");
-        parser.addArgument("--control-port")
-                .type(Integer.class)
-                .dest("tm.io.rpc.port")
-                .metavar("PORT")
-                .help("port for control messages");
         //@formatter:on
 
         return parser;

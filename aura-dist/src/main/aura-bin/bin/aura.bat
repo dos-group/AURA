@@ -20,8 +20,8 @@ SET AURA_LIB_DIR=%AURA_ROOT_DIR%\lib
 
 SET JVM_ARGS=-Xmx512m
 
-SET AURA_JM_CLASSPATH=%AURA_LIB_DIR%\*
+SET AURA_WM_CLASSPATH=%AURA_LIB_DIR%\*
 
-java %JVM_ARGS% -cp "%AURA_JM_CLASSPATH%" eu.aura.client.CliFrontend %*
+java %JVM_ARGS% -cp "%AURA_WM_CLASSPATH%" eu.aura.client.CliFrontend %*
 
 endlocal

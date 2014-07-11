@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.config;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -64,8 +65,8 @@ public class TypesafeConfig implements IConfig {
     }
 
     @Override
-    public ConfigObject getObject(String path) {
-        return delegate.getObject(path);
+    public IConfig getObject(String path) {
+        return new TypesafeConfig(delegate.getObject(path).toConfig());
     }
 
     @Override
@@ -119,8 +120,13 @@ public class TypesafeConfig implements IConfig {
     }
 
     @Override
-    public List<? extends ConfigObject> getObjectList(String path) {
-        return delegate.getObjectList(path);
+    public List<? extends IConfig> getObjectList(String path) {
+        List<? extends ConfigObject> x = delegate.getObjectList(path);
+        List<IConfig> y = new ArrayList<IConfig>(x.size());
+        for (ConfigObject o : x) {
+            y.add(new TypesafeConfig(o.toConfig()));
+        }
+        return y;
     }
 
     @Override

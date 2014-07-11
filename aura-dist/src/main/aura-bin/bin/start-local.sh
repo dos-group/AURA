@@ -17,7 +17,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/config.sh
+. "$bin"/env.sh
 
-# local mode, only bring up job manager. The job manager will start an internal task manager
-$AURA_BIN_DIR/workmanager.sh start local
+# local mode, only bring up workload manager. The workload manager will start an internal task manager
+$AURA_BIN_DIR/wm.sh start local

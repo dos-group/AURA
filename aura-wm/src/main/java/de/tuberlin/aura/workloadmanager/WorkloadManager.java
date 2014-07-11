@@ -6,10 +6,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.taskmanager.TaskManager;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.internal.HelpScreenException;
 import org.apache.log4j.Logger;
 
@@ -31,6 +33,26 @@ import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 // TODO: introduce the concept of a session, that allows to submit multiple queries...
 
 public class WorkloadManager implements ClientWMProtocol {
+
+    // ---------------------------------------------------
+    // Execution Modes.
+    // ---------------------------------------------------
+
+    public static enum ExecutionMode {
+        local("local"),
+        distributed("distributed");
+
+        final String name;
+
+        private ExecutionMode(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
 
     // ---------------------------------------------------
     // Fields.
@@ -57,7 +79,7 @@ public class WorkloadManager implements ClientWMProtocol {
     // ---------------------------------------------------
 
     public WorkloadManager(IConfig config) {
-        final String zkServer = config.getString("zookeeper.server.address");
+        final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
 
         // sanity check.
         ZookeeperClient.checkConnectionString(zkServer);
@@ -262,23 +284,33 @@ public class WorkloadManager implements ClientWMProtocol {
 
         try {
             // parse the arguments and store them as system properties
-            for (Map.Entry<String, Object> e : parser.parseArgs(args).getAttrs().entrySet()) {
-                System.setProperty(e.getKey(), e.getValue().toString());
+            Namespace ns = parser.parseArgs(args);
+            for (Map.Entry<String, Object> e : ns.getAttrs().entrySet()) {
+                if (e.getValue() != null)
+                    System.setProperty(e.getKey(), e.getValue().toString());
             }
-            // load configuration
-            IConfig config = IConfigFactory.load(IConfig.Type.WM);
 
             // start the workload manager
             long start = System.nanoTime();
-            new WorkloadManager(config);
-            LOG.info("WM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
+            ExecutionMode mode = ns.get("aura.execution.mode");
+            switch (mode) {
+                case distributed:
+                    new WorkloadManager(IConfigFactory.load(IConfig.Type.WM));
+                    break;
+                case local:
+                    new WorkloadManager(IConfigFactory.load(IConfig.Type.WM));
+                    new TaskManager(IConfigFactory.load(IConfig.Type.TM));
+                    break;
+            }
+            LOG.info(String.format("WM startup in %s mode in %d ms", mode, Long.toString(Math.abs(System.nanoTime() - start) / 1000000)));
         } catch (HelpScreenException e) {
             parser.handleError(e);
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             System.exit(1);
         } catch (Throwable e) {
-            System.err.println(String.format("Unexpected error: %s", e.getMessage()));
+            System.err.println(String.format("Unexpected error: %s", e));
+            e.printStackTrace();
             System.exit(1);
         }
     }
@@ -289,33 +321,19 @@ public class WorkloadManager implements ClientWMProtocol {
                 .defaultHelp(true)
                 .description("AURA WorkloadManager.");
 
-        parser.addArgument("--config")
+        parser.addArgument("--config-dir")
                 .type(new FileArgumentType().verifyIsDirectory().verifyCanRead())
                 .dest("aura.path.config")
                 .setDefault("config")
                 .metavar("PATH")
                 .help("config folder");
-        parser.addArgument("--log")
-                .type(new FileArgumentType().verifyIsDirectory().verifyCanRead())
-                .dest("aura.path.log")
-                .setDefault("log")
-                .metavar("PATH")
-                .help("log folder");
-        parser.addArgument("--zookeeper-url")
-                .type(String.class)
-                .dest("zookeeper.server.address")
-                .metavar("URL")
-                .help("zookeeper server URL");
-        parser.addArgument("--data-port")
-                .type(Integer.class)
-                .dest("wm.io.tcp.port")
-                .metavar("PORT")
-                .help("port for data transfer");
-        parser.addArgument("--control-port")
-                .type(Integer.class)
-                .dest("wm.io.rpc.port")
-                .metavar("PORT")
-                .help("port for control messages");
+
+        parser.addArgument("--mode")
+                .type(ExecutionMode.class)
+                .dest("aura.execution.mode")
+                .setDefault(ExecutionMode.distributed)
+                .metavar("MODE")
+                .help("execution mode ('distributed' or 'local')");
         //@formatter:on
 
         return parser;
