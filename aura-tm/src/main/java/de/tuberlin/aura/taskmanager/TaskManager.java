@@ -6,6 +6,13 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.config.IConfig;
+import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.impl.type.FileArgumentType;
+import net.sourceforge.argparse4j.inf.ArgumentParser;
+import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.internal.HelpScreenException;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -41,6 +48,7 @@ public final class TaskManager implements ITaskManager {
 
     private static final Logger LOG = Logger.getLogger(TaskManager.class);
 
+    private final IConfig config;
 
     private final IOManager ioManager;
 
@@ -67,28 +75,25 @@ public final class TaskManager implements ITaskManager {
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskManager(final String zookeeperServer, int dataPort, int controlPort) {
-        this(zookeeperServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
-    }
+    public TaskManager(IConfig config) {
+        final String zkServer = config.getString("zookeeper.server.address");
 
-    public TaskManager(final String zookeeperServer, final MachineDescriptor machine) {
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zookeeperServer);
+        ZookeeperHelper.checkConnectionString(zkServer);
 
-        if (machine == null)
-            throw new IllegalArgumentException("machine == null");
+        this.config = config;
 
-        this.taskManagerMachine = machine;
+        this.taskManagerMachine = DescriptorFactory.createMachineDescriptor(config.getConfig("tm"));
 
         this.deployedTasks = new HashMap<>();
 
         this.deployedTopologyTasks = new HashMap<>();
 
         // Setup buffer memory management.
-        this.bufferMemoryManager = new BufferMemoryManager(machine);
+        this.bufferMemoryManager = new BufferMemoryManager(taskManagerMachine, config.getConfig("tm"));
 
         // Setup execution manager.
-        this.executionManager = new TaskExecutionManager(taskManagerMachine, this.bufferMemoryManager);
+        this.executionManager = new TaskExecutionManager(taskManagerMachine, this.bufferMemoryManager, config.getInt("tm.execution.units.number"));
 
         this.executionManager.addEventListener(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK, new IEventHandler() {
 
@@ -98,10 +103,9 @@ public final class TaskManager implements ITaskManager {
             }
         });
 
-        // setup IO.
-        this.ioManager = setupIOManager(machine, executionManager);
+        this.ioManager = new IOManager(taskManagerMachine, executionManager, config.getConfig("tm.io"));
 
-        this.rpcManager = new RPCManager(ioManager);
+        this.rpcManager = new RPCManager(ioManager, config.getConfig("tm.io.rpc"));
 
         // setup IORedispatcher.
         this.ioHandler = new IORedispatcher();
@@ -117,7 +121,7 @@ public final class TaskManager implements ITaskManager {
         this.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, ioHandler);
 
         // setup zookeeper.
-        this.zookeeper = setupZookeeper(zookeeperServer);
+        this.zookeeper = setupZookeeper(zkServer);
 
         this.workloadManagerMachine =
                 (MachineDescriptor) ZookeeperHelper.readFromZookeeper(this.zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
@@ -192,7 +196,7 @@ public final class TaskManager implements ITaskManager {
     }
 
     /**
-     *
+     * 
      * @param taskID
      * @param outputBinding
      */
@@ -201,16 +205,16 @@ public final class TaskManager implements ITaskManager {
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
-        if(outputBinding == null)
+        if (outputBinding == null)
             throw new IllegalArgumentException("outputBinding == null");
 
         final ITaskDriver taskDriver = deployedTasks.get(taskID);
 
-        if(taskDriver == null)
+        if (taskDriver == null)
             throw new IllegalStateException("driver == null");
 
         if (taskDriver.getInvokeable() instanceof DataStorageDriver) {
-            final DataStorageDriver ds = (DataStorageDriver)taskDriver.getInvokeable();
+            final DataStorageDriver ds = (DataStorageDriver) taskDriver.getInvokeable();
             ds.createOutputBinding(outputBinding);
         } else {
 
@@ -219,7 +223,7 @@ public final class TaskManager implements ITaskManager {
             if (ai == null) {
                 throw new IllegalStateException("node has no storage");
             } else {
-                final DataStorageDriver ds = (DataStorageDriver)ai;
+                final DataStorageDriver ds = (DataStorageDriver) ai;
                 ds.createOutputBinding(outputBinding);
             }
         }
@@ -273,15 +277,6 @@ public final class TaskManager implements ITaskManager {
         } catch (IOException | KeeperException | InterruptedException e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    /**
-     * @param machineDescriptor
-     * @return
-     */
-    private IOManager setupIOManager(final MachineDescriptor machineDescriptor, final ITaskExecutionManager executionManager) {
-        final IOManager ioManager = new IOManager(machineDescriptor, executionManager);
-        return ioManager;
     }
 
     /**
@@ -402,37 +397,73 @@ public final class TaskManager implements ITaskManager {
 
     /**
      * TaskManager entry point.
+     * 
      * @param args
      */
     public static void main(final String[] args) {
 
-        int dataPort = -1;
-        int controlPort = -1;
-        String zkServer = null;
-        String measurementPath = null;
-        if (args.length == 4) {
-            try {
-                zkServer = args[0];
-                dataPort = Integer.parseInt(args[1]);
-                controlPort = Integer.parseInt(args[2]);
-                measurementPath = args[3];
-            } catch (NumberFormatException e) {
-                LOG.error("Argument" + " must be an integer", e);
-                System.exit(1);
-            }
-        } else {
-            StringBuilder builder = new StringBuilder();
-            builder.append("Args: ");
-            for (int i = 0; i < args.length; i++) {
-                builder.append(args[i]);
-                builder.append("|");
-            }
+        // construct base argument parser
+        ArgumentParser parser = getArgumentParser();
 
-            LOG.info(builder.toString());
+
+        try {
+            // parse the arguments and store them as system properties
+            for (Map.Entry<String, Object> e : parser.parseArgs(args).getAttrs().entrySet()) {
+                System.setProperty(e.getKey(), e.getValue().toString());
+            }
+            // load configuration
+            IConfig config = IConfigFactory.load(IConfig.Type.TM);
+
+            // start the task manager
+            long start = System.nanoTime();
+            new TaskManager(config);
+            LOG.info("TM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
+        } catch (HelpScreenException e) {
+            parser.handleError(e);
+        } catch (ArgumentParserException e) {
+            parser.handleError(e);
+            System.exit(1);
+        } catch (Throwable e) {
+            System.err.println(String.format("Unexpected error: %s", e.getMessage()));
             System.exit(1);
         }
+    }
 
-        long start = System.nanoTime();
-        new TaskManager(zkServer, dataPort, controlPort);
+    private static ArgumentParser getArgumentParser() {
+        //@formatter:off
+        ArgumentParser parser = ArgumentParsers.newArgumentParser("aura-tm")
+                .defaultHelp(true)
+                .description("AURA TaskManager.");
+
+        parser.addArgument("--config-dir")
+                .type(new FileArgumentType().verifyIsDirectory().verifyCanRead())
+                .dest("aura.path.config")
+                .setDefault("config")
+                .metavar("PATH")
+                .help("config folder");
+        parser.addArgument("--log-dir")
+                .type(new FileArgumentType().verifyIsDirectory().verifyCanRead())
+                .dest("aura.path.log")
+                .setDefault("log")
+                .metavar("PATH")
+                .help("log folder");
+        parser.addArgument("--zookeeper-url")
+                .type(String.class)
+                .dest("zookeeper.server.address")
+                .metavar("URL")
+                .help("zookeeper server URL");
+        parser.addArgument("--data-port")
+                .type(Integer.class)
+                .dest("tm.io.tcp.port")
+                .metavar("PORT")
+                .help("port for data transfer");
+        parser.addArgument("--control-port")
+                .type(Integer.class)
+                .dest("tm.io.rpc.port")
+                .metavar("PORT")
+                .help("port for control messages");
+        //@formatter:on
+
+        return parser;
     }
 }

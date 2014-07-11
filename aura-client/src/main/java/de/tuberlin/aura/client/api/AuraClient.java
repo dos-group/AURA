@@ -8,6 +8,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import de.tuberlin.aura.core.config.IConfig;
 import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,25 +58,17 @@ public final class AuraClient {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param zkServer
-     * @param controlPort
-     * @param dataPort
-     */
-    public AuraClient(final String zkServer, int controlPort, int dataPort) {
+    public AuraClient(IConfig config) {
+        final String zkServer = config.getString("zookeeper.server.address");
+
         // sanity check.
-        if (zkServer == null)
-            throw new IllegalArgumentException("zkServer == null");
-        if (dataPort < 1024 || dataPort > 65535)
-            throw new IllegalArgumentException("dataPort invalid");
-        if (controlPort < 1024 || controlPort > 65535)
-            throw new IllegalArgumentException("controlPort invalid port number");
+        ZookeeperHelper.checkConnectionString(zkServer);
 
-        final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(dataPort, controlPort);
+        final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(config.getConfig("client"));
 
-        this.ioManager = new IOManager(md, null);
+        this.ioManager = new IOManager(md, null, config.getConfig("client.io"));
 
-        this.rpcManager = new RPCManager(ioManager);
+        this.rpcManager = new RPCManager(ioManager, config.getConfig("client.io.rpc"));
 
         this.codeExtractor = new UserCodeExtractor(false);
 

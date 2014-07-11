@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.topology.Topology;
@@ -28,7 +30,6 @@ public class LocalIntegrationTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(LocalIntegrationTest.class);
 
-    private static final String zookeeperAddress = "localhost:2181";
     private static final int machines = 2;
 
     private static AuraClient auraClient;
@@ -40,12 +41,8 @@ public class LocalIntegrationTest {
 
     @BeforeClass
     public static void setupClusterSimulatorAndClient() {
-        new LocalClusterSimulator(LocalClusterSimulator.ExecutionMode.EXECUTION_MODE_SINGLE_PROCESS,
-                        true,
-                        zookeeperAddress,
-                        machines);
-
-        auraClient = new AuraClient(zookeeperAddress, 10000, 11111);
+        new LocalClusterSimulator(IConfigFactory.load());
+        auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
     }
 
     @Test
@@ -181,7 +178,6 @@ public class LocalIntegrationTest {
     public static void tearDown() {
         auraClient.closeSession();
     }
-
 
     // ---------------------------------------------------
     // Methods.

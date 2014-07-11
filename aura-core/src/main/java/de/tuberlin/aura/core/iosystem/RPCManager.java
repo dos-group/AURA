@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import de.tuberlin.aura.core.config.IConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,17 +26,12 @@ import de.tuberlin.aura.core.iosystem.IOEvents.RPCCallerRequestEvent;
 public final class RPCManager {
 
     // ---------------------------------------------------
-    // Constants.
-    // ---------------------------------------------------
-
-    // for debugging use -1.
-    private static final long RPC_RESPONSE_TIMEOUT = -1; // 5000; // in ms
-
-    // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
     private static final Logger LOG = LoggerFactory.getLogger(RPCManager.class);
+
+    private final IConfig config;
 
     private final IOManager ioManager;
 
@@ -51,11 +47,14 @@ public final class RPCManager {
 
     /**
      * @param ioManager
+     * @param config
      */
-    public RPCManager(final IOManager ioManager) {
+    public RPCManager(final IOManager ioManager, IConfig config) {
         // sanity check.
         if (ioManager == null)
             throw new IllegalArgumentException("ioManager == null");
+
+        this.config = config;
 
         this.ioManager = ioManager;
 
@@ -106,7 +105,7 @@ public final class RPCManager {
         @SuppressWarnings("unchecked")
         T proxy = (T) cachedProxies.get(proxyKey);
         if (proxy == null) {
-            proxy = ProtocolCallerProxy.createProtocolProxy(dstMachine.uid, protocolInterface, ioManager);
+            proxy = ProtocolCallerProxy.createProtocolProxy(config.getLong("response.timeout"), dstMachine.uid, protocolInterface, ioManager);
             cachedProxies.put(proxyKey, proxy);
         }
 
@@ -165,6 +164,8 @@ public final class RPCManager {
     @SuppressWarnings("unused")
     private static final class ProtocolCallerProxy implements InvocationHandler {
 
+        private final long responseTimeout; // 5000; // in ms
+
         private final UUID dstMachineID;
 
         private final IOManager ioManager;
@@ -173,10 +174,12 @@ public final class RPCManager {
 
         private final static Map<UUID, Object> callerResultTable = new HashMap<>();
 
-        public ProtocolCallerProxy(final UUID dstMachineID, final IOManager ioManager) {
+        public ProtocolCallerProxy(long responseTimeout, final UUID dstMachineID, final IOManager ioManager) {
             // sanity check.
             if (ioManager == null)
                 throw new IllegalArgumentException("ioManager == null");
+
+            this.responseTimeout = responseTimeout;
 
             this.dstMachineID = dstMachineID;
 
@@ -184,9 +187,12 @@ public final class RPCManager {
         }
 
         @SuppressWarnings("unchecked")
-        public static <T> T createProtocolProxy(final UUID dstMachineID, final Class<T> protocolInterface, final IOManager ioManager) {
+        public static <T> T createProtocolProxy(final long responseTimeout,
+                                                final UUID dstMachineID,
+                                                final Class<T> protocolInterface,
+                                                final IOManager ioManager) {
 
-            final ProtocolCallerProxy pc = new ProtocolCallerProxy(dstMachineID, ioManager);
+            final ProtocolCallerProxy pc = new ProtocolCallerProxy(responseTimeout, dstMachineID, ioManager);
             return (T) Proxy.newProxyInstance(protocolInterface.getClassLoader(), new Class[] {protocolInterface}, pc);
         }
 
@@ -229,10 +235,10 @@ public final class RPCManager {
             ioManager.sendEvent(dstMachineID, new RPCCallerRequestEvent(callUID, methodInfo));
 
             try {
-                if (RPC_RESPONSE_TIMEOUT > 0) {
+                if (responseTimeout > 0) {
                     // block the caller thread until we get some response...
                     // ...but with a specified timeout to avoid indefinitely blocking of caller.
-                    cdl.await(RPC_RESPONSE_TIMEOUT, TimeUnit.MILLISECONDS);
+                    cdl.await(responseTimeout, TimeUnit.MILLISECONDS);
                 } else {
                     cdl.await();
                 }

@@ -257,12 +257,12 @@ public class Topology {
             return this;
         }
 
-        public NodeConnector addNode(final Node node, Class<?> userCodeClazz) {
+        public NodeConnector addNode(final Node node, Class<?>... userCodeClazzes) {
             // sanity check.
             if (node == null)
                 throw new IllegalArgumentException("node == null");
-            if (userCodeClazz == null)
-                throw new IllegalArgumentException("userCodeClazz == null");
+            if (userCodeClazzes.length < 1)
+                throw new IllegalArgumentException("No user code classes given for node connector");
 
             if (nodeMap.containsKey(node.name))
                 throw new IllegalStateException("node already exists");
@@ -275,9 +275,7 @@ public class Topology {
 
             uidNodeMap.put(node.uid, node);
 
-            final List<Class<?>> userCodeClazzList = new ArrayList<>();
-
-            userCodeClazzList.add(userCodeClazz);
+            final List<Class<?>> userCodeClazzList = Arrays.asList(userCodeClazzes);
 
             userCodeClazzMap.put(node.name, userCodeClazzList);
 

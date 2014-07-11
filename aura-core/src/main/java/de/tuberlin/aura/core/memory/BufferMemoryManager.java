@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import de.tuberlin.aura.core.config.IConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +23,7 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
 
     public static final int BUFFER_SIZE = BufferAllocator._64K;
 
+    // TODO [config]: BUFFER_LOAD_FACTOR
     public static final double BUFFER_LOAD_FACTOR = 0.1;
 
     public static final int NUM_OF_ALLOCATORS_PER_GROUP = 2;
@@ -33,6 +35,8 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
     private static final Logger LOG = LoggerFactory.getLogger(BufferMemoryManager.class);
 
     private final Descriptors.MachineDescriptor machineDescriptor;
+
+    private final IConfig config;
 
     private final Runtime runtime;
 
@@ -48,12 +52,14 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
     // Constructors.
     // ---------------------------------------------------
 
-    public BufferMemoryManager(final Descriptors.MachineDescriptor machineDescriptor) {
+    public BufferMemoryManager(final Descriptors.MachineDescriptor machineDescriptor, IConfig config) {
         // sanity check.
         if (machineDescriptor == null)
             throw new IllegalArgumentException("machineDescriptor == null");
 
         this.machineDescriptor = machineDescriptor;
+
+        this.config = config;
 
         this.runtime = Runtime.getRuntime();
 

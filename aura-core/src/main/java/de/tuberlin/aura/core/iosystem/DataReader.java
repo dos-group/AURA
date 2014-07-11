@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.config.IConfig;
 import org.apache.commons.lang3.tuple.Triple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,11 +29,13 @@ public class DataReader {
 
     public final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
 
+    private final IConfig config;
+
     private final IEventDispatcher dispatcher;
 
     private final Map<Channel, BufferQueue<IOEvents.DataIOEvent>> channelToQueue = new HashMap<>();
 
-    private final Map<Triple<UUID,Integer,Integer>,Channel> gateKeyToChannel = new HashMap<>();
+    private final Map<Triple<UUID, Integer, Integer>, Channel> gateKeyToChannel = new HashMap<>();
 
     public final ITaskExecutionManager executionManager;
 
@@ -41,21 +44,21 @@ public class DataReader {
     // ---------------------------------------------------
 
     /**
-     * Creates a new DataReader. A DataReader is always bound to a
-     * {@link de.tuberlin.aura.core.task.spi.ITaskExecutionManager}.
-     *
+     * Creates a new DataReader. A DataReader is always bound to a {@link ITaskExecutionManager}.
+     * 
      * @param dispatcher the dispatcher used for events
      * @param executionManager the execution manager the data reader is bound to
+     * @param config The enclosing IO config
      */
-    public DataReader(final IEventDispatcher dispatcher, final ITaskExecutionManager executionManager) {
+    public DataReader(final IEventDispatcher dispatcher, final ITaskExecutionManager executionManager, IConfig config) {
         // sanity check.
         if (dispatcher == null)
             throw new IllegalArgumentException("dispatcher == null");
-//        if (executionManager == null)
-//            throw new IllegalArgumentException("executionManager == null");
+        // if (executionManager == null)
+        // throw new IllegalArgumentException("executionManager == null");
 
+        this.config = config;
         this.dispatcher = dispatcher;
-
         this.executionManager = executionManager;
     }
 
@@ -68,7 +71,7 @@ public class DataReader {
      * <p/>
      * Notice: the reader does not shut down the worker group. This is in the callers
      * responsibility.
-     *
+     * 
      * @param type the connection type of the channel to bind
      * @param address the remote address the channel should be connected to
      * @param workerGroup the event loop the channel should be associated with
@@ -111,7 +114,7 @@ public class DataReader {
 
     /**
      * Returns the queue which is assigned to the gate of the task.
-     *
+     * 
      * @param taskID the task id which the gate belongs to.
      * @param gateIndex the gate index.
      * @return the queue assigned to the gate, or null if no queue is assigned.
@@ -122,7 +125,7 @@ public class DataReader {
 
     /**
      * Binds a inbound queue to this data reader.
-     *
+     * 
      * @param srcTaskID the UUID of the task
      * @param channel the channel the queue belongs to
      * @param gateIndex the gate the queue belongs to
@@ -130,10 +133,10 @@ public class DataReader {
      * @param queue the queue
      */
     public synchronized void bindQueue(final UUID srcTaskID,
-                                        final Channel channel,
-                                        final int gateIndex,
-                                        final int channelIndex,
-                                        final BufferQueue<IOEvents.DataIOEvent> queue) {
+                                       final Channel channel,
+                                       final int gateIndex,
+                                       final int channelIndex,
+                                       final BufferQueue<IOEvents.DataIOEvent> queue) {
 
         channelToQueue.put(channel, queue);
 
@@ -142,7 +145,7 @@ public class DataReader {
 
     /**
      * Returns true if the channel is already bound to this data reader.
-     *
+     * 
      * @param taskID the UUID of the task
      * @param gateIndex the gate index
      * @param channelIndex the channel index
@@ -155,7 +158,7 @@ public class DataReader {
     /**
      * Writes a {@link de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent} to the channel bound
      * unique identifer triple (taskID, gateIndex, channelIndex).
-     *
+     * 
      * @param taskID the task id
      * @param gateIndex the gate index
      * @param channelIndex the channel index
@@ -227,14 +230,16 @@ public class DataReader {
 
     /**
      * Specifies a inbound connection type.
-     *
+     * 
      * Implementing classes are responsible to provide a {@link io.netty.bootstrap.ServerBootstrap}
      * and the handler pipeline for netty.
-     *
+     * 
      * @param <T> the channel type used by the connection
      */
     public interface InboundConnectionType<T extends Channel> {
+
         ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup);
+
         ChannelInitializer<T> getPipeline(final DataReader dataReader);
     }
 
@@ -242,6 +247,12 @@ public class DataReader {
      * A local connection for communication between tasks located on the same task manager.
      */
     public static class LocalConnection implements InboundConnectionType<LocalChannel> {
+
+        private final IConfig config;
+
+        public LocalConnection(IConfig config) {
+            this.config = config;
+        }
 
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
@@ -258,9 +269,9 @@ public class DataReader {
                 @Override
                 public void initChannel(LocalChannel ch) throws Exception {
                     ch.pipeline()
-                            .addLast(new SerializationHandler.LocalTransferBufferCopyHandler(dataReader.executionManager))
-                            .addLast(dataReader.new TransferBufferEventHandler())
-                            .addLast(dataReader.new DataIOEventHandler());
+                      .addLast(new SerializationHandler.LocalTransferBufferCopyHandler(dataReader.executionManager))
+                      .addLast(dataReader.new TransferBufferEventHandler())
+                      .addLast(dataReader.new DataIOEventHandler());
                 }
             };
         }
@@ -274,16 +285,24 @@ public class DataReader {
         // TODO: check if its better to use a dedicated boss and worker group
         // TODO: check parameter values, like SO_RCVBUF
 
+        private final IConfig config;
+
+        public NetworkConnection(IConfig config) {
+            this.config = config;
+        }
+
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(eventLoopGroup).channel(NioServerSocketChannel.class)
-                    // sets the max. number of pending, not yet fully connected (handshake) channels
-                    .option(ChannelOption.SO_BACKLOG, 1024)
-                            // .option(ChannelOption.SO_RCVBUF, IOConfig.NETTY_RECEIVE_BUFFER_SIZE)
-                            // set keep alive, so idle connections are persistent
-                    .childOption(ChannelOption.SO_KEEPALIVE, true)
-                    .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+
+            //@formatter:off
+            b.group(eventLoopGroup)
+             .channel(NioServerSocketChannel.class)
+             .option(ChannelOption.SO_BACKLOG, config.getInt("netty.so_backlog")) // number of pending, not yet fully connected (handshake) channels
+             .childOption(ChannelOption.SO_KEEPALIVE, config.getBoolean("netty.so_keepalive")) // persist idle connections
+             .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT);
+            //@formatter:on
+
             return b;
         }
 
@@ -294,11 +313,11 @@ public class DataReader {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline()
-                            .addLast(SerializationHandler.LENGTH_FIELD_DECODER())
-                            .addLast(SerializationHandler.KRYO_OUTBOUND_HANDLER())
-                            .addLast(SerializationHandler.KRYO_INBOUND_HANDLER(dataReader.executionManager))
-                            .addLast(dataReader.new TransferBufferEventHandler())
-                            .addLast(dataReader.new DataIOEventHandler());
+                      .addLast(SerializationHandler.LENGTH_FIELD_DECODER())
+                      .addLast(SerializationHandler.KRYO_OUTBOUND_HANDLER(config))
+                      .addLast(SerializationHandler.KRYO_INBOUND_HANDLER(dataReader.executionManager, config))
+                      .addLast(dataReader.new TransferBufferEventHandler())
+                      .addLast(dataReader.new DataIOEventHandler());
                 }
             };
         }
