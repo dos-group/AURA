@@ -197,6 +197,8 @@ public class LocalIntegrationTest {
         handler.handleTopologyFinished(null);
 
         auraClient.awaitSubmissionResult();
+
+        auraClient.ioManager.removeEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, handler);
     }
 
 
@@ -410,13 +412,6 @@ public class LocalIntegrationTest {
                 Thread t = new Thread() {
 
                     public void run() {
-                        // This break makes jobs easier to distinguish in the logs.
-                        try {
-                            Thread.sleep(2000);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
                         LOG.info("Submit: {} - run {}/{}", topologies.get(jobIndex).name, ((jobCounter - 1) % runs) + 1, runs);
                         client.submitTopology(topologies.get(jobIndex), null);
                     }
