@@ -6,17 +6,19 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import de.tuberlin.aura.taskmanager.TaskManager;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.internal.HelpScreenException;
+
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
@@ -24,9 +26,8 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
-import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
+import de.tuberlin.aura.taskmanager.TaskManager;
 
 
 
@@ -192,16 +193,16 @@ public class WorkloadManager implements ClientWMProtocol {
     @Override
     public void submitToTopology(UUID sessionID, UUID topologyID, AuraTopology topology) {
         // sanity check.
-        if(sessionID == null)
+        if (sessionID == null)
             throw new IllegalArgumentException("sessionID == null");
-        if(topologyID == null)
+        if (topologyID == null)
             throw new IllegalArgumentException("topologyID == null");
-        if(topology == null)
+        if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
         final TopologyController topologyController = this.registeredTopologies.get(topologyID);
 
-        if(topologyController == null)
+        if (topologyController == null)
             throw new IllegalStateException("topologyController == null");
 
         topologyController.assembleTopology(topology);
@@ -215,26 +216,21 @@ public class WorkloadManager implements ClientWMProtocol {
      * @param topologyID2
      * @param taskNodeID2
      */
-    /*@Override
-    public void connectTopologies(final UUID sessionID, final UUID topologyID1, final UUID taskNodeID1, final UUID topologyID2, final UUID taskNodeID2) {
-        // sanity check.
-        if(topologyID1 == null)
-            throw new IllegalArgumentException("topologyID1 == null");
-        if(taskNodeID1 == null)
-            throw new IllegalArgumentException("taskNodeID1 == null");
-        if(topologyID2 == null)
-            throw new IllegalArgumentException("topologyID2 == null");
-        if(taskNodeID2 == null)
-            throw new IllegalArgumentException("taskNodeID2 == null");
-
-
-        final TopologyController topologyControllerSrc = this.registeredTopologies.get(topologyID1);
-
-        if(topologyController == null)
-            throw new IllegalStateException("topologyController == null");
-
-        topologyController.createOutputGateAndConnect(taskNodeID1);
-    }*/
+    /*
+     * @Override public void connectTopologies(final UUID sessionID, final UUID topologyID1, final
+     * UUID taskNodeID1, final UUID topologyID2, final UUID taskNodeID2) { // sanity check.
+     * if(topologyID1 == null) throw new IllegalArgumentException("topologyID1 == null");
+     * if(taskNodeID1 == null) throw new IllegalArgumentException("taskNodeID1 == null");
+     * if(topologyID2 == null) throw new IllegalArgumentException("topologyID2 == null");
+     * if(taskNodeID2 == null) throw new IllegalArgumentException("taskNodeID2 == null");
+     * 
+     * 
+     * final TopologyController topologyControllerSrc = this.registeredTopologies.get(topologyID1);
+     * 
+     * if(topologyController == null) throw new IllegalStateException("topologyController == null");
+     * 
+     * topologyController.createOutputGateAndConnect(taskNodeID1); }
+     */
 
     /**
      * @param sessionID
@@ -302,7 +298,7 @@ public class WorkloadManager implements ClientWMProtocol {
                     new TaskManager(IConfigFactory.load(IConfig.Type.TM));
                     break;
             }
-            LOG.info(String.format("WM startup in %s mode in %d ms", mode, Long.toString(Math.abs(System.nanoTime() - start) / 1000000)));
+            LOG.info(String.format("WM startup in %s mode in %s ms", mode, Long.toString(Math.abs(System.nanoTime() - start) / 1000000)));
         } catch (HelpScreenException e) {
             parser.handleError(e);
         } catch (ArgumentParserException e) {

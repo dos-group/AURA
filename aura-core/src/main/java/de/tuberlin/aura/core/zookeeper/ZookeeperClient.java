@@ -6,7 +6,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import java.io.*;
 import java.util.List;
 
-import de.tuberlin.aura.core.config.IConfig;
 import net.jcip.annotations.NotThreadSafe;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -16,9 +15,10 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.data.Stat;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import de.tuberlin.aura.core.config.IConfig;
 
 /**
  * This class wraps helper methods for interacting with ZooKeeper.
@@ -59,7 +59,7 @@ public class ZookeeperClient {
     // ---------------------------------------------------
 
     public ZookeeperClient(String zkServer) {
-        curator = CuratorFrameworkFactory.newClient(zkServer, new ExponentialBackoffRetry(1000, 3));
+        curator = CuratorFrameworkFactory.newClient(zkServer, 60000, 60000, new ExponentialBackoffRetry(1000, 3));
         curator.start();
     }
 

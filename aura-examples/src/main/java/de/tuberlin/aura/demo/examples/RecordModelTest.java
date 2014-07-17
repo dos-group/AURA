@@ -1,16 +1,15 @@
 package de.tuberlin.aura.demo.examples;
 
-import java.util.Arrays;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.config.IConfig;
-import de.tuberlin.aura.core.config.IConfigFactory;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
@@ -132,7 +131,7 @@ public final class RecordModelTest {
 
         final Topology.AuraTopology at1 = atb1.build("JOB 1");
         ac.submitTopology(at1, null);
-        ac.awaitSubmissionResult();
+        ac.awaitSubmissionResult(1);
         ac.closeSession();
         lcs.shutdown();
     }

@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import de.tuberlin.aura.core.config.IConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
@@ -24,7 +24,7 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
     public static final int BUFFER_SIZE = BufferAllocator._64K;
 
     // TODO [config]: BUFFER_LOAD_FACTOR
-    public static final double BUFFER_LOAD_FACTOR = 0.1;
+    public static final double BUFFER_LOAD_FACTOR = 0.7;
 
     public static final int NUM_OF_ALLOCATORS_PER_GROUP = 2;
 

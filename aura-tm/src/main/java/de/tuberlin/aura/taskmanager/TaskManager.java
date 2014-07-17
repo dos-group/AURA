@@ -1,27 +1,21 @@
 package de.tuberlin.aura.taskmanager;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.config.IConfig;
-import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.internal.HelpScreenException;
+
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
@@ -37,7 +31,7 @@ import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.task.spi.ITaskManager;
-import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.storage.DataStorageDriver;
 
 public final class TaskManager implements ITaskManager {
@@ -311,7 +305,7 @@ public final class TaskManager implements ITaskManager {
         if (!(event.getPayload() instanceof StateMachine.FSMTransitionEvent))
             throw new IllegalArgumentException("event is not FSMTransitionEvent");
 
-        final List<ITaskDriver> taskList = deployedTopologyTasks.get(event.getTopologyID());
+        final List<ITaskDriver> taskList = new ArrayList<>(deployedTopologyTasks.get(event.getTopologyID()));
         if (taskList == null) {
             // throw new IllegalArgumentException("ctxList == null");
             LOG.info("Task driver context for topology [" + event.getTopologyID() + "] is removed");

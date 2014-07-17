@@ -548,7 +548,7 @@ public final class TaskDataConsumer implements IDataConsumer {
 
                         inputGates.get(gateIndex).setDataReader(channelReader);
 
-                        LOG.info("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
+                        LOG.debug("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
                                 + taskDriver.getNodeDescriptor().name + " [" + taskDriver.getNodeDescriptor().taskID + "] IS ESTABLISHED");
 
                         connectingToCorrectTask |= true;

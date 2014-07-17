@@ -3,28 +3,26 @@ package de.tuberlin.aura.client.api;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.CountDownLatch;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopologyBuilder;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 
 public final class AuraClient {
 
@@ -156,18 +154,15 @@ public final class AuraClient {
     /**
      *
      */
-    public void awaitSubmissionResult() {
+    public void awaitSubmissionResult(final int numTopologies) {
 
-        final Lock threadLock = new ReentrantLock();
-        final Condition condition = threadLock.newCondition();
+        final CountDownLatch awaitExecution = new CountDownLatch(numTopologies);
 
         ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, new IEventHandler() {
 
             @Override
             public void handleEvent(Event event) {
-                threadLock.lock();
-                condition.signal();
-                threadLock.unlock();
+                awaitExecution.countDown();
             }
         });
 
@@ -175,20 +170,15 @@ public final class AuraClient {
 
             @Override
             public void handleEvent(Event event) {
-                threadLock.lock();
-                condition.signal();
-                threadLock.unlock();
+                awaitExecution.countDown();
             }
         });
 
-        threadLock.lock();
 
         try {
-            condition.await();
+            awaitExecution.await();
         } catch (InterruptedException e) {
-            // do nothing...
-        } finally {
-            threadLock.unlock();
+            LOG.error("latch was interrupted", e);
         }
     }
 
