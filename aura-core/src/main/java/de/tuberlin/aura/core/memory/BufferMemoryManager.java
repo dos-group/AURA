@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import de.tuberlin.aura.core.config.IConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,17 +17,6 @@ import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
  *
  */
 public final class BufferMemoryManager implements IBufferMemoryManager {
-
-    // ---------------------------------------------------
-    // Constants.
-    // ---------------------------------------------------
-
-    public static final int BUFFER_SIZE = BufferAllocator._64K;
-
-    // TODO [config]: BUFFER_LOAD_FACTOR
-    public static final double BUFFER_LOAD_FACTOR = 0.1;
-
-    public static final int NUM_OF_ALLOCATORS_PER_GROUP = 2;
 
     // ---------------------------------------------------
     // Fields.
@@ -61,32 +51,35 @@ public final class BufferMemoryManager implements IBufferMemoryManager {
 
         this.config = config;
 
+        final int bufferSize = config.getInt("memory.buffer.size");
+        final double bufferLoadFactor = config.getDouble("memory.load.factor");
+        final int numOfAllocatorsPerGroup = config.getInt("memory.group.allocators");
+        final int groupsPerExecutionUnit = config.getInt("memory.groups.per.execution.unit");
+
         this.runtime = Runtime.getRuntime();
 
         this.maxMemory = runtime.maxMemory();
 
         final int numOfExecutionUnits = machineDescriptor.hardware.cpuCores;
 
-        final int groupsPerExecutionUnit = 2;
-
-        this.globalBufferCount = (int) ((maxMemory * BUFFER_LOAD_FACTOR) / BUFFER_SIZE);
+        this.globalBufferCount = (int) ((maxMemory * bufferLoadFactor) / bufferSize);
 
         final int perExecutionUnitBuffers = globalBufferCount / numOfExecutionUnits;
 
-        final int buffersPerAllocator = (perExecutionUnitBuffers / groupsPerExecutionUnit) / NUM_OF_ALLOCATORS_PER_GROUP;
+        final int buffersPerAllocator = (perExecutionUnitBuffers / groupsPerExecutionUnit) / numOfAllocatorsPerGroup;
 
         this.allocatorGroups =
                 setupBufferAllocatorGroups(numOfExecutionUnits * groupsPerExecutionUnit,
-                                           NUM_OF_ALLOCATORS_PER_GROUP,
+                                           numOfAllocatorsPerGroup,
                                            buffersPerAllocator,
-                                           BufferAllocator._64K);
+                                           bufferSize);
 
         this.allocatorIndex = new AtomicInteger(0);
 
         LOG.debug("Execution Units: {}", numOfExecutionUnits);
         LOG.debug("Max Memory: {}", maxMemory);
         LOG.debug("Buffer Count: {}", globalBufferCount);
-        LOG.debug("IAllocator Groups: {} with {} allocators each", allocatorGroups.size(), NUM_OF_ALLOCATORS_PER_GROUP);
+        LOG.debug("IAllocator Groups: {} with {} allocators each", allocatorGroups.size(), numOfAllocatorsPerGroup);
         LOG.debug("Groups per Execution Unit: {}", groupsPerExecutionUnit);
         LOG.debug("Buffers Per IAllocator: {}", buffersPerAllocator);
     }

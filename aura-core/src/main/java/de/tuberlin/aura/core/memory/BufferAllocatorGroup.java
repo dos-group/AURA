@@ -26,7 +26,7 @@ public final class BufferAllocatorGroup implements IAllocator {
 
     public BufferAllocatorGroup(final int bufferSize, final List<IAllocator> initialAssignedAllocators) {
         // sanity check.
-        if ((bufferSize & (bufferSize - 1)) != 0 && bufferSize < BufferAllocator._8K && bufferSize > BufferAllocator._64K)
+        if ((bufferSize & (bufferSize - 1)) != 0 && bufferSize < BufferAllocator.BufferSize._8K.bytes && bufferSize > BufferAllocator.BufferSize._64K.bytes)
             throw new IllegalArgumentException("illegal buffer size");
         if (initialAssignedAllocators == null)
             throw new IllegalArgumentException("initialAssignedAllocators == null");

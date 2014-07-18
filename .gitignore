@@ -13,3 +13,4 @@ filter.properties
 tmp
 target
 
+**/profile.user.conf
