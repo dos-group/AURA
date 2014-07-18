@@ -126,6 +126,8 @@ public final class TaskDataConsumer implements IDataConsumer {
 
     private final Map<UUID, Integer> taskIDToChannelIndex = new HashMap<>();
 
+    private int[] remainingChannelsToConnect;
+
 
     // ---------------------------------------------------
     // Constructors.
@@ -397,7 +399,7 @@ public final class TaskDataConsumer implements IDataConsumer {
         // create mappings for input gates.
         this.taskIDToGateIndex.clear();
 
-        //this.channelIndexToTaskID.clear();
+        this.channelIndexToTaskID.clear();
 
         createInputMappings(inputBinding);
 
@@ -478,6 +480,10 @@ public final class TaskDataConsumer implements IDataConsumer {
      *
      */
     private void setupInputGates(final List<List<Descriptors.AbstractNodeDescriptor>> inputBinding) {
+
+        remainingChannelsToConnect = new int[inputBinding.size()];
+
+        int gateIndex = 0;
         for (final List<Descriptors.AbstractNodeDescriptor> tdList : inputBinding) {
 
             final Map<UUID, Boolean> closedChannels = new HashMap<>();
@@ -492,6 +498,7 @@ public final class TaskDataConsumer implements IDataConsumer {
                 closedChannels.put(td.taskID, false);
                 activeChannelSet.add(td.taskID);
             }
+            remainingChannelsToConnect[gateIndex++] = tdList.size();
         }
     }
 
@@ -525,64 +532,47 @@ public final class TaskDataConsumer implements IDataConsumer {
         @Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED)
         private void handleTaskInputDataChannelConnect(final IOEvents.DataIOEvent event) {
 
-            int gateIndex = 0;
-            boolean allInputGatesConnected = true, connectingToCorrectTask = false;
+            try {
+                int gateIndex = taskIDToGateIndex.get(event.srcTaskID);
+                int channelIndex = taskIDToChannelIndex.get(event.srcTaskID);
 
-            for (final List<Descriptors.AbstractNodeDescriptor> inputGate : taskDriver.getBindingDescriptor().inputGateBindings) {
+                // wire queue to input gate
+                final DataReader channelReader = (DataReader) event.getPayload();
 
-                int channelIndex = 0;
-                boolean allInputChannelsPerGateConnected = true;
+                // create queue, if there is none yet as we can have multiple channels
+                // insert in one queue (aka multiple channels per gate)
+                final BufferQueue<IOEvents.DataIOEvent> queue = taskDriver.getQueueManager().getInboundQueue(gateIndex, channelIndex);
+                channelReader.bindQueue(taskDriver.getNodeDescriptor().taskID, event.getChannel(), gateIndex, channelIndex, queue);
 
-                for (final Descriptors.AbstractNodeDescriptor inputTask : inputGate) {
+                inputGates.get(gateIndex).setDataReader(channelReader);
 
-                    // get the right input gate for src the event comes from.
-                    if (inputTask.taskID.equals(event.srcTaskID)) {
+                Descriptors.AbstractNodeDescriptor src = taskDriver.getBindingDescriptor().inputGateBindings.get(gateIndex).get(channelIndex);
 
-                        // wire queue to input gate
-                        final DataReader channelReader = (DataReader) event.getPayload();
+                LOG.debug("INPUT CONNECTION FROM " + src.name + " [" + src.taskID + "] TO TASK "
+                        + taskDriver.getNodeDescriptor().name + " [" + taskDriver.getNodeDescriptor().taskID + "] IS ESTABLISHED");
 
-                        // create queue, if there is none yet as we can have multiple channels
-                        // insert in one queue (aka multiple channels per gate)
-                        final BufferQueue<IOEvents.DataIOEvent> queue = taskDriver.getQueueManager().getInboundQueue(gateIndex, channelIndex);
-                        channelReader.bindQueue(taskDriver.getNodeDescriptor().taskID, event.getChannel(), gateIndex, channelIndex, queue);
 
-                        inputGates.get(gateIndex).setDataReader(channelReader);
+                remainingChannelsToConnect[gateIndex]--;
 
-                        LOG.debug("INPUT CONNECTION FROM " + inputTask.name + " [" + inputTask.taskID + "] TO TASK "
-                                + taskDriver.getNodeDescriptor().name + " [" + taskDriver.getNodeDescriptor().taskID + "] IS ESTABLISHED");
-
-                        connectingToCorrectTask |= true;
-                    }
-
-                    boolean connected = false;
-                    if (inputGates.get(gateIndex).getDataReader() != null) {
-                        connected =
-                                inputGates.get(gateIndex)
-                                          .getDataReader()
-                                          .isConnected(taskDriver.getNodeDescriptor().taskID, gateIndex, channelIndex);
-                    }
-
-                    // all data inputs are connected...
-                    allInputChannelsPerGateConnected &= connected;
-                    channelIndex++;
+                if (remainingChannelsToConnect[gateIndex] < 0) {
+                    throw new IllegalStateException("unexpected channel connected to gate: " + gateIndex);
                 }
 
-
-                if (allInputChannelsPerGateConnected) {
+                // if all channels for gate are connected
+                if (remainingChannelsToConnect[gateIndex] == 0) {
                     absorber.get(gateIndex).initQueues();
+
+                    // if all gates are fully connected
+                    boolean fullyConnected = true;
+                    for (int remaining: remainingChannelsToConnect) {
+                        fullyConnected &= remaining == 0;
+                    }
+                    if (fullyConnected) {
+                        taskDriver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
+                    }
                 }
-
-                allInputGatesConnected &= allInputChannelsPerGateConnected;
-                ++gateIndex;
-            }
-
-            // Check if the incoming channel is connecting to the correct task.
-            if (!connectingToCorrectTask) {
-                throw new IllegalStateException("wrong data channel tries to connect");
-            }
-
-            if (allInputGatesConnected) {
-                taskDriver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
+            } catch (Exception ex) {
+                throw new IllegalStateException("unexpected channel tried to connect");
             }
         }
     }
