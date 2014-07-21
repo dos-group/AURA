@@ -28,6 +28,10 @@
             <groupId>de.tuberlin.aura</groupId>
             <artifactId>aura-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>de.tuberlin.aura</groupId>
+            <artifactId>aura-examples</artifactId>
+        </dependency>
 
     </dependencies>
 
