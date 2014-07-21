@@ -1,6 +1,6 @@
 language: java
 
-script:  mvn -Daura.profile=tiny test
+script:  mvn -Daura.profile=travis test
 
 notifications:
   webhooks:
