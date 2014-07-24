@@ -3,6 +3,7 @@ package de.tuberlin.aura.taskmanager;
 import java.io.IOException;
 import java.util.*;
 
+import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -21,7 +22,6 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.memory.BufferMemoryManager;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
-import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
@@ -124,7 +124,7 @@ public final class TaskManager implements ITaskManager {
             throw new IllegalStateException("workloadManagerMachine == null");
 
         // setup RPC between workload manager and task manager.
-        rpcManager.registerRPCProtocolImpl(this, WM2TMProtocol.class);
+        rpcManager.registerRPCProtocolImpl(this, IWM2TMProtocol.class);
 
         ioManager.connectMessageChannelBlocking(workloadManagerMachine);
     }

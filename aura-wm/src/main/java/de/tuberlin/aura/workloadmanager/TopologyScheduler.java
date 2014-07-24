@@ -1,11 +1,11 @@
 package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.core.common.utils.IVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
-import de.tuberlin.aura.core.common.utils.Visitor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.ExecutionNode;
 import de.tuberlin.aura.core.topology.Topology.Node;
@@ -69,7 +69,7 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
         LOG.debug("Schedule topology [{}] on {} task managers", topology.name, infrastructureManager.getNumberOfMachine());
 
         // Scheduling.
-        TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
+        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
 
             @Override
             public void visit(final Node element) {

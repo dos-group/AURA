@@ -74,7 +74,7 @@ public class DataReader {
      * @param workerGroup the event loop the channel should be associated with
      * @param <T> the type of channel this connection uses
      */
-    public <T extends Channel> void bind(final InboundConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
+    public <T extends Channel> void bind(final IInboundConnectionType<T> type, final SocketAddress address, final EventLoopGroup workerGroup) {
         // sanity check.
         if (type == null)
             throw new IllegalArgumentException("type == null");
@@ -233,7 +233,7 @@ public class DataReader {
      *
      * @param <T> the channel type used by the connection
      */
-    public interface InboundConnectionType<T extends Channel> {
+    public interface IInboundConnectionType<T extends Channel> {
         ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup);
         ChannelInitializer<T> getPipeline(final DataReader dataReader);
     }
@@ -241,7 +241,7 @@ public class DataReader {
     /**
      * A local connection for communication between tasks located on the same task manager.
      */
-    public static class LocalConnection implements InboundConnectionType<LocalChannel> {
+    public static class LocalConnection implements IInboundConnectionType<LocalChannel> {
 
         @Override
         public ServerBootstrap bootStrap(EventLoopGroup eventLoopGroup) {
@@ -269,7 +269,7 @@ public class DataReader {
     /**
      * A tcp connection for communication between network connected tasks.
      */
-    public static class NetworkConnection implements InboundConnectionType<SocketChannel> {
+    public static class NetworkConnection implements IInboundConnectionType<SocketChannel> {
 
         // TODO: check if its better to use a dedicated boss and worker group
         // TODO: check parameter values, like SO_RCVBUF

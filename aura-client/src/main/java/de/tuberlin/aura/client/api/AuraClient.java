@@ -8,6 +8,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import de.tuberlin.aura.core.protocols.IClientWMProtocol;
 import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +22,6 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopologyBuilder;
@@ -43,7 +43,7 @@ public final class AuraClient {
 
     public final RPCManager rpcManager;
 
-    public final ClientWMProtocol clientProtocol;
+    public final IClientWMProtocol clientProtocol;
 
     public final UserCodeExtractor codeExtractor;
 
@@ -107,7 +107,7 @@ public final class AuraClient {
 
         ioManager.connectMessageChannelBlocking(wmMachineDescriptor);
 
-        clientProtocol = rpcManager.getRPCProtocolProxy(ClientWMProtocol.class, wmMachineDescriptor);
+        clientProtocol = rpcManager.getRPCProtocolProxy(IClientWMProtocol.class, wmMachineDescriptor);
 
         this.registeredTopologyMonitors = new HashMap<>();
 

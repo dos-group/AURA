@@ -2,8 +2,8 @@ package de.tuberlin.aura.core.operators;
 
 import java.io.Serializable;
 
-import de.tuberlin.aura.core.common.utils.Visitable;
-import de.tuberlin.aura.core.common.utils.Visitor;
+import de.tuberlin.aura.core.common.utils.IVisitable;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 
 /**
  *
@@ -16,7 +16,7 @@ public final class OperatorAPI {
     /**
      *
      */
-    public static class Operator implements Serializable, Visitable<Operator> {
+    public static class Operator implements Serializable, IVisitable<Operator> {
 
         // ---------------------------------------------------
         // Fields.
@@ -50,7 +50,7 @@ public final class OperatorAPI {
         }
 
         @Override
-        public void accept(final Visitor<Operator> visitor) {
+        public void accept(final IVisitor<Operator> visitor) {
             visitor.visit(this);
         }
     }
@@ -58,7 +58,7 @@ public final class OperatorAPI {
     /**
      *
      */
-    public static final class PlanPrinter implements Visitor<OperatorAPI.Operator> {
+    public static final class PlanPrinter implements IVisitor<Operator> {
 
         // ---------------------------------------------------
         // Fields.
@@ -112,19 +112,14 @@ public final class OperatorAPI {
             if (element.properties.operatorType.operatorInputArity == OperatorProperties.OperatorInputArity.UNARY) {
 
                 level++;
-
                     visit(element.inputOp1);
-
                 level--;
 
             } else if (element.properties.operatorType.operatorInputArity == OperatorProperties.OperatorInputArity.BINARY) {
 
                 level++;
-
                     visit(element.inputOp1);
-
                     visit(element.inputOp2);
-
                 level--;
             }
         }

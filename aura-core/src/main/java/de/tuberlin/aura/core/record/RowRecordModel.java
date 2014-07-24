@@ -21,7 +21,7 @@ public final class RowRecordModel {
     /**
      *
      */
-    public static interface KeySelector {
+    public static interface IKeySelector {
 
         public abstract int[] key();
     }

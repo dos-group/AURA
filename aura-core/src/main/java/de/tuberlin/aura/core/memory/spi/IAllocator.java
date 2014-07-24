@@ -1,6 +1,5 @@
 package de.tuberlin.aura.core.memory.spi;
 
-import de.tuberlin.aura.core.memory.BufferCallback;
 import de.tuberlin.aura.core.memory.MemoryView;
 
 /**
@@ -12,7 +11,7 @@ public interface IAllocator {
 
     public abstract MemoryView allocBlocking() throws InterruptedException;
 
-    public abstract MemoryView alloc(final BufferCallback bufferCallback);
+    public abstract MemoryView alloc(final IBufferCallback bufferCallback);
 
     public abstract void free(final MemoryView memory);
 

@@ -1,7 +1,11 @@
 package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
+import de.tuberlin.aura.core.topology.TopologyStates;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -11,7 +15,7 @@ import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPipeline;
-import de.tuberlin.aura.core.common.utils.Visitor;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.task.common.TaskStates;
@@ -195,6 +199,7 @@ public final class TopologyController extends EventDispatcher {
                     }
                 }
             });
+
         } else {
 
             topologyContainer.topologyQueue.add(topology);
@@ -217,7 +222,29 @@ public final class TopologyController extends EventDispatcher {
      */
     private StateMachine.FiniteStateMachine<TopologyState, TopologyTransition> createTopologyFSM() {
 
-        final StateMachine.FSMTransitionConstraint2<TopologyState, TopologyTransition> runTransitionConstraint =
+
+        final Map<TaskStates.TaskTransition,Integer> map = new HashMap<TaskStates.TaskTransition,Integer>();
+
+        this.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, new IEventHandler() {
+
+            @Override
+            public void handleEvent(Event e) {
+                final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
+
+                final TaskStates.TaskTransition transition =
+                        (TaskStates.TaskTransition)((StateMachine.FSMTransitionEvent<TaskStates.TaskTransition>)event.getPayload()).getPayload();
+                map.put(transition, (Integer)map.get(transition) + 1);
+
+            }
+        });
+
+
+
+
+
+
+
+        /*final StateMachine.FSMTransitionConstraint2<TopologyState, TopologyTransition> runTransitionConstraint =
                 new StateMachine.FSMTransitionConstraint2<TopologyState, TopologyTransition>(TaskStates.TaskTransition.TASK_TRANSITION_RUN) {
 
                     int numOfTasksToBeReady = 0;
@@ -225,6 +252,52 @@ public final class TopologyController extends EventDispatcher {
                     @Override
                     public boolean eval(StateMachine.FSMTransitionEvent<? extends Enum<?>> event) {
                         return (++numOfTasksToBeReady) == topologyContainer.executingTopology.executionNodeMap.size();
+                    }
+                };*/
+
+        final StateMachine.FSMTransitionConstraint2<TopologyState, TopologyTransition> runTransitionConstraint =
+                new StateMachine.FSMTransitionConstraint2<TopologyState, TopologyTransition>(TaskStates.TaskTransition.TASK_TRANSITION_RUN) {
+
+                    int numOfTasksToBeReady = 0;
+
+                    final Lock threadLock = new ReentrantLock();
+                    final Condition condition = threadLock.newCondition();
+
+                    @Override
+                    public boolean eval(StateMachine.FSMTransitionEvent<? extends Enum<?>> event) {
+
+                        if (numOfTasksToBeReady == 0) {
+
+                            final StateMachine.IFSMStateAction<TopologyState, TopologyTransition> stateHandler =
+                                    new StateMachine.IFSMStateAction<TopologyState, TopologyTransition>() {
+                                        @Override
+                                        public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
+                                            threadLock.lock();
+                                            condition.signal();
+                                            threadLock.unlock();
+                                        }
+                                    };
+
+                            topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_DEPLOYED, stateHandler);
+                        }
+
+                        boolean result = (++numOfTasksToBeReady) == topologyContainer.executingTopology.executionNodeMap.size();
+
+                        if (result) {
+                                threadLock.lock();
+                                try {
+                                    if (topologyFSM.getCurrentState() == TopologyState.TOPOLOGY_STATE_SCHEDULED) {
+                                        condition.await();
+                                    }
+                                } catch (InterruptedException e) {
+                                    // do nothing...
+                                } finally {
+                                    threadLock.unlock();
+                                }
+                                //topologyFSM.removeEventListener(TopologyState.TOPOLOGY_STATE_DEPLOYED, stateHandler);
+                        }
+
+                        return result;
                     }
                 };
 
@@ -297,7 +370,7 @@ public final class TopologyController extends EventDispatcher {
                         .setInitialState(TopologyState.TOPOLOGY_STATE_CREATED)
                         .build();
 
-        topologyFSM.addGlobalStateListener(new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+        topologyFSM.addGlobalStateListener(new StateMachine.IFSMStateAction<TopologyState, TopologyTransition>() {
 
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
@@ -306,12 +379,12 @@ public final class TopologyController extends EventDispatcher {
             }
         });
 
-        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_RUNNING, new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_RUNNING, new StateMachine.IFSMStateAction<TopologyState, TopologyTransition>() {
 
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
 
-                Topology.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new Visitor<Topology.Node>() {
+                Topology.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new IVisitor<Topology.Node>() {
 
                     @Override
                     public void visit(final Topology.Node element) {
@@ -332,14 +405,14 @@ public final class TopologyController extends EventDispatcher {
             }
         });
 
-        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_FAILURE, new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_FAILURE, new StateMachine.IFSMStateAction<TopologyState, TopologyTransition>() {
 
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
 
                 ioManager.sendEvent(topologyContainer.executingTopology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE));
 
-                Topology.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new Visitor<Topology.Node>() {
+                Topology.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new IVisitor<Topology.Node>() {
 
                     @Override
                     public void visit(final Topology.Node element) {
@@ -361,7 +434,7 @@ public final class TopologyController extends EventDispatcher {
             }
         });
 
-        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_FINISHED, new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_FINISHED, new StateMachine.IFSMStateAction<TopologyState, TopologyTransition>() {
 
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
@@ -376,11 +449,14 @@ public final class TopologyController extends EventDispatcher {
             }
         });
 
-        topologyFSM.addStateListener(TopologyState.ERROR, new StateMachine.FSMStateAction<TopologyState, TopologyTransition>() {
+        topologyFSM.addStateListener(TopologyState.ERROR, new StateMachine.IFSMStateAction<TopologyState, TopologyTransition>() {
 
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                throw new IllegalStateException();
+                throw new IllegalStateException(
+                        "previousState: " + previousState.toString()
+                        + ", transition: " + transition.toString()
+                        + ", currentState: " + state );
             }
         });
 

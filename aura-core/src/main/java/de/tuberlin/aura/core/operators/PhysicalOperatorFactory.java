@@ -69,13 +69,13 @@ public final class PhysicalOperatorFactory {
         return createPhysicalOperator(properties, null, null);
     }
 
-    private static UnaryUDFFunction<Object,Object> createUDF(final Class<?> udfType) {
+    private static IUnaryUDFFunction<Object,Object> createUDF(final Class<?> udfType) {
         // sanity check.
         if (udfType == null)
             throw new IllegalArgumentException("udfType == null");
 
         try {
-            return (UnaryUDFFunction<Object,Object>)udfType.getConstructor().newInstance();
+            return (IUnaryUDFFunction<Object,Object>)udfType.getConstructor().newInstance();
         } catch(Exception e) {
             throw new IllegalStateException(e);
         }

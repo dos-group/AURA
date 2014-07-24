@@ -54,7 +54,7 @@ public class DataWriter {
      */
     public <T extends Channel> ChannelWriter<T> bind(final UUID srcTaskID,
                                                      final UUID dstTaskID,
-                                                     final OutgoingConnectionType<T> connectionType,
+                                                     final IOutgoingConnectionType<T> connectionType,
                                                      final SocketAddress address,
                                                      final EventLoopGroup eventLoopGroup) {
 
@@ -95,7 +95,7 @@ public class DataWriter {
 
         public ChannelWriter(final UUID srcTaskID,
                              final UUID dstTaskID,
-                             final OutgoingConnectionType<T> connectionType,
+                             final IOutgoingConnectionType<T> connectionType,
                              final SocketAddress address,
                              final EventLoopGroup eventLoopGroup) {
 
@@ -347,14 +347,14 @@ public class DataWriter {
     }
 
 
-    public interface OutgoingConnectionType<T extends Channel> {
+    public interface IOutgoingConnectionType<T extends Channel> {
 
         Bootstrap bootStrap(final EventLoopGroup eventLoopGroup);
 
         ChannelInitializer<T> getPipeline(final ChannelWriter channelWriter);
     }
 
-    public static class LocalConnection implements OutgoingConnectionType<LocalChannel> {
+    public static class LocalConnection implements IOutgoingConnectionType<LocalChannel> {
 
         @Override
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {
@@ -384,7 +384,7 @@ public class DataWriter {
         }
     }
 
-    public static class NetworkConnection implements OutgoingConnectionType<SocketChannel> {
+    public static class NetworkConnection implements IOutgoingConnectionType<SocketChannel> {
 
         @Override
         public Bootstrap bootStrap(EventLoopGroup eventLoopGroup) {

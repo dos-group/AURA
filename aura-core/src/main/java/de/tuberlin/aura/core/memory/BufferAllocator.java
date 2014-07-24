@@ -5,6 +5,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import de.tuberlin.aura.core.memory.spi.IBufferCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,7 @@ public final class BufferAllocator implements IAllocator {
 
     public final BlockingQueue<MemoryView> freeList;
 
-    private final LinkedList<BufferCallback> callbackList;
+    private final LinkedList<IBufferCallback> callbackList;
 
     private final Object callbackLock = new Object();
 
@@ -88,7 +89,7 @@ public final class BufferAllocator implements IAllocator {
     }
 
     @Override
-    public MemoryView alloc(final BufferCallback callback) {
+    public MemoryView alloc(final IBufferCallback callback) {
         // sanity check.
         if (callback == null)
             throw new IllegalArgumentException("callback == null");
@@ -125,7 +126,7 @@ public final class BufferAllocator implements IAllocator {
 
         synchronized (callbackLock) {
             if (!callbackList.isEmpty()) {
-                final BufferCallback bufferCallback = callbackList.poll();
+                final IBufferCallback bufferCallback = callbackList.poll();
                 buffer.retain();
                 bufferCallback.bufferReader(buffer);
             } else {

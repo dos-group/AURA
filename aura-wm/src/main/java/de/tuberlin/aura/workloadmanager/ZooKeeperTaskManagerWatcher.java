@@ -21,13 +21,13 @@ import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 /**
  * TODO: Put all watchers in one class like the descriptors?
  */
-public class ZkTaskManagerWatcher implements Watcher {
+public class ZooKeeperTaskManagerWatcher implements Watcher {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = LoggerFactory.getLogger(ZkTaskManagerWatcher.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ZooKeeperTaskManagerWatcher.class);
 
     /**
      * Events received by this class are passed on to this handler.
@@ -50,7 +50,7 @@ public class ZkTaskManagerWatcher implements Watcher {
      * @param handler
      * @param zk
      */
-    public ZkTaskManagerWatcher(IEventHandler handler, ZooKeeper zk) {
+    public ZooKeeperTaskManagerWatcher(IEventHandler handler, ZooKeeper zk) {
         this.handler = handler;
         this.zk = zk;
         this.nodes = new HashSet<>();

@@ -3,9 +3,9 @@ package de.tuberlin.aura.core.topology;
 import java.io.Serializable;
 import java.util.*;
 
+import de.tuberlin.aura.core.common.utils.IVisitable;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.common.utils.Visitable;
-import de.tuberlin.aura.core.common.utils.Visitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
@@ -518,7 +518,7 @@ public class Topology {
     /**
      *
      */
-    public static class Node implements Visitable<Node>, Serializable {
+    public static class Node implements IVisitable<Node>, Serializable {
 
         private static final long serialVersionUID = -1L;
 
@@ -698,7 +698,7 @@ public class Topology {
             return (new StringBuilder()).append("Node = {").append(" name = " + name + ", ").append(" }").toString();
         }
 
-        public void accept(final Visitor<Node> visitor) {
+        public void accept(final IVisitor<Node> visitor) {
             visitor.visit(this);
         }
     }
@@ -745,7 +745,7 @@ public class Topology {
     /**
      *
      */
-    public static final class ExecutionNode implements Visitable<ExecutionNode> {
+    public static final class ExecutionNode implements IVisitable<ExecutionNode> {
 
         // ---------------------------------------------------
         // Fields.
@@ -837,7 +837,7 @@ public class Topology {
                                         .toString();
         }
 
-        public void accept(final Visitor<ExecutionNode> visitor) {
+        public void accept(final IVisitor<ExecutionNode> visitor) {
             visitor.visit(this);
         }
     }
@@ -940,15 +940,15 @@ public class Topology {
      */
     public static final class TopologyBreadthFirstTraverser {
 
-        public static void traverse(final AuraTopology topology, final Visitor<Node> visitor) {
+        public static void traverse(final AuraTopology topology, final IVisitor<Node> visitor) {
             traverse(false, topology, visitor);
         }
 
-        public static void traverseBackwards(final AuraTopology topology, final Visitor<Node> visitor) {
+        public static void traverseBackwards(final AuraTopology topology, final IVisitor<Node> visitor) {
             traverse(true, topology, visitor);
         }
 
-        private static void traverse(final boolean traverseBackwards, final AuraTopology topology, final Visitor<Node> visitor) {
+        private static void traverse(final boolean traverseBackwards, final AuraTopology topology, final IVisitor<Node> visitor) {
             // sanity check.
             if (topology == null)
                 throw new IllegalArgumentException("topology == null");
@@ -1037,7 +1037,7 @@ public class Topology {
             if (topology == null)
                 throw new IllegalArgumentException("topology == null");
 
-            TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
+            TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
 
                 @Override
                 public void visit(Node element) {

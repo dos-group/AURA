@@ -105,7 +105,7 @@ public class DataStorageDriver extends AbstractInvokeable {
         producer.bind(driver.getBindingDescriptor().outputGateBindings, producer.getAllocator());
 
         driver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
-                new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+                new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                     @Override
                     public void stateAction(TaskStates.TaskState previousState,

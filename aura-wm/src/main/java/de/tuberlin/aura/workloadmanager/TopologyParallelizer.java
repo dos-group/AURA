@@ -3,9 +3,9 @@ package de.tuberlin.aura.workloadmanager;
 import java.util.*;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
-import de.tuberlin.aura.core.common.utils.Visitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
@@ -42,7 +42,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
         final Map<UUID, ExecutionNode> executionNodeMap = new HashMap<>();
 
         // First pass, create task descriptors.
-        TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
+        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
 
             @Override
             public void visit(final Node element) {
@@ -92,7 +92,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
         topology.setExecutionNodes(executionNodeMap);
 
         // Second pass, create binding descriptors.
-        TopologyBreadthFirstTraverser.traverse(topology, new Visitor<Node>() {
+        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
 
             @Override
             public void visit(final Node element) {

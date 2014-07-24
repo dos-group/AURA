@@ -2,17 +2,14 @@ package de.tuberlin.aura.demo.examples;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
+import de.tuberlin.aura.core.operators.IUnaryUDFFunction;
 import de.tuberlin.aura.core.operators.OperatorAPI;
 import de.tuberlin.aura.core.operators.OperatorProperties;
 import de.tuberlin.aura.core.operators.TopologyGenerator;
-import de.tuberlin.aura.core.operators.UnaryUDFFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.tuples.Tuple1;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
-
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 
 /**
  *
@@ -26,7 +23,7 @@ public class OperatorTest {
     // Testing.
     // ------------------------------------------------------------------------------------------------
 
-    public static final class SourceUDF1 implements UnaryUDFFunction<Void, Tuple1<Integer>> {
+    public static final class SourceUDF1 implements IUnaryUDFFunction<Void, Tuple1<Integer>> {
 
         int count = 15;
 
@@ -36,7 +33,7 @@ public class OperatorTest {
         }
     }
 
-    public static final class MapUDF1 implements UnaryUDFFunction<Tuple1<Integer>, Tuple2<Integer,String>> {
+    public static final class MapUDF1 implements IUnaryUDFFunction<Tuple1<Integer>, Tuple2<Integer,String>> {
 
 
         @Override
@@ -45,7 +42,7 @@ public class OperatorTest {
         }
     }
 
-    public static final class SinkUDF1 implements UnaryUDFFunction<Tuple2<Integer,String>, Void> {
+    public static final class SinkUDF1 implements IUnaryUDFFunction<Tuple2<Integer,String>, Void> {
 
         @Override
         public Void apply(final Tuple2<Integer,String> in) {

@@ -44,7 +44,7 @@ public final class StateMachine {
 
         private final Map<S, List<FiniteStateMachine<? extends Enum<?>, ? extends Enum<?>>>> nestedFSMs;
 
-        private final Map<T, FSMTransitionConstraint<S, T>> transitionConstraintMap;
+        private final Map<T, IFSMTransitionConstraint<S, T>> transitionConstraintMap;
 
         // ---------------------------------------------------
         // Constructors.
@@ -209,7 +209,7 @@ public final class StateMachine {
              * @param constraint
              * @return
              */
-            public FiniteStateMachineBuilder<S, T> addTransition(final T transition, final S nextState, final FSMTransitionConstraint<S, T> constraint) {
+            public FiniteStateMachineBuilder<S, T> addTransition(final T transition, final S nextState, final IFSMTransitionConstraint<S, T> constraint) {
                 // sanity check.
                 if (transition == null)
                     throw new IllegalArgumentException("transition == null");
@@ -328,7 +328,7 @@ public final class StateMachine {
      * @param <S>
      * @param <T>
      */
-    public static interface FSMStateAction<S, T> {
+    public static interface IFSMStateAction<S, T> {
 
         /**
          * @param previousState
@@ -358,7 +358,7 @@ public final class StateMachine {
      * @param <S>
      * @param <T>
      */
-    public static interface FSMTransitionConstraint<S extends Enum<S>, T extends Enum<T>> {
+    public static interface IFSMTransitionConstraint<S extends Enum<S>, T extends Enum<T>> {
 
         /**
          * @param transition
@@ -371,7 +371,7 @@ public final class StateMachine {
      * @param <S>
      * @param <T>
      */
-    public static abstract class FSMTransitionConstraint2<S extends Enum<S>, T extends Enum<T>> implements FSMTransitionConstraint<S, T> {
+    public static abstract class FSMTransitionConstraint2<S extends Enum<S>, T extends Enum<T>> implements IFSMTransitionConstraint<S, T> {
 
         private final Enum<?> domainTransition;
 
@@ -402,6 +402,9 @@ public final class StateMachine {
                 @Override
                 public void handleEvent(Event event) {
                     if (eval((FSMTransitionEvent<? extends Enum<?>>) event)) {
+
+                        // TODO:  HERE IS THE BUG !
+
                         stateMachine.dispatchEvent(new FSMTransitionEvent<>(hostTransition));
                     }
                 }
@@ -438,7 +441,7 @@ public final class StateMachine {
 
         private final Class<T> transitionClazz;
 
-        private final Map<T, FSMTransitionConstraint<S, T>> transitionConstraintMap;
+        private final Map<T, IFSMTransitionConstraint<S, T>> transitionConstraintMap;
 
         // ---------------------------------------------------
         // Constructors.
@@ -459,7 +462,7 @@ public final class StateMachine {
                                   final Set<S> finalStates,
                                   final Map<S, List<FiniteStateMachine<? extends Enum<?>, ? extends Enum<?>>>> nestedFSMs,
                                   final Class<T> transitionClazz,
-                                  final Map<T, FSMTransitionConstraint<S, T>> transitionConstraintMap) {
+                                  final Map<T, IFSMTransitionConstraint<S, T>> transitionConstraintMap) {
 
             // The EventDispatcher must run a own dispatch thread, because of
             // nested dispatch that can occur (e.g. in transition constraints).
@@ -523,7 +526,7 @@ public final class StateMachine {
                 }
             }
 
-            for (final Map.Entry<T, FSMTransitionConstraint<S, T>> entry : this.transitionConstraintMap.entrySet()) {
+            for (final Map.Entry<T, IFSMTransitionConstraint<S, T>> entry : this.transitionConstraintMap.entrySet()) {
                 entry.getValue().defineTransitionConstraint(entry.getKey(), this);
             }
         }
@@ -536,7 +539,7 @@ public final class StateMachine {
          * @param state
          * @param stateAction
          */
-        public void addStateListener(final S state, final FSMStateAction<S, T> stateAction) {
+        public void addStateListener(final S state, final IFSMStateAction<S, T> stateAction) {
             // sanity check.
             if (state == null)
                 throw new IllegalArgumentException("state == null");
@@ -561,7 +564,7 @@ public final class StateMachine {
         /**
          * @param stateAction
          */
-        public void addGlobalStateListener(final FSMStateAction<S, T> stateAction) {
+        public void addGlobalStateListener(final IFSMStateAction<S, T> stateAction) {
             this.addEventListener(FSMStateEvent.FSM_STATE_CHANGE, new IEventHandler() {
 
                 @Override
@@ -765,8 +768,8 @@ public final class StateMachine {
      * 
      * // ---------------------------------------------------
      * 
-     * final FSMStateAction<OperatorState, OperatorTransition> operatorAction = new
-     * FSMStateAction<OperatorState, OperatorTransition>() {
+     * final IFSMStateAction<OperatorState, OperatorTransition> operatorAction = new
+     * IFSMStateAction<OperatorState, OperatorTransition>() {
      * 
      * @Override public void stateAction(OperatorState previousState, OperatorTransition transition,
      * OperatorState state) { System.out.println("previousState = " + previousState +
@@ -792,7 +795,7 @@ public final class StateMachine {
      * 
      * // ---------------------------------------------------
      * 
-     * final FSMStateAction<TaskState, TaskTransition> taskAction = new FSMStateAction<TaskState,
+     * final IFSMStateAction<TaskState, TaskTransition> taskAction = new IFSMStateAction<TaskState,
      * TaskTransition>() {
      * 
      * @Override public void stateAction(TaskState previousState, TaskTransition transition,
@@ -825,8 +828,8 @@ public final class StateMachine {
      * 
      * // ---------------------------------------------------
      * 
-     * final FSMStateAction<TopologyState, TopologyTransition> topologyAction = new
-     * FSMStateAction<TopologyState, TopologyTransition>() {
+     * final IFSMStateAction<TopologyState, TopologyTransition> topologyAction = new
+     * IFSMStateAction<TopologyState, TopologyTransition>() {
      * 
      * @Override public void stateAction(TopologyState previousState, TopologyTransition transition,
      * TopologyState state) { System.out.println("previousState = " + previousState +
@@ -871,18 +874,18 @@ public final class StateMachine {
      * // ---------------------------------------------------
      * 
      * topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_RUNNING, new
-     * FSMStateAction<TopologyState, TopologyTransition>() {
+     * IFSMStateAction<TopologyState, TopologyTransition>() {
      * 
      * @Override public void stateAction(TopologyState previousState, TopologyTransition transition,
      * TopologyState state) { System.out.println("RUNNING STATE LISTENER"); } });
      * 
-     * topologyFSM.addStateListener(TopologyState.ERROR, new FSMStateAction<TopologyState,
+     * topologyFSM.addStateListener(TopologyState.ERROR, new IFSMStateAction<TopologyState,
      * TopologyTransition>() {
      * 
      * @Override public void stateAction(TopologyState previousState, TopologyTransition transition,
      * TopologyState state) { System.out.println("ERROR STATE LISTENER"); } });
      * 
-     * topologyFSM.addGlobalStateListener(new FSMStateAction<TopologyState, TopologyTransition>() {
+     * topologyFSM.addGlobalStateListener(new IFSMStateAction<TopologyState, TopologyTransition>() {
      * 
      * @Override public void stateAction(TopologyState previousState, TopologyTransition transition,
      * TopologyState state) { System.out.println("GLOBAL LISTENER"); } });

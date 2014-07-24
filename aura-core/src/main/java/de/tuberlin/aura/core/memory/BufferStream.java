@@ -14,7 +14,7 @@ public final class BufferStream {
     /**
      *
      */
-    public static interface BufferInput {
+    public static interface IBufferInput {
 
         public abstract MemoryView get();
     }
@@ -22,7 +22,7 @@ public final class BufferStream {
     /**
      *
      */
-    public static interface BufferOutput {
+    public static interface IBufferOutput {
 
         public abstract void put(final MemoryView buffer);
     }
@@ -40,9 +40,9 @@ public final class BufferStream {
 
         protected int count;
 
-        protected BufferInput bufferInput;
+        protected IBufferInput bufferInput;
 
-        protected BufferOutput bufferOutput;
+        protected IBufferOutput bufferOutput;
 
         // ---------------------------------------------------
         // Constructors.
@@ -55,7 +55,7 @@ public final class BufferStream {
         // Public Methods.
         // ---------------------------------------------------
 
-        public void setBufferInput(final BufferInput bufferInput) {
+        public void setBufferInput(final IBufferInput bufferInput) {
             // sanity check.
             if (bufferInput == null)
                 throw new IllegalArgumentException("bufferInput == null");
@@ -63,7 +63,7 @@ public final class BufferStream {
             this.bufferInput = bufferInput;
         }
 
-        public void setBufferOutput(final BufferOutput bufferOutput) {
+        public void setBufferOutput(final IBufferOutput bufferOutput) {
             // sanity check.
             if (bufferOutput == null)
                 throw new IllegalArgumentException("bufferOutput == null");
@@ -207,9 +207,9 @@ public final class BufferStream {
 
         protected MemoryView buf;
 
-        protected BufferInput bufferInput;
+        protected IBufferInput bufferInput;
 
-        protected BufferOutput bufferOutput;
+        protected IBufferOutput bufferOutput;
 
         protected int pos;
 
@@ -231,7 +231,7 @@ public final class BufferStream {
         // Public Methods.
         // ---------------------------------------------------
 
-        public void setBufferInput(final BufferInput bufferInput) {
+        public void setBufferInput(final IBufferInput bufferInput) {
             // sanity check.
             if (bufferInput == null)
                 throw new IllegalArgumentException("bufferInput == null");
@@ -239,7 +239,7 @@ public final class BufferStream {
             this.bufferInput = bufferInput;
         }
 
-        public void setBufferOutput(final BufferOutput bufferOutput) {
+        public void setBufferOutput(final IBufferOutput bufferOutput) {
             // sanity check.
             if (bufferOutput == null)
                 throw new IllegalArgumentException("bufferOutput == null");

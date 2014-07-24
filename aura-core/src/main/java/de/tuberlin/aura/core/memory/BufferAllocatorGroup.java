@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
+import de.tuberlin.aura.core.memory.spi.IBufferCallback;
 
 /**
  *
@@ -104,7 +105,7 @@ public final class BufferAllocatorGroup implements IAllocator {
     }
 
     @Override
-    public MemoryView alloc(final BufferCallback bufferCallback) {
+    public MemoryView alloc(final IBufferCallback bufferCallback) {
         // sanity check.
         if (bufferCallback == null)
             throw new IllegalArgumentException("bufferCallback == null");

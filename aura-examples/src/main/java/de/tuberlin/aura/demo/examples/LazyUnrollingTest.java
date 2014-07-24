@@ -306,6 +306,7 @@ public final class LazyUnrollingTest {
             e.printStackTrace();
         }
 
+
         final Topology.AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
 
         atb2.addNode(new Topology.ComputationNode(UUID.randomUUID(), "TaskRightInput", 2, 1), TaskRightInput.class)

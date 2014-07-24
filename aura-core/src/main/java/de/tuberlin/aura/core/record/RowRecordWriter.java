@@ -106,7 +106,7 @@ public class RowRecordWriter implements IRecordWriter {
 
             kryoOutputs.add(kryoOutput);
 
-            os.setBufferInput(new BufferStream.BufferInput() {
+            os.setBufferInput(new BufferStream.IBufferInput() {
 
                 @Override
                 public MemoryView get() {
@@ -118,7 +118,7 @@ public class RowRecordWriter implements IRecordWriter {
                 }
             });
 
-            os.setBufferOutput(new BufferStream.BufferOutput() {
+            os.setBufferOutput(new BufferStream.IBufferOutput() {
 
                 @Override
                 public void put(MemoryView buffer) {

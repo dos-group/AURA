@@ -382,7 +382,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         // global state listener, that reacts to all state changes.
 
-        taskFSM.addGlobalStateListener(new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+        taskFSM.addGlobalStateListener(new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
@@ -408,7 +408,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         // error state listener.
 
-        taskFSM.addStateListener(TaskState.ERROR, new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+        taskFSM.addStateListener(TaskState.ERROR, new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
@@ -419,7 +419,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         // task ready state listener.
 
-        taskFSM.addStateListener(TaskState.TASK_STATE_READY, new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+        taskFSM.addStateListener(TaskState.TASK_STATE_READY, new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
@@ -437,7 +437,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         // task finish state listener.
 
-        taskFSM.addStateListener(TaskState.TASK_STATE_FINISHED, new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+        taskFSM.addStateListener(TaskState.TASK_STATE_FINISHED, new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
@@ -455,7 +455,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         // task failure state listener.
 
-        taskFSM.addStateListener(TaskState.TASK_STATE_FAILURE, new StateMachine.FSMStateAction<TaskState, TaskTransition>() {
+        taskFSM.addStateListener(TaskState.TASK_STATE_FAILURE, new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {

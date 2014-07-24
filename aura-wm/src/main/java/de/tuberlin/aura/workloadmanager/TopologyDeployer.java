@@ -1,14 +1,14 @@
 package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
-import de.tuberlin.aura.core.common.utils.Visitor;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.DeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.protocols.WM2TMProtocol;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.ExecutionNode;
 import de.tuberlin.aura.core.topology.Topology.Node;
@@ -64,14 +64,14 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
     private synchronized void deployTopology(final AuraTopology topology) {
 
         // Deploying.
-        TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
+        TopologyBreadthFirstTraverser.traverseBackwards(topology, new IVisitor<Node>() {
 
             @Override
             public void visit(final Node element) {
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
-                    final WM2TMProtocol tmProtocol =
-                            rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, en.getNodeDescriptor().getMachineDescriptor());
+                    final IWM2TMProtocol tmProtocol =
+                            rpcManager.getRPCProtocolProxy(IWM2TMProtocol.class, en.getNodeDescriptor().getMachineDescriptor());
 
                     if(!en.logicalNode.isAlreadyDeployed) {
 
@@ -97,7 +97,7 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                 new HashMap<Descriptors.MachineDescriptor, List<DeploymentDescriptor>>();
 
         // Collect all deployment descriptors for a machine.
-        TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
+        TopologyBreadthFirstTraverser.traverseBackwards(topology, new IVisitor<Node>() {
 
             @Override
             public void visit(final Node element) {
@@ -124,7 +124,7 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
         });
 
         // Ship the deployment descriptors to the task managers.
-        TopologyBreadthFirstTraverser.traverseBackwards(topology, new Visitor<Node>() {
+        TopologyBreadthFirstTraverser.traverseBackwards(topology, new IVisitor<Node>() {
 
             @Override
             public void visit(final Node element) {
@@ -137,7 +137,7 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                     // If TDD are not yet shipped, then do it...
                     if (tddList != null) {
 
-                        final WM2TMProtocol tmProtocol = rpcManager.getRPCProtocolProxy(WM2TMProtocol.class, machineDescriptor);
+                        final IWM2TMProtocol tmProtocol = rpcManager.getRPCProtocolProxy(IWM2TMProtocol.class, machineDescriptor);
 
                         tmProtocol.installTasks(tddList);
 

@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
 
-public interface WM2TMProtocol {
+public interface IWM2TMProtocol {
 
     public abstract void installTask(final Descriptors.DeploymentDescriptor deploymentDescriptor);
 

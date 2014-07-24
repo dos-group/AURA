@@ -4,7 +4,7 @@ import java.util.UUID;
 
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 
-public interface ClientWMProtocol {
+public interface IClientWMProtocol {
 
     public abstract void openSession(final UUID sessionID);
 

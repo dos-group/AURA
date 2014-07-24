@@ -2,8 +2,8 @@ package de.tuberlin.aura.core.operators;
 
 import java.io.Serializable;
 
-import de.tuberlin.aura.core.common.utils.Visitable;
-import de.tuberlin.aura.core.common.utils.Visitor;
+import de.tuberlin.aura.core.common.utils.IVisitable;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 
 /**
  *
@@ -14,7 +14,7 @@ public class PhysicalOperators {
      *
      * @param <O>
      */
-    public static interface IPhysicalOperator<O> extends Serializable, Visitable<IPhysicalOperator> {
+    public static interface IPhysicalOperator<O> extends Serializable, IVisitable<IPhysicalOperator> {
 
         public abstract void open() throws Throwable;
 
@@ -103,13 +103,13 @@ public class PhysicalOperators {
         // Fields.
         // ---------------------------------------------------
 
-        protected final UnaryUDFFunction<I,O> udfFunction;
+        protected final IUnaryUDFFunction<I,O> udfFunction;
 
         // ---------------------------------------------------
         // Constructor.
         // ---------------------------------------------------
 
-        protected AbstractUnaryUDFPhysicalOperator(final OperatorProperties properties, final IPhysicalOperator<I> inputOp, final UnaryUDFFunction<I, O> udfFunction) {
+        protected AbstractUnaryUDFPhysicalOperator(final OperatorProperties properties, final IPhysicalOperator<I> inputOp, final IUnaryUDFFunction<I, O> udfFunction) {
             super(properties, inputOp);
 
             this.udfFunction = udfFunction;
@@ -185,7 +185,7 @@ public class PhysicalOperators {
         }
 
         @Override
-        public void accept(final Visitor<IPhysicalOperator> visitor) {
+        public void accept(final IVisitor<IPhysicalOperator> visitor) {
             visitor.visit(this);
         }
     }*/
@@ -204,7 +204,7 @@ public class PhysicalOperators {
         // Constructor.
         // ---------------------------------------------------
 
-        public UDFSource(final OperatorProperties properties, final UnaryUDFFunction<Object, O> udfFunction) {
+        public UDFSource(final OperatorProperties properties, final IUnaryUDFFunction<Object, O> udfFunction) {
             super(properties, null, udfFunction);
         }
 
@@ -226,7 +226,7 @@ public class PhysicalOperators {
         }
 
         @Override
-        public void accept(final Visitor<IPhysicalOperator> visitor) {
+        public void accept(final IVisitor<IPhysicalOperator> visitor) {
             visitor.visit(this);
         }
     }
@@ -266,7 +266,7 @@ public class PhysicalOperators {
         }
 
         @Override
-        public void accept(final Visitor<IPhysicalOperator> visitor) {
+        public void accept(final IVisitor<IPhysicalOperator> visitor) {
             visitor.visit(this);
         }
     }*/
@@ -285,7 +285,7 @@ public class PhysicalOperators {
         // Constructor.
         // ---------------------------------------------------
 
-        public UDFSink(final OperatorProperties properties, final IPhysicalOperator<I> inputOp, final UnaryUDFFunction<I,Object> udfFunction) {
+        public UDFSink(final OperatorProperties properties, final IPhysicalOperator<I> inputOp, final IUnaryUDFFunction<I,Object> udfFunction) {
             super(properties, inputOp, udfFunction);
         }
 
@@ -312,7 +312,7 @@ public class PhysicalOperators {
         }
 
         @Override
-        public void accept(final Visitor<IPhysicalOperator> visitor) {
+        public void accept(final IVisitor<IPhysicalOperator> visitor) {
             visitor.visit(this);
         }
     }
@@ -330,7 +330,7 @@ public class PhysicalOperators {
 
         public MapPhysicalOperator(final OperatorProperties properties,
                                    final IPhysicalOperator<I> inputOp,
-                                   final UnaryUDFFunction<I, O> udfFunction) {
+                                   final IUnaryUDFFunction<I, O> udfFunction) {
 
             super(properties, inputOp, udfFunction);
         }
@@ -359,7 +359,7 @@ public class PhysicalOperators {
         }
 
         @Override
-        public void accept(final Visitor<IPhysicalOperator> visitor) {
+        public void accept(final IVisitor<IPhysicalOperator> visitor) {
             visitor.visit(this);
         }
     }
@@ -429,7 +429,7 @@ public class PhysicalOperators {
         }
 
         @Override
-        public void accept(final Visitor<IPhysicalOperator> visitor) {
+        public void accept(final IVisitor<IPhysicalOperator> visitor) {
             visitor.visit(this);
         }
     }

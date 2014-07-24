@@ -96,7 +96,7 @@ public final class Partitioner {
             this.partitionFields = partitionFields;
         }
 
-        public HashPartitioner(final RowRecordModel.KeySelector keySelector) {
+        public HashPartitioner(final RowRecordModel.IKeySelector keySelector) {
             // sanity check.
             if (keySelector == null)
                 throw new IllegalArgumentException("keySelector == null");

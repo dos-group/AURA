@@ -77,7 +77,7 @@ public class RowRecordReader implements IRecordReader {
 
             final BufferStream.ContinuousByteInputStream inputStream = new BufferStream.ContinuousByteInputStream();
 
-            inputStream.setBufferInput(new BufferStream.BufferInput() {
+            inputStream.setBufferInput(new BufferStream.IBufferInput() {
 
                 private final int channelIndex = driver.getDataConsumer().getChannelIndexFromTaskID(node.taskID);
 
@@ -95,7 +95,7 @@ public class RowRecordReader implements IRecordReader {
                 }
             });
 
-            inputStream.setBufferOutput(new BufferStream.BufferOutput() {
+            inputStream.setBufferOutput(new BufferStream.IBufferOutput() {
 
                 @Override
                 public void put(final MemoryView buffer) {

@@ -187,7 +187,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                 executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + oldTaskDriver.getNodeDescriptor().name);
 
                 currentTaskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
-                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
                             public void stateAction(TaskStates.TaskState previousState,
@@ -198,7 +198,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                         });
 
                 currentTaskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
-                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
                             public void stateAction(TaskStates.TaskState previousState,
@@ -227,7 +227,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                         });
 
                 currentTaskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_CANCELED,
-                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
                             public void stateAction(TaskStates.TaskState previousState,
@@ -239,7 +239,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                         });
 
                 currentTaskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FAILURE,
-                        new StateMachine.FSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
                             public void stateAction(TaskStates.TaskState previousState,

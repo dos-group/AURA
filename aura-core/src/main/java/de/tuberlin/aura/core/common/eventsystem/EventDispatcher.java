@@ -228,7 +228,7 @@ public class EventDispatcher implements IEventDispatcher {
      * @param event The event to dispatch.
      */
     @Override
-    public void dispatchEvent(final Event event) {
+    public /*synchronized*/ void dispatchEvent(final Event event) {
         // sanity check.
         if (event == null)
             throw new IllegalArgumentException("event == null");

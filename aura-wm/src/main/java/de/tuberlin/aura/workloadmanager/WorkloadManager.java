@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.protocols.IClientWMProtocol;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -15,14 +16,13 @@ import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
-import de.tuberlin.aura.core.protocols.ClientWMProtocol;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
 
 // TODO: introduce the concept of a session, that allows to submit multiple queries...
 
-public class WorkloadManager implements ClientWMProtocol {
+public class WorkloadManager implements IClientWMProtocol {
 
     // ---------------------------------------------------
     // Fields.
@@ -80,7 +80,7 @@ public class WorkloadManager implements ClientWMProtocol {
 
         this.registeredSessions = new ConcurrentHashMap<>();
 
-        rpcManager.registerRPCProtocolImpl(this, ClientWMProtocol.class);
+        rpcManager.registerRPCProtocolImpl(this, IClientWMProtocol.class);
 
         ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
 

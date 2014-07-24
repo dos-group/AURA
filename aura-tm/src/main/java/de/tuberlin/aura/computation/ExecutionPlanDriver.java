@@ -3,10 +3,9 @@ package de.tuberlin.aura.computation;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.tuberlin.aura.core.operators.OperatorProperties;
 import org.slf4j.Logger;
 
-import de.tuberlin.aura.core.common.utils.Visitor;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.operators.PhysicalOperatorFactory;
 import de.tuberlin.aura.core.operators.PhysicalOperators;
@@ -78,7 +77,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
         }
 
         @Override
-        public void accept(Visitor<PhysicalOperators.IPhysicalOperator> visitor) {
+        public void accept(IVisitor<PhysicalOperators.IPhysicalOperator> visitor) {
             throw new UnsupportedOperationException();
         }
     }

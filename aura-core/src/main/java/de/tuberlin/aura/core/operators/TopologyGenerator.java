@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import de.tuberlin.aura.core.common.utils.Visitor;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.topology.Topology;
 
 /**
  *
  */
-public final class TopologyGenerator implements Visitor<OperatorAPI.Operator> {
+public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
 
     // ---------------------------------------------------
     // Fields.

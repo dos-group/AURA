@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.memory.spi.IBufferCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,6 @@ import com.esotericsoftware.kryo.io.UnsafeMemoryInput;
 import com.esotericsoftware.kryo.io.UnsafeMemoryOutput;
 
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
-import de.tuberlin.aura.core.memory.BufferCallback;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.task.spi.IDataConsumer;
@@ -174,7 +174,7 @@ public final class SerializationHandler {
         /**
          *
          */
-        private class Callback implements BufferCallback {
+        private class Callback implements IBufferCallback {
 
             private final ByteBuf pendingBuffer;
 
@@ -357,7 +357,7 @@ public final class SerializationHandler {
         /**
          *
          */
-        private class Callback implements BufferCallback {
+        private class Callback implements IBufferCallback {
 
             private final IOEvents.TransferBufferEvent transferBufferEvent;
 
