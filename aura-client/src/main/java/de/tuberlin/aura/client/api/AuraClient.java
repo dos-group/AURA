@@ -4,9 +4,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.CountDownLatch;
 
 import de.tuberlin.aura.core.protocols.IClientWMProtocol;
 import org.apache.zookeeper.ZooKeeper;
@@ -16,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
@@ -25,8 +24,7 @@ import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopologyBuilder;
-import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 
 public final class AuraClient {
 
@@ -57,25 +55,17 @@ public final class AuraClient {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param zkServer
-     * @param controlPort
-     * @param dataPort
-     */
-    public AuraClient(final String zkServer, int controlPort, int dataPort) {
+    public AuraClient(IConfig config) {
+        final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
+
         // sanity check.
-        if (zkServer == null)
-            throw new IllegalArgumentException("zkServer == null");
-        if (dataPort < 1024 || dataPort > 65535)
-            throw new IllegalArgumentException("dataPort invalid");
-        if (controlPort < 1024 || controlPort > 65535)
-            throw new IllegalArgumentException("controlPort invalid port number");
+        ZookeeperClient.checkConnectionString(zkServer);
 
-        final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(dataPort, controlPort);
+        final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(config.getConfig("client"));
 
-        this.ioManager = new IOManager(md, null);
+        this.ioManager = new IOManager(md, null, config.getConfig("client.io"));
 
-        this.rpcManager = new RPCManager(ioManager);
+        this.rpcManager = new RPCManager(ioManager, config.getConfig("client.io.rpc"));
 
         this.codeExtractor = new UserCodeExtractor(false);
 
@@ -84,18 +74,15 @@ public final class AuraClient {
                           .addStandardDependency("io/netty")
                           .addStandardDependency("de/tuberlin/aura/core");
 
-        final ZooKeeper zookeeper;
 
         final MachineDescriptor wmMachineDescriptor;
         try {
-            zookeeper = new ZooKeeper(zkServer, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(new IEventHandler() {
+            ZookeeperClient client = new ZookeeperClient(zkServer);
 
-                @Override
-                public void handleEvent(Event event) {}
-            }));
+            wmMachineDescriptor = (MachineDescriptor) client.read(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER);
 
-            wmMachineDescriptor = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER);
-        } catch (IOException e) {
+            client.close();
+        } catch (Exception e) {
             throw new IllegalStateException(e);
         }
 
@@ -169,18 +156,15 @@ public final class AuraClient {
     /**
      *
      */
-    public void awaitSubmissionResult() {
+    public void awaitSubmissionResult(final int numTopologies) {
 
-        final Lock threadLock = new ReentrantLock();
-        final Condition condition = threadLock.newCondition();
+        final CountDownLatch awaitExecution = new CountDownLatch(numTopologies);
 
         ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, new IEventHandler() {
 
             @Override
             public void handleEvent(Event event) {
-                threadLock.lock();
-                condition.signal();
-                threadLock.unlock();
+                awaitExecution.countDown();
             }
         });
 
@@ -188,20 +172,14 @@ public final class AuraClient {
 
             @Override
             public void handleEvent(Event event) {
-                threadLock.lock();
-                condition.signal();
-                threadLock.unlock();
+                awaitExecution.countDown();
             }
         });
 
-        threadLock.lock();
-
         try {
-            condition.await();
+            awaitExecution.await();
         } catch (InterruptedException e) {
-            // do nothing...
-        } finally {
-            threadLock.unlock();
+            LOG.error("latch was interrupted", e);
         }
     }
 

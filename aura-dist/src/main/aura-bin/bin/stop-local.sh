@@ -17,7 +17,7 @@
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/config.sh
+. "$bin"/env.sh
 
-# stop local job manager (has an internal task manager)
-$AURA_BIN_DIR/workmanager.sh stop
+# stop local workload manager (has an internal task manager)
+$AURA_BIN_DIR/wm.sh stop

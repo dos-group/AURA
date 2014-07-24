@@ -1,26 +1,22 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.io.IOException;
+import java.util.*;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import net.jcip.annotations.NotThreadSafe;
 
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperConnectionWatcher;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 
 /**
@@ -46,16 +42,18 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     /**
      * The connection to the ZooKeeper-cluster.
      */
-    private ZooKeeper zookeeper;
+    private ZookeeperClient zookeeperClient;
 
     /**
      * Stores all task manager nodes.
      */
-    private final HashMap<UUID, MachineDescriptor> nodeMap;
+    private final Map<UUID, MachineDescriptor> nodeMap;
 
     private final MachineDescriptor wmMachine;
 
     private int machineIdx;
+
+    private final Object taskManagerMonitor = new Object();
 
     // ---------------------------------------------------
     // Constructors.
@@ -64,12 +62,12 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     /**
      * Constructor.
      * 
-     * @param zkServers This string must contain the connection to the ZooKeeper-cluster.
+     * @param zkServer This string must contain the connection to the ZooKeeper-cluster.
      */
-    private InfrastructureManager(final String zkServers, final MachineDescriptor wmMachine) {
+    private InfrastructureManager(final String zkServer, final MachineDescriptor wmMachine) {
         super();
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zkServers);
+        ZookeeperClient.checkConnectionString(zkServer);
         if (wmMachine == null)
             throw new IllegalArgumentException("wmMachine == null");
 
@@ -78,44 +76,29 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
         this.nodeMap = new HashMap<>();
 
         try {
+            zookeeperClient = new ZookeeperClient(zkServer);
+            zookeeperClient.initDirectories();
 
-            final IEventHandler eh = new IEventHandler() {
-
-                @Override
-                public synchronized void handleEvent(Event event) {
-                    switch (event.type) {
-                        case ZookeeperHelper.EVENT_TYPE_CONNECTION_EXPIRED:
-                            try {
-                                zookeeper.close();
-                            } catch (InterruptedException e) {
-                                LOG.error("ZooKeeper operation was interrupted", e);
-                            }
-                    }
-                }
-            };
-
-            // Get a connection to ZooKeeper and initialize
-            // the directories in ZooKeeper.
-            this.zookeeper = new ZooKeeper(zkServers, ZookeeperHelper.ZOOKEEPER_TIMEOUT, new ZookeeperConnectionWatcher(eh));
-            ZookeeperHelper.initDirectories(this.zookeeper);
-
-            // Store the workload manager machine descriptor.
-            ZookeeperHelper.storeInZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
+            zookeeperClient.store(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
 
             // Get all available nodes.
             final ZkTaskManagerWatcher watcher = new ZkTaskManagerWatcher();
-            synchronized (watcher) { // TODO: Synchronization on local variable 'watcher'
-                final List<String> nodes = this.zookeeper.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, watcher);
+
+            synchronized (taskManagerMonitor) {
+                final List<String> nodes = zookeeperClient.getChildrenForPathAndWatch(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, watcher);
+
                 for (final String node : nodes) {
-                    final MachineDescriptor descriptor =
-                            (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, ZookeeperHelper.ZOOKEEPER_TASKMANAGERS + "/" + node);
+                    final MachineDescriptor descriptor;
+                    try {
+                        descriptor = (MachineDescriptor) zookeeperClient.read(ZookeeperClient.ZOOKEEPER_TASKMANAGERS + "/" + node);
+                    } catch (Exception e) {
+                        throw new IllegalStateException(e);
+                    }
                     this.nodeMap.put(descriptor.uid, descriptor);
                 }
             }
-        } catch (IOException | KeeperException e) {
+        } catch (Exception e) {
             throw new IllegalStateException(e);
-        } catch (InterruptedException e) {
-            LOG.error("The connection to ZooKeeper was interrupted.", e);
         }
     }
 
@@ -160,45 +143,53 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
             LOG.debug("Received event - state: {} - type: {}", event.getState().toString(), event.getType().toString());
 
             try {
-                // Find out whether a node was created or deleted.
-                final List<String> nodeList = zookeeper.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, this);
+                synchronized (taskManagerMonitor) {
+                    final List<String> nodeList = zookeeperClient.getChildrenForPath(ZookeeperClient.ZOOKEEPER_TASKMANAGERS);
 
-                if (nodeMap.values().size() < nodeList.size()) {
-                    // A node has been added.
-                    MachineDescriptor newMachine = null;
-                    for (final String node : nodeList) {
-                        final UUID machineID = UUID.fromString(node);
-                        if (!nodeMap.containsKey(machineID)) {
-                            newMachine = (MachineDescriptor) ZookeeperHelper.readFromZookeeper(zookeeper, event.getPath() + "/" + node);
-                            nodeMap.put(machineID, newMachine);
+                    // Find out whether a node was created or deleted.
+                    if (nodeMap.values().size() < nodeList.size()) {
+                        // A node has been added.
+                        MachineDescriptor newMachine = null;
+                        for (final String node : nodeList) {
+                            final UUID machineID = UUID.fromString(node);
+                            if (!nodeMap.containsKey(machineID)) {
+                                newMachine = (MachineDescriptor) zookeeperClient.read(event.getPath() + "/" + node);
+                                nodeMap.put(machineID, newMachine);
+                            }
+
                         }
+
+                        dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_ADDED, newMachine));
+
+                    } else {
+                        // A node has been removed.
+                        UUID machineID = null;
+                        for (final UUID uid : nodeMap.keySet()) {
+                            if (!nodeList.contains(uid.toString())) {
+                                machineID = uid;
+                                break;
+                            }
+                        }
+
+                        final MachineDescriptor removedMachine = nodeMap.remove(machineID);
+
+                        if (removedMachine == null)
+                            LOG.error("machine with uid = " + machineID + " can not be removed");
+                        else
+                            LOG.info("REMOVED MACHINE uid = " + machineID);
+
+                        dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_REMOVED, removedMachine));
                     }
 
-                    dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_ADDED, newMachine));
-
-                } else {
-                    // A node has been removed.
-                    UUID machineID = null;
-                    for (final UUID uid : nodeMap.keySet()) {
-                        if (!nodeList.contains(uid.toString())) {
-                            machineID = uid;
-                            break;
-                        }
-                    }
-
-                    final MachineDescriptor removedMachine = nodeMap.remove(machineID);
-
-                    if (removedMachine == null)
-                        LOG.error("machine with uid = " + machineID + " can not be removed");
-                    else
-                        LOG.info("REMOVED MACHINE uid = " + machineID);
-
-                    dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_REMOVED, removedMachine));
                 }
-            } catch (KeeperException e) {
-                LOG.error("ZooKeeper operation failed", e);
+
+                // keep watching
+                zookeeperClient.getChildrenForPathAndWatch(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, this);
+
             } catch (InterruptedException e) {
                 LOG.error("Interaction with ZooKeeper was interrupted", e);
+            } catch (Exception e) {
+                LOG.error("ZooKeeper operation failed", e);
             }
         }
     }

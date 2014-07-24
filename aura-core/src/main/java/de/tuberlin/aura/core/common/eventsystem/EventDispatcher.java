@@ -170,7 +170,7 @@ public class EventDispatcher implements IEventDispatcher {
             Event event = it.next();
 
             if (event.type.equals(type)) {
-                LOG.info("Process sticky event {}", event);
+                LOG.debug("Process sticky event {}", event);
 
                 if (useDispatchThread) {
                     eventQueue.add(event);
@@ -300,7 +300,7 @@ public class EventDispatcher implements IEventDispatcher {
      */
     @Override
     public void joinDispatcherThread() {
-        if(useDispatchThread) {
+        if (useDispatchThread) {
             try {
                 dispatcherThread.join();
             } catch (InterruptedException e) {
@@ -328,11 +328,11 @@ public class EventDispatcher implements IEventDispatcher {
                 }
             }
         } else { // listeners == null
-            LOG.info("no listener registered for event " + event.type);
+            LOG.debug("no listener registered for event " + event.type);
 
             if (event instanceof IOEvents.DataIOEvent) {
                 IOEvents.DataIOEvent e2 = (IOEvents.DataIOEvent) event;
-                LOG.info("type {} from {} to {}", e2.type, e2.srcTaskID, e2.dstTaskID);
+                LOG.debug("type {} from {} to {}", e2.type, e2.srcTaskID, e2.dstTaskID);
             }
 
             // Event wasn't processed by any event handler.

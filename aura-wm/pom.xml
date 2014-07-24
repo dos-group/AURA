@@ -27,6 +27,10 @@
             <groupId>de.tuberlin.aura</groupId>
             <artifactId>aura-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>de.tuberlin.aura</groupId>
+            <artifactId>aura-tm</artifactId>
+        </dependency>
     </dependencies>
 
     <!-- ================================= -->

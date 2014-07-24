@@ -41,6 +41,8 @@ public final class TaskDataProducer implements IDataProducer {
 
     private final Map<UUID, Integer> taskIDToGateIndex;
 
+    private final Map<UUID, Integer> taskIDToChannelIndex;
+
     private final Map<Integer, UUID> channelIndexToTaskID;
 
     private final IEventHandler producerEventHandler;
@@ -76,6 +78,8 @@ public final class TaskDataProducer implements IDataProducer {
 
         this.taskIDToGateIndex = new HashMap<>();
 
+        this.taskIDToChannelIndex = new HashMap<>();
+
         this.channelIndexToTaskID = new HashMap<>();
     }
 
@@ -101,6 +105,8 @@ public final class TaskDataProducer implements IDataProducer {
         this.allocator = allocator;
 
         this.taskIDToGateIndex.clear();
+
+        this.taskIDToChannelIndex.clear();
 
         this.channelIndexToTaskID.clear();
 
@@ -352,13 +358,20 @@ public final class TaskDataProducer implements IDataProducer {
      * and the corresponding task ID.
      */
     private void createOutputMappings(final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding) {
-        int channelIndex = 0;
+
+        remainingChannelsToConnect = new int[outputBinding.size()];
+
+        int gateIndex = 0;
         for (final List<Descriptors.AbstractNodeDescriptor> outputGate : outputBinding) {
+            int channelIndex = 0;
             for (final Descriptors.AbstractNodeDescriptor outputTask : outputGate) {
-                taskIDToGateIndex.put(outputTask.taskID, channelIndex);
-                channelIndexToTaskID.put(channelIndex, outputTask.taskID);
+                taskIDToGateIndex.put(outputTask.taskID, gateIndex);
+                channelIndexToTaskID.put(gateIndex, outputTask.taskID);
+                taskIDToChannelIndex.put(outputTask.taskID, channelIndex);
+                channelIndex++;
             }
-            ++channelIndex;
+            remainingChannelsToConnect[gateIndex] = outputGate.size();
+            ++gateIndex;
         }
     }
 
@@ -366,47 +379,54 @@ public final class TaskDataProducer implements IDataProducer {
     // Inner Classes.
     // ---------------------------------------------------
 
+    private int[] remainingChannelsToConnect;
+
     private final class ProducerEventHandler extends EventHandler {
 
         @Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
         private void handleTaskOutputDataChannelConnect(final IOEvents.DataIOEvent event) {
-            int gateIndex = 0;
-            boolean allOutputGatesConnected = true;
-            for (final List<Descriptors.AbstractNodeDescriptor> outputGate : driver.getBindingDescriptor().outputGateBindings) {
+            try {
+                int gateIndex = taskIDToGateIndex.get(event.dstTaskID);
+                int channelIndex = taskIDToChannelIndex.get(event.dstTaskID);
 
-                int channelIndex = 0;
-                boolean allOutputChannelsPerGateConnected = true;
+                // get the right queue manager for task context
+                final BufferQueue<IOEvents.DataIOEvent> queue = driver.getQueueManager().getOutboundQueue(gateIndex, channelIndex);
 
-                for (final Descriptors.AbstractNodeDescriptor outputTask : outputGate) {
+                final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.getPayload();
+                channelWriter.setOutboundQueue(queue);
 
-                    // Set the channel on right position.
-                    if (outputTask.taskID.equals(event.dstTaskID)) {
-                        // get the right queue manager for task context
-                        final BufferQueue<IOEvents.DataIOEvent> queue = driver.getQueueManager().getOutboundQueue(gateIndex, channelIndex);
+                final OutputGate og = outputGates.get(gateIndex);
+                og.setChannelWriter(channelIndex, channelWriter);
 
-                        final DataWriter.ChannelWriter channelWriter = (DataWriter.ChannelWriter) event.getPayload();
-                        channelWriter.setOutboundQueue(queue);
+                Descriptors.AbstractNodeDescriptor dst = driver.getBindingDescriptor().outputGateBindings.get(gateIndex).get(channelIndex);
 
-                        final OutputGate og = outputGates.get(gateIndex);
-                        og.setChannelWriter(channelIndex, channelWriter);
+                LOG.debug("OUTPUT CONNECTION FROM " + driver.getNodeDescriptor().name + " [" + driver.getNodeDescriptor().taskID
+                        + "] TO TASK " + dst.name + " [" + dst.taskID + "] IS ESTABLISHED");
 
-                        LOG.info("OUTPUT CONNECTION FROM " + driver.getNodeDescriptor().name + " [" + driver.getNodeDescriptor().taskID
-                                + "] TO TASK " + outputTask.name + " [" + outputTask.taskID + "] IS ESTABLISHED");
-                    }
 
-                    // all data outputs are connected...
-                    allOutputChannelsPerGateConnected &= (outputGates.get(gateIndex).getChannelWriter(channelIndex++) != null);
+                remainingChannelsToConnect[gateIndex]--;
+
+                if (remainingChannelsToConnect[gateIndex] < 0) {
+                    throw new IllegalStateException("unexpected channel connected to gate: " + gateIndex);
                 }
 
-                allOutputGatesConnected &= allOutputChannelsPerGateConnected;
-                ++gateIndex;
-            }
+                // if all channels for gate are connected
+                if (remainingChannelsToConnect[gateIndex] == 0) {
 
-            if (allOutputGatesConnected) {
-                LOG.debug("All output gates connected");
-                driver.getTaskStateMachine().dispatchEvent(
-                        new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED)
-                );
+                    // if all gates are fully connected
+                    boolean fullyConnected = true;
+                    for (int remaining: remainingChannelsToConnect) {
+                        fullyConnected &= remaining == 0;
+                    }
+                    if (fullyConnected) {
+                        LOG.debug("All output gates connected");
+                        driver.getTaskStateMachine().dispatchEvent(
+                                new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_OUTPUTS_CONNECTED)
+                        );
+                    }
+                }
+            } catch (Exception ex) {
+                throw new IllegalStateException("unexpected channel tried to connect");
             }
         }
     }

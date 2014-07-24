@@ -22,13 +22,24 @@ public final class BufferAllocator implements IAllocator {
 
     private final static Logger LOG = LoggerFactory.getLogger(BufferAllocator.class);
 
-    public static final int _8K = 1024 * 8;
+    enum BufferSize {
+        _8K(1024 * 8),
+        _16K(1024 * 16),
+        _32K(1024 * 32),
+        _64K(1024 * 64);
 
-    public static final int _16K = 1024 * 16;
+        BufferSize(final int bytes) { this.bytes = bytes; }
 
-    public static final int _32K = 1024 * 32;
+        public final int bytes;
+    }
 
-    public static final int _64K = 1024 * 64;
+//    public static final int _8K = 1024 * 8;
+//
+//    public static final int _16K = 1024 * 16;
+//
+//    public static final int _32K = 1024 * 32;
+//
+//    public static final int _64K = 1024 * 64;
 
     // ---------------------------------------------------
     // Fields.
@@ -53,11 +64,11 @@ public final class BufferAllocator implements IAllocator {
     public BufferAllocator(final int bufferSize, final int bufferCount) {
 
         // sanity check.
-        if ((bufferSize & (bufferSize - 1)) != 0 && bufferSize < _8K && bufferSize > _64K)
+        if ((bufferSize & (bufferSize - 1)) != 0 && bufferSize < BufferSize._8K.bytes && bufferSize > BufferSize._64K.bytes)
             throw new IllegalArgumentException("illegal buffer size");
         if (bufferCount <= 0)
             throw new IllegalArgumentException("bufferCount <= 0");
-        if ((bufferCount * bufferSize) % _64K != 0)
+        if ((bufferCount * bufferSize) % BufferSize._64K.bytes != 0)
             throw new IllegalArgumentException("allocated memory must be a multiple of 64K");
 
         this.bufferSize = bufferSize;

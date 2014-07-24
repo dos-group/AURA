@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -16,7 +17,6 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
 
 /**
  * TODO: Put all watchers in one class like the descriptors?
@@ -72,7 +72,7 @@ public class ZooKeeperTaskManagerWatcher implements Watcher {
             switch (event.getType()) {
                 case NodeChildrenChanged:
                     // Find out whether a node was created or deleted.
-                    List<String> nodeList = this.zk.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, false);
+                    List<String> nodeList = this.zk.getChildren(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, false);
 
                     de.tuberlin.aura.core.common.eventsystem.Event zkEvent;
                     if (this.nodes.size() < nodeList.size()) {
@@ -90,7 +90,7 @@ public class ZooKeeperTaskManagerWatcher implements Watcher {
                             }
                         }
 
-                        zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_ADDED, newNode);
+                        zkEvent = new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_ADDED, newNode);
                     } else {
                         // A node has been removed.
                         String nodeName = null;
@@ -102,7 +102,7 @@ public class ZooKeeperTaskManagerWatcher implements Watcher {
                         }
 
                         zkEvent =
-                                new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperHelper.EVENT_TYPE_NODE_REMOVED, UUID.fromString(nodeName));
+                                new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_REMOVED, UUID.fromString(nodeName));
                     }
 
                     // Forward the event.
@@ -113,7 +113,7 @@ public class ZooKeeperTaskManagerWatcher implements Watcher {
             }
 
             // Stay interested in changes within the worker folder.
-            this.zk.getChildren(ZookeeperHelper.ZOOKEEPER_TASKMANAGERS, this);
+            this.zk.getChildren(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, this);
         } catch (IOException e) {
             LOG.error("Read from ZooKeeper failed", e);
         } catch (ClassNotFoundException e) {

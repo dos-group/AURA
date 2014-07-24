@@ -6,7 +6,18 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.protocols.IClientWMProtocol;
+
+import de.tuberlin.aura.taskmanager.TaskManager;
+import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.impl.type.FileArgumentType;
+import net.sourceforge.argparse4j.inf.ArgumentParser;
+import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.inf.Namespace;
+import net.sourceforge.argparse4j.internal.HelpScreenException;
+
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -17,12 +28,32 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
-import de.tuberlin.aura.core.zookeeper.ZookeeperHelper;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 
 
 // TODO: introduce the concept of a session, that allows to submit multiple queries...
 
 public class WorkloadManager implements IClientWMProtocol {
+
+    // ---------------------------------------------------
+    // Execution Modes.
+    // ---------------------------------------------------
+
+    public static enum ExecutionMode {
+        local("local"),
+        distributed("distributed");
+
+        final String name;
+
+        private ExecutionMode(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
 
     // ---------------------------------------------------
     // Fields.
@@ -48,31 +79,17 @@ public class WorkloadManager implements IClientWMProtocol {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param zkServer
-     * @param dataPort
-     * @param controlPort
-     */
-    public WorkloadManager(final String zkServer, int dataPort, int controlPort) {
-        this(zkServer, DescriptorFactory.createMachineDescriptor(dataPort, controlPort));
-    }
+    public WorkloadManager(IConfig config) {
+        final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
 
-    /**
-     * 
-     * @param zkServer
-     * @param machineDescriptor
-     */
-    public WorkloadManager(final String zkServer, final MachineDescriptor machineDescriptor) {
         // sanity check.
-        ZookeeperHelper.checkConnectionString(zkServer);
-        if (machineDescriptor == null)
-            throw new IllegalArgumentException("machineDescriptor == null");
+        ZookeeperClient.checkConnectionString(zkServer);
 
-        this.machineDescriptor = machineDescriptor;
+        this.machineDescriptor = DescriptorFactory.createMachineDescriptor(config.getConfig("wm"));
 
-        this.ioManager = new IOManager(this.machineDescriptor, null);
+        this.ioManager = new IOManager(this.machineDescriptor, null, config.getConfig("wm.io"));
 
-        this.rpcManager = new RPCManager(ioManager);
+        this.rpcManager = new RPCManager(ioManager, config.getConfig("wm.io.rpc"));
 
         this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machineDescriptor);
 
@@ -176,16 +193,16 @@ public class WorkloadManager implements IClientWMProtocol {
     @Override
     public void submitToTopology(UUID sessionID, UUID topologyID, AuraTopology topology) {
         // sanity check.
-        if(sessionID == null)
+        if (sessionID == null)
             throw new IllegalArgumentException("sessionID == null");
-        if(topologyID == null)
+        if (topologyID == null)
             throw new IllegalArgumentException("topologyID == null");
-        if(topology == null)
+        if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
         final TopologyController topologyController = this.registeredTopologies.get(topologyID);
 
-        if(topologyController == null)
+        if (topologyController == null)
             throw new IllegalStateException("topologyController == null");
 
         topologyController.assembleTopology(topology);
@@ -199,26 +216,21 @@ public class WorkloadManager implements IClientWMProtocol {
      * @param topologyID2
      * @param taskNodeID2
      */
-    /*@Override
-    public void connectTopologies(final UUID sessionID, final UUID topologyID1, final UUID taskNodeID1, final UUID topologyID2, final UUID taskNodeID2) {
-        // sanity check.
-        if(topologyID1 == null)
-            throw new IllegalArgumentException("topologyID1 == null");
-        if(taskNodeID1 == null)
-            throw new IllegalArgumentException("taskNodeID1 == null");
-        if(topologyID2 == null)
-            throw new IllegalArgumentException("topologyID2 == null");
-        if(taskNodeID2 == null)
-            throw new IllegalArgumentException("taskNodeID2 == null");
-
-
-        final TopologyController topologyControllerSrc = this.registeredTopologies.get(topologyID1);
-
-        if(topologyController == null)
-            throw new IllegalStateException("topologyController == null");
-
-        topologyController.createOutputGateAndConnect(taskNodeID1);
-    }*/
+    /*
+     * @Override public void connectTopologies(final UUID sessionID, final UUID topologyID1, final
+     * UUID taskNodeID1, final UUID topologyID2, final UUID taskNodeID2) { // sanity check.
+     * if(topologyID1 == null) throw new IllegalArgumentException("topologyID1 == null");
+     * if(taskNodeID1 == null) throw new IllegalArgumentException("taskNodeID1 == null");
+     * if(topologyID2 == null) throw new IllegalArgumentException("topologyID2 == null");
+     * if(taskNodeID2 == null) throw new IllegalArgumentException("taskNodeID2 == null");
+     * 
+     * 
+     * final TopologyController topologyControllerSrc = this.registeredTopologies.get(topologyID1);
+     * 
+     * if(topologyController == null) throw new IllegalStateException("topologyController == null");
+     * 
+     * topologyController.createOutputGateAndConnect(taskNodeID1); }
+     */
 
     /**
      * @param sessionID
@@ -258,46 +270,68 @@ public class WorkloadManager implements IClientWMProtocol {
     // ---------------------------------------------------
 
     /**
-     * 
+     * TaskManager entry point.
+     *
      * @param args
      */
     public static void main(final String[] args) {
+        // construct base argument parser
+        ArgumentParser parser = getArgumentParser();
 
-        // final Logger rootLOG = Logger.getRootLogger();
-        //
-        // final PatternLayout layout = new PatternLayout("%d %p - %m%n");
-        // final ConsoleAppender consoleAppender = new ConsoleAppender(layout);
-        // rootLOG.addAppender(consoleAppender);
-        // rootLOG.setLevel(Level.INFO);
-
-        int dataPort = -1;
-        int controlPort = -1;
-        String zkServer = null;
-        String measurementPath = null;
-        if (args.length == 4) {
-            try {
-                zkServer = args[0];
-                dataPort = Integer.parseInt(args[1]);
-                controlPort = Integer.parseInt(args[2]);
-                measurementPath = args[3];
-            } catch (NumberFormatException e) {
-                LOG.error("Argument" + " must be an integer", e);
-                System.exit(1);
-            }
-        } else {
-            StringBuilder builder = new StringBuilder();
-            builder.append("Args: ");
-            for (int i = 0; i < args.length; i++) {
-                builder.append(args[i]);
-                builder.append("|");
+        try {
+            // parse the arguments and store them as system properties
+            Namespace ns = parser.parseArgs(args);
+            for (Map.Entry<String, Object> e : ns.getAttrs().entrySet()) {
+                if (e.getValue() != null)
+                    System.setProperty(e.getKey(), e.getValue().toString());
             }
 
-            LOG.error(builder.toString());
+            // start the workload manager
+            long start = System.nanoTime();
+            ExecutionMode mode = ns.get("aura.execution.mode");
+            switch (mode) {
+                case distributed:
+                    new WorkloadManager(IConfigFactory.load(IConfig.Type.WM));
+                    break;
+                case local:
+                    new WorkloadManager(IConfigFactory.load(IConfig.Type.WM));
+                    new TaskManager(IConfigFactory.load(IConfig.Type.TM));
+                    break;
+            }
+            LOG.info(String.format("WM startup in %s mode in %s ms", mode, Long.toString(Math.abs(System.nanoTime() - start) / 1000000)));
+        } catch (HelpScreenException e) {
+            parser.handleError(e);
+        } catch (ArgumentParserException e) {
+            parser.handleError(e);
+            System.exit(1);
+        } catch (Throwable e) {
+            System.err.println(String.format("Unexpected error: %s", e));
+            e.printStackTrace();
             System.exit(1);
         }
+    }
 
-        long start = System.nanoTime();
-        new WorkloadManager(zkServer, dataPort, controlPort);
-        LOG.info("WM startup: " + Long.toString(Math.abs(System.nanoTime() - start) / 1000000) + " ms");
+    private static ArgumentParser getArgumentParser() {
+        //@formatter:off
+        ArgumentParser parser = ArgumentParsers.newArgumentParser("aura-wm")
+                .defaultHelp(true)
+                .description("AURA WorkloadManager.");
+
+        parser.addArgument("--config-dir")
+                .type(new FileArgumentType().verifyIsDirectory().verifyCanRead())
+                .dest("aura.path.config")
+                .setDefault("config")
+                .metavar("PATH")
+                .help("config folder");
+
+        parser.addArgument("--mode")
+                .type(ExecutionMode.class)
+                .dest("aura.execution.mode")
+                .setDefault(ExecutionMode.distributed)
+                .metavar("MODE")
+                .help("execution mode ('distributed' or 'local')");
+        //@formatter:on
+
+        return parser;
     }
 }
