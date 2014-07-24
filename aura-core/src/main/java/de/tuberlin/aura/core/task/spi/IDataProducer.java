@@ -17,7 +17,7 @@ public interface IDataProducer {
 
     public abstract void broadcast(final int gateIndex, final MemoryView buffer);
 
-    public abstract void done();
+    public abstract void done(final int outputGateIndex);
 
     public abstract void shutdownProducer(boolean awaitExhaustion);
 

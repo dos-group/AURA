@@ -36,7 +36,7 @@ public class MultiOutputGateTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done();
+            producer.done(0);
         }
     }
 
@@ -65,7 +65,7 @@ public class MultiOutputGateTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done();
+            producer.done(0);
         }
     }
 
@@ -95,7 +95,7 @@ public class MultiOutputGateTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done();
+            producer.done(0);
         }
     }
 

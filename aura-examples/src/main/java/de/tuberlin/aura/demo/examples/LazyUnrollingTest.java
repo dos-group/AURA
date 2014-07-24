@@ -78,7 +78,7 @@ public final class LazyUnrollingTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done();
+            producer.done(0);
         }
     }
 
@@ -153,7 +153,7 @@ public final class LazyUnrollingTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done();
+            producer.done(0);
         }
     }
 
@@ -221,7 +221,7 @@ public final class LazyUnrollingTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done();
+            producer.done(0);
         }
     }
 

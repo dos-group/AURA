@@ -182,7 +182,7 @@ public class ExampleTopologies {
         @Override
         public void close() throws Throwable {
             LOG.debug("{} {} done", driver.getNodeDescriptor().name, driver.getNodeDescriptor().taskIndex);
-            producer.done();
+            producer.done(0);
         }
     }
 
@@ -212,7 +212,7 @@ public class ExampleTopologies {
         @Override
         public void close() throws Throwable {
             LOG.debug("{} {} done", driver.getNodeDescriptor().name, driver.getNodeDescriptor().taskIndex);
-            producer.done();
+            producer.done(0);
         }
     }
 
@@ -248,7 +248,7 @@ public class ExampleTopologies {
         @Override
         public void close() throws Throwable {
             LOG.debug("{} {} done", driver.getNodeDescriptor().name, driver.getNodeDescriptor().taskIndex);
-            producer.done();
+            producer.done(0);
         }
     }
 
@@ -298,7 +298,7 @@ public class ExampleTopologies {
         @Override
         public void close() throws Throwable {
             LOG.debug("{} {} done", driver.getNodeDescriptor().name, driver.getNodeDescriptor().taskIndex);
-            producer.done();
+            producer.done(0);
         }
     }
 

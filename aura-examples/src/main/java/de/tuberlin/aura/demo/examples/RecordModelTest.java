@@ -68,7 +68,7 @@ public final class RecordModelTest {
         @Override
         public void close() throws Throwable {
             recordWriter.end();
-            producer.done();
+            producer.done(0);
         }
     }
 

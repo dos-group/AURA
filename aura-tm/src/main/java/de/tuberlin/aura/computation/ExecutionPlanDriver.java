@@ -251,7 +251,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
         }
 
         if (driver.getBindingDescriptor().outputGateBindings.size() > 0)
-            producer.done();
+            producer.done(0);
     }
 
     @Override

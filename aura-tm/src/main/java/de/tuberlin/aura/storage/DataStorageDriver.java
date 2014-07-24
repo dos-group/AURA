@@ -160,7 +160,7 @@ public class DataStorageDriver extends AbstractInvokeable {
             }
         }
 
-        producer.done();
+        producer.done(0);
 
         driver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
     }

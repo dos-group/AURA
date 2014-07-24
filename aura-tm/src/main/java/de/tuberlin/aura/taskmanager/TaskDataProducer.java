@@ -219,16 +219,16 @@ public final class TaskDataProducer implements IDataProducer {
     /**
      *
      */
-    public void done() {
-        final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(0);
+    public void done(final int outputGateIndex) {
+        final List<Descriptors.AbstractNodeDescriptor> outputs = driver.getBindingDescriptor().outputGateBindings.get(outputGateIndex);
 
         for (int index = 0; index < outputs.size(); ++index) {
-            final UUID outputTaskID = driver.getBindingDescriptor().outputGateBindings.get(0).get(index).taskID;
+            final UUID outputTaskID = driver.getBindingDescriptor().outputGateBindings.get(outputGateIndex).get(index).taskID;
 
             final IOEvents.DataIOEvent exhaustedEvent =
                     new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_SOURCE_EXHAUSTED, driver.getNodeDescriptor().taskID, outputTaskID);
 
-            emit(0, index, exhaustedEvent);
+            emit(outputGateIndex, index, exhaustedEvent);
         }
     }
 
