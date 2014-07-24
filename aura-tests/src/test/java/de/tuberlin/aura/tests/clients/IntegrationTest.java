@@ -70,10 +70,11 @@ public class IntegrationTest {
     }
 
     @Test
-    public void testMultiTenancy() {
+    public void testMultiQuery() {
         List<Topology.AuraTopology> topologies = new ArrayList<>();
-        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
-        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 3));
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 3));
+        topologies.add(ExampleTopologies.three_layer_point2point(auraClient, executionUnits / 3));
         runTopologiesConcurrently(topologies);
     }
 
@@ -148,7 +149,6 @@ public class IntegrationTest {
 
         for (int i = 0; i < topologies.size(); i++) {
             final int jobIndex = i;
-            LOG.info("Submit: {}", topologies.get(i).name);
 
             new Thread() {
 
