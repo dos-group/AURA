@@ -5,11 +5,11 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import de.tuberlin.aura.core.memory.spi.IBufferCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
+import de.tuberlin.aura.core.memory.spi.IBufferCallback;
 
 /**
  *

@@ -13,11 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.utils.ProcessExecutor;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.taskmanager.TaskManager;
 import de.tuberlin.aura.workloadmanager.WorkloadManager;
-import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.config.IConfig;
-import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 
 public final class LocalClusterSimulator {
 

@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.config.IConfig;
-import de.tuberlin.aura.core.config.IConfigFactory;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
@@ -14,6 +12,8 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;

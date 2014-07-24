@@ -5,10 +5,10 @@ package de.tuberlin.aura.core.operators;
  */
 public final class PhysicalOperatorFactory {
 
-    public static PhysicalOperators.AbstractPhysicalOperator<Object> createPhysicalOperator(
+    public static AbstractPhysicalOperator<Object> createPhysicalOperator(
             final OperatorProperties properties,
-            final PhysicalOperators.AbstractPhysicalOperator<Object> inputOp1,
-            final PhysicalOperators.AbstractPhysicalOperator<Object> inputOp2) {
+            final AbstractPhysicalOperator<Object> inputOp1,
+            final AbstractPhysicalOperator<Object> inputOp2) {
 
         // sanity check.
         if (properties == null)
@@ -16,7 +16,7 @@ public final class PhysicalOperatorFactory {
 
         switch(properties.operatorType) {
             case MAP_TUPLE_OPERATOR:
-                return new PhysicalOperators.MapPhysicalOperator<>(properties, inputOp1, createUDF(properties.udfFunction));
+                return new MapPhysicalOperator<>(properties, inputOp1, createUDF(properties.udfFunction));
             case MAP_GROUP_OPERATOR:
                 break;
             case FLAT_MAP_TUPLE_OPERATOR:
@@ -26,7 +26,7 @@ public final class PhysicalOperatorFactory {
             case FILTER_OPERATOR:
                 break;
             case UNION_OPERATOR:
-                return new PhysicalOperators.UnionPhysicalOperator<>(properties, inputOp1, inputOp2);
+                return new UnionPhysicalOperator<>(properties, inputOp1, inputOp2);
             case DIFFERENCE_OPERATOR:
                 break;
             case HASH_JOIN_OPERATOR:
@@ -40,13 +40,13 @@ public final class PhysicalOperatorFactory {
             case REDUCE_OPERATOR:
                 break;
             case UDF_SOURCE:
-                return new PhysicalOperators.UDFSource<>(properties, createUDF(properties.udfFunction));
+                return new UDFSource<>(properties, createUDF(properties.udfFunction));
             case FILE_SOURCE:
                 break;
             case STREAM_SOURCE:
                 break;
             case UDF_SINK:
-                return new PhysicalOperators.UDFSink<>(properties, inputOp1, createUDF(properties.udfFunction));
+                return new UDFSink<>(properties, inputOp1, createUDF(properties.udfFunction));
             case FILE_SINK:
                 break;
             case STREAM_SINK:
@@ -56,14 +56,14 @@ public final class PhysicalOperatorFactory {
         throw new IllegalStateException("'" + properties.operatorType + "' is not defined.");
     }
 
-    public static PhysicalOperators.AbstractPhysicalOperator<Object> createPhysicalOperator(
+    public static AbstractPhysicalOperator<Object> createPhysicalOperator(
             final OperatorProperties properties,
-            final PhysicalOperators.AbstractPhysicalOperator<Object> inputOp1) {
+            final AbstractPhysicalOperator<Object> inputOp1) {
 
         return createPhysicalOperator(properties, inputOp1, null);
     }
 
-    public static PhysicalOperators.AbstractPhysicalOperator<Object> createPhysicalOperator(
+    public static AbstractPhysicalOperator<Object> createPhysicalOperator(
             final OperatorProperties properties) {
 
         return createPhysicalOperator(properties, null, null);

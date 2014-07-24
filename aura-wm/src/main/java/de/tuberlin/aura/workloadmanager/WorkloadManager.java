@@ -6,11 +6,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import de.tuberlin.aura.core.config.IConfig;
-import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.protocols.IClientWMProtocol;
-
-import de.tuberlin.aura.taskmanager.TaskManager;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -22,13 +17,17 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.descriptors.DescriptorFactory;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
+import de.tuberlin.aura.core.protocols.IClientWMProtocol;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
+import de.tuberlin.aura.taskmanager.TaskManager;
 
 
 // TODO: introduce the concept of a session, that allows to submit multiple queries...
@@ -244,6 +243,7 @@ public class WorkloadManager implements IClientWMProtocol {
 
         final TopologyController topologyController = new TopologyController(managerContext, topology.topologyID);
         registeredTopologies.put(topology.topologyID, topologyController);
+
         return topologyController;
     }
 

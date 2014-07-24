@@ -2,12 +2,6 @@ package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
-
-import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import net.jcip.annotations.NotThreadSafe;
 
 import org.apache.zookeeper.WatchedEvent;
@@ -17,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 
 /**

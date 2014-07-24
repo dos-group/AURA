@@ -7,7 +7,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -17,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
+import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 
 /**
  * TODO: Put all watchers in one class like the descriptors?

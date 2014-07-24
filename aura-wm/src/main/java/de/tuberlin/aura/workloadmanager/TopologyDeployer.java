@@ -3,8 +3,8 @@ package de.tuberlin.aura.workloadmanager;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
-import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.common.utils.IVisitor;
+import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.DeploymentDescriptor;
 import de.tuberlin.aura.core.iosystem.RPCManager;

@@ -7,12 +7,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import de.tuberlin.aura.core.config.IConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.utils.ResettableCountDownLatch;
+import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.PooledByteBufAllocator;

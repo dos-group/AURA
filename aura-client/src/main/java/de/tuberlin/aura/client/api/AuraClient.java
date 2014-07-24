@@ -1,13 +1,10 @@
 package de.tuberlin.aura.client.api;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
-import de.tuberlin.aura.core.protocols.IClientWMProtocol;
-import org.apache.zookeeper.ZooKeeper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +18,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
+import de.tuberlin.aura.core.protocols.IClientWMProtocol;
 import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopologyBuilder;

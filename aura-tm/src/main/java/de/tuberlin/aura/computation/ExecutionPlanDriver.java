@@ -3,12 +3,13 @@ package de.tuberlin.aura.computation;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.tuberlin.aura.core.operators.AbstractPhysicalOperator;
+import de.tuberlin.aura.core.operators.IPhysicalOperator;
 import org.slf4j.Logger;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.operators.PhysicalOperatorFactory;
-import de.tuberlin.aura.core.operators.PhysicalOperators;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
@@ -22,7 +23,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
     /**
      *
      */
-    public static final class GateReaderOperator extends PhysicalOperators.AbstractPhysicalOperator<Object> {
+    public static final class GateReaderOperator extends AbstractPhysicalOperator<Object> {
 
         // ---------------------------------------------------
         // Fields.
@@ -77,7 +78,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
         }
 
         @Override
-        public void accept(IVisitor<PhysicalOperators.IPhysicalOperator> visitor) {
+        public void accept(IVisitor<IPhysicalOperator> visitor) {
             throw new UnsupportedOperationException();
         }
     }
@@ -88,7 +89,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
 
     private final Descriptors.OperatorNodeDescriptor operatorNodeDescriptor;
 
-    private PhysicalOperators.AbstractPhysicalOperator<Object> rootOperator;
+    private AbstractPhysicalOperator<Object> rootOperator;
 
     private final List<IRecordWriter> recordWriters;
 

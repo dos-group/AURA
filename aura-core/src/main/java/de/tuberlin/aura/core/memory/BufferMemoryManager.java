@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import de.tuberlin.aura.core.config.IConfigFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

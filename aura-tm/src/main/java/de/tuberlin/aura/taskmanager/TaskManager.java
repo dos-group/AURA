@@ -2,12 +2,12 @@ package de.tuberlin.aura.taskmanager;
 
 import java.util.*;
 
-import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 import net.sourceforge.argparse4j.internal.HelpScreenException;
+
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -26,6 +26,7 @@ import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.memory.BufferMemoryManager;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
+import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;

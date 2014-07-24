@@ -1,10 +1,10 @@
 package de.tuberlin.aura.workloadmanager;
 
-import de.tuberlin.aura.core.common.utils.IVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.ExecutionNode;
