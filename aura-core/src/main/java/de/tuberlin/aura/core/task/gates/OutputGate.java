@@ -52,7 +52,6 @@ public final class OutputGate extends AbstractGate {
         }
 
         final EventHandler outputGateEventHandler = new OutputGateEventHandler();
-
         taskDriver.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, outputGateEventHandler);
         taskDriver.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, outputGateEventHandler);
     }
@@ -135,14 +134,18 @@ public final class OutputGate extends AbstractGate {
 
         @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN)
         private void handleOutputGateOpen(final DataIOEvent event) {
-            openChannelList.set(producer.getOutputGateIndexFromTaskID(event.dstTaskID), true); // TODO:
-            LOG.debug("GATE FOR TASK " + event.srcTaskID + " OPENED");
+            if (producer.getOutputGateIndexFromTaskID(event.dstTaskID) == gateIndex) {
+                openChannelList.set(producer.getChannelIndexFromTaskID(event.dstTaskID), true); // TODO:
+                LOG.debug("GATE FOR TASK " + event.srcTaskID + " OPENED");
+            }
         }
 
         @Handle(event = DataIOEvent.class, type = DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE)
         private void handleOutputGateClose(final DataIOEvent event) {
-            openChannelList.set(producer.getOutputGateIndexFromTaskID(event.dstTaskID), false); // TODO:
-            LOG.debug("GATE FOR TASK " + event.srcTaskID + " CLOSED");
+            if (producer.getOutputGateIndexFromTaskID(event.dstTaskID) == gateIndex) {
+                openChannelList.set(producer.getChannelIndexFromTaskID(event.dstTaskID), false); // TODO:
+                LOG.debug("GATE FOR TASK " + event.srcTaskID + " CLOSED");
+            }
         }
     }
 }

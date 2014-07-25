@@ -25,6 +25,8 @@ public interface IDataProducer {
 
     public abstract int getOutputGateIndexFromTaskID(final UUID taskID);
 
+    public abstract int getChannelIndexFromTaskID(final UUID taskID);
+
 
     public abstract void store(final MemoryView buffer);
 

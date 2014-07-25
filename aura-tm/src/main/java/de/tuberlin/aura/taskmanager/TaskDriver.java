@@ -161,7 +161,6 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             invokeable.setDataConsumer(dataConsumer);
             invokeable.setLogger(LOG);
 
-
         } else if (nodeDescriptor instanceof Descriptors.StorageNodeDescriptor) {
 
             invokeable = new DataStorageDriver();
@@ -170,9 +169,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             invokeable.setDataConsumer(dataConsumer);
             invokeable.setLogger(LOG);
 
-
         } else {
-
             throw new IllegalStateException();
         }
     }

@@ -156,14 +156,21 @@ public class MultiOutputGateTest {
         @Override
         public void open() throws Throwable {
             consumer.openGate(0);
+            consumer.openGate(1);
         }
 
         @Override
         public void run() throws Throwable {
             while (!consumer.isExhausted() && isInvokeableRunning()) {
-                final IOEvents.TransferBufferEvent event = consumer.absorb(0);
-                if (event != null) {
-                    event.buffer.free();
+                final IOEvents.TransferBufferEvent event1 = consumer.absorb(0);
+                if (event1 != null) {
+                    LOG.info("-> EVENT 1");
+                    event1.buffer.free();
+                }
+                final IOEvents.TransferBufferEvent event2 = consumer.absorb(1);
+                if (event2 != null) {
+                    LOG.info("-> EVENT 2");
+                    event2.buffer.free();
                 }
             }
         }
@@ -182,10 +189,11 @@ public class MultiOutputGateTest {
 
         atb.addNode(new Topology.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Source.class)
            .connectTo("ForwardLeft", Topology.Edge.TransferType.ALL_TO_ALL)
+           .and().connectTo("ForwardRight", Topology.Edge.TransferType.ALL_TO_ALL)
            .addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardLeft", 1, 1), ForwardLeft.class)
            .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-           //.addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardRight", 1, 1), ForwardRight.class)
-           //.connectTo("Middle2", Topology.Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardRight", 1, 1), ForwardRight.class)
+           .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
            .addNode(new Topology.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
 
         ac.submitTopology(atb.build("JOB1"), null);

@@ -272,6 +272,15 @@ public final class TaskDataProducer implements IDataProducer {
 
     /**
      *
+     * @param taskID
+     * @return
+     */
+    public int getChannelIndexFromTaskID(final UUID taskID) {
+        return taskIDToChannelIndex.get(taskID);
+    }
+
+    /**
+     *
      * @return
      */
     /*@Override

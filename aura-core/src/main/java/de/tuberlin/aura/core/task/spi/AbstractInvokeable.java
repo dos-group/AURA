@@ -1,6 +1,5 @@
 package de.tuberlin.aura.core.task.spi;
 
-import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import org.slf4j.Logger;
 
 public abstract class AbstractInvokeable implements IExecutionLifecycle {
@@ -24,6 +23,8 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
     // ---------------------------------------------------
 
     public AbstractInvokeable() {
+
+        this.isRunning = true;
     }
 
     // ---------------------------------------------------
