@@ -9,11 +9,11 @@ import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
-import de.tuberlin.aura.core.task.spi.IDataConsumer;
-import de.tuberlin.aura.core.task.spi.IDataProducer;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.topology.Topology;
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -22,6 +22,8 @@ import java.util.UUID;
  */
 public class MultiOutputGateTest {
 
+    private static final Logger LOG = LoggerFactory.getLogger(MultiOutputGateTest.class);
+
     // -----------------------------------------------------------------------------
 
     public static class Source extends AbstractInvokeable {
@@ -29,6 +31,10 @@ public class MultiOutputGateTest {
         private static final int BUFFER_COUNT = 10;
 
         public Source() {
+        }
+
+        @Override
+        public void open() throws Throwable {
 
             driver.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, new IEventHandler() {
 
@@ -50,7 +56,7 @@ public class MultiOutputGateTest {
 
         @Override
         public void close() throws Throwable {
-            //producer.done(0);
+            producer.done(0);
         }
     }
 
@@ -110,7 +116,7 @@ public class MultiOutputGateTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done(1);
+            producer.done(0);
         }
     }
 
@@ -141,17 +147,22 @@ public class MultiOutputGateTest {
 
     public static void main(final String[] args) {
 
+        final SimpleLayout layout = new SimpleLayout();
+        new ConsoleAppender(layout);
+
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
 
         atb.addNode(new Topology.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Source.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+           .connectTo("ForwardLeft", Topology.Edge.TransferType.ALL_TO_ALL)
            .addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardLeft", 1, 1), ForwardLeft.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardRight", 1, 1), ForwardRight.class)
-           .connectTo("Middle2", Topology.Edge.TransferType.ALL_TO_ALL)
+           .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
+           //.addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardRight", 1, 1), ForwardRight.class)
+           //.connectTo("Middle2", Topology.Edge.TransferType.ALL_TO_ALL)
            .addNode(new Topology.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
+
+        ac.submitTopology(atb.build("JOB1"), null);
 
         ac.awaitSubmissionResult(1);
         ac.closeSession();

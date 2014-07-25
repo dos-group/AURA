@@ -27,6 +27,10 @@ import de.tuberlin.aura.core.task.spi.ITaskDriver;
  */
 public final class TaskDataConsumer implements IDataConsumer {
 
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
+
     private final class RoundRobinAbsorber {
 
         private int channelIndex;

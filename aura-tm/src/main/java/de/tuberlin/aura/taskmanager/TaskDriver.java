@@ -343,10 +343,10 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                                                 final Logger LOG) {
         try {
 
-            final Constructor<? extends AbstractInvokeable> invokeableCtor = invokableClazz.getConstructor();
-            final AbstractInvokeable invokeable = invokeableCtor.newInstance(taskDriver, dataProducer, dataConsumer, LOG);
+            //final Constructor<? extends AbstractInvokeable> invokeableCtor = invokableClazz.getConstructor();
+            final AbstractInvokeable invokeable = invokableClazz.newInstance();
 
-            invokeable.setTaskDriver(this);
+            invokeable.setTaskDriver(taskDriver);
             invokeable.setDataProducer(dataProducer);
             invokeable.setDataConsumer(dataConsumer);
             invokeable.setLogger(LOG);
