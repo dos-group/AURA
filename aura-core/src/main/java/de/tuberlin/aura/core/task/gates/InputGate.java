@@ -19,7 +19,7 @@ public final class InputGate extends AbstractGate {
 
     private static final Logger LOG = LoggerFactory.getLogger(InputGate.class);
 
-    /** Reference to the DataReader component of underlying I/O subsystem.*/
+    /** Reference to the DataReader component of the underlying I/O subsystem.*/
     private DataReader dataReader;
 
     // ---------------------------------------------------
@@ -29,7 +29,7 @@ public final class InputGate extends AbstractGate {
     /**
      * Constructor.
      * @param taskDriver The associated task driver context.
-     * @param gateIndex
+     * @param gateIndex The index of the input gate.
      */
     public InputGate(final ITaskDriver taskDriver, int gateIndex) {
         super(taskDriver, gateIndex, taskDriver.getBindingDescriptor().inputGateBindings.get(gateIndex).size());
@@ -64,7 +64,7 @@ public final class InputGate extends AbstractGate {
     }
 
     /**
-     * Return the input queue of a connected channel.
+     * Return the input queue of the selected channel.
      * @return The index of the channel and associated queue.
      */
     public BufferQueue<DataIOEvent> getInputQueue(final int channelIndex) {

@@ -15,7 +15,9 @@ import org.apache.log4j.SimpleLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  *
@@ -30,6 +32,10 @@ public class MultiOutputGateTest {
 
         private static final int BUFFER_COUNT = 10;
 
+        private BlockingQueue<Integer> gateIndexQueue = new LinkedBlockingQueue<>();
+
+        private Set<Integer> openOutputGates = new HashSet<>();
+
         public Source() {
         }
 
@@ -40,23 +46,43 @@ public class MultiOutputGateTest {
 
                 @Override
                 public void handleEvent(Event event) {
-
+                    final IOEvents.DataIOEvent gateEvent = (IOEvents.DataIOEvent)event;
+                    gateIndexQueue.add(producer.getOutputGateIndexFromTaskID(gateEvent.dstTaskID));
                 }
             });
+
+            for(int i = 0; i < driver.getBindingDescriptor().outputGateBindings.size(); ++i) {
+                openOutputGates.add(i);
+            }
         }
 
         @Override
         public void run() throws Throwable {
-            int i = 0;
-            while (i++ < BUFFER_COUNT && isInvokeableRunning()) {
-                final MemoryView buffer = producer.getAllocator().allocBlocking();
-                producer.broadcast(0, buffer);
+
+            while(!openOutputGates.isEmpty()) {
+
+                final int gateIndex;
+
+                try {
+                    gateIndex = gateIndexQueue.take();
+
+                    int i = 0;
+                    while (i++ < BUFFER_COUNT && isInvokeableRunning()) {
+                        final MemoryView buffer = producer.getAllocator().allocBlocking();
+                        producer.broadcast(gateIndex, buffer);
+                    }
+
+                    producer.done(gateIndex);
+                    openOutputGates.remove(gateIndex);
+
+                } catch(InterruptedException e) {
+                    // do nothing.
+                }
             }
         }
 
         @Override
         public void close() throws Throwable {
-            producer.done(0);
         }
     }
 
