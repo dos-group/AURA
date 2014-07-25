@@ -50,9 +50,7 @@ public final class LazyUnrollingTest {
 
         private final IRecordWriter recordWriter;
 
-        public TaskMap1(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-
-            super(taskDriver, producer, consumer, LOG);
+        public TaskMap1() {
 
             final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
 
@@ -125,9 +123,7 @@ public final class LazyUnrollingTest {
 
         private final IRecordWriter recordWriter;
 
-        public TaskRightInput(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-
-            super(taskDriver, producer, consumer, LOG);
+        public TaskRightInput() {
 
             final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
 
@@ -168,9 +164,7 @@ public final class LazyUnrollingTest {
 
         private final IRecordReader recordReaderRight;
 
-        public TaskBinaryInput(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-
-            super(taskDriver, producer, consumer, LOG);
+        public TaskBinaryInput() {
 
             final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
 
@@ -232,10 +226,7 @@ public final class LazyUnrollingTest {
 
         private IRecordReader recordReader;
 
-        public TaskMap3(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-
-            super(taskDriver, producer, consumer, LOG);
-
+        public TaskMap3() {
             this.recordReader = new RowRecordReader(driver, 0);
         }
 

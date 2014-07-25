@@ -155,11 +155,21 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             if (invokeableClazz != null)
                 throw new IllegalStateException();
 
-            invokeable = new ExecutionPlanDriver(this, dataProducer, dataConsumer, LOG, (Descriptors.OperatorNodeDescriptor) nodeDescriptor);
+            invokeable = new ExecutionPlanDriver((Descriptors.OperatorNodeDescriptor) nodeDescriptor);
+            invokeable.setTaskDriver(this);
+            invokeable.setDataProducer(dataProducer);
+            invokeable.setDataConsumer(dataConsumer);
+            invokeable.setLogger(LOG);
+
 
         } else if (nodeDescriptor instanceof Descriptors.StorageNodeDescriptor) {
 
-            invokeable = new DataStorageDriver(this, dataProducer, dataConsumer, LOG);
+            invokeable = new DataStorageDriver();
+            invokeable.setTaskDriver(this);
+            invokeable.setDataProducer(dataProducer);
+            invokeable.setDataConsumer(dataConsumer);
+            invokeable.setLogger(LOG);
+
 
         } else {
 
@@ -270,8 +280,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
         taskManager.getIOManager().connectDataChannel(
                 nodeDescriptor.taskID,
                 dstNodeDescriptor.taskID,
-                dstNodeDescriptor.getMachineDescriptor()/*,
-                allocator*/
+                dstNodeDescriptor.getMachineDescriptor()
         );
     }
 
@@ -334,10 +343,13 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                                                 final Logger LOG) {
         try {
 
-            final Constructor<? extends AbstractInvokeable> invokeableCtor =
-                    invokableClazz.getConstructor(ITaskDriver.class, IDataProducer.class, IDataConsumer.class, Logger.class);
-
+            final Constructor<? extends AbstractInvokeable> invokeableCtor = invokableClazz.getConstructor();
             final AbstractInvokeable invokeable = invokeableCtor.newInstance(taskDriver, dataProducer, dataConsumer, LOG);
+
+            invokeable.setTaskDriver(this);
+            invokeable.setDataProducer(dataProducer);
+            invokeable.setDataConsumer(dataConsumer);
+            invokeable.setLogger(LOG);
 
             return invokeable;
 

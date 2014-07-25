@@ -117,11 +117,13 @@ public final class TaskDataProducer implements IDataProducer {
         connectOutputDataChannels(outputBinding);
 
         if (outputBinding.size() == 0 && dataStorage == null) {
-            dataStorage = new DataStorageDriver(driver, this, driver.getDataConsumer(), driver.getLOG());
+            dataStorage = new DataStorageDriver();
+            dataStorage.setTaskDriver(driver);
+            dataStorage.setDataProducer(this);
+            dataStorage.setDataConsumer(driver.getDataConsumer());
+            dataStorage.setLogger(driver.getLOG());
         }
     }
-
-
 
     /**
      * @param gateIndex
@@ -403,7 +405,6 @@ public final class TaskDataProducer implements IDataProducer {
                 LOG.debug("OUTPUT CONNECTION FROM " + driver.getNodeDescriptor().name + " [" + driver.getNodeDescriptor().taskID
                         + "] TO TASK " + dst.name + " [" + dst.taskID + "] IS ESTABLISHED");
 
-
                 remainingChannelsToConnect[gateIndex]--;
 
                 if (remainingChannelsToConnect[gateIndex] < 0) {
@@ -418,6 +419,7 @@ public final class TaskDataProducer implements IDataProducer {
                     for (int remaining: remainingChannelsToConnect) {
                         fullyConnected &= remaining == 0;
                     }
+
                     if (fullyConnected) {
                         LOG.debug("All output gates connected");
                         driver.getTaskStateMachine().dispatchEvent(

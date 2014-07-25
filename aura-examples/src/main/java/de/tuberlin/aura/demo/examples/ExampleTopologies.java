@@ -161,8 +161,7 @@ public class ExampleTopologies {
 
         private static final int BUFFER_COUNT = 5;
 
-        public SmallSource(final ITaskDriver driver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public SmallSource() {
         }
 
         @Override
@@ -190,8 +189,7 @@ public class ExampleTopologies {
 
         private static final int BUFFER_COUNT = 10;
 
-        public LargeSource(final ITaskDriver driver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public LargeSource() {
         }
 
         @Override
@@ -218,8 +216,7 @@ public class ExampleTopologies {
 
     public static class ForwardWithOneInput extends AbstractInvokeable {
 
-        public ForwardWithOneInput(final ITaskDriver driver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public ForwardWithOneInput() {
         }
 
         @Override
@@ -254,8 +251,7 @@ public class ExampleTopologies {
 
     public static class ForwardWithTwoInputs extends AbstractInvokeable {
 
-        public ForwardWithTwoInputs(final ITaskDriver driver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public ForwardWithTwoInputs() {
         }
 
         @Override
@@ -306,8 +302,7 @@ public class ExampleTopologies {
 
         long count = 0;
 
-        public Sink(final ITaskDriver driver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public Sink() {
         }
 
         @Override

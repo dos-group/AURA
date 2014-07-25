@@ -31,9 +31,7 @@ public class DataStorageDriver extends AbstractInvokeable {
     // Constructors.
     // ---------------------------------------------------
 
-    public DataStorageDriver(ITaskDriver taskDriver, IDataProducer producer, IDataConsumer consumer, Logger LOG) {
-        super(taskDriver, producer, consumer, LOG);
-
+    public DataStorageDriver() {
         this.bufferStorage = new ArrayList<MemoryView>();
     }
 

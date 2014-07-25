@@ -1,5 +1,6 @@
 package de.tuberlin.aura.core.task.spi;
 
+import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import org.slf4j.Logger;
 
 public abstract class AbstractInvokeable implements IExecutionLifecycle {
@@ -8,13 +9,13 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
     // Fields.
     // ---------------------------------------------------
 
-    protected final ITaskDriver driver;
+    protected ITaskDriver driver;
 
-    protected final IDataProducer producer;
+    protected IDataProducer producer;
 
-    protected final IDataConsumer consumer;
+    protected IDataConsumer consumer;
 
-    protected final Logger LOG;
+    protected Logger LOG;
 
     protected boolean isRunning;
 
@@ -22,26 +23,7 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
     // Constructors.
     // ---------------------------------------------------
 
-    public AbstractInvokeable(final ITaskDriver driver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-        // sanity check.
-        if (driver == null)
-            throw new IllegalArgumentException("driver == null");
-        if (producer == null)
-            throw new IllegalArgumentException("producer == null");
-        if (consumer == null)
-            throw new IllegalArgumentException("consumer == null");
-        if (LOG == null)
-            throw new IllegalArgumentException("LOG == null");
-
-        this.driver = driver;
-
-        this.producer = producer;
-
-        this.consumer = consumer;
-
-        this.LOG = LOG;
-
-        this.isRunning = true;
+    public AbstractInvokeable() {
     }
 
     // ---------------------------------------------------
@@ -58,6 +40,40 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
 
     public void stopInvokeable() {
         isRunning = false;
+    }
+
+    // ---------------------------------------------------
+
+    public void setTaskDriver(final ITaskDriver driver) {
+        // sanity check.
+        if (driver == null)
+            throw new IllegalArgumentException("driver == null");
+
+        this.driver = driver;
+    }
+
+    public void setDataProducer(final IDataProducer producer) {
+        // sanity check.
+        if (producer == null)
+            throw new IllegalArgumentException("producer == null");
+
+        this.producer = producer;
+    }
+
+    public void setDataConsumer(final IDataConsumer consumer) {
+        // sanity check.
+        if (consumer == null)
+            throw new IllegalArgumentException("consumer == null");
+
+        this.consumer = consumer;
+    }
+
+    public void setLogger(final Logger LOG) {
+        // sanity check.
+        if (LOG == null)
+            throw new IllegalArgumentException("LOG == null");
+
+        this.LOG = LOG;
     }
 
     // ---------------------------------------------------

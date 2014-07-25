@@ -101,10 +101,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
     // Constructors.
     // ---------------------------------------------------
 
-    public ExecutionPlanDriver(final ITaskDriver driver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG,
-                               final Descriptors.OperatorNodeDescriptor operatorNodeDescriptor) {
-
-        super(driver, producer, consumer, LOG);
+    public ExecutionPlanDriver(final Descriptors.OperatorNodeDescriptor operatorNodeDescriptor) {
 
         this.operatorNodeDescriptor = operatorNodeDescriptor;
 

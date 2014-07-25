@@ -45,15 +45,14 @@ public final class RecordModelTest {
      */
     public static class Source extends AbstractInvokeable {
 
-        private final RowRecordWriter recordWriter;
+        private RowRecordWriter recordWriter;
 
-        public Source(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(taskDriver, producer, consumer, LOG);
-            final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
-            this.recordWriter = new RowRecordWriter(driver, AbstractTuple.class, 0, partitioner);
+        public Source() {
         }
 
         public void open() throws Throwable {
+            final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
+            this.recordWriter = new RowRecordWriter(driver, AbstractTuple.class, 0, partitioner);
             recordWriter.begin();
         }
 
@@ -77,17 +76,14 @@ public final class RecordModelTest {
      */
     public static class Sink extends AbstractInvokeable {
 
-        private final RowRecordReader recordReader;
+        private RowRecordReader recordReader;
 
-        public Sink(final ITaskDriver taskDriver, final IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-
-            super(taskDriver, producer, consumer, LOG);
-
-            this.recordReader = new RowRecordReader(taskDriver, 0);
+        public Sink() {
         }
 
         @Override
         public void open() throws Throwable {
+            this.recordReader = new RowRecordReader(driver, 0);
             consumer.openGate(0);
         }
 

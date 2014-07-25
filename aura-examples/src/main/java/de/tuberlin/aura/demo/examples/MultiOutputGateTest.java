@@ -2,6 +2,8 @@ package de.tuberlin.aura.demo.examples;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
+import de.tuberlin.aura.core.common.eventsystem.Event;
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.iosystem.IOEvents;
@@ -10,19 +12,31 @@ import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.task.spi.IDataConsumer;
 import de.tuberlin.aura.core.task.spi.IDataProducer;
 import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.topology.Topology;
 import org.slf4j.Logger;
+
+import java.util.UUID;
 
 /**
  *
  */
 public class MultiOutputGateTest {
 
+    // -----------------------------------------------------------------------------
+
     public static class Source extends AbstractInvokeable {
 
         private static final int BUFFER_COUNT = 10;
 
-        public Source(final ITaskDriver driver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public Source() {
+
+            driver.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, new IEventHandler() {
+
+                @Override
+                public void handleEvent(Event event) {
+
+                }
+            });
         }
 
         @Override
@@ -36,14 +50,15 @@ public class MultiOutputGateTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done(0);
+            //producer.done(0);
         }
     }
+
+    // -----------------------------------------------------------------------------
 
     public static class ForwardLeft extends AbstractInvokeable {
 
-        public ForwardLeft(final ITaskDriver driver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public ForwardLeft() {
         }
 
         @Override
@@ -69,11 +84,11 @@ public class MultiOutputGateTest {
         }
     }
 
+    // -----------------------------------------------------------------------------
 
     public static class ForwardRight extends AbstractInvokeable {
 
-        public ForwardRight(final ITaskDriver driver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public ForwardRight() {
         }
 
         @Override
@@ -95,15 +110,15 @@ public class MultiOutputGateTest {
 
         @Override
         public void close() throws Throwable {
-            producer.done(0);
+            producer.done(1);
         }
     }
 
+    // -----------------------------------------------------------------------------
 
     public static class Sink extends AbstractInvokeable {
 
-        public Sink(final ITaskDriver driver, IDataProducer producer, final IDataConsumer consumer, final Logger LOG) {
-            super(driver, producer, consumer, LOG);
+        public Sink() {
         }
 
         @Override
@@ -121,16 +136,25 @@ public class MultiOutputGateTest {
             }
         }
     }
+
+    // -----------------------------------------------------------------------------
 
     public static void main(final String[] args) {
 
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
+        Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
 
+        atb.addNode(new Topology.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Source.class)
+           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardLeft", 1, 1), ForwardLeft.class)
+           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardRight", 1, 1), ForwardRight.class)
+           .connectTo("Middle2", Topology.Edge.TransferType.ALL_TO_ALL)
+           .addNode(new Topology.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
 
         ac.awaitSubmissionResult(1);
         ac.closeSession();
         lcs.shutdown();
     }
-
 }
