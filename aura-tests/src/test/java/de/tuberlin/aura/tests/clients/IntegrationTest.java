@@ -34,6 +34,12 @@ public class IntegrationTest {
 
     @BeforeClass
     public static void setup() {
+        if (System.getProperty("aura.profile") == null) {
+            LOG.warn("No profile.user.conf configuration profile specified! Fall back to profile.default.conf");
+            LOG.warn("Please create a user profile for your specific settings.");
+            System.setProperty("aura.profile", "default");
+        }
+
         IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
         switch (simConfig.getString("simulator.mode")) {
             case "local":
@@ -42,7 +48,8 @@ public class IntegrationTest {
             case "cluster":
                 break;
             default:
-                throw new IllegalArgumentException("mode has to be specified in the configuration.");
+                LOG.warn("'simulator mode' has unknown value. Fallback to local mode.");
+                new LocalClusterSimulator(simConfig);
         }
 
         auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
@@ -72,9 +79,8 @@ public class IntegrationTest {
     @Test
     public void testMultiQuery() {
         List<Topology.AuraTopology> topologies = new ArrayList<>();
-        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 3));
-        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 3));
-        topologies.add(ExampleTopologies.three_layer_point2point(auraClient, executionUnits / 3));
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
         runTopologiesConcurrently(topologies);
     }
 
