@@ -3,13 +3,14 @@ package de.tuberlin.aura.computation;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.tuberlin.aura.core.operators.AbstractPhysicalOperator;
-import de.tuberlin.aura.core.operators.IPhysicalOperator;
-import org.slf4j.Logger;
+import de.tuberlin.aura.core.processing.operators.impl.OperatorEnvironment;
+import de.tuberlin.aura.core.processing.operators.base.AbstractPhysicalOperator;
+import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.processing.operators.base.IPhysicalOperator;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.operators.PhysicalOperatorFactory;
+import de.tuberlin.aura.core.processing.operators.PhysicalOperatorFactory;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
@@ -41,8 +42,11 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
         // Constructors.
         // ---------------------------------------------------
 
-        public GateReaderOperator(final IRecordReader recordReader, final IDataConsumer dataConsumer, final int gateIndex) {
-            super(null);
+        public GateReaderOperator(final IOperatorEnvironment environment,
+                                  final IRecordReader recordReader,
+                                  final IDataConsumer dataConsumer,
+                                  final int gateIndex) {
+            super(environment);
             // sanity check.
             if (recordReader == null)
                 throw new IllegalArgumentException("recordReader == null");
@@ -62,6 +66,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
 
         @Override
         public void open() throws Throwable {
+            super.open();
             dataConsumer.openGate(gateIndex);
             recordReader.begin();
         }
@@ -73,6 +78,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
 
         @Override
         public void close() throws Throwable {
+            super.close();
             recordReader.end();
             dataConsumer.closeGate(gateIndex);
         }
@@ -89,13 +95,15 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
 
     private final Descriptors.OperatorNodeDescriptor operatorNodeDescriptor;
 
-    private AbstractPhysicalOperator<Object> rootOperator;
+    private AbstractPhysicalOperator<?> rootOperator;
 
     private final List<IRecordWriter> recordWriters;
 
     private final List<IRecordReader> recordReaders;
 
     private final List<GateReaderOperator> gateReaderOperators;
+
+    private IOperatorEnvironment environment;
 
     // ---------------------------------------------------
     // Constructors.
@@ -119,6 +127,8 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
     @Override
     public void create() throws Throwable {
 
+        this.environment = new OperatorEnvironment(driver.getLogger(), operatorNodeDescriptor.properties);
+
         if (driver.getBindingDescriptor().outputGateBindings.size() > 0) {
 
             final Partitioner.IPartitioner partitioner =
@@ -128,33 +138,27 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
                     );
 
             for (int i = 0; i <  driver.getBindingDescriptor().outputGateBindings.size(); ++i) {
-                recordWriters.add(new RowRecordWriter(driver, operatorNodeDescriptor.properties.outputType, i, partitioner));
+                final RowRecordWriter reader = new RowRecordWriter(driver, operatorNodeDescriptor.properties.outputType, i, partitioner);
+                recordWriters.add(reader);
             }
         }
 
         for (int i = 0; i <  driver.getBindingDescriptor().inputGateBindings.size(); ++i) {
-
             final IRecordReader recordReader = new RowRecordReader(driver, i);
-
             recordReaders.add(recordReader);
-
-            gateReaderOperators.add(new GateReaderOperator(recordReader, consumer, i));
+            gateReaderOperators.add(new GateReaderOperator(environment, recordReader, consumer, i));
         }
 
         switch (operatorNodeDescriptor.properties.operatorType.operatorInputArity) {
-
             case NULLARY:
-                rootOperator = PhysicalOperatorFactory.createPhysicalOperator(operatorNodeDescriptor.properties);
+                rootOperator = PhysicalOperatorFactory.createPhysicalOperator(environment, null, null);
             break;
-
             case UNARY:
-                rootOperator = PhysicalOperatorFactory.createPhysicalOperator(operatorNodeDescriptor.properties, gateReaderOperators.get(0));
+                rootOperator = PhysicalOperatorFactory.createPhysicalOperator(environment, gateReaderOperators.get(0), null);
             break;
-
             case BINARY:
-                rootOperator = PhysicalOperatorFactory.createPhysicalOperator(operatorNodeDescriptor.properties, gateReaderOperators.get(0), gateReaderOperators.get(1));
+                rootOperator = PhysicalOperatorFactory.createPhysicalOperator(environment, gateReaderOperators.get(0), gateReaderOperators.get(1));
             break;
-
             default:
                 throw new IllegalStateException();
         }
@@ -162,102 +166,57 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
 
     @Override
     public void open() throws Throwable {
-
         for (final IRecordWriter recordWriter : recordWriters) {
             recordWriter.begin();
         }
-
         rootOperator.open();
     }
 
     @Override
     public void run() throws Throwable {
 
-        switch (rootOperator.getProperties().operatorType) {
-
-            case MAP_TUPLE_OPERATOR: {
-
-                Object object = rootOperator.next();
-                while (object != null) {
-                    emit(object);
-                    object = rootOperator.next();
-                }
-
-            } break;
-            case MAP_GROUP_OPERATOR: {
-            } break;
+        /*switch (rootOperator.getProperties().operatorType) {
+            case MAP_TUPLE_OPERATOR:
+            case MAP_GROUP_OPERATOR:
             case FLAT_MAP_TUPLE_OPERATOR:
-                break;
             case FLAT_MAP_GROUP_OPERATOR:
-                break;
             case FILTER_OPERATOR:
-                break;
             case UNION_OPERATOR:
-                break;
             case DIFFERENCE_OPERATOR:
-                break;
             case HASH_JOIN_OPERATOR:
-                break;
             case MERGE_JOIN_OPERATOR:
-                break;
             case GROUP_BY_OPERATOR:
-                break;
             case SORT_OPERATOR:
-                break;
             case REDUCE_OPERATOR:
-                break;
-
-            case UDF_SOURCE: {
-
-                Object object = rootOperator.next();
-                while (object != null) {
-                    emit(object);
-                    object = rootOperator.next();
-                }
-
-            } break;
-
-            case FILE_SOURCE: {
-            } break;
-
+            case FILE_SOURCE:
             case STREAM_SOURCE:
-                break;
-
-            case UDF_SINK: {
-
-                while (!recordReaders.get(0).finished()) {
-                    rootOperator.next();
-                }
-
-            } break;
-
-            case FILE_SINK: {
-            } break;
+            case UDF_SOURCE:
+            case FILE_SINK:
             case STREAM_SINK:
-                break;
+            case UDF_SINK: {
+            } break;
+        }*/
+
+        Object object = rootOperator.next();
+        while (object != null) {
+            if(recordWriters.size() == 1) {
+                recordWriters.get(0).writeObject(object);
+            }
+            object = rootOperator.next();
         }
     }
 
     @Override
     public void close() throws Throwable {
-
         rootOperator.close();
-
         for (final IRecordWriter recordWriter : recordWriters) {
             recordWriter.end();
         }
-
         if (driver.getBindingDescriptor().outputGateBindings.size() > 0)
             producer.done(0);
     }
 
     @Override
     public void release() throws Throwable {
-    }
-
-    private void emit(final Object object) {
-        if (object != null) {
-            recordWriters.get(0).writeObject(object);
-        }
     }
 }

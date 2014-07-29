@@ -11,6 +11,10 @@ import java.util.Arrays;
  */
 public final class BufferStream {
 
+    // Disallow instantiation.
+    private BufferStream() {
+    }
+
     /**
      *
      */

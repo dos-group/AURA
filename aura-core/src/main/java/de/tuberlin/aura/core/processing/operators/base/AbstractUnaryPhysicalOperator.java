@@ -1,4 +1,6 @@
-package de.tuberlin.aura.core.operators;
+package de.tuberlin.aura.core.processing.operators.base;
+
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
 
 /**
  *
@@ -17,8 +19,9 @@ public abstract class AbstractUnaryPhysicalOperator<I,O> extends AbstractPhysica
     // Constructor.
     // ---------------------------------------------------
 
-    AbstractUnaryPhysicalOperator(final OperatorProperties properties, final IPhysicalOperator<I> inputOp) {
-        super(properties);
+    public AbstractUnaryPhysicalOperator(final IOperatorEnvironment environment,
+                                         final IPhysicalOperator<I> inputOp) {
+        super(environment);
         this.inputOp = inputOp;
     }
 }

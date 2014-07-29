@@ -28,7 +28,7 @@ public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
 
     public abstract ITaskManager getTaskManager();
 
-    public abstract Logger getLOG();
+    public abstract Logger getLogger();
 
     public abstract AbstractInvokeable getInvokeable();
 

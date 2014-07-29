@@ -9,7 +9,7 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
-import de.tuberlin.aura.core.operators.OperatorProperties;
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.task.usercode.UserCode;
@@ -389,7 +389,7 @@ public class Topology {
 
                         for(final Class<?> userCodeClazz : userCodeClazzList) {
 
-                            if(!AbstractTuple.class.isAssignableFrom(userCodeClazz)) { // TODO: shit hack...
+                            if(userCodeClazz != null && !AbstractTuple.class.isAssignableFrom(userCodeClazz)) { // TODO: shit hack...
 
                                 final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
                                 userCodeList.add(uc);

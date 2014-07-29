@@ -1,10 +1,12 @@
-package de.tuberlin.aura.core.operators;
+package de.tuberlin.aura.core.processing.generator;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
+import de.tuberlin.aura.core.processing.api.OperatorAPI;
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import de.tuberlin.aura.core.topology.Topology;
 
 /**

@@ -1,6 +1,10 @@
-package de.tuberlin.aura.core.operators;
+package de.tuberlin.aura.core.processing.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
+import de.tuberlin.aura.core.processing.operators.base.AbstractBinaryPhysicalOperator;
+import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.processing.operators.base.IPhysicalOperator;
 
 /**
  *
@@ -12,17 +16,17 @@ public final class UnionPhysicalOperator<I> extends AbstractBinaryPhysicalOperat
     // Fields.
     // ---------------------------------------------------
 
-    private boolean input1Closed = false;
+    private boolean selectedInput;
 
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public UnionPhysicalOperator(final OperatorProperties properties,
+    public UnionPhysicalOperator(final IOperatorEnvironment environment,
                                  final IPhysicalOperator<I> inputOp1,
                                  final IPhysicalOperator<I> inputOp2) {
 
-        super(properties, inputOp1, inputOp2);
+        super(environment, inputOp1, inputOp2);
     }
 
     // ---------------------------------------------------
@@ -31,39 +35,41 @@ public final class UnionPhysicalOperator<I> extends AbstractBinaryPhysicalOperat
 
     @Override
     public void open() throws Throwable {
+        super.open();
         inputOp1.open();
+        inputOp2.open();
     }
 
     @Override
     public I next() throws Throwable {
 
-        if (!input1Closed) {
-            final I input1 = inputOp1.next();
+        I in = null;
 
-            if (input1 != null) {
-                return input1;
-            } else {
+        if (selectedInput)
+            in = inputOp1.next();
+        else
+            in = inputOp2.next();
+
+        if (in == null) {
+
+            if (selectedInput) {
                 inputOp1.close();
-                input1Closed = true;
-                inputOp2.open();
+            } else {
+                inputOp2.close();
             }
+
+            selectedInput = !selectedInput;
         }
 
-        return inputOp2.next();
+        if (inputOp1.isOpen() && inputOp2.isOpen())
+            selectedInput = !selectedInput;
 
-        /*final I output;
-
-        if (switchState)
-          output = inputOp1.next();
-        else
-          output = inputOp2.next();
-
-        return output;*/
+        return in;
     }
 
     @Override
     public void close() throws Throwable {
-        inputOp2.close();
+        super.close();
     }
 
     @Override

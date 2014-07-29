@@ -1,4 +1,6 @@
-package de.tuberlin.aura.core.operators;
+package de.tuberlin.aura.core.processing.operators.base;
+
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
 
 /**
  *
@@ -10,14 +12,17 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
     // Fields.
     // ---------------------------------------------------
 
-    private final OperatorProperties properties;
+    private final IOperatorEnvironment environment;
+
+    private boolean isOperatorOpen = false;
 
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public AbstractPhysicalOperator(final OperatorProperties properties) {
-        this.properties = properties;
+    public AbstractPhysicalOperator(final IOperatorEnvironment environment) {
+
+        this.environment = environment;
     }
 
     // ---------------------------------------------------
@@ -26,6 +31,7 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
 
     @Override
     public void open() throws Throwable {
+        this.isOperatorOpen = true;
     }
 
     @Override
@@ -35,10 +41,16 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
 
     @Override
     public void close() throws Throwable {
+        this.isOperatorOpen = false;
     }
 
     @Override
-    public OperatorProperties getProperties() {
-        return properties;
+    public IOperatorEnvironment getEnvironment() {
+        return environment;
+    }
+
+    @Override
+    public boolean isOpen() {
+        return isOperatorOpen;
     }
 }

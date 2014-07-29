@@ -1,4 +1,6 @@
-package de.tuberlin.aura.core.operators;
+package de.tuberlin.aura.core.processing.operators.base;
+
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
 
 /**
  *
@@ -20,8 +22,10 @@ public abstract class AbstractBinaryPhysicalOperator<I1,I2,O> extends AbstractPh
     // Constructor.
     // ---------------------------------------------------
 
-    AbstractBinaryPhysicalOperator(final OperatorProperties properties, final IPhysicalOperator<I1> inputOp1, final IPhysicalOperator<I2> inputOp2) {
-        super(properties);
+    public AbstractBinaryPhysicalOperator(final IOperatorEnvironment environment,
+                                          final IPhysicalOperator<I1> inputOp1,
+                                          final IPhysicalOperator<I2> inputOp2) {
+        super(environment);
 
         // sanity check.
         if (inputOp1 == null)

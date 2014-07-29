@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.operators.OperatorProperties;
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import de.tuberlin.aura.core.task.usercode.UserCode;
 import de.tuberlin.aura.core.topology.Topology.Node;
 

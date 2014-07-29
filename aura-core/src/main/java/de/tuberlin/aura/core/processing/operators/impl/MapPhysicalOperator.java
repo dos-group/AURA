@@ -1,6 +1,12 @@
-package de.tuberlin.aura.core.operators;
+package de.tuberlin.aura.core.processing.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
+import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.processing.udfs.contracts.IMapFunction;
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
+import de.tuberlin.aura.core.processing.operators.base.AbstractUnaryUDFPhysicalOperator;
+import de.tuberlin.aura.core.processing.operators.base.IPhysicalOperator;
+import de.tuberlin.aura.core.processing.udfs.functions.MapFunction;
 
 /**
  *
@@ -13,11 +19,11 @@ public final class MapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOper
     // Constructor.
     // ---------------------------------------------------
 
-    public MapPhysicalOperator(final OperatorProperties properties,
+    public MapPhysicalOperator(final IOperatorEnvironment environment,
                                final IPhysicalOperator<I> inputOp,
-                               final IUnaryUDFFunction<I, O> udfFunction) {
+                               final MapFunction<I, O> function) {
 
-        super(properties, inputOp, udfFunction);
+        super(environment, inputOp, function);
     }
 
     // ---------------------------------------------------
@@ -26,6 +32,7 @@ public final class MapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOper
 
     @Override
     public void open() throws Throwable {
+        super.open();
         inputOp.open();
     }
 
@@ -33,13 +40,14 @@ public final class MapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOper
     public O next() throws Throwable {
         final I input = inputOp.next();
         if (input != null)
-            return udfFunction.apply(input);
+            return ((IMapFunction<I,O>)function).map(input);
         else
             return null;
     }
 
     @Override
     public void close() throws Throwable {
+        super.close();
         inputOp.close();
     }
 

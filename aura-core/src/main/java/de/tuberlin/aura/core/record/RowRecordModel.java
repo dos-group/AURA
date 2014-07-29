@@ -64,8 +64,12 @@ public final class RowRecordModel {
 
             final FieldAccess fa = fieldAccessorRegistry.get(clazz);
 
-            if (fa == null)
-                throw new IllegalStateException("no FieldAccessor found ");
+            if (fa == null) {
+                final FieldAccess accessor = FieldAccess.get(clazz);
+                fieldAccessorRegistry.put(clazz, accessor);
+                return accessor;
+                //throw new IllegalStateException("no FieldAccessor found ");
+            }
 
             return fa;
         }

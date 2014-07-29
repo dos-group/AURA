@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.operators;
+package de.tuberlin.aura.core.processing.api;
 
 import java.io.Serializable;
 

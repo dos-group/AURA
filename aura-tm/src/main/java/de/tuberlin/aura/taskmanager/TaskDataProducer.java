@@ -121,7 +121,7 @@ public final class TaskDataProducer implements IDataProducer {
             dataStorage.setTaskDriver(driver);
             dataStorage.setDataProducer(this);
             dataStorage.setDataConsumer(driver.getDataConsumer());
-            dataStorage.setLogger(driver.getLOG());
+            dataStorage.setLogger(driver.getLogger());
         }
     }
 

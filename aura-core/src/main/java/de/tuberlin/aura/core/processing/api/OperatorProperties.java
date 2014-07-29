@@ -1,8 +1,9 @@
-package de.tuberlin.aura.core.operators;
+package de.tuberlin.aura.core.processing.api;
 
 import java.io.Serializable;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.processing.udfs.contracts.IFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 
 /**
@@ -64,6 +65,13 @@ public final class OperatorProperties implements Serializable {
         }
     }
 
+    public static enum SortOrder {
+
+        ASCENDING,
+
+        DESCENDING
+    }
+
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
@@ -90,7 +98,15 @@ public final class OperatorProperties implements Serializable {
 
     public final Class<?> outputType;
 
-    public final Class<?> udfFunction;
+    public final Class<? extends IFunction> function;
+
+    public final int[] keyIndices1;
+
+    public final int[] keyIndices2;
+
+    public final int[] sortKeyIndices;
+
+    public final SortOrder sortOrder;
 
     // ---------------------------------------------------
     // Constructors.
@@ -106,8 +122,11 @@ public final class OperatorProperties implements Serializable {
                               final Class<?> input1Type,
                               final Class<?> input2Type,
                               final Class<?> outputType,
-                              final Class<?> udfFunction) {
-
+                              final Class<? extends IFunction> function,
+                              final int[] keyIndices1,
+                              final int[] keyIndices2,
+                              final int[] sortKeyIndices,
+                              final SortOrder sortOrder) {
         // sanity check.
         if (operatorUID == null)
             throw new IllegalArgumentException("operatorUID == null");
@@ -136,42 +155,14 @@ public final class OperatorProperties implements Serializable {
 
         this.outputType = outputType;
 
-        this.udfFunction = udfFunction;
-    }
+        this.function = function;
 
-    public OperatorProperties(final PhysicalOperatorType operatorType,
-                              final int[] keys,
-                              final Partitioner.PartitioningStrategy strategy,
-                              final int globalDOP,
-                              final String instanceName,
-                              final Class<?> input1Type,
-                              final Class<?> input2Type,
-                              final Class<?> outputType) {
+        this.keyIndices1 = keyIndices1;
 
-        this(UUID.randomUUID(), operatorType, 1, keys, strategy, globalDOP, instanceName, input1Type, input2Type, outputType, null);
-    }
+        this.keyIndices2 = keyIndices2;
 
-    public OperatorProperties(final PhysicalOperatorType operatorType,
-                              final int[] keys,
-                              final Partitioner.PartitioningStrategy strategy,
-                              final int globalDOP,
-                              final String instanceName,
-                              final Class<?> udfFunction,
-                              final Class<?> input1Type,
-                              final Class<?> input2Type,
-                              final Class<?> outputType) {
+        this.sortKeyIndices = sortKeyIndices;
 
-        this(UUID.randomUUID(), operatorType, 1, keys, strategy, globalDOP, instanceName, input1Type, input2Type, outputType, udfFunction);
-    }
-
-    public OperatorProperties(final PhysicalOperatorType operatorType,
-                              final int globalDOP,
-                              final String instanceName,
-                              final Class<?> udfFunction,
-                              final Class<?> input1Type,
-                              final Class<?> input2Type,
-                              final Class<?> outputType) {
-
-        this(UUID.randomUUID(), operatorType, 1, null, null, globalDOP, instanceName, input1Type, input2Type, outputType, udfFunction);
+        this.sortOrder = sortOrder;
     }
 }

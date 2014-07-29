@@ -292,7 +292,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     }
 
     @Override
-    public Logger getLOG() {
+    public Logger getLogger() {
         return LOG;
     }
 
