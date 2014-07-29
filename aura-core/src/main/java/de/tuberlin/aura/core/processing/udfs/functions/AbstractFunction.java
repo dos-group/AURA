@@ -1,7 +1,7 @@
 package de.tuberlin.aura.core.processing.udfs.functions;
 
-import de.tuberlin.aura.core.processing.udfs.contracts.IFunction;
 import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.processing.udfs.contracts.IFunction;
 
 /**
  *

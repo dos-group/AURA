@@ -1,5 +1,7 @@
 package de.tuberlin.aura.demo.examples;
 
+import java.util.UUID;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
@@ -14,8 +16,6 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.tuples.Tuple1;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
-
-import java.util.UUID;
 
 /**
  *

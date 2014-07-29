@@ -1,15 +1,16 @@
 package de.tuberlin.aura.core.processing.operators.impl;
 
+import java.util.Comparator;
+import java.util.PriorityQueue;
+
 import com.esotericsoftware.reflectasm.FieldAccess;
+
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import de.tuberlin.aura.core.processing.operators.base.AbstractUnaryPhysicalOperator;
 import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.processing.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.record.RowRecordModel;
-
-import java.util.Comparator;
-import java.util.PriorityQueue;
 
 /**
  *

@@ -17,7 +17,9 @@ import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
-import de.tuberlin.aura.core.task.spi.*;
+import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
+import de.tuberlin.aura.core.task.spi.IRecordReader;
+import de.tuberlin.aura.core.task.spi.IRecordWriter;
 import de.tuberlin.aura.core.topology.Topology;
 
 public final class LazyUnrollingTest {

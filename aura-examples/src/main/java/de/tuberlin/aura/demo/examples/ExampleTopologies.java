@@ -2,15 +2,10 @@ package de.tuberlin.aura.demo.examples;
 
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
-import de.tuberlin.aura.core.task.spi.IDataConsumer;
-import de.tuberlin.aura.core.task.spi.IDataProducer;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.topology.Topology;
 
 /**

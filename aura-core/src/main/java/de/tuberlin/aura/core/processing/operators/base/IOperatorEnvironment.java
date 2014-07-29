@@ -1,7 +1,8 @@
 package de.tuberlin.aura.core.processing.operators.base;
 
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import org.slf4j.Logger;
+
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
 
 /**
  *

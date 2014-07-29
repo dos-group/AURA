@@ -4,17 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.task.common.TaskStates;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
-import de.tuberlin.aura.core.task.spi.IDataConsumer;
-import de.tuberlin.aura.core.task.spi.IDataProducer;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
 
 /**
  *

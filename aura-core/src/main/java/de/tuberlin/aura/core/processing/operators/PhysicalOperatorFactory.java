@@ -1,10 +1,9 @@
 package de.tuberlin.aura.core.processing.operators;
 
+import de.tuberlin.aura.core.processing.operators.base.AbstractPhysicalOperator;
 import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.processing.operators.impl.*;
 import de.tuberlin.aura.core.processing.udfs.FunctionFactory;
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
-import de.tuberlin.aura.core.processing.operators.base.AbstractPhysicalOperator;
 import de.tuberlin.aura.core.processing.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.processing.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.processing.udfs.functions.SourceFunction;

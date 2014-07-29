@@ -1,9 +1,8 @@
 package de.tuberlin.aura.core.processing.operators.base;
 
-import de.tuberlin.aura.core.common.utils.IVisitable;
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
-
 import java.io.Serializable;
+
+import de.tuberlin.aura.core.common.utils.IVisitable;
 
 /**
  *

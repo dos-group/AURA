@@ -1,12 +1,7 @@
 package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-import de.tuberlin.aura.core.topology.TopologyStates;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;

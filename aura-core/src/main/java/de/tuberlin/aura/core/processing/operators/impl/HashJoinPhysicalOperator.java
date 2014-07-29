@@ -1,18 +1,18 @@
 package de.tuberlin.aura.core.processing.operators.impl;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.esotericsoftware.reflectasm.FieldAccess;
+
 import de.tuberlin.aura.core.common.utils.IVisitor;
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import de.tuberlin.aura.core.processing.operators.base.AbstractBinaryPhysicalOperator;
 import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.processing.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.record.RowRecordModel;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  *

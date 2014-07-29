@@ -1,11 +1,10 @@
 package de.tuberlin.aura.core.processing.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
-import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
-import de.tuberlin.aura.core.processing.udfs.contracts.IMapFunction;
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import de.tuberlin.aura.core.processing.operators.base.AbstractUnaryUDFPhysicalOperator;
+import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.processing.operators.base.IPhysicalOperator;
+import de.tuberlin.aura.core.processing.udfs.contracts.IMapFunction;
 import de.tuberlin.aura.core.processing.udfs.functions.MapFunction;
 
 /**

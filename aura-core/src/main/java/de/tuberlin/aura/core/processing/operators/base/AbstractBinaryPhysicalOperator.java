@@ -1,7 +1,5 @@
 package de.tuberlin.aura.core.processing.operators.base;
 
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
-
 /**
  *
  * @param <I1>

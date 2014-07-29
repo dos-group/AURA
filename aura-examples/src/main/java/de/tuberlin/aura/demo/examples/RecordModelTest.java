@@ -4,7 +4,6 @@ import java.util.UUID;
 
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
-import org.slf4j.Logger;
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
@@ -16,9 +15,6 @@ import de.tuberlin.aura.core.record.RowRecordWriter;
 import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import de.tuberlin.aura.core.record.tuples.Tuple3;
 import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
-import de.tuberlin.aura.core.task.spi.IDataConsumer;
-import de.tuberlin.aura.core.task.spi.IDataProducer;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
 import de.tuberlin.aura.core.topology.Topology;
 
 
