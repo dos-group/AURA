@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import de.tuberlin.aura.core.processing.udfs.contracts.IFunction;
 import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.record.TypeInformation;
 
 /**
  *
@@ -88,23 +89,23 @@ public final class OperatorProperties implements Serializable {
 
     public final int globalDOP;
 
-    public final int[] keys;
+    public final int[][] partitioningKeys;
 
     public final Partitioner.PartitioningStrategy strategy;
 
-    public final Class<?> input1Type;
+    public TypeInformation input1Type;
 
-    public final Class<?> input2Type;
+    public TypeInformation input2Type;
 
-    public final Class<?> outputType;
+    public TypeInformation outputType;
 
     public final Class<? extends IFunction> function;
 
-    public final int[] keyIndices1;
+    public final int[][] keyIndices1;
 
-    public final int[] keyIndices2;
+    public final int[][] keyIndices2;
 
-    public final int[] sortKeyIndices;
+    public final int[][] sortKeyIndices;
 
     public final SortOrder sortOrder;
 
@@ -113,6 +114,60 @@ public final class OperatorProperties implements Serializable {
     // ---------------------------------------------------
 
     public OperatorProperties(final UUID operatorUID,
+                              final PhysicalOperatorType operatorType,
+                              final int localDOP,
+                              final int[][] partitioningKeys,
+                              final Partitioner.PartitioningStrategy strategy,
+                              final int globalDOP,
+                              final String instanceName,
+                              final TypeInformation input1Type,
+                              final TypeInformation input2Type,
+                              final TypeInformation outputType,
+                              final Class<? extends IFunction> function,
+                              final int[][] keyIndices1,
+                              final int[][] keyIndices2,
+                              final int[][] sortKeyIndices,
+                              final SortOrder sortOrder) {
+        // sanity check.
+        if (operatorUID == null)
+            throw new IllegalArgumentException("operatorUID == null");
+        if (operatorType == null)
+            throw new IllegalArgumentException("operatorType == null");
+        if (instanceName == null)
+            throw new IllegalArgumentException("instanceName == null");
+
+        this.operatorUID = operatorUID;
+
+        this.operatorType = operatorType;
+
+        this.localDOP = localDOP;
+
+        this.partitioningKeys = partitioningKeys;
+
+        this.strategy = strategy;
+
+        this.globalDOP = globalDOP;
+
+        this.instanceName = instanceName;
+
+        this.input1Type = input1Type;
+
+        this.input2Type = input2Type;
+
+        this.outputType = outputType;
+
+        this.function = function;
+
+        this.keyIndices1 = keyIndices1;
+
+        this.keyIndices2 = keyIndices2;
+
+        this.sortKeyIndices = sortKeyIndices;
+
+        this.sortOrder = sortOrder;
+    }
+
+    /*public OperatorProperties(final UUID operatorUID,
                               final PhysicalOperatorType operatorType,
                               final int localDOP,
                               final int[] keys,
@@ -164,5 +219,5 @@ public final class OperatorProperties implements Serializable {
         this.sortKeyIndices = sortKeyIndices;
 
         this.sortOrder = sortOrder;
-    }
+    }*/
 }

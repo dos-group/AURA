@@ -13,8 +13,10 @@ import de.tuberlin.aura.core.processing.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.processing.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.processing.udfs.functions.SourceFunction;
 import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.record.tuples.Tuple3;
+import de.tuberlin.aura.core.record.tuples.Tuple4;
 import de.tuberlin.aura.core.topology.Topology;
 
 /**
@@ -66,8 +68,13 @@ public class OperatorTest {
         }
     }
 
-
     public static void main(final String[] args) {
+
+        final TypeInformation source1OutputTypeInfo =
+                new TypeInformation(Tuple3.class,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class),
+                        new TypeInformation(Integer.class));
 
         final OperatorAPI.Operator source1 =
                 new OperatorAPI.Operator(
@@ -75,13 +82,13 @@ public class OperatorTest {
                                 UUID.randomUUID(),
                                 OperatorProperties.PhysicalOperatorType.UDF_SOURCE,
                                 1,
-                                new int[] {0},
+                                new int[][] { {0} },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 1,
                                 "Source1",
                                 null,
                                 null,
-                                Tuple3.class,
+                                source1OutputTypeInfo,
                                 Source1.class,
                                 null,
                                 null,
@@ -90,19 +97,25 @@ public class OperatorTest {
                         )
                 );
 
+        final TypeInformation source2OutputTypeInfo =
+                new TypeInformation(Tuple3.class,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class),
+                        new TypeInformation(Integer.class));
+
         final OperatorAPI.Operator source2 =
                 new OperatorAPI.Operator(
                         new OperatorProperties(
                                 UUID.randomUUID(),
                                 OperatorProperties.PhysicalOperatorType.UDF_SOURCE,
                                 1,
-                                new int[] {0},
+                                new int[][] { {0} },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 1,
                                 "Source2",
                                 null,
                                 null,
-                                Tuple3.class,
+                                source2OutputTypeInfo,
                                 Source2.class,
                                 null,
                                 null,
@@ -155,22 +168,28 @@ public class OperatorTest {
                         map1
                 );*/
 
+
+        final TypeInformation join1OutputTypeInfo =
+                new TypeInformation(Tuple2.class,
+                        source1OutputTypeInfo,
+                        source2OutputTypeInfo);
+
         final OperatorAPI.Operator join1 =
                 new OperatorAPI.Operator(
                         new OperatorProperties(
                                 UUID.randomUUID(),
                                 OperatorProperties.PhysicalOperatorType.HASH_JOIN_OPERATOR,
                                 1,
-                                new int[] {0},
+                                new int[][] { {0} },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 1,
                                 "Join1",
-                                Tuple3.class,
-                                Tuple3.class,
-                                Tuple2.class,
+                                source1OutputTypeInfo,
+                                source2OutputTypeInfo,
+                                join1OutputTypeInfo,
                                 null,
-                                new int[] {0,1},
-                                new int[] {0,1},
+                                new int[][] { { 0 }, { 1 } },
+                                new int[][] { { 0 }, { 1 } },
                                 null,
                                 null
                         ),
@@ -212,7 +231,7 @@ public class OperatorTest {
                                 null,
                                 1,
                                 "Sink1",
-                                Tuple2.class,
+                                join1OutputTypeInfo,
                                 null,
                                 null,
                                 Sink1.class,

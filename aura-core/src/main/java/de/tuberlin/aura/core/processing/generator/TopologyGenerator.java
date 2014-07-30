@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.tuberlin.aura.core.common.utils.ArrayUtils;
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.processing.api.OperatorAPI;
 import de.tuberlin.aura.core.processing.api.OperatorProperties;
@@ -50,7 +51,7 @@ public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
 
             currentConnector = topologyBuilder.addNode(
                     new Topology.OperatorNode(element.properties),
-                    element.properties.outputType
+                    element.properties.outputType.extractTypes()
             );
 
         } else if (element.properties.operatorType.operatorInputArity == OperatorProperties.OperatorInputArity.UNARY) {
@@ -65,9 +66,9 @@ public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
             final List<Class<?>> typeList = new ArrayList<>();
 
             if(element.properties.input1Type != null)
-                typeList.add(element.properties.input1Type);
+                typeList.addAll(element.properties.input1Type.extractTypes());
             if(element.properties.outputType != null)
-                typeList.add(element.properties.outputType);
+                typeList.addAll(element.properties.outputType.extractTypes());
 
             currentConnector = topologyBuilder.addNode(
                     new Topology.OperatorNode(element.properties),
@@ -90,13 +91,15 @@ public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
                     selectEdgeTransferType(element.inputOp2.properties, element.properties)
             );
 
+
+            final List<Class<?>> typeList = new ArrayList<>();
+            typeList.addAll(element.properties.input1Type.extractTypes());
+            typeList.addAll(element.properties.input2Type.extractTypes());
+            typeList.addAll(element.properties.outputType.extractTypes());
+
             currentConnector = topologyBuilder.addNode(
                     new Topology.OperatorNode(element.properties),
-                    Arrays.asList(
-                            element.properties.input1Type,
-                            element.properties.input1Type,
-                            element.properties.outputType
-                    )
+                    typeList
             );
         }
     }
@@ -116,7 +119,7 @@ public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
     private Topology.Edge.TransferType selectEdgeTransferType(final OperatorProperties srcOperator,
                                                               final OperatorProperties dstOperator) {
 
-        if (Arrays.equals(srcOperator.keys, dstOperator.keys) // TODO: only subset of keys should be enough.. isPartOf()
+        if (ArrayUtils.equals(srcOperator.partitioningKeys, dstOperator.partitioningKeys) // TODO: only subset of keys should be enough.. isPartOf()
                 && srcOperator.strategy == dstOperator.strategy) {
             return Topology.Edge.TransferType.POINT_TO_POINT;
         } else {

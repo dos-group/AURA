@@ -12,6 +12,7 @@ import de.tuberlin.aura.core.processing.operators.base.AbstractBinaryPhysicalOpe
 import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.processing.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.record.RowRecordModel;
+import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 
 /**
@@ -23,9 +24,9 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
     // Fields.
     // ---------------------------------------------------
 
-    private final FieldAccess input1Accessor;
+    private final TypeInformation input1TypeInfo;
 
-    private final FieldAccess input2Accessor;
+    private final TypeInformation input2TypeInfo;
 
     private final Map<List<Integer>,I1> buildSide;
 
@@ -44,9 +45,9 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
 
         super(environment, inputOp1, inputOp2);
 
-        this.input1Accessor = RowRecordModel.RecordTypeBuilder.getFieldAccessor(getEnvironment().getProperties().input1Type);
+        this.input1TypeInfo = getEnvironment().getProperties().input1Type;
 
-        this.input2Accessor = RowRecordModel.RecordTypeBuilder.getFieldAccessor(getEnvironment().getProperties().input2Type);
+        this.input2TypeInfo = getEnvironment().getProperties().input2Type;
 
         this.buildSide = new HashMap<>();
 
@@ -74,9 +75,11 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
 
         while (in1 != null) {
             final List<Integer> key1 = new ArrayList<>(getEnvironment().getProperties().keyIndices1.length);
-            for (final int k : getEnvironment().getProperties().keyIndices1) {
-                key1.add(input1Accessor.get(in1, k).hashCode());
+
+            for (final int[] selectorChain : getEnvironment().getProperties().keyIndices1) {
+                key1.add(input1TypeInfo.selectField(selectorChain, in1).hashCode());
             }
+
             buildSide.put(key1, in1);
             in1 = inputOp1.next();
         }
@@ -96,9 +99,11 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
             in2 = inputOp2.next();
             if (in2 != null) {
                 final List<Integer> key2 = new ArrayList<>(getEnvironment().getProperties().keyIndices2.length);
-                for (final int k : getEnvironment().getProperties().keyIndices2) {
-                    key2.add(input2Accessor.get(in2, k).hashCode());
+
+                for (final int[] selectorChain : getEnvironment().getProperties().keyIndices2) {
+                    key2.add(input1TypeInfo.selectField(selectorChain, in2).hashCode());
                 }
+
                 in1 = buildSide.get(key2);
             } else {
                 return null;

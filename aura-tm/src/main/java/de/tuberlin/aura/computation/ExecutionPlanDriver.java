@@ -136,11 +136,12 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
             final Partitioner.IPartitioner partitioner =
                     Partitioner.PartitionerFactory.createPartitioner(
                             operatorNodeDescriptor.properties.strategy,
-                            operatorNodeDescriptor.properties.keys
+                            operatorNodeDescriptor.properties.outputType,
+                            operatorNodeDescriptor.properties.partitioningKeys
                     );
 
             for (int i = 0; i <  driver.getBindingDescriptor().outputGateBindings.size(); ++i) {
-                final RowRecordWriter reader = new RowRecordWriter(driver, operatorNodeDescriptor.properties.outputType, i, partitioner);
+                final RowRecordWriter reader = new RowRecordWriter(driver, operatorNodeDescriptor.properties.outputType.type, i, partitioner);
                 recordWriters.add(reader);
             }
         }

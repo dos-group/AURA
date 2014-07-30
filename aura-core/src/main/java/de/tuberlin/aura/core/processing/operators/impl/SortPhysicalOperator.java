@@ -11,6 +11,7 @@ import de.tuberlin.aura.core.processing.operators.base.AbstractUnaryPhysicalOper
 import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.processing.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.record.RowRecordModel;
+import de.tuberlin.aura.core.record.TypeInformation;
 
 /**
  *
@@ -27,9 +28,9 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
         @Override
         public int compare(final T o1, final T o2) {
-            for(final int k : getEnvironment().getProperties().sortKeyIndices) {
-                final Comparable f1 = (Comparable)inputAccessor.get(o1, k);
-                final Comparable f2 = (Comparable)inputAccessor.get(o2, k);
+            for(final int[] selectorChain : getEnvironment().getProperties().sortKeyIndices) {
+                final Comparable f1 = (Comparable)inputType.selectField(selectorChain, o1);
+                final Comparable f2 = (Comparable)inputType.selectField(selectorChain, o2);
                 final int res = properties.sortOrder == OperatorProperties.SortOrder.ASCENDING ? f1.compareTo(f2) : f2.compareTo(f1);
                 if(res != 0)
                     return res;
@@ -42,7 +43,7 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
     // Fields.
     // ---------------------------------------------------
 
-    private final FieldAccess inputAccessor;
+    private final TypeInformation inputType;
 
     private PriorityQueue<I> priorityQueue;
 
@@ -55,7 +56,7 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
         super(environment, inputOp);
 
-        this.inputAccessor = RowRecordModel.RecordTypeBuilder.getFieldAccessor(getEnvironment().getProperties().input1Type);
+        this.inputType = getEnvironment().getProperties().input1Type;
 
         this.priorityQueue = new PriorityQueue<>(10, new SortComparator<I>());
     }
@@ -67,18 +68,13 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
     @Override
     public void open() throws Throwable {
         super.open();
-
         I in = null;
-
         inputOp.open();
-
         in = inputOp.next();
-
         while (in != null) {
             priorityQueue.add(in);
             in = inputOp.next();
         }
-
         inputOp.close();
     }
 

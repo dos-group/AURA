@@ -2,6 +2,7 @@ package de.tuberlin.aura.demo.examples;
 
 import java.util.UUID;
 
+import de.tuberlin.aura.core.record.TypeInformation;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.SimpleLayout;
 
@@ -47,7 +48,14 @@ public final class RecordModelTest {
         }
 
         public void open() throws Throwable {
-            final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(new int[] {0});
+
+            final TypeInformation outputTypeInfo =
+                    new TypeInformation(Tuple3.class,
+                            new TypeInformation(String.class),
+                            new TypeInformation(Integer.class),
+                            new TypeInformation(Integer.class));
+
+            final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(outputTypeInfo, new int[][] { {0} });
             this.recordWriter = new RowRecordWriter(driver, AbstractTuple.class, 0, partitioner);
             recordWriter.begin();
         }

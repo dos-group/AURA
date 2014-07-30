@@ -29,7 +29,7 @@ public final class Partitioner {
      */
     public static final class PartitionerFactory {
 
-        public static IPartitioner createPartitioner(final PartitioningStrategy strategy, final int keys[]) {
+        public static IPartitioner createPartitioner(final PartitioningStrategy strategy, final TypeInformation typeInfo, final int partitioningKeys[][]) {
             // sanity check.
             if (strategy == null)
                 throw new IllegalArgumentException("strategy == null");
@@ -37,7 +37,7 @@ public final class Partitioner {
             switch(strategy) {
 
                 case HASH_PARTITIONER: {
-                    return new HashPartitioner(keys);
+                    return new HashPartitioner(typeInfo, partitioningKeys);
                 }
 
                 case RANGE_PARTITIONER: {
@@ -84,44 +84,41 @@ public final class Partitioner {
      */
     public static class HashPartitioner extends AbstractPartitioner {
 
-        private final int[] partitionFields;
+        private TypeInformation typeInfo;
 
-        private FieldAccess fieldAccessor;
+        private final int[][] partitioningKeys;
 
-        public HashPartitioner(final int[] partitionFields) {
+        public HashPartitioner(final TypeInformation typeInfo, final int[][] partitioningKeys) {
             // sanity check.
-            if (partitionFields == null)
-                throw new IllegalArgumentException("partitionFields == null");
+            if (partitioningKeys == null)
+                throw new IllegalArgumentException("partitioningKeys == null");
 
-            this.partitionFields = partitionFields;
+            this.typeInfo = typeInfo;
+
+            this.partitioningKeys = partitioningKeys;
         }
 
-        public HashPartitioner(final RowRecordModel.IKeySelector keySelector) {
+        /*public HashPartitioner(final RowRecordModel.IKeySelector keySelector) {
             // sanity check.
             if (keySelector == null)
                 throw new IllegalArgumentException("keySelector == null");
 
-            this.partitionFields = keySelector.key();
-        }
+            this.partitioningKeys = keySelector.key();
+        }*/
 
-        @Override
+        /*@Override
         public int partition(final RowRecordModel.Record record, final int receiver) {
             int result = 17;
             for(final int fieldIndex : partitionFields)
                 result = 31 * result + record.get(fieldIndex).hashCode();
             return (result & Integer.MAX_VALUE) % receiver;
-        }
+        }*/
 
         @Override
         public int partition(final Object object, final int receiver) {
-
-            if(fieldAccessor == null) {
-                fieldAccessor = FieldAccess.get(object.getClass());
-            }
-
             int result = 17;
-            for(final int fieldIndex : partitionFields)
-                result = 31 * result + fieldAccessor.get(object, fieldIndex).hashCode();
+            for(final int[] selectorChain : partitioningKeys)
+                result = 31 * result + typeInfo.selectField(selectorChain, object).hashCode();
             return (result & Integer.MAX_VALUE) % receiver;
         }
     }
@@ -147,5 +144,4 @@ public final class Partitioner {
             return channelIndex;
         }
     }
-
 }
