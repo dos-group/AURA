@@ -28,7 +28,7 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
 
     private final TypeInformation input2TypeInfo;
 
-    private final Map<List<Integer>,I1> buildSide;
+    private final Map<List<Object>,I1> buildSide;
 
     // ---------------------------------------------------
     // Constructor.
@@ -74,13 +74,14 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
         in1 = inputOp1.next();
 
         while (in1 != null) {
-            final List<Integer> key1 = new ArrayList<>(getEnvironment().getProperties().keyIndices1.length);
+            final List<Object> key1 = new ArrayList<>(getEnvironment().getProperties().keyIndices1.length);
 
             for (final int[] selectorChain : getEnvironment().getProperties().keyIndices1) {
-                key1.add(input1TypeInfo.selectField(selectorChain, in1).hashCode());
+                key1.add(input1TypeInfo.selectField(selectorChain, in1));
             }
 
             buildSide.put(key1, in1);
+
             in1 = inputOp1.next();
         }
 
@@ -98,10 +99,10 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
         while (in1 == null) {
             in2 = inputOp2.next();
             if (in2 != null) {
-                final List<Integer> key2 = new ArrayList<>(getEnvironment().getProperties().keyIndices2.length);
+                final List<Object> key2 = new ArrayList<>(getEnvironment().getProperties().keyIndices2.length);
 
                 for (final int[] selectorChain : getEnvironment().getProperties().keyIndices2) {
-                    key2.add(input1TypeInfo.selectField(selectorChain, in2).hashCode());
+                    key2.add(input1TypeInfo.selectField(selectorChain, in2));
                 }
 
                 in1 = buildSide.get(key2);

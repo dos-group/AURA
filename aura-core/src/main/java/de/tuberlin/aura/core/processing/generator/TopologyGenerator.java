@@ -49,9 +49,16 @@ public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
 
         if (element.properties.operatorType.operatorInputArity == OperatorProperties.OperatorInputArity.NULLARY) {
 
+            final List<Class<?>> typeList = new ArrayList<>();
+            //typeList.addAll(element.properties.outputType.extractTypes());
+
+            if (element.properties.function != null) {
+                typeList.add(element.properties.function);
+            }
+
             currentConnector = topologyBuilder.addNode(
                     new Topology.OperatorNode(element.properties),
-                    element.properties.outputType.extractTypes()
+                    typeList
             );
 
         } else if (element.properties.operatorType.operatorInputArity == OperatorProperties.OperatorInputArity.UNARY) {
@@ -64,11 +71,12 @@ public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
             );
 
             final List<Class<?>> typeList = new ArrayList<>();
+            //typeList.addAll(element.properties.input1Type.extractTypes());
+            //typeList.addAll(element.properties.outputType.extractTypes());
 
-            if(element.properties.input1Type != null)
-                typeList.addAll(element.properties.input1Type.extractTypes());
-            if(element.properties.outputType != null)
-                typeList.addAll(element.properties.outputType.extractTypes());
+            if (element.properties.function != null) {
+                typeList.add(element.properties.function);
+            }
 
             currentConnector = topologyBuilder.addNode(
                     new Topology.OperatorNode(element.properties),
@@ -93,9 +101,13 @@ public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
 
 
             final List<Class<?>> typeList = new ArrayList<>();
-            typeList.addAll(element.properties.input1Type.extractTypes());
-            typeList.addAll(element.properties.input2Type.extractTypes());
-            typeList.addAll(element.properties.outputType.extractTypes());
+            //typeList.addAll(element.properties.input1Type.extractTypes());
+            //typeList.addAll(element.properties.input2Type.extractTypes());
+            //typeList.addAll(element.properties.outputType.extractTypes());
+
+            if (element.properties.function != null) {
+                typeList.add(element.properties.function);
+            }
 
             currentConnector = topologyBuilder.addNode(
                     new Topology.OperatorNode(element.properties),

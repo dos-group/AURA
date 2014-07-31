@@ -32,7 +32,7 @@ public final class TypeInformation implements Serializable {
     }
 
     public TypeInformation(final Class<?> type, TypeInformation... fieldTypes) {
-        this(type, Arrays.asList(fieldTypes));
+        this(type, fieldTypes.length > 1 ? Arrays.asList(fieldTypes) : null);
     }
 
     public TypeInformation(final Class<?> type, List<TypeInformation> fieldTypes) {
@@ -94,8 +94,10 @@ public final class TypeInformation implements Serializable {
 
         final List<Class<?>> typeList = new ArrayList<>();
         typeList.add(typeInfo.type);
-        for (final TypeInformation ti : fieldTypes) {
-            typeList.addAll(_extractTypes(ti));
+        if (typeInfo.fieldTypes != null) {
+            for (final TypeInformation ti : typeInfo.fieldTypes) {
+                typeList.addAll(_extractTypes(ti));
+            }
         }
         return typeList;
     }
@@ -146,8 +148,13 @@ public final class TypeInformation implements Serializable {
                                                                             new TypeInformation(Integer.class),
                                                                             new TypeInformation(Integer.class))));
 
-        final Object result = ti.selectField(new int[] {1, 2}, tuple);
+        final List<Class<?>> classList = ti.extractTypes();
 
-        System.out.println("--> " + result);
+        for (final Class<?> clazz : classList) {
+            System.out.println(clazz.getSimpleName());
+        }
+
+        //final Object result = ti.selectField(new int[] {1, 2}, tuple);
+        //System.out.println("--> " + result);
     }
 }

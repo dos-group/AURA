@@ -5,6 +5,7 @@ import java.util.List;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import de.tuberlin.aura.core.processing.operators.PhysicalOperatorFactory;
 import de.tuberlin.aura.core.processing.operators.base.AbstractPhysicalOperator;
 import de.tuberlin.aura.core.processing.operators.base.IOperatorEnvironment;
@@ -199,6 +200,11 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
             case UDF_SINK: {
             } break;
         }*/
+
+
+        //if (rootOperator.getEnvironment().getProperties().operatorType == OperatorProperties.PhysicalOperatorType.HASH_JOIN_OPERATOR) {
+        //    System.out.println("STOP");
+        //}
 
         Object object = rootOperator.next();
         while (object != null) {

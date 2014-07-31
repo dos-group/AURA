@@ -58,7 +58,6 @@ public class RowRecordReader implements IRecordReader {
     // Constructors.
     // ---------------------------------------------------
 
-
     public RowRecordReader(final ITaskDriver driver, final int gateIndex) {
         // sanity check.
         if (driver == null)
@@ -84,8 +83,8 @@ public class RowRecordReader implements IRecordReader {
                 @Override
                 public MemoryView get() {
                     try {
-
-                        selectedChannel = ++selectedChannel % kryoInputs.size();
+                        // TODO: VERIFY: channel selection should only take place in the <code>readObject</code> method.
+                        // selectedChannel = ++selectedChannel % kryoInputs.size();
 
                         return driver.getDataConsumer().absorb(gateIndex, channelIndex).buffer;
 
@@ -188,7 +187,9 @@ public class RowRecordReader implements IRecordReader {
 
                 selectedChannel = ++selectedChannel % kryoInputs.size();
 
-                return null;
+                // We are not allowed to return null in that case, because that would stop
+                // the operator driver <code>while(input != null) {...}</code> of the calling operator.
+                return readObject(); // TODO: VERIFY FIX, recursive call is ok?
             }
 
         } catch (Exception e) {
