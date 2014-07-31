@@ -34,12 +34,6 @@ public class IntegrationTest {
 
     @BeforeClass
     public static void setup() {
-        if (System.getProperty("aura.profile") == null) {
-            LOG.warn("No profile.user.conf configuration profile specified! Fall back to profile.default.conf");
-            LOG.warn("Please create a user profile for your specific settings.");
-            System.setProperty("aura.profile", "default");
-        }
-
         IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
         switch (simConfig.getString("simulator.mode")) {
             case "local":

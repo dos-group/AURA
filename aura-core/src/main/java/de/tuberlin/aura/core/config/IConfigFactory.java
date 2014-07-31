@@ -8,11 +8,15 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigParseOptions;
 import de.tuberlin.aura.core.common.utils.InetHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  */
 public class IConfigFactory {
+
+    private static final Logger LOG = LoggerFactory.getLogger(IConfigFactory.class);
 
     /**
      * Factory method.
@@ -44,9 +48,13 @@ public class IConfigFactory {
         config = ConfigFactory.parseResources(String.format("reference.%s", s), opts).withFallback(config);
         // 2. merge a config constructed from current system data
         config = currentRuntimeConfig().withFallback(config);
-        // 3. merge a config from a classpath entry named '${aura.profile}.profile.conf'
-        if (System.getProperty("aura.profile") != null)
-            config = ConfigFactory.parseResources(String.format("profile.%s.conf", System.getProperty("aura.profile")), opts).withFallback(config);
+        // 3. merge a config from a classpath entry named '$profile.{aura.profile}.conf' or fall back to profile.default.conf
+        if (System.getProperty("aura.profile") == null) {
+            LOG.warn("No configuration profile specified! Falling back to profile.default.conf.");
+            LOG.warn("You may want to create a profile for your configuration.");
+            System.setProperty("aura.profile", "default");
+        }
+        config = ConfigFactory.parseResources(String.format("profile.%s.conf", System.getProperty("aura.profile")), opts).withFallback(config);
         // 4. merge a config from a file named ${aura.path.config}/aura.conf
         config = ConfigFactory.parseFile(new File(String.format("%s/aura.%s", System.getProperty("aura.path.config"), s)), opts).withFallback(config);
         // 5. merge system properties as configuration
@@ -55,6 +63,7 @@ public class IConfigFactory {
         // wrap the resolved delegate into a TypesafeConfig new instance and return
         return new TypesafeConfig(config.resolve());
     }
+
 
     /**
      * Loads default values from the current runtime config.
