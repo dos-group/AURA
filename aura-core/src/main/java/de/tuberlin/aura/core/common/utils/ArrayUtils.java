@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.common.utils;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Operations on multi-dimensional arrays.
@@ -80,5 +81,12 @@ public class ArrayUtils {
             }
         }
         return true;
+    }
+
+    public static int[] toIntArray(final List<Integer> list){
+        int[] ret = new int[list.size()];
+        for(int i = 0;i < ret.length;i++)
+            ret[i] = list.get(i);
+        return ret;
     }
 }

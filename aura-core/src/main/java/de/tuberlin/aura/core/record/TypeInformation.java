@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.record;
 
 import com.esotericsoftware.reflectasm.FieldAccess;
+import de.tuberlin.aura.core.common.utils.ArrayUtils;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.record.tuples.Tuple3;
 import de.tuberlin.aura.core.record.tuples.Tuple4;
@@ -65,6 +66,25 @@ public final class TypeInformation implements Serializable {
         }
 
         return obj;
+    }
+
+    public int[] buildSelectorChain(final String accessPath) {
+        // sanity check.
+        if (accessPath == null)
+            throw new IllegalArgumentException("accessPath == null");
+
+        final StringTokenizer st = new StringTokenizer(accessPath, ".", false);
+        final List<Integer> selectorChain = new ArrayList<>();
+        TypeInformation ti = this;
+
+        while (st.hasMoreElements()) {
+            FieldAccess fa = RowRecordModel.RecordTypeBuilder.getFieldAccessor(ti.type);
+            final int fieldIndex = fa.getIndex(st.nextToken());
+            selectorChain.add(fieldIndex);
+            ti = ti.fieldTypes.get(fieldIndex);
+        }
+
+        return ArrayUtils.toIntArray(selectorChain);
     }
 
     public List<Class<?>> extractTypes() {
@@ -149,20 +169,10 @@ public final class TypeInformation implements Serializable {
                                                                             new TypeInformation(Integer.class))));
 
         final List<Class<?>> classList = ti.extractTypes();
-
         for (final Class<?> clazz : classList) {
             System.out.println(clazz.getSimpleName());
-        }*/
-
-        //final Object result = ti.selectField(new int[] {1, 2}, tuple);
-        //System.out.println("--> " + result);
-
-        final Random rand1 = new Random(12312);
-        final Random rand2 = new Random(13454);
-        for(int i = 0; i < 1000; ++i) {
-            if(rand2.nextInt(10000) == 9935) {
-                System.out.println("#");
-            }
         }
+        final Object result = ti.selectField(new int[] {1, 2}, tuple);
+        System.out.println("--> " + result);*/
     }
 }

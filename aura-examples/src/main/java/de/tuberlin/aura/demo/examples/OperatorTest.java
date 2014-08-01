@@ -69,20 +69,10 @@ public class OperatorTest {
         }
     }
 
-    /*public static final class Sink1 extends SinkFunction<Tuple2<String,Integer>> {
-
-        @Override
-        public void consume(final Tuple2<String,Integer> in) {
-
-            //getEnvironment().getLogger().info(in.toString());
-            System.out.println(in.toString() +  " - " + this.toString());
-        }
-    }*/
-
 
     public static void main(final String[] args) {
 
-        final TypeInformation source1OutputTypeInfo =
+        final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(String.class),
                         new TypeInformation(Integer.class));
@@ -93,13 +83,13 @@ public class OperatorTest {
                                 UUID.randomUUID(),
                                 OperatorProperties.PhysicalOperatorType.UDF_SOURCE,
                                 1,
-                                new int[][] { { 1 } },
+                                new int[][] { source1TypeInfo.buildSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 2,
                                 "Source1",
                                 null,
                                 null,
-                                source1OutputTypeInfo,
+                                source1TypeInfo,
                                 Source1.class,
                                 null,
                                 null,
@@ -109,7 +99,7 @@ public class OperatorTest {
                 );
 
 
-        final TypeInformation source2OutputTypeInfo =
+        final TypeInformation source2TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(String.class),
                         new TypeInformation(Integer.class));
@@ -120,13 +110,13 @@ public class OperatorTest {
                                 UUID.randomUUID(),
                                 OperatorProperties.PhysicalOperatorType.UDF_SOURCE,
                                 1,
-                                new int[][] { { 1 } },
+                                new int[][] { source2TypeInfo.buildSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 2,
                                 "Source2",
                                 null,
                                 null,
-                                source2OutputTypeInfo,
+                                source2TypeInfo,
                                 Source2.class,
                                 null,
                                 null,
@@ -136,10 +126,10 @@ public class OperatorTest {
                 );
 
 
-        final TypeInformation join1OutputTypeInfo =
+        final TypeInformation join1TypeInfo =
                 new TypeInformation(Tuple2.class,
-                        source1OutputTypeInfo,
-                        source2OutputTypeInfo);
+                        source1TypeInfo,
+                        source2TypeInfo);
 
         final OperatorAPI.Operator join1 =
                 new OperatorAPI.Operator(
@@ -147,16 +137,16 @@ public class OperatorTest {
                                 UUID.randomUUID(),
                                 OperatorProperties.PhysicalOperatorType.HASH_JOIN_OPERATOR,
                                 1,
-                                new int[][] { { 0, 1 } },
+                                new int[][] { join1TypeInfo.buildSelectorChain("_0._1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 2,
                                 "Join1",
-                                source1OutputTypeInfo,
-                                source2OutputTypeInfo,
-                                join1OutputTypeInfo,
+                                source1TypeInfo,
+                                source2TypeInfo,
+                                join1TypeInfo,
                                 null,
-                                new int[][] { { 1 } },
-                                new int[][] { { 1 } },
+                                new int[][] { source1TypeInfo.buildSelectorChain("_1") },
+                                new int[][] { source2TypeInfo.buildSelectorChain("_1") },
                                 null,
                                 null
                         ),
@@ -171,17 +161,17 @@ public class OperatorTest {
                                 UUID.randomUUID(),
                                 OperatorProperties.PhysicalOperatorType.SORT_OPERATOR,
                                 1,
-                                new int[][] { { 0, 1 } },
+                                new int[][] { join1TypeInfo.buildSelectorChain("_0._1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 2,
                                 "Sort1",
-                                join1OutputTypeInfo,
+                                join1TypeInfo,
                                 null,
-                                join1OutputTypeInfo,
+                                join1TypeInfo,
                                 null,
                                 null,
                                 null,
-                                new int[][] { { 1, 1 } },
+                                new int[][] { join1TypeInfo.buildSelectorChain("_1._1") },
                                 OperatorProperties.SortOrder.DESCENDING
                         ),
                         join1
@@ -198,7 +188,7 @@ public class OperatorTest {
                                 null,
                                 1,
                                 "Sink1",
-                                join1OutputTypeInfo,
+                                join1TypeInfo,
                                 null,
                                 null,
                                 Sink1.class,
