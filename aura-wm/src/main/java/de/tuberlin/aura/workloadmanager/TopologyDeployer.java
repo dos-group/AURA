@@ -1,5 +1,6 @@
 package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.core.topology.Topology;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;

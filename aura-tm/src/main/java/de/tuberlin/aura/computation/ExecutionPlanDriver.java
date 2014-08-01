@@ -162,7 +162,7 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
             break;
             case BINARY:
                 rootOperator = PhysicalOperatorFactory.createPhysicalOperator(environment, gateReaderOperators.get(0), gateReaderOperators.get(1));
-            break;
+                break;
             default:
                 throw new IllegalStateException();
         }
@@ -200,11 +200,6 @@ public final class ExecutionPlanDriver extends AbstractInvokeable {
             case UDF_SINK: {
             } break;
         }*/
-
-
-        //if (rootOperator.getEnvironment().getProperties().operatorType == OperatorProperties.PhysicalOperatorType.HASH_JOIN_OPERATOR) {
-        //    System.out.println("STOP");
-        //}
 
         Object object = rootOperator.next();
         while (object != null) {

@@ -99,7 +99,6 @@ public final class TopologyGenerator implements IVisitor<OperatorAPI.Operator> {
                     selectEdgeTransferType(element.inputOp2.properties, element.properties)
             );
 
-
             final List<Class<?>> typeList = new ArrayList<>();
             //typeList.addAll(element.properties.input1Type.extractTypes());
             //typeList.addAll(element.properties.input2Type.extractTypes());

@@ -661,7 +661,7 @@ public class Topology {
             inputs.add(node);
         }
 
-        public Collection<Node> getInputs() {
+        public List<Node> getInputs() {
             return Collections.unmodifiableList(inputs);
         }
 
@@ -675,7 +675,7 @@ public class Topology {
             outputs.add(node);
         }
 
-        public Collection<Node> getOutputs() {
+        public List<Node> getOutputs() {
             return Collections.unmodifiableList(outputs);
         }
 
@@ -1040,6 +1040,41 @@ public class Topology {
                 @Override
                 public void visit(Node element) {
                     System.out.println(element.name);
+                }
+            });
+        }
+    }
+
+    /**
+     *
+     */
+    public static final class ExecutionTopologyPrinter {
+
+        // ---------------------------------------------------
+        // Constructor.
+        // ---------------------------------------------------
+
+        private ExecutionTopologyPrinter() {
+        }
+
+        // ---------------------------------------------------
+        // Public Static Methods.
+        // ---------------------------------------------------
+
+        public static void printTopology(final AuraTopology topology) {
+            // sanity check.
+            if (topology == null)
+                throw new IllegalArgumentException("topology == null");
+
+            TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
+
+                @Override
+                public void visit(final Node element) {
+                    if (element.getExecutionNodes() != null) {
+                        for (final ExecutionNode en : element.getExecutionNodes()) {
+                            System.out.println(" ( " + element.name + " | " + en.taskIndex + " ) ");
+                        }
+                    }
                 }
             });
         }

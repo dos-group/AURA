@@ -133,7 +133,7 @@ public final class TypeInformation implements Serializable {
 
     public static void main(final String[] args) {
 
-        final Tuple2<Integer, Tuple3<Integer, Integer, Tuple4<Integer, Integer, Integer, Integer>>> tuple =
+        /*final Tuple2<Integer, Tuple3<Integer, Integer, Tuple4<Integer, Integer, Integer, Integer>>> tuple =
                 new Tuple2<>(1, new Tuple3<>(1, 1, new Tuple4<>(1, 1, 1, 15)));
 
         final TypeInformation ti =
@@ -152,9 +152,17 @@ public final class TypeInformation implements Serializable {
 
         for (final Class<?> clazz : classList) {
             System.out.println(clazz.getSimpleName());
-        }
+        }*/
 
         //final Object result = ti.selectField(new int[] {1, 2}, tuple);
         //System.out.println("--> " + result);
+
+        final Random rand1 = new Random(12312);
+        final Random rand2 = new Random(13454);
+        for(int i = 0; i < 1000; ++i) {
+            if(rand2.nextInt(10000) == 9935) {
+                System.out.println("#");
+            }
+        }
     }
 }

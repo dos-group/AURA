@@ -10,13 +10,11 @@ import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.processing.api.OperatorAPI;
 import de.tuberlin.aura.core.processing.api.OperatorProperties;
 import de.tuberlin.aura.core.processing.generator.TopologyGenerator;
-import de.tuberlin.aura.core.processing.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.processing.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.processing.udfs.functions.SourceFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
-import de.tuberlin.aura.core.record.tuples.Tuple3;
 import de.tuberlin.aura.core.topology.Topology;
 
 /**
@@ -39,7 +37,7 @@ public class OperatorTest {
 
         @Override
         public  Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("KEY", rand.nextInt(10000)) : null;
+            return (--count >= 0 ) ?  new Tuple2<>("SOURCE1", rand.nextInt(10000)) : null;
         }
     }
 
@@ -51,7 +49,7 @@ public class OperatorTest {
 
         @Override
         public Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("KEY", rand.nextInt(10000)) : null;
+            return (--count >= 0 ) ?  new Tuple2<>("SOURCE2", rand.nextInt(10000)) : null;
         }
     }
 
@@ -67,9 +65,7 @@ public class OperatorTest {
 
         @Override
         public void consume(final Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>> in) {
-
-            //getEnvironment().getLogger().info(in.toString());
-            System.out.println(in._0._0 + " | " + in._1._0 + " | " + in._0._1 + " | " + in._1._1);
+            System.out.println(in);
         }
     }
 
@@ -112,6 +108,7 @@ public class OperatorTest {
                         )
                 );
 
+
         final TypeInformation source2OutputTypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(String.class),
@@ -137,6 +134,7 @@ public class OperatorTest {
                                 null
                         )
                 );
+
 
         final TypeInformation join1OutputTypeInfo =
                 new TypeInformation(Tuple2.class,
@@ -167,30 +165,6 @@ public class OperatorTest {
                 );
 
 
-        /*final OperatorAPI.Operator union1 =
-                new OperatorAPI.Operator(
-                        new OperatorProperties(
-                                UUID.randomUUID(),
-                                OperatorProperties.PhysicalOperatorType.UNION_OPERATOR,
-                                1,
-                                new int[][] { { 1 } },
-                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
-                                "Union1",
-                                source1OutputTypeInfo,
-                                source1OutputTypeInfo,
-                                source1OutputTypeInfo,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
-                        ),
-                        source1,
-                        source2
-                );*/
-
-
         final OperatorAPI.Operator sort1 =
                 new OperatorAPI.Operator(
                         new OperatorProperties(
@@ -213,28 +187,6 @@ public class OperatorTest {
                         join1
                 );
 
-        /*final OperatorAPI.Operator union1 =
-                new OperatorAPI.Operator(
-                        new OperatorProperties(
-                                UUID.randomUUID(),
-                                OperatorProperties.PhysicalOperatorType.UNION_OPERATOR,
-                                1,
-                                new int[][] { { 2 } },
-                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
-                                "Union1",
-                                source1OutputTypeInfo,
-                                source1OutputTypeInfo,
-                                source1OutputTypeInfo,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
-                        ),
-                        source1,
-                        source2
-                );*/
 
         final OperatorAPI.Operator sink1 =
                 new OperatorAPI.Operator(
@@ -265,7 +217,7 @@ public class OperatorTest {
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
         final Topology.AuraTopology topology = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
 
-        // Topology.TopologyPrinter.printTopology(topology);
+        //Topology.TopologyPrinter.printTopology(topology);
 
         ac.submitTopology(topology, null);
         ac.awaitSubmissionResult(1);

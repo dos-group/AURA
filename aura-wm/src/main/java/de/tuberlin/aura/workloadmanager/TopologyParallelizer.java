@@ -116,7 +116,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                 Map<UUID, List<Descriptors.AbstractNodeDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get(dstEN.uid);
                                 if (executionNodeInputs == null) {
-                                    executionNodeInputs = new HashMap<>();
+                                    executionNodeInputs = new LinkedHashMap<>();
                                     gateExecutionNodeInputs.put(dstEN.uid, executionNodeInputs);
                                 }
 
@@ -127,12 +127,12 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                 }
 
                                 // Assignment of channels
-                                for (final ExecutionNode srcEN : n.getExecutionNodes())
+                                for (final ExecutionNode srcEN : n.getExecutionNodes()) {
                                     inputDescriptors.add(srcEN.getNodeDescriptor());
+                                }
                             }
-
                         }
-                            break;
+                        break;
 
                         case POINT_TO_POINT: {
 
@@ -156,7 +156,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                         Map<UUID, List<Descriptors.AbstractNodeDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get(dstEN.uid);
                                         if (executionNodeInputs == null) {
-                                            executionNodeInputs = new HashMap<>();
+                                            executionNodeInputs = new LinkedHashMap<>();
                                             gateExecutionNodeInputs.put(dstEN.uid, executionNodeInputs);
                                         }
 
@@ -183,7 +183,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                     Map<UUID, List<Descriptors.AbstractNodeDescriptor>> executionNodeInputs = gateExecutionNodeInputs.get(dstEN.uid);
                                     if (executionNodeInputs == null) {
-                                        executionNodeInputs = new HashMap<>();
+                                        executionNodeInputs = new LinkedHashMap<>();
                                         gateExecutionNodeInputs.put(dstEN.uid, executionNodeInputs);
                                     }
 
@@ -204,7 +204,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
                     }
                 }
 
@@ -222,7 +222,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                 Map<UUID, List<Descriptors.AbstractNodeDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get(srcEN.uid);
                                 if (executionNodeOutputs == null) {
-                                    executionNodeOutputs = new HashMap<>();
+                                    executionNodeOutputs = new LinkedHashMap<>();
                                     gateExecutionNodeOutputs.put(srcEN.uid, executionNodeOutputs);
                                 }
 
@@ -237,7 +237,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
 
                         case POINT_TO_POINT: {
 
@@ -255,7 +255,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                     Map<UUID, List<Descriptors.AbstractNodeDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get(srcEN.uid);
                                     if (executionNodeOutputs == null) {
-                                        executionNodeOutputs = new HashMap<>();
+                                        executionNodeOutputs = new LinkedHashMap<>();
                                         gateExecutionNodeOutputs.put(srcEN.uid, executionNodeOutputs);
                                     }
 
@@ -293,7 +293,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                                         Map<UUID, List<Descriptors.AbstractNodeDescriptor>> executionNodeOutputs = gateExecutionNodeOutputs.get(srcEN.uid);
                                         if (executionNodeOutputs == null) {
-                                            executionNodeOutputs = new HashMap<>();
+                                            executionNodeOutputs = new LinkedHashMap<>();
                                             gateExecutionNodeOutputs.put(srcEN.uid, executionNodeOutputs);
                                         }
 
@@ -309,7 +309,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                             }
 
                         }
-                            break;
+                        break;
                     }
                 }
 
@@ -319,11 +319,12 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                     final Map<UUID, List<Descriptors.AbstractNodeDescriptor>> inputsPerGate = gateExecutionNodeInputs.get(en.uid);
 
                     List<List<Descriptors.AbstractNodeDescriptor>> inputsPerGateList = null;
+
                     if (inputsPerGate != null) {
-                        final Collection<List<Descriptors.AbstractNodeDescriptor>> inputsPerGateCollection = inputsPerGate.values();
-                        if (inputsPerGateCollection instanceof List)
+                        final Collection<List<Descriptors.AbstractNodeDescriptor>> inputsPerGateCollection = inputsPerGate.values(); // TODO: BUG!
+                        if (inputsPerGateCollection instanceof List) {
                             inputsPerGateList = (List<List<Descriptors.AbstractNodeDescriptor>>) inputsPerGateCollection;
-                        else
+                        } else
                             inputsPerGateList = new ArrayList<>(inputsPerGateCollection);
                     }
 
