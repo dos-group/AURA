@@ -1,5 +1,6 @@
 package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -8,7 +9,7 @@ import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.ExecutionNode;
-import de.tuberlin.aura.core.topology.Topology.Node;
+import de.tuberlin.aura.core.topology.Topology.LogicalNode;
 import de.tuberlin.aura.core.topology.Topology.TopologyBreadthFirstTraverser;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
@@ -18,21 +19,15 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
     // Fields.
     // ---------------------------------------------------
 
-    /**
-     * Logger.
-     */
     private static final Logger LOG = LoggerFactory.getLogger(TopologyScheduler.class);
 
-    private InfrastructureManager infrastructureManager;
+    private IInfrastructureManager infrastructureManager;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param infrastructureManager
-     */
-    public TopologyScheduler(final InfrastructureManager infrastructureManager) {
+    public TopologyScheduler(final IInfrastructureManager infrastructureManager) {
         // sanity check.
         if (infrastructureManager == null)
             throw new IllegalArgumentException("infrastructureManager == null");
@@ -44,10 +39,6 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     * @param topology
-     * @return
-     */
     @Override
     public AuraTopology apply(AuraTopology topology) {
 
@@ -62,17 +53,14 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
     // Private Methods.
     // ---------------------------------------------------
 
-    /**
-     * @param topology
-     */
     private void scheduleTopology(AuraTopology topology) {
-        LOG.debug("Schedule topology [{}] on {} task managers", topology.name, infrastructureManager.getNumberOfMachine());
+        LOG.debug("Schedule topology [{}] on {} taskmanager managers", topology.name, infrastructureManager.getNumberOfMachine());
 
         // Scheduling.
-        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
+        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<LogicalNode>() {
 
             @Override
-            public void visit(final Node element) {
+            public void visit(final LogicalNode element) {
 
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 

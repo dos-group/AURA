@@ -1,37 +1,38 @@
 package de.tuberlin.aura.demo.examples;
 
-import java.util.Random;
-import java.util.UUID;
-
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.processing.api.OperatorAPI;
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
-import de.tuberlin.aura.core.processing.generator.TopologyGenerator;
-import de.tuberlin.aura.core.processing.udfs.functions.SinkFunction;
-import de.tuberlin.aura.core.processing.udfs.functions.SourceFunction;
+import de.tuberlin.aura.core.dataflow.generator.TopologyGenerator;
+import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowAPI;
+import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
+import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
+import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
 
+import java.util.Random;
+import java.util.UUID;
+
 /**
  *
  */
-public class OperatorTest {
+public final class OperatorTest {
 
     // Disallow instantiation.
     private OperatorTest() {}
 
-    // ------------------------------------------------------------------------------------------------
-    // Testing.
-    // ------------------------------------------------------------------------------------------------
+    // ---------------------------------------------------
+    // User Defined Functions.
+    // ---------------------------------------------------
 
     public static final class Source1 extends SourceFunction<Tuple2<String,Integer>> {
 
-        int count = 1000;
+        int count = 950000;
 
         Random rand = new Random(12312);
 
@@ -43,7 +44,7 @@ public class OperatorTest {
 
     public static final class Source2 extends SourceFunction<Tuple2<String,Integer>> {
 
-        int count = 1000;
+        int count = 950000;
 
         Random rand = new Random(13454);
 
@@ -53,13 +54,13 @@ public class OperatorTest {
         }
     }
 
-    /*public static final class Map1 extends MapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
+    public static final class Map1 extends MapFunction<Tuple2<Tuple2<String,Integer>,Tuple2<String,Integer>>, Tuple2<Tuple2<String,Integer>,Tuple2<String,Integer>>> {
 
         @Override
-        public Tuple2<String,Integer> map(final Tuple2<String,Integer> in) {
-            return new Tuple2<>(in._0, in._1);
+        public Tuple2<Tuple2<String,Integer>,Tuple2<String,Integer>> map(final Tuple2<Tuple2<String,Integer>,Tuple2<String,Integer>> in) {
+            return new Tuple2<>(new Tuple2<>("HELLO", in._0._1), in._1);
         }
-    }*/
+    }
 
     public static final class Sink1 extends SinkFunction<Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>>> {
 
@@ -69,23 +70,29 @@ public class OperatorTest {
         }
     }
 
+    // ---------------------------------------------------
+    // Entry Point.
+    // ---------------------------------------------------
 
     public static void main(final String[] args) {
+
+        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
+        final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(String.class),
                         new TypeInformation(Integer.class));
 
-        final OperatorAPI.Operator source1 =
-                new OperatorAPI.Operator(
-                        new OperatorProperties(
+        final DataflowAPI.DataflowNodeDescriptor source1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
                                 UUID.randomUUID(),
-                                OperatorProperties.PhysicalOperatorType.UDF_SOURCE,
+                                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
                                 1,
-                                new int[][] { source1TypeInfo.buildSelectorChain("_1") },
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                1,
                                 "Source1",
                                 null,
                                 null,
@@ -98,21 +105,20 @@ public class OperatorTest {
                         )
                 );
 
-
         final TypeInformation source2TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(String.class),
                         new TypeInformation(Integer.class));
 
-        final OperatorAPI.Operator source2 =
-                new OperatorAPI.Operator(
-                        new OperatorProperties(
+        final DataflowAPI.DataflowNodeDescriptor source2 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
                                 UUID.randomUUID(),
-                                OperatorProperties.PhysicalOperatorType.UDF_SOURCE,
+                                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
                                 1,
-                                new int[][] { source2TypeInfo.buildSelectorChain("_1") },
+                                new int[][] { source2TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                1,
                                 "Source2",
                                 null,
                                 null,
@@ -125,28 +131,27 @@ public class OperatorTest {
                         )
                 );
 
-
         final TypeInformation join1TypeInfo =
                 new TypeInformation(Tuple2.class,
                         source1TypeInfo,
                         source2TypeInfo);
 
-        final OperatorAPI.Operator join1 =
-                new OperatorAPI.Operator(
-                        new OperatorProperties(
+        final DataflowAPI.DataflowNodeDescriptor join1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
                                 UUID.randomUUID(),
-                                OperatorProperties.PhysicalOperatorType.HASH_JOIN_OPERATOR,
+                                DataflowNodeProperties.DataflowNodeType.HASH_JOIN_OPERATOR,
                                 1,
-                                new int[][] { join1TypeInfo.buildSelectorChain("_0._1") },
+                                new int[][] { join1TypeInfo.buildFieldSelectorChain("_0._1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                1,
                                 "Join1",
                                 source1TypeInfo,
                                 source2TypeInfo,
                                 join1TypeInfo,
                                 null,
-                                new int[][] { source1TypeInfo.buildSelectorChain("_1") },
-                                new int[][] { source2TypeInfo.buildSelectorChain("_1") },
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                new int[][] { source2TypeInfo.buildFieldSelectorChain("_1") },
                                 null,
                                 null
                         ),
@@ -154,16 +159,15 @@ public class OperatorTest {
                         source2
                 );
 
-
-        final OperatorAPI.Operator sort1 =
-                new OperatorAPI.Operator(
-                        new OperatorProperties(
+        final DataflowAPI.DataflowNodeDescriptor sort1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
                                 UUID.randomUUID(),
-                                OperatorProperties.PhysicalOperatorType.SORT_OPERATOR,
+                                DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
                                 1,
-                                new int[][] { join1TypeInfo.buildSelectorChain("_0._1") },
+                                new int[][] { join1TypeInfo.buildFieldSelectorChain("_0._1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                1,
                                 "Sort1",
                                 join1TypeInfo,
                                 null,
@@ -171,18 +175,39 @@ public class OperatorTest {
                                 null,
                                 null,
                                 null,
-                                new int[][] { join1TypeInfo.buildSelectorChain("_1._1") },
-                                OperatorProperties.SortOrder.DESCENDING
+                                new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._1") },
+                                DataflowNodeProperties.SortOrder.DESCENDING
                         ),
                         join1
                 );
 
-
-        final OperatorAPI.Operator sink1 =
-                new OperatorAPI.Operator(
-                        new OperatorProperties(
+        final DataflowAPI.DataflowNodeDescriptor map1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
                                 UUID.randomUUID(),
-                                OperatorProperties.PhysicalOperatorType.UDF_SINK,
+                                DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
+                                1,
+                                new int[][] {join1TypeInfo.buildFieldSelectorChain("_0._1")},
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "Map1",
+                                join1TypeInfo,
+                                null,
+                                join1TypeInfo,
+                                Map1.class,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        sort1
+                );
+
+        final DataflowAPI.DataflowNodeDescriptor sink1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
                                 1,
                                 null,
                                 null,
@@ -197,67 +222,13 @@ public class OperatorTest {
                                 null,
                                 null
                         ),
-                        sort1
+                        map1
                 );
 
-
-        // OperatorAPI.PlanPrinter.printPlan(sink1);
-
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
-        final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
-        final Topology.AuraTopology topology = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
-
-        //Topology.TopologyPrinter.printTopology(topology);
-
-        ac.submitTopology(topology, null);
+        final Topology.AuraTopology topology1 = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
+        ac.submitTopology(topology1, null);
         ac.awaitSubmissionResult(1);
         ac.closeSession();
-
         lcs.shutdown();
-
-        /*final OperatorAPI.Operator union1 =
-        new OperatorAPI.Operator(
-                new OperatorProperties(
-                        UUID.randomUUID(),
-                        OperatorProperties.PhysicalOperatorType.UNION_OPERATOR,
-                        1,
-                        new int[] {0},
-                        Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                        1,
-                        "Union1",
-                        Tuple3.class,
-                        Tuple3.class,
-                        Tuple3.class,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null
-                ),
-                source1,
-                source2
-        );*/
-
-        /*final OperatorAPI.Operator map1 =
-        new OperatorAPI.Operator(
-                new OperatorProperties(
-                        UUID.randomUUID(),
-                        OperatorProperties.PhysicalOperatorType.MAP_TUPLE_OPERATOR,
-                        1,
-                        new int[] {0},
-                        Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                        1,
-                        "Map1",
-                        Tuple3.class,
-                        null,
-                        Tuple3.class,
-                        Map1.class,
-                        null,
-                        null,
-                        null,
-                        null
-                ),
-                source2
-        );*/
     }
 }

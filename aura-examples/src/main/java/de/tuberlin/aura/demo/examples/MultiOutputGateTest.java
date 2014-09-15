@@ -19,7 +19,7 @@ import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
+import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.topology.Topology;
 
 /**
@@ -190,14 +190,14 @@ public class MultiOutputGateTest {
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
 
-        atb.addNode(new Topology.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Source.class)
+        atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source", 1, 1), Source.class)
            .connectTo("ForwardLeft", Topology.Edge.TransferType.ALL_TO_ALL)
            .and().connectTo("ForwardRight", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardLeft", 1, 1), ForwardLeft.class)
+           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "ForwardLeft", 1, 1), ForwardLeft.class)
            .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.ComputationNode(UUID.randomUUID(), "ForwardRight", 1, 1), ForwardRight.class)
+           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "ForwardRight", 1, 1), ForwardRight.class)
            .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
+           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
 
         ac.submitTopology(atb.build("JOB1"), null);
 

@@ -2,10 +2,6 @@ package de.tuberlin.aura.core.common.utils;
 
 import java.io.Serializable;
 
-/**
- * @param <A>
- * @param <B>
- */
 public class Pair<A, B> implements Serializable {
 
     // ---------------------------------------------------
@@ -22,19 +18,12 @@ public class Pair<A, B> implements Serializable {
     // Constructor.
     // ---------------------------------------------------
 
-    /**
-     *
-     */
     public Pair() {
         super();
         this.first = null;
         this.second = null;
     }
 
-    /**
-     * @param first
-     * @param second
-     */
     public Pair(A first, B second) {
         super();
         this.first = first;

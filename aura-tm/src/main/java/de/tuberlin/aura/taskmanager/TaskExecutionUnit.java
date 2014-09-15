@@ -11,10 +11,10 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
-import de.tuberlin.aura.core.task.common.TaskStates;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
+import de.tuberlin.aura.core.taskmanager.common.TaskStates;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 
 public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
@@ -38,7 +38,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
     private final IAllocator outputAllocator;
 
-    private ITaskDriver currentTaskDriver;
+    private ITaskDriver taskDriver;
 
     // ---------------------------------------------------
     // Constructors.
@@ -66,8 +66,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
         this.outputAllocator = outputAllocator;
 
-        // TODO: Make this configurable
-        this.executorThread = new Thread(new ExecutionUnitRunner());
+        this.executorThread = new Thread(new ExecutionUnitRunner()); // TODO: Make this configurable
 
         this.taskQueue = new LinkedBlockingQueue<>();
 
@@ -78,9 +77,6 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     *
-     */
     public void start() {
         // check preconditions.
         if (executorThread.isAlive()) {
@@ -90,9 +86,6 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         executorThread.start();
     }
 
-    /**
-     * @param taskDriver
-     */
     public void enqueueTask(final ITaskDriver taskDriver) {
         // sanity check.
         if (taskDriver == null) {
@@ -101,9 +94,6 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         taskQueue.add(taskDriver);
     }
 
-    /**
-     *
-     */
     public void stop() {
         // check preconditions.
         if (!executorThread.isAlive()) {
@@ -112,37 +102,26 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         isExecutionUnitRunning.set(false);
     }
 
-    /**
-     * @return
-     */
+    // ---------------------------------------------------
+    // Public Getter Methods.
+    // ---------------------------------------------------
+
     public int getNumberOfEnqueuedTasks() {
-        return taskQueue.size() + (currentTaskDriver != null ? 1 : 0);
+        return taskQueue.size() + (taskDriver != null ? 1 : 0);
     }
 
-    /**
-     * @return
-     */
-    public ITaskDriver getCurrentTaskDriver() {
-        return currentTaskDriver;
+    public ITaskDriver getTaskDriver() {
+        return taskDriver;
     }
 
-    /**
-     * @return
-     */
     public IAllocator getInputAllocator() {
         return inputAllocator;
     }
 
-    /**
-     * @return
-     */
     public IAllocator getOutputAllocator() {
         return outputAllocator;
     }
 
-    /**
-     * @return
-     */
     public int getExecutionUnitID() {
         return executionUnitID;
     }
@@ -151,13 +130,14 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
     // Private Methods.
     // ---------------------------------------------------
 
-    /**
-     * @param taskDriver
-     */
     private void unregisterTask(final ITaskDriver taskDriver) {
-        LOG.trace("unregister task {} {}", taskDriver.getNodeDescriptor().name, taskDriver.getNodeDescriptor().taskIndex);
-        executionManager.dispatchEvent(new TaskExecutionManager.TaskExecutionEvent(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
-                                                                                   taskDriver));
+        LOG.debug("UNREGISTER TASK NAME:{} INDEX:{} UID:{}", taskDriver.getNodeDescriptor().name, taskDriver.getNodeDescriptor().taskIndex, taskDriver.getNodeDescriptor().taskID);
+        executionManager.dispatchEvent(
+                new TaskExecutionManager.TaskExecutionEvent(
+                        TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
+                        taskDriver
+                )
+        );
     }
 
     // ---------------------------------------------------
@@ -172,21 +152,21 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
             while (isExecutionUnitRunning.get()) {
 
                 try {
-                    currentTaskDriver = taskQueue.take();
-                    LOG.debug("Execution Unit {} prepares execution of task {}",
+                    taskDriver = taskQueue.take();
+                    LOG.info("Execution Unit {} prepares execution of taskmanager {}",
                             TaskExecutionUnit.this.executionUnitID,
-                            currentTaskDriver.getNodeDescriptor().taskID);
+                            taskDriver.getNodeDescriptor().taskID);
                 } catch (InterruptedException e) {
                     throw new IllegalStateException(e);
                 }
 
                 final CountDownLatch executeLatch = new CountDownLatch(1);
 
-                final ITaskDriver oldTaskDriver = currentTaskDriver;
+                final ITaskDriver terminatingTaskDriver = taskDriver;
 
-                executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + oldTaskDriver.getNodeDescriptor().name);
+                executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + terminatingTaskDriver.getNodeDescriptor().name);
 
-                currentTaskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
+                taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
                         new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
@@ -197,7 +177,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             }
                         });
 
-                currentTaskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
+                taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
                         new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
@@ -206,10 +186,9 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                                                     TaskStates.TaskState state) {
                                 try {
 
-                                    if (oldTaskDriver.getNodeDescriptor() instanceof Descriptors.ComputationNodeDescriptor &&
-                                            !oldTaskDriver.getDataProducer().hasStoredBuffers()) {
-                                        oldTaskDriver.teardownDriver(true);
-                                        unregisterTask(oldTaskDriver);
+                                    if (!(terminatingTaskDriver.getNodeDescriptor() instanceof Descriptors.DatasetNodeDescriptor)) {
+                                        terminatingTaskDriver.teardownDriver(true);
+                                        unregisterTask(terminatingTaskDriver);
                                     }
 
                                 } catch (Throwable t) {
@@ -221,36 +200,36 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             @Override
                             public String toString() {
                                 return "TaskStateFinished Listener (TaskExecutionUnit -> "
-                                        + oldTaskDriver.getNodeDescriptor().name + " "
-                                        + oldTaskDriver.getNodeDescriptor().taskIndex + ")";
+                                        + terminatingTaskDriver.getNodeDescriptor().name + " "
+                                        + terminatingTaskDriver.getNodeDescriptor().taskIndex + ")";
                             }
                         });
 
-                currentTaskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_CANCELED,
+                taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_CANCELED,
                         new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
                             public void stateAction(TaskStates.TaskState previousState,
                                                     TaskStates.TaskTransition transition,
                                                     TaskStates.TaskState state) {
-                                oldTaskDriver.teardownDriver(false);
-                                unregisterTask(oldTaskDriver);
+                                terminatingTaskDriver.teardownDriver(false);
+                                unregisterTask(terminatingTaskDriver);
                             }
                         });
 
-                currentTaskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FAILURE,
+                taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FAILURE,
                         new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
                             public void stateAction(TaskStates.TaskState previousState,
                                                     TaskStates.TaskTransition transition,
                                                     TaskStates.TaskState state) {
-                                oldTaskDriver.teardownDriver(false);
-                                unregisterTask(oldTaskDriver);
+                                terminatingTaskDriver.teardownDriver(false);
+                                unregisterTask(terminatingTaskDriver);
                             }
                         });
 
-                currentTaskDriver.startupDriver(inputAllocator, outputAllocator);
+                taskDriver.startupDriver(inputAllocator, outputAllocator);
 
                 try {
                     executeLatch.await();
@@ -258,17 +237,17 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                     LOG.error(e.getLocalizedMessage(), e);
                 }
 
-                if (/*oldTaskDriver.getNodeDescriptor() instanceof Descriptors.ComputationNodeDescriptor &&*/
-                    !currentTaskDriver.getDataProducer().hasStoredBuffers()) {
-                    currentTaskDriver.executeDriver();
-                    LOG.debug("Execution Unit {} completed the execution of task {}",
+                //if (/*terminatingTaskDriver.getNodeDescriptor() instanceof Descriptors.ComputationNodeDescriptor &&*/
+                //    !taskDriver.getDataProducer().hasStoredBuffers()) {
+                    taskDriver.executeDriver();
+                    LOG.debug("Execution Unit {} completed the execution of taskmanager {}",
                             TaskExecutionUnit.this.executionUnitID,
-                            currentTaskDriver.getNodeDescriptor().taskID);
-                }
+                            taskDriver.getNodeDescriptor().taskID);
+                //}
 
                 // This is necessary to indicate that this execution unit is free via the
                 // getNumberOfEnqueuedTasks()-method. This isn't thread safe in any way!
-                currentTaskDriver = null;
+                taskDriver = null;
             }
 
             LOG.debug("Terminate thread of execution unit {}", TaskExecutionUnit.this.executionUnitID);

@@ -9,11 +9,11 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
+import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
 import de.tuberlin.aura.core.record.tuples.AbstractTuple;
-import de.tuberlin.aura.core.task.common.TaskStates.TaskState;
-import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
+import de.tuberlin.aura.core.taskmanager.common.TaskStates.TaskState;
+import de.tuberlin.aura.core.taskmanager.usercode.UserCode;
+import de.tuberlin.aura.core.taskmanager.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology.DeploymentType;
 
 public class Topology {
@@ -51,24 +51,21 @@ public class Topology {
 
         public UUID topologyID;
 
-        public final Map<String, Node> nodeMap;
+        public final Map<String, LogicalNode> nodeMap;
 
-        public final Map<String, Node> sourceMap;
+        public final Map<String, LogicalNode> sourceMap;
 
-        public final Map<String, Node> sinkMap;
+        public final Map<String, LogicalNode> sinkMap;
 
         public final Map<Pair<String, String>, Edge> edges;
 
         public final Map<String, List<UserCode>> userCodeMap;
 
-        public final Map<UUID, Node> uidNodeMap;
+        public final Map<UUID, LogicalNode> uidNodeMap;
 
         public final DeploymentType deploymentType;
 
         public Map<UUID, ExecutionNode> executionNodeMap;
-
-
-        public final Map<Pair<String, String>, Edge.TransferType> externalEdges;
 
         // ---------------------------------------------------
         // Constructor.
@@ -77,14 +74,13 @@ public class Topology {
         public AuraTopology(final UUID machineID,
                             final String name,
                             final UUID topologyID,
-                            final Map<String, Node> nodeMap,
-                            final Map<String, Node> sourceMap,
-                            final Map<String, Node> sinkMap,
+                            final Map<String, LogicalNode> nodeMap,
+                            final Map<String, LogicalNode> sourceMap,
+                            final Map<String, LogicalNode> sinkMap,
                             final Map<Pair<String, String>, Edge> edges,
                             final Map<String, List<UserCode>> userCodeMap,
-                            final Map<UUID, Node> uidNodeMap,
-                            final DeploymentType deploymentType,
-                            final Map<Pair<String, String>, Edge.TransferType> externalEdges) {
+                            final Map<UUID, LogicalNode> uidNodeMap,
+                            final DeploymentType deploymentType) {
 
             // sanity check.
             if (machineID == null)
@@ -107,35 +103,6 @@ public class Topology {
                 throw new IllegalArgumentException("uidNodeMap == null");
             if (deploymentType == null)
                 throw new IllegalArgumentException("deploymentType == null");
-            if (externalEdges == null)
-                throw new IllegalArgumentException("externalEdges == null");
-
-            /*this.machineID = machineID;
-
-            this.name = name;
-
-            this.topologyID = topologyID;
-
-            this.nodeMap = Collections.unmodifiableMap(nodeMap);
-
-            this.sourceMap = Collections.unmodifiableMap(sourceMap);
-
-            this.sinkMap = Collections.unmodifiableMap(sinkMap);
-
-            this.edges = Collections.unmodifiableMap(edges);
-
-            this.userCodeMap = Collections.unmodifiableMap(userCodeMap);
-
-            this.uidNodeMap = Collections.unmodifiableMap(uidNodeMap);
-
-            this.deploymentType = deploymentType;
-
-            this.monitoringProperties = EnumSet.copyOf(monitoringProperties);
-
-            this.executionNodeMap = null;
-
-            this.externalEdges = Collections.unmodifiableMap(externalEdges);*/
-
 
             this.machineID = machineID;
 
@@ -158,8 +125,6 @@ public class Topology {
             this.deploymentType = deploymentType;
 
             this.executionNodeMap = null;
-
-            this.externalEdges = externalEdges;
         }
 
         // ---------------------------------------------------
@@ -188,11 +153,11 @@ public class Topology {
 
         private final UUID machineID;
 
-        private final Map<String, Node> nodeMap;
+        private final Map<String, LogicalNode> nodeMap;
 
-        private final Map<String, Node> sourceMap;
+        private final Map<String, LogicalNode> sourceMap;
 
-        private final Map<String, Node> sinkMap;
+        private final Map<String, LogicalNode> sinkMap;
 
         private final Map<Pair<String, String>, Edge> edges;
 
@@ -204,12 +169,9 @@ public class Topology {
 
         private final Map<String, List<Class<?>>> userCodeClazzMap;
 
-        private final Map<UUID, Node> uidNodeMap;
+        private final Map<UUID, LogicalNode> uidNodeMap;
 
         private boolean isBuilt = false;
-
-
-        private final Map<Pair<String, String>, Edge.TransferType> externalEdges;
 
         // ---------------------------------------------------
         // Constructor.
@@ -241,93 +203,44 @@ public class Topology {
             this.userCodeClazzMap = new HashMap<>();
 
             this.uidNodeMap = new HashMap<>();
-
-
-            this.externalEdges = new HashMap<>();
         }
 
         // ---------------------------------------------------
         // Public Methods.
         // ---------------------------------------------------
 
-        public AuraTopologyBuilder connectFrom(final String srcNodeName, final String dstNodeName, final Edge.TransferType transferType) {
-
-            externalEdges.put(new Pair<>(srcNodeName, dstNodeName), transferType);
-
-            return this;
-        }
-
-        public NodeConnector addNode(final Node node, Class<?>... userCodeClazzes) {
+        public NodeConnector addNode(final LogicalNode node, Class<?>... userCodeClazzes) {
             // sanity check.
             if (node == null)
                 throw new IllegalArgumentException("node == null");
             if (userCodeClazzes.length < 1)
                 throw new IllegalArgumentException("No user code classes given for node connector");
-
             if (nodeMap.containsKey(node.name))
                 throw new IllegalStateException("node already exists");
 
             nodeMap.put(node.name, node);
-
             sourceMap.put(node.name, node);
-
             sinkMap.put(node.name, node);
-
             uidNodeMap.put(node.uid, node);
-
             final List<Class<?>> userCodeClazzList = Arrays.asList(userCodeClazzes);
-
             userCodeClazzMap.put(node.name, userCodeClazzList);
-
             return nodeConnector.currentSource(node);
         }
 
-        public NodeConnector addNode(final Pair<Topology.Node,List<Class<?>>> nodeAndUserClazzList) {
-            // sanity check.
-            if (nodeAndUserClazzList == null)
-                throw new IllegalArgumentException("nodeAndUserClazzList == null");
-
-            return addNode(nodeAndUserClazzList.getFirst(), nodeAndUserClazzList.getSecond());
-        }
-
-        public NodeConnector addNode(final Node node, final List<Class<?>> userCodeClazzList) {
+        public NodeConnector addNode(final LogicalNode node, final List<Class<?>> userCodeClazzList) {
             // sanity check.
             if (node == null)
                 throw new IllegalArgumentException("node == null");
             if (userCodeClazzList == null)
                 throw new IllegalArgumentException("userCodeClazzList == null");
-
             if (nodeMap.containsKey(node.name))
                 throw new IllegalStateException("node already exists");
 
             nodeMap.put(node.name, node);
-
             sourceMap.put(node.name, node);
-
             sinkMap.put(node.name, node);
-
             uidNodeMap.put(node.uid, node);
-
             userCodeClazzMap.put(node.name, userCodeClazzList);
-
-            return nodeConnector.currentSource(node);
-        }
-
-        public NodeConnector addStorageNode(final StorageNode node) {
-            // sanity check.
-            if (node == null)
-                throw new IllegalArgumentException("node == null");
-            if (nodeMap.containsKey(node.name))
-                throw new IllegalStateException("node already exists");
-
-            nodeMap.put(node.name, node);
-
-            sourceMap.put(node.name, node);
-
-            sinkMap.put(node.name, node);
-
-            uidNodeMap.put(node.uid, node);
-
             return nodeConnector.currentSource(node);
         }
 
@@ -352,22 +265,22 @@ public class Topology {
                 final Map<Pair<String, String>, List<Object>> edgeProperties = nodeConnector.getEdgeProperties();
 
                 for (final Pair<String, String> entry : nodeConnector.getEdges()) {
-                    final Node srcNode = nodeMap.get(entry.getFirst());
-                    final Node dstNode = nodeMap.get(entry.getSecond());
+                    final LogicalNode srcNode = nodeMap.get(entry.getFirst());
+                    final LogicalNode dstNode = nodeMap.get(entry.getSecond());
                     srcNode.addOutput(dstNode);
                     dstNode.addInput(srcNode);
                 }
 
                 for (final Pair<String, String> entry : nodeConnector.getEdges()) {
 
-                    final Node srcNode = nodeMap.get(entry.getFirst());
-                    final Node dstNode = nodeMap.get(entry.getSecond());
+                    final LogicalNode srcNode = nodeMap.get(entry.getFirst());
+                    final LogicalNode dstNode = nodeMap.get(entry.getSecond());
                     final List<Object> properties = edgeProperties.get(new Pair<>(srcNode.name, dstNode.name));
                     final Edge.TransferType transferType = (Edge.TransferType) properties.get(0);
                     final Edge.EdgeType edgeType = (Edge.EdgeType) properties.get(1);
 
                     if (edgeType == Edge.EdgeType.BACKWARD_EDGE) {
-                        if (!validateBackCouplingEdge(new HashSet<Node>(), srcNode, dstNode))
+                        if (!validateBackCouplingEdge(new HashSet<LogicalNode>(), srcNode, dstNode))
                             throw new IllegalStateException(srcNode.name + " to " + dstNode.name + "is not a back coupling edge");
                     }
 
@@ -379,23 +292,16 @@ public class Topology {
                     }
                 }
 
-                for (final Node n : nodeMap.values()) {
-
-                    if (n instanceof ComputationNode || n instanceof Node) {
-
+                for (final LogicalNode n : nodeMap.values()) {
+                    if (n instanceof InvokeableNode || n instanceof LogicalNode) {
                         final List<Class<?>> userCodeClazzList = userCodeClazzMap.get(n.name);
-
                         final List<UserCode> userCodeList = new ArrayList<>();
-
-                        for(final Class<?> userCodeClazz : userCodeClazzList) {
-
-                            if(userCodeClazz != null && !AbstractTuple.class.isAssignableFrom(userCodeClazz)) { // TODO: shit hack...
-
+                        for (final Class<?> userCodeClazz : userCodeClazzList) {
+                            if (userCodeClazz != null && !AbstractTuple.class.isAssignableFrom(userCodeClazz)) { // TODO: shit hack...
                                 final UserCode uc = codeExtractor.extractUserCodeClass(userCodeClazz);
                                 userCodeList.add(uc);
                             }
                         }
-
                         userCodeMap.put(n.name, userCodeList);
                     }
                 }
@@ -415,13 +321,12 @@ public class Topology {
                                     edges,
                                     userCodeMap,
                                     uidNodeMap,
-                                    deploymentType,
-                                    externalEdges);
+                                    deploymentType);
         }
 
-        private boolean validateBackCouplingEdge(final Set<Node> visitedNodes, final Node currentNode, final Node destNode) {
+        private boolean validateBackCouplingEdge(final Set<LogicalNode> visitedNodes, final LogicalNode currentNode, final LogicalNode destNode) {
             // implement detection of back coupling (cycle forming) edge!
-            for (final Node n : currentNode.inputs) {
+            for (final LogicalNode n : currentNode.inputs) {
                 // be careful, only reference comparison!
                 if (destNode == n)
                     return true;
@@ -440,11 +345,9 @@ public class Topology {
 
         public final class NodeConnector {
 
-            protected NodeConnector(final AuraTopologyBuilder tb) {
-                this.tb = tb;
-                this.edges = new ArrayList<>();
-                this.edgeProperties = new HashMap<>();
-            }
+            // ---------------------------------------------------
+            // Fields.
+            // ---------------------------------------------------
 
             private final AuraTopologyBuilder tb;
 
@@ -452,9 +355,23 @@ public class Topology {
 
             private final Map<Pair<String, String>, List<Object>> edgeProperties;
 
-            private Node srcNode;
+            private LogicalNode srcNode;
 
-            public NodeConnector currentSource(final Node srcNode) {
+            // ---------------------------------------------------
+            // Constructor.
+            // ---------------------------------------------------
+
+            protected NodeConnector(final AuraTopologyBuilder tb) {
+                this.tb = tb;
+                this.edges = new ArrayList<>();
+                this.edgeProperties = new HashMap<>();
+            }
+
+            // ---------------------------------------------------
+            // Public Methods.
+            // ---------------------------------------------------
+
+            public NodeConnector currentSource(final LogicalNode srcNode) {
                 this.srcNode = srcNode;
                 return this;
             }
@@ -462,8 +379,8 @@ public class Topology {
             public AuraTopologyBuilder connectTo(final String dstNodeName,
                                                  final Edge.TransferType transferType,
                                                  final Edge.EdgeType edgeType,
-                                                 final Node.DataPersistenceType dataLifeTime,
-                                                 final Node.ExecutionType executionType) {
+                                                 final LogicalNode.DataPersistenceType dataLifeTime,
+                                                 final LogicalNode.ExecutionType executionType) {
                 // sanity check.
                 if (dstNodeName == null)
                     throw new IllegalArgumentException("dstNode == null");
@@ -486,19 +403,19 @@ public class Topology {
                 return connectTo(dstNodeName,
                                  transferType,
                                  Edge.EdgeType.FORWARD_EDGE,
-                                 Node.DataPersistenceType.EPHEMERAL,
-                                 Node.ExecutionType.PIPELINED);
+                                 LogicalNode.DataPersistenceType.EPHEMERAL,
+                                 LogicalNode.ExecutionType.PIPELINED);
             }
 
             public AuraTopologyBuilder connectTo(final String dstNodeName, final Edge.TransferType transferType, final Edge.EdgeType edgeType) {
-                return connectTo(dstNodeName, transferType, edgeType, Node.DataPersistenceType.EPHEMERAL, Node.ExecutionType.PIPELINED);
+                return connectTo(dstNodeName, transferType, edgeType, LogicalNode.DataPersistenceType.EPHEMERAL, LogicalNode.ExecutionType.PIPELINED);
             }
 
             public AuraTopologyBuilder connectTo(final String dstNodeName,
                                                  final Edge.TransferType transferType,
                                                  final Edge.EdgeType edgeType,
-                                                 final Node.DataPersistenceType dataLifeTime) {
-                return connectTo(dstNodeName, transferType, edgeType, dataLifeTime, Node.ExecutionType.PIPELINED);
+                                                 final LogicalNode.DataPersistenceType dataLifeTime) {
+                return connectTo(dstNodeName, transferType, edgeType, dataLifeTime, LogicalNode.ExecutionType.PIPELINED);
             }
 
             public List<Pair<String, String>> getEdges() {
@@ -516,7 +433,7 @@ public class Topology {
     /**
      *
      */
-    public static class Node implements IVisitable<Node>, Serializable {
+    public static class LogicalNode implements Serializable, IVisitable<LogicalNode> {
 
         private static final long serialVersionUID = -1L;
 
@@ -563,12 +480,11 @@ public class Topology {
 
         public final ExecutionType executionType;
 
-        public final List<Node> inputs;
+        public final List<LogicalNode> inputs;
 
-        public final List<Node> outputs;
+        public final List<LogicalNode> outputs;
 
         private final Map<UUID, ExecutionNode> executionNodes;
-
 
         public boolean isAlreadyDeployed = false;
 
@@ -576,20 +492,20 @@ public class Topology {
         // Constructors.
         // ---------------------------------------------------
 
-        public Node(final UUID uid, final String name) {
+        public LogicalNode(final UUID uid, final String name) {
             this(uid, name, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
         }
 
-        public Node(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
+        public LogicalNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
             this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
         }
 
-        public Node(final UUID uid,
-                    final String name,
-                    int degreeOfParallelism,
-                    int perWorkerParallelism,
-                    final DataPersistenceType dataPersistenceType,
-                    final ExecutionType executionType) {
+        public LogicalNode(final UUID uid,
+                           final String name,
+                           int degreeOfParallelism,
+                           int perWorkerParallelism,
+                           final DataPersistenceType dataPersistenceType,
+                           final ExecutionType executionType) {
             // sanity check.
             if (uid == null)
                 throw new IllegalArgumentException("uid == null");
@@ -623,35 +539,11 @@ public class Topology {
             this.executionType = executionType;
         }
 
-        public Node(final Node node) {
-            // sanity check.
-            if (node == null)
-                throw new IllegalArgumentException("node == null");
-
-            this.uid = UUID.fromString(node.uid.toString());
-
-            this.name = node.name;
-
-            this.degreeOfParallelism = node.degreeOfParallelism;
-
-            this.perWorkerParallelism = node.perWorkerParallelism;
-
-            this.inputs = new ArrayList<>(node.inputs);
-
-            this.outputs = new ArrayList<>(node.inputs);
-
-            this.executionNodes = new HashMap<>(node.executionNodes);
-
-            this.dataPersistenceType = node.dataPersistenceType;
-
-            this.executionType = node.executionType;
-        }
-
         // ---------------------------------------------------
         // Public Methods.
         // ---------------------------------------------------
 
-        public void addInput(final Node node) {
+        public void addInput(final LogicalNode node) {
             // sanity check.
             if (node == null)
                 throw new IllegalArgumentException("node == null");
@@ -661,11 +553,11 @@ public class Topology {
             inputs.add(node);
         }
 
-        public List<Node> getInputs() {
+        public List<LogicalNode> getInputs() {
             return Collections.unmodifiableList(inputs);
         }
 
-        public void addOutput(final Node node) {
+        public void addOutput(final LogicalNode node) {
             // sanity check.
             if (node == null)
                 throw new IllegalArgumentException("node == null");
@@ -675,7 +567,7 @@ public class Topology {
             outputs.add(node);
         }
 
-        public List<Node> getOutputs() {
+        public List<LogicalNode> getOutputs() {
             return Collections.unmodifiableList(outputs);
         }
 
@@ -696,7 +588,7 @@ public class Topology {
             return (new StringBuilder()).append("Node = {").append(" name = " + name + ", ").append(" }").toString();
         }
 
-        public void accept(final IVisitor<Node> visitor) {
+        public void accept(final IVisitor<LogicalNode> visitor) {
             visitor.visit(this);
         }
     }
@@ -706,31 +598,11 @@ public class Topology {
     /**
      *
      */
-    public static final class StorageNode extends Node {
+    public static final class DatasetNode extends LogicalNode {
 
-        public StorageNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
-            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.PERSISTED_IN_MEMORY, ExecutionType.BLOCKING);
-        }
-    }
+        public final DataflowNodeProperties properties;
 
-    /**
-     *
-     */
-    public static final class ComputationNode extends Node {
-
-        public ComputationNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
-            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
-        }
-    }
-
-    /**
-     *
-     */
-    public static final class OperatorNode extends Node {
-
-        public final OperatorProperties properties;
-
-        public OperatorNode(final OperatorProperties properties) {
+        public DatasetNode(final DataflowNodeProperties properties) {
 
             super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
 
@@ -738,12 +610,38 @@ public class Topology {
         }
     }
 
+    /**
+     *
+     */
+    public static final class OperatorNode extends LogicalNode {
+
+        public final DataflowNodeProperties properties;
+
+        public OperatorNode(final DataflowNodeProperties properties) {
+
+            super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+
+            this.properties = properties;
+        }
+    }
+
+    /**
+     *
+     */
+    public static final class InvokeableNode extends LogicalNode {
+
+        public InvokeableNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+        }
+    }
+
+
     //---------------------------------------------------------------------------------------------------------------
 
     /**
      *
      */
-    public static final class ExecutionNode implements IVisitable<ExecutionNode> {
+    public static final class ExecutionNode implements Serializable, IVisitable<ExecutionNode> {
 
         // ---------------------------------------------------
         // Fields.
@@ -751,7 +649,7 @@ public class Topology {
 
         public final UUID uid;
 
-        public final Node logicalNode;
+        public final LogicalNode logicalNode;
 
         public final int taskIndex;
 
@@ -765,7 +663,7 @@ public class Topology {
         // Constructors.
         // ---------------------------------------------------
 
-        public ExecutionNode(final UUID uid, final int taskIndex, final Node logicalNode) {
+        public ExecutionNode(final UUID uid, final int taskIndex, final LogicalNode logicalNode) {
             // sanity check.
             if (uid == null)
                 throw new IllegalArgumentException("uid == null");
@@ -815,8 +713,6 @@ public class Topology {
             // sanity check.
             if (nodeBindingDescriptor == null)
                 throw new IllegalArgumentException("nodeBindingDescriptor == null");
-            //if (this.nodeBindingDescriptor != null)
-            //    throw new IllegalStateException("nodeBindingDescriptor is already set");
 
             this.nodeBindingDescriptor = nodeBindingDescriptor;
         }
@@ -880,9 +776,9 @@ public class Topology {
         // Fields.
         // ---------------------------------------------------
 
-        public final Node srcNode;
+        public final LogicalNode srcNode;
 
-        public final Node dstNode;
+        public final LogicalNode dstNode;
 
         public final TransferType transferType;
 
@@ -892,7 +788,7 @@ public class Topology {
         // Constructor.
         // ---------------------------------------------------
 
-        public Edge(final Node srcNode, final Node dstNode, final TransferType transferType, final EdgeType edgeType) {
+        public Edge(final LogicalNode srcNode, final LogicalNode dstNode, final TransferType transferType, final EdgeType edgeType) {
 
             // sanity check.
             if (srcNode == null)
@@ -938,44 +834,44 @@ public class Topology {
      */
     public static final class TopologyBreadthFirstTraverser {
 
-        public static void traverse(final AuraTopology topology, final IVisitor<Node> visitor) {
+        public static void traverse(final AuraTopology topology, final IVisitor<LogicalNode> visitor) {
             traverse(false, topology, visitor);
         }
 
-        public static void traverseBackwards(final AuraTopology topology, final IVisitor<Node> visitor) {
+        public static void traverseBackwards(final AuraTopology topology, final IVisitor<LogicalNode> visitor) {
             traverse(true, topology, visitor);
         }
 
-        private static void traverse(final boolean traverseBackwards, final AuraTopology topology, final IVisitor<Node> visitor) {
+        private static void traverse(final boolean traverseBackwards, final AuraTopology topology, final IVisitor<LogicalNode> visitor) {
             // sanity check.
             if (topology == null)
                 throw new IllegalArgumentException("topology == null");
             if (visitor == null)
                 throw new IllegalArgumentException("visitor == null");
 
-            final Set<Node> visitedNodes = new HashSet<>();
-            final Queue<Node> q = new LinkedList<>();
+            final Set<LogicalNode> visitedNodes = new HashSet<>();
+            final Queue<LogicalNode> q = new LinkedList<>();
 
-            final Collection<Node> startNodes;
+            final Collection<LogicalNode> startNodes;
             if (traverseBackwards)
                 startNodes = topology.sinkMap.values();
             else
                 startNodes = topology.sourceMap.values();
 
-            for (final Node node : startNodes)
+            for (final LogicalNode node : startNodes)
                 q.add(node);
 
             while (!q.isEmpty()) {
-                final Node node = q.remove();
+                final LogicalNode node = q.remove();
                 node.accept(visitor);
 
-                final Collection<Node> nextVisitedNodes;
+                final Collection<LogicalNode> nextVisitedNodes;
                 if (traverseBackwards)
                     nextVisitedNodes = node.inputs;
                 else
                     nextVisitedNodes = node.outputs;
 
-                for (final Node nextNode : nextVisitedNodes) {
+                for (final LogicalNode nextNode : nextVisitedNodes) {
                     if (!visitedNodes.contains(nextNode)) {
                         q.add(nextNode);
                         visitedNodes.add(nextNode);
@@ -992,22 +888,22 @@ public class Topology {
 
         // TODO: change to iterative implementation!
 
-        public static boolean search(final Node start, final Node goal) {
+        public static boolean search(final LogicalNode start, final LogicalNode goal) {
             // sanity check.
             if (start == null)
                 throw new IllegalArgumentException("start == null");
             if (goal == null)
                 throw new IllegalArgumentException("goal == null");
 
-            return searchHelper(new HashSet<Node>(), start, goal);
+            return searchHelper(new HashSet<LogicalNode>(), start, goal);
         }
 
-        private static boolean searchHelper(final Set<Node> visitedNodes, final Node current, final Node goal) {
+        private static boolean searchHelper(final Set<LogicalNode> visitedNodes, final LogicalNode current, final LogicalNode goal) {
             visitedNodes.add(current);
             // be careful, only reference comparison!
             if (current == goal)
                 return true;
-            for (final Node n : current.outputs)
+            for (final LogicalNode n : current.outputs)
                 if (!visitedNodes.contains(n))
                     searchHelper(visitedNodes, n, goal);
             return false;
@@ -1035,46 +931,11 @@ public class Topology {
             if (topology == null)
                 throw new IllegalArgumentException("topology == null");
 
-            TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
+            TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<LogicalNode>() {
 
                 @Override
-                public void visit(Node element) {
+                public void visit(LogicalNode element) {
                     System.out.println(element.name);
-                }
-            });
-        }
-    }
-
-    /**
-     *
-     */
-    public static final class ExecutionTopologyPrinter {
-
-        // ---------------------------------------------------
-        // Constructor.
-        // ---------------------------------------------------
-
-        private ExecutionTopologyPrinter() {
-        }
-
-        // ---------------------------------------------------
-        // Public Static Methods.
-        // ---------------------------------------------------
-
-        public static void printTopology(final AuraTopology topology) {
-            // sanity check.
-            if (topology == null)
-                throw new IllegalArgumentException("topology == null");
-
-            TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
-
-                @Override
-                public void visit(final Node element) {
-                    if (element.getExecutionNodes() != null) {
-                        for (final ExecutionNode en : element.getExecutionNodes()) {
-                            System.out.println(" ( " + element.name + " | " + en.taskIndex + " ) ");
-                        }
-                    }
                 }
             });
         }

@@ -11,9 +11,4 @@ public interface IClientWMProtocol {
     public abstract void submitTopology(final UUID sessionID, final AuraTopology topology);
 
     public abstract void closeSession(final UUID sessionID);
-
-
-    public abstract void submitToTopology(final UUID sessionID, final UUID topologyID, final AuraTopology topology);
-
-    //public abstract void connectTopologies(final UUID sessionID, final UUID topologyID1, final UUID taskNodeID1, final UUID topologyID2, final UUID taskNodeID2);
 }

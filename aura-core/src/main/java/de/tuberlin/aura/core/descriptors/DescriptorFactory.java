@@ -16,13 +16,6 @@ public final class DescriptorFactory {
     // Disallow instantiation.
     private DescriptorFactory() {}
 
-    /**
-     * Builds the {@link MachineDescriptor} for the machine this processes is running on.
-     * 
-     * @param config The config instance for parameter lookup.
-     * @param ns The namespace under which config values will be found (one of wm, tm, or client).
-     * @return A {@link MachineDescriptor}.
-     */
     public static MachineDescriptor createMachineDescriptor(IConfig config) {
 
         // Get the IP address of this node.

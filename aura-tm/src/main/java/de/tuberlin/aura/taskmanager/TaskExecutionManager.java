@@ -11,9 +11,9 @@ import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 
 public final class TaskExecutionManager extends EventDispatcher implements ITaskExecutionManager {
 
@@ -21,9 +21,6 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
     // Execution Manager Events.
     // ---------------------------------------------------
 
-    /**
-     *
-     */
     public static final class TaskExecutionEvent extends Event {
 
         public static final String EXECUTION_MANAGER_EVENT_UNREGISTER_TASK = "EXECUTION_MANAGER_EVENT_UNREGISTER_TASK";
@@ -51,10 +48,6 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param machineDescriptor
-     * @param bufferMemoryManager
-     */
     public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor,
                                 final IBufferMemoryManager bufferMemoryManager,
                                 final int numberOfExecutionUnits) {
@@ -82,9 +75,6 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     * @param driver
-     */
     public void scheduleTask(final ITaskDriver driver) {
         // sanity check.
         if (driver == null)
@@ -102,7 +92,6 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
             }
         }
 
-        // driver.setAssignedExecutionUnitIndex(selectedEU);
         executionUnit[selectedEU].enqueueTask(driver);
 
         LOG.info("EXECUTE TASK {}-{} [{}] ON EXECUTION UNIT ({}) ON MACHINE [{}]",
@@ -113,10 +102,6 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
                  machineDescriptor.uid);
     }
 
-    /**
-     * @param taskID
-     * @return
-     */
     public ITaskExecutionUnit findExecutionUnitByTaskID(final UUID taskID) {
         // sanity check.
         if (taskID == null)
@@ -124,13 +109,13 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
 
         for (int i = 0; i < numberOfExecutionUnits; ++i) {
             final ITaskExecutionUnit eu = executionUnit[i];
-            final ITaskDriver taskCtx = eu.getCurrentTaskDriver();
+            final ITaskDriver taskCtx = eu.getTaskDriver();
             if (taskCtx != null && taskID.equals(taskCtx.getNodeDescriptor().taskID)) {
                 return eu;
             }
         }
 
-        LOG.trace("No task execution unit was found for this task ID: {}", taskID);
+        LOG.trace("No taskmanager execution unit was found for this taskmanager ID: {}", taskID);
         return null;
     }
 
@@ -138,16 +123,10 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
     // Private Methods.
     // ---------------------------------------------------
 
-    /**
-     *
-     */
     private void initializeExecutionUnits() {
-        int numberOfExecutionUnits = this.numberOfExecutionUnits;
-
-        for (int i = 0; i < numberOfExecutionUnits; ++i) {
+        for (int i = 0; i < this.numberOfExecutionUnits; ++i) {
             final BufferAllocatorGroup inputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
             final BufferAllocatorGroup outputBuffer = bufferMemoryManager.getBufferAllocatorGroup();
-
             this.executionUnit[i] = new TaskExecutionUnit(this, i, inputBuffer, outputBuffer);
             this.executionUnit[i].start();
         }

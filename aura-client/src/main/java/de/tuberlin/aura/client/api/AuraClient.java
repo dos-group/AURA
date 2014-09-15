@@ -19,7 +19,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOManager;
 import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.protocols.IClientWMProtocol;
-import de.tuberlin.aura.core.task.usercode.UserCodeExtractor;
+import de.tuberlin.aura.core.taskmanager.usercode.UserCodeExtractor;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopologyBuilder;
 import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
@@ -30,9 +30,6 @@ public final class AuraClient {
     // Fields.
     // ---------------------------------------------------
 
-    /**
-     * Logger.
-     */
     private static final Logger LOG = LoggerFactory.getLogger(AuraClient.class);
 
     public final IOManager ioManager;
@@ -107,17 +104,11 @@ public final class AuraClient {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     * @return
-     */
     public AuraTopologyBuilder createTopologyBuilder() {
         return new AuraTopologyBuilder(ioManager.machine.uid, codeExtractor);
     }
 
-    /**
-     * @param topology
-     * @param handler
-     */
+
     public void submitTopology(final AuraTopology topology, final EventHandler handler) {
         // sanity check.
         if (topology == null)
@@ -129,31 +120,11 @@ public final class AuraClient {
         clientProtocol.submitTopology(clientSessionID, topology);
     }
 
-    /**
-     *
-     */
     public void closeSession() {
         clientProtocol.closeSession(clientSessionID);
     }
 
-    /**
-     *
-     * @param topologyID
-     * @param topology
-     */
-    public void submitToTopology(final UUID topologyID, final AuraTopology topology) {
-        // sanity check.
-        if (topologyID == null)
-            throw new IllegalArgumentException("topologyID == null");
-        if (topology == null)
-            throw new IllegalArgumentException("topology == null");
 
-        clientProtocol.submitToTopology(clientSessionID, topologyID, topology);
-    }
-
-    /**
-     *
-     */
     public void awaitSubmissionResult(final int numTopologies) {
 
         final CountDownLatch awaitExecution = new CountDownLatch(numTopologies);

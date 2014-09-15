@@ -29,7 +29,7 @@ public final class TypeInformation implements Serializable {
     // ---------------------------------------------------
 
     public TypeInformation(final Class<?> type) {
-        this(type, null);
+        this(type, (TypeInformation)null);
     }
 
     public TypeInformation(final Class<?> type, TypeInformation... fieldTypes) {
@@ -68,7 +68,7 @@ public final class TypeInformation implements Serializable {
         return obj;
     }
 
-    public int[] buildSelectorChain(final String accessPath) {
+    public int[] buildFieldSelectorChain(final String accessPath) {
         // sanity check.
         if (accessPath == null)
             throw new IllegalArgumentException("accessPath == null");
@@ -156,17 +156,17 @@ public final class TypeInformation implements Serializable {
         /*final Tuple2<Integer, Tuple3<Integer, Integer, Tuple4<Integer, Integer, Integer, Integer>>> tuple =
                 new Tuple2<>(1, new Tuple3<>(1, 1, new Tuple4<>(1, 1, 1, 15)));
 
-        final TypeInformation ti =
-                new TypeInformation(Tuple2.class,
-                                    new TypeInformation(Integer.class),
-                                    new TypeInformation(Tuple3.class,
-                                                        new TypeInformation(Integer.class),
-                                                        new TypeInformation(Integer.class),
-                                                        new TypeInformation(Tuple4.class,
-                                                                            new TypeInformation(Integer.class),
-                                                                            new TypeInformation(Integer.class),
-                                                                            new TypeInformation(Integer.class),
-                                                                            new TypeInformation(Integer.class))));
+        final ITypeInformation ti =
+                new ITypeInformation(Tuple2.class,
+                                    new ITypeInformation(Integer.class),
+                                    new ITypeInformation(Tuple3.class,
+                                                        new ITypeInformation(Integer.class),
+                                                        new ITypeInformation(Integer.class),
+                                                        new ITypeInformation(Tuple4.class,
+                                                                            new ITypeInformation(Integer.class),
+                                                                            new ITypeInformation(Integer.class),
+                                                                            new ITypeInformation(Integer.class),
+                                                                            new ITypeInformation(Integer.class))));
 
         final List<Class<?>> classList = ti.extractTypes();
         for (final Class<?> clazz : classList) {

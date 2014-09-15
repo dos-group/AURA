@@ -7,9 +7,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.processing.api.OperatorProperties;
-import de.tuberlin.aura.core.task.usercode.UserCode;
-import de.tuberlin.aura.core.topology.Topology.Node;
+import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.taskmanager.usercode.UserCode;
+import de.tuberlin.aura.core.topology.Topology.LogicalNode;
 
 public final class Descriptors {
 
@@ -276,7 +276,7 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
-        public final UUID topologyID;
+        public UUID topologyID;
 
         public final UUID taskID;
 
@@ -382,7 +382,7 @@ public final class Descriptors {
     /**
      *
      */
-    public static final class StorageNodeDescriptor extends AbstractNodeDescriptor {
+    public static final class DatasetNodeDescriptor extends AbstractNodeDescriptor {
 
         // ---------------------------------------------------
         // Fields.
@@ -390,32 +390,21 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
+        public final DataflowNodeProperties properties;
+
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
 
-        public StorageNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name) {
+        public DatasetNodeDescriptor(final UUID topologyID,
+                                     final UUID taskID,
+                                     final int taskIndex,
+                                     final String name,
+                                     final DataflowNodeProperties properties) {
+
             super(topologyID, taskID, taskIndex, name, null);
-        }
-    }
 
-    /**
-     *
-     */
-    public static final class ComputationNodeDescriptor extends AbstractNodeDescriptor {
-
-        // ---------------------------------------------------
-        // Fields.
-        // ---------------------------------------------------
-
-        private static final long serialVersionUID = -1L;
-
-        // ---------------------------------------------------
-        // Constructors.
-        // ---------------------------------------------------
-
-        public ComputationNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
-            super(topologyID, taskID, taskIndex, name, userCodeList);
+            this.properties = properties;
         }
     }
 
@@ -430,7 +419,7 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
-        public final OperatorProperties properties;
+        public final DataflowNodeProperties properties;
 
         // ---------------------------------------------------
         // Constructors.
@@ -441,11 +430,31 @@ public final class Descriptors {
                                       final int taskIndex,
                                       final String name,
                                       final List<UserCode> userCodeList,
-                                      final OperatorProperties properties) {
+                                      final DataflowNodeProperties properties) {
 
             super(topologyID, taskID, taskIndex, name, userCodeList);
 
             this.properties = properties;
+        }
+    }
+
+    /**
+     *
+     */
+    public static final class InvokeableNodeDescriptor extends AbstractNodeDescriptor {
+
+        // ---------------------------------------------------
+        // Fields.
+        // ---------------------------------------------------
+
+        private static final long serialVersionUID = -1L;
+
+        // ---------------------------------------------------
+        // Constructors.
+        // ---------------------------------------------------
+
+        public InvokeableNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
+            super(topologyID, taskID, taskIndex, name, userCodeList);
         }
     }
 
@@ -521,7 +530,7 @@ public final class Descriptors {
         @Override
         public String toString() {
             return (new StringBuilder()).append("NodeBindingDescriptor = {")
-            // .append( " task = " + task.toString() + ", " )
+            // .append( " taskmanager = " + taskmanager.toString() + ", " )
                                         .append(" inputGates = " + inputGateBindings.toString() + ", ")
                                         .append(" outputGates = " + outputGateBindings.toString())
                                         .append(" }")
@@ -544,9 +553,9 @@ public final class Descriptors {
 
         public final NodeBindingDescriptor nodeBindingDescriptor;
 
-        public final Node.DataPersistenceType dataPersistenceType;
+        public final LogicalNode.DataPersistenceType dataPersistenceType;
 
-        public final Node.ExecutionType executionType;
+        public final LogicalNode.ExecutionType executionType;
 
         // ---------------------------------------------------
         // Constructors.
@@ -554,8 +563,8 @@ public final class Descriptors {
 
         public DeploymentDescriptor(final AbstractNodeDescriptor nodeDescriptor,
                                     final NodeBindingDescriptor nodeBindingDescriptor,
-                                    final Node.DataPersistenceType dataPersistenceType,
-                                    final Node.ExecutionType executionType) {
+                                    final LogicalNode.DataPersistenceType dataPersistenceType,
+                                    final LogicalNode.ExecutionType executionType) {
 
             // sanity check.
             if (nodeDescriptor == null)

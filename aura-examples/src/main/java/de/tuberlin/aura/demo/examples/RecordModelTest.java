@@ -15,7 +15,7 @@ import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
 import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import de.tuberlin.aura.core.record.tuples.Tuple3;
-import de.tuberlin.aura.core.task.spi.AbstractInvokeable;
+import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.topology.Topology;
 
 
@@ -124,9 +124,9 @@ public final class RecordModelTest {
         final Topology.AuraTopologyBuilder atb1 = ac.createTopologyBuilder();
 
         //@formatter:off
-        atb1.addNode(new Topology.ComputationNode(UUID.randomUUID(), "Source", 1, 1), Source.class, Record1.class)
+        atb1.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source", 1, 1), Source.class, Record1.class)
             .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-            .addNode(new Topology.ComputationNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
+            .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", 1, 1), Sink.class);
         //@formatter:on
 
         final Topology.AuraTopology at1 = atb1.build("JOB 1");

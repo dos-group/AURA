@@ -109,7 +109,7 @@ public final class LocalClusterSimulator {
             zookeeperCNXNFactory = null;
         }
 
-        // ------- bootstrap local cluster -------
+        // ------- bootstrap LOCAL cluster -------
 
         switch (mode) {
 

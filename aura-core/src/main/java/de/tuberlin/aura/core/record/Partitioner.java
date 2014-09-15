@@ -2,8 +2,6 @@ package de.tuberlin.aura.core.record;
 
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import com.esotericsoftware.reflectasm.FieldAccess;
-
 /**
  *
  */
@@ -16,6 +14,10 @@ public final class Partitioner {
      *
      */
     public static enum PartitioningStrategy {
+
+        BROADCAST,              // TODO:
+
+        RANDOM_PARTITIONER,     // TODO:
 
         HASH_PARTITIONER,
 
@@ -35,6 +37,10 @@ public final class Partitioner {
                 throw new IllegalArgumentException("strategy == null");
 
             switch(strategy) {
+
+                case BROADCAST: {
+                    return null;
+                }
 
                 case HASH_PARTITIONER: {
                     return new HashPartitioner(typeInfo, partitioningKeys);

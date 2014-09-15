@@ -15,8 +15,8 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.BufferStream;
 import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.task.spi.IRecordWriter;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.IRecordWriter;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
 
 public class RowRecordWriter implements IRecordWriter {
 
@@ -26,13 +26,9 @@ public class RowRecordWriter implements IRecordWriter {
 
     private final ITaskDriver driver;
 
-    private final int bufferSize;
-
     private Partitioner.IPartitioner partitioner;
 
     private final Kryo kryo;
-
-    private final List<BufferStream.ContinuousByteOutputStream> outputStreams;
 
     private final List<Output> kryoOutputs;
 
@@ -46,21 +42,6 @@ public class RowRecordWriter implements IRecordWriter {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     *
-     * @param driver
-     * @param recordType
-     * @param gateIndex
-     */
-    public RowRecordWriter(final ITaskDriver driver, final Class<?> recordType, final int gateIndex) {
-        this(driver, recordType, gateIndex, null);
-    }
-
-    /**
-     * 
-     * @param driver
-     * @param partitioner
-     */
     public RowRecordWriter(final ITaskDriver driver, final Class<?> recordType, final int gateIndex, final Partitioner.IPartitioner partitioner) {
         // sanity check.
         if (driver == null)
@@ -76,16 +57,13 @@ public class RowRecordWriter implements IRecordWriter {
 
         this.partitioner = partitioner;
 
-        this.bufferSize = driver.getDataProducer().getAllocator().getBufferSize();
+        final int bufferSize = driver.getDataProducer().getAllocator().getBufferSize();
 
         this.kryo = new Kryo();
 
-        this.outputStreams = new ArrayList<>();
-
         this.kryoOutputs = new ArrayList<>();
 
-        this.outputBinding = driver.getBindingDescriptor().outputGateBindings.get(gateIndex);
-
+        this.outputBinding = driver.getBindingDescriptor().outputGateBindings.get(gateIndex); // 1
 
         final int channelCount;
         if (partitioner != null) {
@@ -99,8 +77,6 @@ public class RowRecordWriter implements IRecordWriter {
             final int index = i;
 
             final BufferStream.ContinuousByteOutputStream os = new BufferStream.ContinuousByteOutputStream();
-
-            outputStreams.add(os);
 
             final Output kryoOutput = new FastOutput(os, bufferSize);
 
@@ -140,16 +116,13 @@ public class RowRecordWriter implements IRecordWriter {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     *
-     */
     public void begin() {
 
         final UUID srcTaskID = driver.getNodeDescriptor().taskID;
 
         for (int i = 0; i < outputBinding.size(); ++i) {
 
-            final UUID dstTaskID = driver.getBindingDescriptor().outputGateBindings.get(gateIndex).get(i).taskID;
+            final UUID dstTaskID = outputBinding.get(i).taskID;
 
             final IOEvents.DataIOEvent event = new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_RECORD_TYPE, srcTaskID, dstTaskID);
 
@@ -161,10 +134,6 @@ public class RowRecordWriter implements IRecordWriter {
         }
     }
 
-    /**
-     * 
-     * @param record
-     */
     public void writeRecord(final RowRecordModel.Record record) {
         // sanity check.
         if(record == null)
@@ -180,10 +149,6 @@ public class RowRecordWriter implements IRecordWriter {
         kryo.writeObject(kryoOutputs.get(channelIndex), record.instance());
     }
 
-    /**
-     *
-     * @param object
-     */
     public void writeObject(final Object object) {
         // sanity check.
         if(object == null)
@@ -199,9 +164,6 @@ public class RowRecordWriter implements IRecordWriter {
         kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
     }
 
-    /**
-     * 
-     */
     public void end() {
         try {
 
@@ -222,10 +184,6 @@ public class RowRecordWriter implements IRecordWriter {
         }
     }
 
-    /**
-     *
-     * @param partitioner
-     */
     public void setPartitioner(final Partitioner.IPartitioner partitioner) {
         // sanity check.
         if (partitioner == null)

@@ -7,9 +7,6 @@ import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 
 public class PipelineAssembler {
 
-    /**
-     *
-     */
     public static final class AssemblyPipeline {
 
         public AssemblyPipeline(final IEventDispatcher dispatcher) {
@@ -50,9 +47,6 @@ public class PipelineAssembler {
         }
     }
 
-    /**
-     *
-     */
     public static abstract class AssemblyPhase<I, O> {
 
         protected IEventDispatcher dispatcher;

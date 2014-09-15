@@ -10,10 +10,6 @@ import java.util.zip.Inflater;
  */
 public final class Compression {
 
-    /**
-     * @param data
-     * @return
-     */
     public static byte[] compress(final byte[] data) {
         // sanity check.
         if (data == null)
@@ -38,10 +34,6 @@ public final class Compression {
         return output;
     }
 
-    /**
-     * @param data
-     * @return
-     */
     public static byte[] decompress(final byte[] data) {
         // sanity check.
         if (data == null)

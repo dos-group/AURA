@@ -24,27 +24,13 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     // Fields.
     // ---------------------------------------------------
 
-    /**
-     * Logger.
-     */
     private static final Logger LOG = LoggerFactory.getLogger(InfrastructureManager.class);
 
-    /**
-     * The only instance of this class.
-     */
     private static InfrastructureManager INSTANCE;
 
-    /**
-     * The connection to the ZooKeeper-cluster.
-     */
     private ZookeeperClient zookeeperClient;
 
-    /**
-     * Stores all task manager nodes.
-     */
     private final Map<UUID, MachineDescriptor> nodeMap;
-
-    private final MachineDescriptor wmMachine;
 
     private int machineIdx;
 
@@ -66,18 +52,15 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
         if (wmMachine == null)
             throw new IllegalArgumentException("wmMachine == null");
 
-        this.wmMachine = wmMachine;
-
         this.nodeMap = new HashMap<>();
 
         try {
             zookeeperClient = new ZookeeperClient(zkServer);
             zookeeperClient.initDirectories();
-
-            zookeeperClient.store(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER, this.wmMachine);
+            zookeeperClient.store(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER, wmMachine);
 
             // Get all available nodes.
-            final ZkTaskManagerWatcher watcher = new ZkTaskManagerWatcher();
+            final ZookeeperTaskManagerWatcher watcher = new ZookeeperTaskManagerWatcher();
 
             synchronized (taskManagerMonitor) {
                 final List<String> nodes = zookeeperClient.getChildrenForPathAndWatch(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, watcher);
@@ -128,11 +111,8 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     // Inner Classes.
     // ---------------------------------------------------
 
-    private class ZkTaskManagerWatcher implements Watcher {
+    private class ZookeeperTaskManagerWatcher implements Watcher {
 
-        /**
-         * {@inheritDoc}
-         */
         @Override
         public synchronized void process(WatchedEvent event) {
             LOG.debug("Received event - state: {} - type: {}", event.getState().toString(), event.getType().toString());
@@ -167,7 +147,6 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
                         }
 
                         final MachineDescriptor removedMachine = nodeMap.remove(machineID);
-
                         if (removedMachine == null)
                             LOG.error("machine with uid = " + machineID + " can not be removed");
                         else
@@ -175,7 +154,6 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
 
                         dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_REMOVED, removedMachine));
                     }
-
                 }
 
                 // keep watching

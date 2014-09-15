@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 
 public class QueueManager<T> {
@@ -14,9 +12,7 @@ public class QueueManager<T> {
     // Fields.
     // ---------------------------------------------------
 
-    private final static Logger LOG = org.slf4j.LoggerFactory.getLogger(QueueManager.class);
-
-    public static Map<UUID, QueueManager> BINDINGS = new HashMap<UUID, QueueManager>();
+    public static Map<UUID, QueueManager> BINDINGS = new HashMap<>();
 
     private final Map<LongKey, BufferQueue<T>> inboundQueues;
 
@@ -26,9 +22,13 @@ public class QueueManager<T> {
 
     private final BufferQueue.FACTORY<T> outboundFactory;
 
-    private int inputQueuesCounter;
+    //private int inputQueuesCounter;
 
-    private int outputQueuesCounter;
+    //private int outputQueuesCounter;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     private QueueManager(BufferQueue.FACTORY<T> inboundFactory, BufferQueue.FACTORY<T> outboundFactory) {
 
@@ -45,26 +45,12 @@ public class QueueManager<T> {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     * 
-     * @param taskID
-     * @param inboundFactory
-     * @param outboundFactory
-     * @param <F>
-     * @return
-     */
     public static <F> QueueManager<F> newInstance(UUID taskID, BufferQueue.FACTORY<F> inboundFactory, BufferQueue.FACTORY<F> outboundFactory) {
         QueueManager<F> instance = new QueueManager<>(inboundFactory, outboundFactory);
         BINDINGS.put(taskID, instance);
         return instance;
     }
 
-    /**
-     * [Christian] TODO: Synchronized necessary -> concurrent access from ConsumerEventHandler?
-     * 
-     * @param gateIndex
-     * @return
-     */
     public synchronized BufferQueue<T> getInboundQueue(int gateIndex, int channelIndex) {
 
         final LongKey key = new LongKey(gateIndex, channelIndex);
@@ -74,18 +60,11 @@ public class QueueManager<T> {
 
         final BufferQueue<T> queue = inboundFactory.newInstance();
         inboundQueues.put(key, queue);
-        ++this.inputQueuesCounter;
+        //++this.inputQueuesCounter;
 
         return queue;
     }
 
-    /**
-     * [Christian] TODO: Synchronized -> concurrent access from ProducerEventHandler?
-     * 
-     * @param gateIndex
-     * @param channelIndex
-     * @return
-     */
     public synchronized BufferQueue<T> getOutboundQueue(int gateIndex, int channelIndex) {
 
         final LongKey key = new LongKey(gateIndex, channelIndex);
@@ -95,18 +74,18 @@ public class QueueManager<T> {
 
         final BufferQueue<T> queue = outboundFactory.newInstance();
         outboundQueues.put(key, queue);
-        ++this.outputQueuesCounter;
+        //++this.outputQueuesCounter;
 
         return queue;
     }
 
-    public void clearInboundQueues() {
-        inboundQueues.clear();
-    }
+    //public void clearInboundQueues() {
+    //    inboundQueues.clear();
+    //}
 
-    public void clearOutboundQueues() {
-        outboundQueues.clear();
-    }
+    //public void clearOutboundQueues() {
+    //    outboundQueues.clear();
+    //}
 
     // ---------------------------------------------------
     // Inner Classes.

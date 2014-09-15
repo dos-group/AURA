@@ -37,7 +37,7 @@ public class ZookeeperConnectionWatcher implements Watcher {
      * Constructor.
      * 
      * @param handler Forward all events that are received by this class to this event handler for
-     *        further processing.
+     *        further dataflow.
      */
     public ZookeeperConnectionWatcher(IEventHandler handler) {
         this.handler = handler;

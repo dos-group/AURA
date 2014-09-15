@@ -17,5 +17,4 @@ public class UnsafeAccess {
             throw new RuntimeException(e);
         }
     }
-
 }

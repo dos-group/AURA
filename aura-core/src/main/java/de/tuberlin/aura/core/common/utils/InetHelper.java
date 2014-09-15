@@ -13,9 +13,6 @@ public class InetHelper {
 
     private static final Set<Integer> reservedPorts = new HashSet<>();
 
-    /**
-     * Logger.
-     */
     private static final Logger LOG = LoggerFactory.getLogger(InetHelper.class);
 
     public static InetAddress getIPAddress() {

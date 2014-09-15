@@ -23,10 +23,10 @@ import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.spi.IBufferCallback;
-import de.tuberlin.aura.core.task.spi.IDataConsumer;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionUnit;
+import de.tuberlin.aura.core.taskmanager.spi.IDataConsumer;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -51,7 +51,7 @@ public final class SerializationHandler {
      * Inbound handler that de-serializes
      * {@link de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent}.
      * 
-     * @param taskExecutionManager the task execution manager this handler is bound to
+     * @param taskExecutionManager the taskmanager execution manager this handler is bound to
      * @param config
      * @return inbound de-serialization handler for
      *         {@link de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent}
@@ -241,7 +241,7 @@ public final class SerializationHandler {
         private void bindAllocator(UUID src, UUID dst) {
             final ITaskExecutionManager tem = executionManager;
             final ITaskExecutionUnit executionUnit = tem.findExecutionUnitByTaskID(dst);
-            final ITaskDriver taskDriver = executionUnit.getCurrentTaskDriver();
+            final ITaskDriver taskDriver = executionUnit.getTaskDriver();
             final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
             IAllocator allocatorGroup = executionUnit.getInputAllocator();
@@ -423,7 +423,7 @@ public final class SerializationHandler {
         private void bindAllocator(UUID src, UUID dst) {
             final ITaskExecutionManager tem = executionManager;
             final ITaskExecutionUnit executionUnit = tem.findExecutionUnitByTaskID(dst);
-            final ITaskDriver taskDriver = executionUnit.getCurrentTaskDriver();
+            final ITaskDriver taskDriver = executionUnit.getTaskDriver();
             final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
             IAllocator allocatorGroup = executionUnit.getInputAllocator();
@@ -456,19 +456,6 @@ public final class SerializationHandler {
     // ---------------------------------------------------
     // Kryo Serializer.
     // ---------------------------------------------------
-
-    /**
-     *
-     */
-    /*
-     * private static class BaseIOEventSerializer extends Serializer<IOEvents.BaseIOEvent> {
-     * 
-     * @Override public void write(Kryo kryo, Output output, IOEvents.BaseIOEvent baseIOEvent) {
-     * output.writeString(baseIOEvent.type); }
-     * 
-     * @Override public IOEvents.BaseIOEvent read(Kryo kryo, Input input,
-     * Class<IOEvents.BaseIOEvent> type) { return new IOEvents.BaseIOEvent(input.readString()); } }
-     */
 
     /**
      *

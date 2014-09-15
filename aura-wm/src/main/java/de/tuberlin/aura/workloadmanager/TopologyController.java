@@ -2,6 +2,9 @@ package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
 
+import de.tuberlin.aura.core.common.utils.DeepCopy;
+import de.tuberlin.aura.workloadmanager.spi.ITopologyController;
+import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
@@ -13,27 +16,13 @@ import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPipeline;
 import de.tuberlin.aura.core.iosystem.IOEvents;
-import de.tuberlin.aura.core.iosystem.IOManager;
-import de.tuberlin.aura.core.task.common.TaskStates;
+import de.tuberlin.aura.core.taskmanager.common.TaskStates;
 import de.tuberlin.aura.core.topology.Topology;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyState;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 
-public final class TopologyController extends EventDispatcher {
-
-    // ---------------------------------------------------
-    // Inner Classes.
-    // ---------------------------------------------------
-
-    private final class TopologyContainer {
-
-        private List<AuraTopology> executedTopologies = new ArrayList<AuraTopology>();
-
-        private AuraTopology executingTopology = null;
-
-        private Queue<AuraTopology> topologyQueue = new LinkedList<AuraTopology>();
-    }
+public final class TopologyController extends EventDispatcher implements ITopologyController {
 
     // ---------------------------------------------------
     // Fields.
@@ -41,172 +30,92 @@ public final class TopologyController extends EventDispatcher {
 
     private static final Logger LOG = Logger.getLogger(TopologyController.class);
 
-    private final WorkloadManagerContext context;
+    private final IWorkloadManager workloadManager;
 
-    private final IOManager ioManager;
+    private final AuraTopology topology;
 
-    private AssemblyPipeline assemblyPipeline;
-
-    public final UUID topologyID;
-
-    private StateMachine.FiniteStateMachine<TopologyState, TopologyTransition> topologyFSM;
-
-    private final TopologyContainer topologyContainer;
+    private final StateMachine.FiniteStateMachine<TopologyState, TopologyTransition> topologyFSM;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param context
-     * @param topologyID
-     */
-    public TopologyController(final WorkloadManagerContext context, final UUID topologyID) {
+    public TopologyController(final IWorkloadManager workloadManager, final UUID topologyID, final AuraTopology topology) {
         super(true, "TopologyControllerEventDispatcher");
 
-        // sanity check.
-        if (context == null)
-            throw new IllegalArgumentException("context == null");
+        // Sanity check.
+        if (workloadManager == null)
+            throw new IllegalArgumentException("workloadManager == null");
         if (topologyID == null)
             throw new IllegalArgumentException("topologyID == null");
 
-        this.context = context;
+        this.workloadManager = workloadManager;
 
-        this.topologyID = topologyID;
+        this.topology = topology;
 
-        this.topologyContainer = new TopologyContainer();
-
-        this.ioManager = context.ioManager;
+        this.topologyFSM = createTopologyFSM();
     }
 
     // ---------------------------------------------------
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     *
-     * @param topology
-     */
-    public void assembleTopology(final AuraTopology topology) {
+    public void assembleTopology() {
 
-        if(topologyContainer.executingTopology == null) {
+        LOG.info("ASSEMBLE TOPOLOGY '" + topology.name + "'");
 
-            topology.topologyID = this.topologyID;
+        // ---------------------------------------------------
 
-            this.topologyContainer.executingTopology = topology;
+        weaveInDatasets();
 
-            LOG.info("ASSEMBLE TOPOLOGY '" + topologyContainer.executingTopology.name + "'");
+        // ---------------------------------------------------
 
-            this.topologyFSM = createTopologyFSM();
+        final AssemblyPipeline assemblyPipeline = new AssemblyPipeline(this.topologyFSM);
 
-            boolean abort = false;
-            for(final Map.Entry<Pair<String,String>,Topology.Edge.TransferType> externalEdges : this.topologyContainer.executingTopology.externalEdges.entrySet()) {
+        assemblyPipeline.addPhase(new TopologyParallelizer(workloadManager.getEnvironmentManager()));
 
-                for(final AuraTopology executedTopology : topologyContainer.executedTopologies) {
+        assemblyPipeline.addPhase(new TopologyScheduler(workloadManager.getInfrastructureManager()));
 
-                    final Topology.Node srcNode = executedTopology.nodeMap.get(externalEdges.getKey().getFirst());
+        assemblyPipeline.addPhase(new TopologyDeployer(workloadManager.getRPCManager()));
 
-                    //final Topology.Node srcNode = new Topology.Node(originalSrcNode);
+        assemblyPipeline.assemble(topology);
 
-                    if(srcNode != null) {
+        this.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
 
-                        // Tag this node that it is already deployed.
-                        srcNode.isAlreadyDeployed = true;
+            private int finalStateCnt = 0;
 
-                        // Extend current topology with external Node.
-                        topologyContainer.executingTopology.sourceMap.put(srcNode.name, srcNode);
+            @Override
+            public void handleEvent(Event e) {
+                final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
 
-                        topologyContainer.executingTopology.nodeMap.put(srcNode.name, srcNode);
+                final Topology.ExecutionNode en = topology.executionNodeMap.get(event.getTaskID());
 
-                        final Topology.Node dstNode = topologyContainer.executingTopology.nodeMap.get(externalEdges.getKey().getSecond());
+                // sanity check.
+                if (en == null)
+                    throw new IllegalStateException();
 
-                        srcNode.addOutput(dstNode);
+                en.setState((TaskStates.TaskState) event.getPayload());
 
-                        dstNode.addInput(srcNode);
+                // It is at the moment a bit clumsy to detect the dataflow end.
+                // We should introduce a dedicated "dataflow end" event...
+                if (en.getState() == TaskStates.TaskState.TASK_STATE_FINISHED ||
+                        en.getState() == TaskStates.TaskState.TASK_STATE_CANCELED ||
+                        en.getState() == TaskStates.TaskState.TASK_STATE_FAILURE)
 
-                        topologyContainer.executingTopology.sourceMap.remove(dstNode.name);
+                    ++finalStateCnt;
 
-                        srcNode.inputs.clear();
-
-                        final Topology.Edge edge = new Topology.Edge(srcNode, dstNode, externalEdges.getValue(), Topology.Edge.EdgeType.FORWARD_EDGE);
-
-                        topologyContainer.executingTopology.edges.put(externalEdges.getKey(), edge);
-
-                        abort = true;
-                        break;
-                    }
+                if (finalStateCnt == topology.executionNodeMap.size()) { // TODO
+                    //((WorkloadManager)workloadManager).unregisterTopology(topology.topologyID);
+                    //TopologyController.this.removeAllEventListener();
+                    // Shutdown the event dispatcher threads used by this executingTopology controller
+                    //shutdown();
+                    topologyFSM.joinDispatcherThread();
+                    finalStateCnt = 0;
                 }
-
-                if(abort)
-                    break;
             }
-
-            this.assemblyPipeline = new AssemblyPipeline(this.topologyFSM);
-
-            assemblyPipeline.addPhase(new TopologyParallelizer());
-
-            assemblyPipeline.addPhase(new TopologyScheduler(context.infrastructureManager));
-
-            assemblyPipeline.addPhase(new TopologyDeployer(context.rpcManager));
-
-            assemblyPipeline.assemble(topologyContainer.executingTopology);
-
-
-            this.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
-
-                private int finalStateCnt = 0;
-
-                @Override
-                public void handleEvent(Event e) {
-                    final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
-
-                    final Topology.ExecutionNode en = topologyContainer.executingTopology.executionNodeMap.get(event.getTaskID());
-
-                    // sanity check.
-                    if (en == null)
-                        throw new IllegalStateException();
-
-                    en.setState((TaskStates.TaskState) event.getPayload());
-
-                    // It is at the moment a bit clumsy to detect the processing end.
-                    // We should introduce a dedicated "processing end" event...
-                    if (en.getState() == TaskStates.TaskState.TASK_STATE_FINISHED ||
-                            en.getState() == TaskStates.TaskState.TASK_STATE_CANCELED ||
-                            en.getState() == TaskStates.TaskState.TASK_STATE_FAILURE)
-                        ++finalStateCnt;
-
-                    if (finalStateCnt == topologyContainer.executingTopology.executionNodeMap.size()) {
-
-                        //context.workloadManager.unregisterTopology(topologyContainer.executingTopology.topologyID);
-                        TopologyController.this.removeAllEventListener();
-                        // Shutdown the event dispatcher threads used by this executingTopology controller
-                        //shutdown();
-
-                        topologyFSM.joinDispatcherThread();
-
-                        finalStateCnt = 0;
-
-                        topologyContainer.executedTopologies.add(topologyContainer.executingTopology);
-
-                        topologyContainer.executingTopology = null;
-
-                        if(topologyContainer.topologyQueue.size() > 0) {
-
-                            assembleTopology(topologyContainer.topologyQueue.poll());
-                        }
-                    }
-                }
-            });
-
-        } else {
-
-            topologyContainer.topologyQueue.add(topology);
-        }
+        });
     }
 
-    /**
-     * @return
-     */
     public IEventDispatcher getTopologyFSMDispatcher() {
         return topologyFSM;
     }
@@ -215,9 +124,86 @@ public final class TopologyController extends EventDispatcher {
     // Private Methods.
     // ---------------------------------------------------
 
-    /**
-     * @return
-     */
+    private void weaveInDatasets() {
+        Topology.TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Topology.LogicalNode>() {
+
+            @Override
+            public void visit(final Topology.LogicalNode element) {
+
+                final Topology.LogicalNode n1 = workloadManager.getEnvironmentManager().getDataset(element.uid);
+
+                if (n1 != null) {
+
+                    final Topology.LogicalNode node = (Topology.LogicalNode)DeepCopy.copy(n1); //new Topology.LogicalNode(n1);
+
+                    for (final Topology.ExecutionNode en : node.getExecutionNodes()) { // TODO: We have to change this!
+                        en.getNodeDescriptor().topologyID = topology.topologyID;
+                    }
+
+                    node.isAlreadyDeployed = true;
+
+                    node.outputs.clear();
+
+                    node.outputs.addAll(element.outputs);
+
+                    node.inputs.clear();
+
+                    final List<Topology.Edge> edgeUpdates = new ArrayList<>();
+
+                    for (final Map.Entry<Pair<String,String>, Topology.Edge> entry : topology.edges.entrySet()) {
+
+                        final Pair<String,String> edge = entry.getKey();
+
+                        if (edge.getFirst().equals(node.name)) {
+
+                            final Topology.Edge e = entry.getValue();
+
+                            edgeUpdates.add(new Topology.Edge(node, e.dstNode, e.transferType, e.edgeType));
+                        }
+
+                        if (edge.getSecond().equals(node.name)) {
+
+                            final Topology.Edge e = entry.getValue();
+
+                            edgeUpdates.add(new Topology.Edge(e.srcNode, node, e.transferType, e.edgeType));
+                        }
+                    }
+
+                    for (final Topology.Edge e : edgeUpdates) {
+
+                        topology.edges.put(new Pair<>(e.srcNode.name, e.dstNode.name), e);
+                    }
+
+
+                    topology.sourceMap.put(node.name, node);
+
+                    topology.nodeMap.put(node.name, node);
+
+                    topology.uidNodeMap.put(node.uid, node);
+
+
+                    for (final Topology.LogicalNode n : topology.uidNodeMap.values()) {
+
+                        if (n != node) {
+
+                            for (int i = 0; i <  n.inputs.size(); ++i) {
+                                final Topology.LogicalNode ins = n.inputs.get(i);
+                                if (ins.uid.equals(node.uid))
+                                    n.inputs.set(i, node);
+                            }
+
+                            for (int i = 0; i <  n.outputs.size(); ++i) {
+                                final Topology.LogicalNode outs = n.outputs.get(i);
+                                if (outs.uid.equals(node.uid))
+                                    n.outputs.set(i, node);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     private StateMachine.FiniteStateMachine<TopologyState, TopologyTransition> createTopologyFSM() {
 
         final StateMachine.FSMTransitionConstraint2<TopologyState, TopologyTransition> runTransitionConstraint =
@@ -227,7 +213,7 @@ public final class TopologyController extends EventDispatcher {
 
                     @Override
                     public boolean eval(StateMachine.FSMTransitionEvent<? extends Enum<?>> event) {
-                        return (++numOfTasksToBeReady) == topologyContainer.executingTopology.executionNodeMap.size();
+                        return (++numOfTasksToBeReady) == topology.executionNodeMap.size();
                     }
                 };
 
@@ -238,7 +224,7 @@ public final class TopologyController extends EventDispatcher {
 
                     @Override
                     public boolean eval(StateMachine.FSMTransitionEvent<? extends Enum<?>> event) {
-                        return (++numOfTasksToBeFinished) == topologyContainer.executingTopology.executionNodeMap.size();
+                        return (++numOfTasksToBeFinished) == topology.executionNodeMap.size();
                     }
                 };
 
@@ -250,7 +236,7 @@ public final class TopologyController extends EventDispatcher {
 
                     @Override
                     public boolean eval(StateMachine.FSMTransitionEvent<? extends Enum<?>> event) {
-                        return (++numOfTasksToBeCanceled) == topologyContainer.executingTopology.executionNodeMap.size();
+                        return (++numOfTasksToBeCanceled) == topology.executionNodeMap.size();
                     }
                 };
 
@@ -304,7 +290,7 @@ public final class TopologyController extends EventDispatcher {
 
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                LOG.info("CHANGE STATE OF TOPOLOGY '" + topologyContainer.executingTopology.name + "' [" + topologyContainer.executingTopology.topologyID + "] FROM " + previousState + " TO " + state
+                LOG.info("CHANGE STATE OF TOPOLOGY '" + topology.name + "' [" + topology.topologyID + "] FROM " + previousState + " TO " + state
                         + "  [" + transition.toString() + "]");
             }
         });
@@ -314,21 +300,17 @@ public final class TopologyController extends EventDispatcher {
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
 
-                Topology.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new IVisitor<Topology.Node>() {
+                Topology.TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Topology.LogicalNode>() {
 
                     @Override
-                    public void visit(final Topology.Node element) {
-
+                    public void visit(final Topology.LogicalNode element) {
                         for (final Topology.ExecutionNode en : element.getExecutionNodes()) {
-
                             final IOEvents.TaskControlIOEvent transitionUpdate =
                                     new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
-
                             transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_RUN));
                             transitionUpdate.setTaskID(en.getNodeDescriptor().taskID);
                             transitionUpdate.setTopologyID(en.getNodeDescriptor().topologyID);
-
-                            ioManager.sendEvent(en.getNodeDescriptor().getMachineDescriptor(), transitionUpdate);
+                            workloadManager.getIOManager().sendEvent(en.getNodeDescriptor().getMachineDescriptor(), transitionUpdate);
                         }
                     }
                 });
@@ -340,23 +322,20 @@ public final class TopologyController extends EventDispatcher {
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
 
-                ioManager.sendEvent(topologyContainer.executingTopology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE));
+                workloadManager.getIOManager().sendEvent(topology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE));
 
-                Topology.TopologyBreadthFirstTraverser.traverse(topologyContainer.executingTopology, new IVisitor<Topology.Node>() {
+                Topology.TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Topology.LogicalNode>() {
 
                     @Override
-                    public void visit(final Topology.Node element) {
+                    public void visit(final Topology.LogicalNode element) {
                         for (final Topology.ExecutionNode en : element.getExecutionNodes()) {
-
                             final IOEvents.TaskControlIOEvent transitionUpdate =
                                     new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION);
-
                             transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_CANCEL));
                             transitionUpdate.setTaskID(en.getNodeDescriptor().taskID);
                             transitionUpdate.setTopologyID(en.getNodeDescriptor().topologyID);
-
                             if (en.getState().equals(TaskStates.TaskState.TASK_STATE_RUNNING)) {
-                                ioManager.sendEvent(en.getNodeDescriptor().getMachineDescriptor(), transitionUpdate);
+                                workloadManager.getIOManager().sendEvent(en.getNodeDescriptor().getMachineDescriptor(), transitionUpdate);
                             }
                         }
                     }
@@ -370,10 +349,8 @@ public final class TopologyController extends EventDispatcher {
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
                 // Send to the examples the finish notification...
                 IOEvents.ControlIOEvent event = new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED);
-                event.setPayload(TopologyController.this.topologyContainer.executingTopology.name);
-
-                ioManager.sendEvent(topologyContainer.executingTopology.machineID, event);
-
+                event.setPayload(TopologyController.this.topology.name);
+                workloadManager.getIOManager().sendEvent(topology.machineID, event);
                 // Shutdown the event dispatcher threads used by this executingTopology controller
                 TopologyController.this.topologyFSM.shutdown();
             }
@@ -389,52 +366,6 @@ public final class TopologyController extends EventDispatcher {
                         + ", currentState: " + state );
             }
         });
-
-        // -------------------------------------------------------------------------------------
-        // WORKAROUND FOR TOPOLOGY STATE-MACHINE BUG
-        // -------------------------------------------------------------------------------------
-
-        /*final CountDownLatch cdl =  new CountDownLatch(1);
-
-        topologyFSM.addStateListener(TopologyState.TOPOLOGY_STATE_DEPLOYED, new StateMachine.IFSMStateAction<TopologyState, TopologyTransition>() {
-
-            @Override
-            public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
-                cdl.countDown();
-            }
-        });
-
-        final Map<TaskStates.TaskTransition,Integer> map = new HashMap<TaskStates.TaskTransition,Integer>();
-
-        context.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, new IEventHandler() {
-
-            @Override
-            public void handleEvent(Event e) {
-                final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
-
-                final TaskStates.TaskTransition transition =
-                        (TaskStates.TaskTransition)((StateMachine.FSMTransitionEvent<TaskStates.TaskTransition>)event.getPayload()).getPayload();
-
-                final int domainTransitions = (map.get(transition) == null ? 0 : map.get(transition))  + 1;
-
-                map.put(transition, domainTransitions);
-
-                if (domainTransitions == topologyContainer.executingTopology.executionNodeMap.size()) {
-
-                    if (transition == TaskStates.TaskTransition.TASK_TRANSITION_RUN) {
-
-                        try {
-                            cdl.await();
-                        } catch (InterruptedException e1) {
-                        }
-
-                        topologyFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_RUN));
-                    }
-                }
-            }
-        });*/
-
-        // -------------------------------------------------------------------------------------
 
         return topologyFSM;
     }

@@ -20,9 +20,6 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.config.IConfig;
 
-/**
- * This class wraps helper methods for interacting with ZooKeeper.
- */
 @NotThreadSafe
 public class ZookeeperClient {
 
@@ -79,7 +76,7 @@ public class ZookeeperClient {
             }
         }
 
-        // Create a folder that is used to register the task-managers.
+        // Create a folder that is used to register the taskmanager-managers.
         stat = curator.checkExists().forPath(ZOOKEEPER_TASKMANAGERS);
         if (stat == null) {
             try {

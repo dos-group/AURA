@@ -23,23 +23,19 @@ public final class BufferAllocator implements IAllocator {
     private final static Logger LOG = LoggerFactory.getLogger(BufferAllocator.class);
 
     enum BufferSize {
+
         _8K(1024 * 8),
+
         _16K(1024 * 16),
+
         _32K(1024 * 32),
+
         _64K(1024 * 64);
 
         BufferSize(final int bytes) { this.bytes = bytes; }
 
         public final int bytes;
     }
-
-//    public static final int _8K = 1024 * 8;
-//
-//    public static final int _16K = 1024 * 16;
-//
-//    public static final int _32K = 1024 * 32;
-//
-//    public static final int _64K = 1024 * 64;
 
     // ---------------------------------------------------
     // Fields.

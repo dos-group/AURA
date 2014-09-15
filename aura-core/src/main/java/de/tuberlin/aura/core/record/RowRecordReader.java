@@ -19,8 +19,8 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.BufferStream;
 import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.task.spi.IRecordReader;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
 
 /**
  *
@@ -54,6 +54,9 @@ public class RowRecordReader implements IRecordReader {
 
     private int selectedChannel = 0;
 
+
+    private List<InputBufferAccessor> inputBufferAccessors;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -71,6 +74,8 @@ public class RowRecordReader implements IRecordReader {
 
         this.kryo = new Kryo();
 
+        this.inputBufferAccessors = new ArrayList<>();
+
 
         for(final Descriptors.AbstractNodeDescriptor node : driver.getBindingDescriptor().inputGateBindings.get(gateIndex)) {
 
@@ -86,7 +91,15 @@ public class RowRecordReader implements IRecordReader {
                         // TODO: VERIFY: channel selection should only take place in the <code>readObject</code> method.
                         // selectedChannel = ++selectedChannel % kryoInputs.size();
 
-                        return driver.getDataConsumer().absorb(gateIndex, channelIndex).buffer;
+                        final MemoryView buffer =  driver.getDataConsumer().absorb(gateIndex, channelIndex).buffer;
+
+                        for (final InputBufferAccessor bufferAccessor : inputBufferAccessors) {
+                            if (buffer != null) {
+                                bufferAccessor.accessInputBuffer(buffer);
+                            }
+                        }
+
+                        return buffer;
 
                     } catch (InterruptedException e) {
                         throw new IllegalStateException(e);
@@ -188,7 +201,7 @@ public class RowRecordReader implements IRecordReader {
                 selectedChannel = ++selectedChannel % kryoInputs.size();
 
                 // We are not allowed to return null in that case, because that would stop
-                // the operator driver <code>while(input != null) {...}</code> of the calling operator.
+                // the operators driver <code>while(input != null) {...}</code> of the calling operators.
                 return readObject(); // TODO: VERIFY FIX, recursive call is ok?
             }
 
@@ -211,6 +224,19 @@ public class RowRecordReader implements IRecordReader {
      */
     public boolean finished() {
         return isFinished;
+    }
+
+    /**
+     *
+     * @param bufferAccessor
+     */
+    @Override
+    public void addInputBufferAccessor(final InputBufferAccessor bufferAccessor) {
+        // sanity check.
+        if (bufferAccessor == null)
+            throw new IllegalArgumentException("bufferAccessor == null");
+
+        inputBufferAccessors.add(bufferAccessor);
     }
 
     // ---------------------------------------------------
@@ -253,5 +279,4 @@ public class RowRecordReader implements IRecordReader {
             threadLock.unlock();
         }
     }
-
 }

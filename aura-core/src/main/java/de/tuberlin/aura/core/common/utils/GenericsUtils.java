@@ -8,12 +8,6 @@ public final class GenericsUtils {
     // Disallow instantiation.
     private GenericsUtils() {}
 
-    /**
-     * @param obj
-     * @param clazz
-     * @param <T>
-     * @return
-     */
     public static <T> T convertInstanceOfObject(Object obj, Class<T> clazz) {
         // sanity check.
         if (obj == null)

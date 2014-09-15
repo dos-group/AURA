@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -113,9 +113,9 @@ public class DataReader {
     }
 
     /**
-     * Returns the queue which is assigned to the gate of the task.
+     * Returns the queue which is assigned to the gate of the taskmanager.
      * 
-     * @param taskID the task id which the gate belongs to.
+     * @param taskID the taskmanager id which the gate belongs to.
      * @param gateIndex the gate index.
      * @return the queue assigned to the gate, or null if no queue is assigned.
      */
@@ -126,7 +126,7 @@ public class DataReader {
     /**
      * Binds a inbound queue to this data reader.
      * 
-     * @param srcTaskID the UUID of the task
+     * @param srcTaskID the UUID of the taskmanager
      * @param channel the channel the queue belongs to
      * @param gateIndex the gate the queue belongs to
      * @param channelIndex the channel index the queue belongs to
@@ -146,7 +146,7 @@ public class DataReader {
     /**
      * Returns true if the channel is already bound to this data reader.
      * 
-     * @param taskID the UUID of the task
+     * @param taskID the UUID of the taskmanager
      * @param gateIndex the gate index
      * @param channelIndex the channel index
      * @return true if the channel is already bound to this data reader, false otherwise
@@ -159,7 +159,7 @@ public class DataReader {
      * Writes a {@link de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent} to the channel bound
      * unique identifer triple (taskID, gateIndex, channelIndex).
      * 
-     * @param taskID the task id
+     * @param taskID the taskmanager id
      * @param gateIndex the gate index
      * @param channelIndex the channel index
      * @param event the event that is written to the channel
@@ -246,7 +246,7 @@ public class DataReader {
     }
 
     /**
-     * A local connection for communication between tasks located on the same task manager.
+     * A local connection for communication between tasks located on the same taskmanager manager.
      */
     public static class LocalConnection implements InboundConnectionType<LocalChannel> {
 

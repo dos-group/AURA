@@ -8,6 +8,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +21,7 @@ import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.ControlIOEvent;
-import de.tuberlin.aura.core.task.spi.ITaskExecutionManager;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -34,7 +35,7 @@ import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 
-public final class IOManager extends EventDispatcher {
+public final class IOManager extends EventDispatcher implements IIOManager {
 
     // ---------------------------------------------------
     // Fields.
@@ -55,8 +56,6 @@ public final class IOManager extends EventDispatcher {
 
     private final LocalAddress localAddress = new LocalAddress(UUID.randomUUID().toString());
 
-    private final EventHandler controlEventHandler;
-
     private final DataReader dataReader;
 
     public final DataWriter dataWriter;
@@ -71,7 +70,6 @@ public final class IOManager extends EventDispatcher {
     private final LocalEventLoopGroup localInboundELG;
 
     private final LocalEventLoopGroup localOutboundELG;
-
 
     // ---------------------------------------------------
     // Constructors.
@@ -99,8 +97,11 @@ public final class IOManager extends EventDispatcher {
         this.dataWriter = new DataWriter(IOManager.this, config);
 
         this.tcpInboundELG = new NioEventLoopGroup(config.getInt("tcp.threads.inbound"));
+
         this.tcpOutboundELG = new NioEventLoopGroup(config.getInt("tcp.threads.outbound"));
+
         this.localInboundELG = new LocalEventLoopGroup(config.getInt("local.threads.inbound"));
+
         this.localOutboundELG = new LocalEventLoopGroup(config.getInt("local.threads.outbound"));
 
         startNetworkConnectionSetupServer(this.machine, tcpInboundELG);
@@ -112,7 +113,7 @@ public final class IOManager extends EventDispatcher {
 
         startNetworkControlMessageServer(this.machine, controlPlaneEventLoopGroup);
 
-        this.controlEventHandler = new ControlIOChannelEventHandler();
+        final EventHandler controlEventHandler = new ControlIOChannelEventHandler();
 
         this.addEventListener(ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED, controlEventHandler);
 
@@ -123,11 +124,6 @@ public final class IOManager extends EventDispatcher {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     * @param srcTaskID
-     * @param dstTaskID
-     * @param dstMachine
-     */
     public void connectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
         // sanity check.
         if (srcTaskID == null)
@@ -144,11 +140,6 @@ public final class IOManager extends EventDispatcher {
         }
     }
 
-    /**
-     * @param srcTaskID
-     * @param dstTaskID
-     * @param dstMachine
-     */
     public void disconnectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final MachineDescriptor dstMachine) {
         // sanity check.
         if (srcTaskID == null)
@@ -161,9 +152,6 @@ public final class IOManager extends EventDispatcher {
         // TODO: implement it!
     }
 
-    /**
-     * @param dstMachine
-     */
     public void connectMessageChannelBlocking(final MachineDescriptor dstMachine) {
         // sanity check.
         if (dstMachine == null)
@@ -217,10 +205,6 @@ public final class IOManager extends EventDispatcher {
         removeEventListener(ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED, localHandler);
     }
 
-    /**
-     * @param dstMachine
-     * @return
-     */
     public Channel getControlIOChannel(final MachineDescriptor dstMachine) {
         // sanity check.
         if (machine == null)
@@ -229,10 +213,6 @@ public final class IOManager extends EventDispatcher {
         return controlIOConnections.get(new Pair<>(machine.uid, dstMachine.uid));
     }
 
-    /**
-     * @param dstMachine
-     * @param event
-     */
     public void sendEvent(final MachineDescriptor dstMachine, final ControlIOEvent event) {
         // sanity check.
         if (dstMachine == null)
@@ -241,10 +221,6 @@ public final class IOManager extends EventDispatcher {
         sendEvent(dstMachine.uid, event);
     }
 
-    /**
-     * @param dstMachineID
-     * @param event
-     */
     public void sendEvent(final UUID dstMachineID, final ControlIOEvent event) {
 
         // sanity check.
@@ -273,25 +249,14 @@ public final class IOManager extends EventDispatcher {
     // Private Methods.
     // ---------------------------------------------------
 
-    /**
-     * @param machine
-     * @param nelg
-     */
     private void startNetworkConnectionSetupServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
         dataReader.bind(new DataReader.NetworkConnection(config), machine.dataAddress, nelg);
     }
 
-    /**
-     * @param lelg
-     */
     private void startLocalDataConnectionSetupServer(final LocalEventLoopGroup lelg) {
         dataReader.bind(new DataReader.LocalConnection(config), localAddress, lelg);
     }
 
-    /**
-     * @param machine
-     * @param nelg
-     */
     private void startNetworkControlMessageServer(final MachineDescriptor machine, final NioEventLoopGroup nelg) {
         final ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(nelg).channel(NioServerSocketChannel.class).childHandler(new ChannelInitializer<SocketChannel>() {

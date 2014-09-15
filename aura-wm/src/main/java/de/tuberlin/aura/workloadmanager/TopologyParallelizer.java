@@ -9,12 +9,31 @@ import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
-import de.tuberlin.aura.core.task.common.TaskStates;
-import de.tuberlin.aura.core.task.usercode.UserCode;
+import de.tuberlin.aura.core.taskmanager.common.TaskStates;
+import de.tuberlin.aura.core.taskmanager.usercode.UserCode;
 import de.tuberlin.aura.core.topology.Topology.*;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
+import de.tuberlin.aura.workloadmanager.spi.IDistributedEnvironment;
 
 public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopology> {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private final IDistributedEnvironment environmentManager;
+
+    // ---------------------------------------------------
+    // Constructor.
+    // ---------------------------------------------------
+
+    public TopologyParallelizer(final IDistributedEnvironment environmentManager) {
+        // sanity check.
+        if (environmentManager == null)
+            throw new IllegalArgumentException("environmentManager == null");
+
+        this.environmentManager = environmentManager;
+    }
 
     // ---------------------------------------------------
     // Public.
@@ -41,15 +60,16 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
         final Map<UUID, ExecutionNode> executionNodeMap = new HashMap<>();
 
-        // First pass, create task descriptors.
-        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
+        // First pass, create taskmanager descriptors.
+        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<LogicalNode>() {
 
             @Override
-            public void visit(final Node element) {
+            public void visit(LogicalNode element) {
 
-                if(element.isAlreadyDeployed) {
+                if (element.isAlreadyDeployed) {
+
                     for(final ExecutionNode en : element.getExecutionNodes()) {
-                        // Reset the task state.
+                        // Reset the taskmanager state.
                         en.setState(TaskStates.TaskState.TASK_STATE_CREATED);
                         executionNodeMap.put(en.getNodeDescriptor().taskID, en);
                     }
@@ -62,9 +82,18 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                     final Descriptors.AbstractNodeDescriptor nodeDescriptor;
 
-                    if (element instanceof ComputationNode)
-                        nodeDescriptor = new Descriptors.ComputationNodeDescriptor(topology.topologyID, taskID, index, element.name, userCodeList);
+                    if (element instanceof InvokeableNode)
+
+                        nodeDescriptor = new Descriptors.InvokeableNodeDescriptor(
+                                topology.topologyID,
+                                taskID,
+                                index,
+                                element.name,
+                                userCodeList
+                        );
+
                     else if (element instanceof OperatorNode)
+
                         nodeDescriptor = new Descriptors.OperatorNodeDescriptor(
                                 topology.topologyID,
                                 taskID,
@@ -73,11 +102,23 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                 userCodeList,
                                 ((OperatorNode)element).properties
                         );
-                    else if (element instanceof StorageNode)
-                        nodeDescriptor = new Descriptors.StorageNodeDescriptor(topology.topologyID, taskID, index, element.name);
-                    else if (element instanceof Node)
-                        nodeDescriptor = new Descriptors.AbstractNodeDescriptor(topology.topologyID, taskID, index, element.name, userCodeList);
-                    else
+
+                    else if (element instanceof DatasetNode) {
+
+                        nodeDescriptor = new Descriptors.DatasetNodeDescriptor(
+                                topology.topologyID,
+                                taskID,
+                                index,
+                                element.name,
+                                ((DatasetNode) element).properties
+                        );
+
+                        if (!environmentManager.existsDataset(element.uid)) {
+
+                            environmentManager.addDataset((DatasetNode)element);
+                        }
+
+                    } else
                         throw new IllegalStateException();
 
                     final UUID executionNodeID = UUID.randomUUID();
@@ -92,16 +133,16 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
         topology.setExecutionNodes(executionNodeMap);
 
         // Second pass, create binding descriptors.
-        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Node>() {
+        TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<LogicalNode>() {
 
             @Override
-            public void visit(final Node element) {
+            public void visit(final LogicalNode element) {
 
                 // TODO: reduce code!
 
                 // Bind inputs of the execution nodes.
                 final Map<UUID, Map<UUID, List<Descriptors.AbstractNodeDescriptor>>> gateExecutionNodeInputs = new HashMap<>();
-                for (final Node n : element.getInputs()) {
+                for (final LogicalNode n : element.getInputs()) {
 
                     if(element.isAlreadyDeployed)
                         continue;
@@ -210,7 +251,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
                 // Bind outputs of the execution nodes.
                 final Map<UUID, Map<UUID, List<Descriptors.AbstractNodeDescriptor>>> gateExecutionNodeOutputs = new HashMap<>();
-                for (final Node n : element.getOutputs()) {
+                for (final LogicalNode n : element.getOutputs()) {
 
                     final Edge ie = topology.edges.get(new Pair<>(element.name, n.name));
 

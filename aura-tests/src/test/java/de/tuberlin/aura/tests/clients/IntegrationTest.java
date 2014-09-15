@@ -36,13 +36,13 @@ public class IntegrationTest {
     public static void setup() {
         IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
         switch (simConfig.getString("simulator.mode")) {
-            case "local":
+            case "LOCAL":
                 new LocalClusterSimulator(simConfig);
                 break;
             case "cluster":
                 break;
             default:
-                LOG.warn("'simulator mode' has unknown value. Fallback to local mode.");
+                LOG.warn("'simulator mode' has unknown value. Fallback to LOCAL mode.");
                 new LocalClusterSimulator(simConfig);
         }
 

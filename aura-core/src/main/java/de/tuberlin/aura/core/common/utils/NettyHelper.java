@@ -7,9 +7,6 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
 public class NettyHelper {
 
-    /**
-     * Logger.
-     */
     private static final Logger LOG = LoggerFactory.getLogger(NettyHelper.class);
 
     public static LengthFieldBasedFrameDecoder getLengthDecoder() {

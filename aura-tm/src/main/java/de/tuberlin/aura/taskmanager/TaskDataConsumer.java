@@ -16,86 +16,12 @@ import de.tuberlin.aura.core.iosystem.DataReader;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.queues.BufferQueue;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
-import de.tuberlin.aura.core.task.common.TaskStates;
-import de.tuberlin.aura.core.task.gates.InputGate;
-import de.tuberlin.aura.core.task.spi.IDataConsumer;
-import de.tuberlin.aura.core.task.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.common.TaskStates;
+import de.tuberlin.aura.core.taskmanager.gates.InputGate;
+import de.tuberlin.aura.core.taskmanager.spi.IDataConsumer;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
 
-/**
- * The TaskDataConsumer is responsible for receiving data from connected TaskDataProducers and
- * provide this data (in form of buffers) to the task.
- */
 public final class TaskDataConsumer implements IDataConsumer {
-
-    // ---------------------------------------------------
-    // Inner Classes.
-    // ---------------------------------------------------
-
-    private final class RoundRobinAbsorber {
-
-        private int channelIndex;
-
-        private final InputGate inputGate;
-
-        private final int gateIndex;
-
-        private final BlockingQueue<BufferQueue<IOEvents.DataIOEvent>> absorberQueue = new LinkedBlockingQueue<>();
-
-        public RoundRobinAbsorber(final int gateIndex, final InputGate inputGate) {
-            // sanity check.
-            if (inputGate == null)
-                throw new IllegalArgumentException("inputGate == null");
-
-            this.inputGate = inputGate;
-
-            this.gateIndex = gateIndex;
-        }
-
-        public void initQueues() {
-
-            for (int channelIndex = 0; channelIndex < inputGate.getNumOfChannels(); ++channelIndex) {
-
-                final int index = channelIndex;
-
-                final BufferQueue<IOEvents.DataIOEvent> bufferQueue = inputGate.getInputQueue(channelIndex);
-
-                final BufferQueue.QueueObserver qo = new BufferQueue.QueueObserver() {
-
-                    private final int channelIndex = index;
-
-                    @Override
-                    public void signalNotEmpty() {
-                        absorberQueue.add(bufferQueue);
-                    }
-
-                    @Override
-                    public void signalNotFull() {}
-
-                    @Override
-                    public void signalNewElement() {}
-                };
-
-                bufferQueue.registerObserver(qo);
-            }
-        }
-
-        public IOEvents.DataIOEvent take() throws InterruptedException {
-
-            IOEvents.DataIOEvent event = null;
-
-            while(event == null) {
-
-                final BufferQueue<IOEvents.DataIOEvent> bq = absorberQueue.take();
-
-                event = bq.poll();
-
-                if (event != null)
-                    absorberQueue.add(bq);
-            }
-
-            return event;
-        }
-    }
 
     // ---------------------------------------------------
     // Fields.
@@ -104,9 +30,6 @@ public final class TaskDataConsumer implements IDataConsumer {
     private static final Logger LOG = Logger.getLogger(TaskDataConsumer.class);
 
     private final ITaskDriver taskDriver;
-
-    private final IEventHandler consumerEventHandler;
-
 
     private final List<InputGate> inputGates;
 
@@ -120,18 +43,15 @@ public final class TaskDataConsumer implements IDataConsumer {
 
     private final Map<Pair<Integer,Integer>, UUID> channelIndexToTaskID;
 
-
     private boolean areInputsGatesExhausted;
 
     private IAllocator allocator;
-
 
     private final List<RoundRobinAbsorber> absorber;
 
     private final Map<UUID, Integer> taskIDToChannelIndex = new HashMap<>();
 
     private int[] remainingChannelsToConnect;
-
 
     // ---------------------------------------------------
     // Constructors.
@@ -144,8 +64,7 @@ public final class TaskDataConsumer implements IDataConsumer {
 
         this.taskDriver = taskDriver;
 
-        // event handling.
-        this.consumerEventHandler = new ConsumerEventHandler();
+        final IEventHandler consumerEventHandler = new ConsumerEventHandler();
 
         taskDriver.addEventListener(IOEvents.DataEventType.DATA_EVENT_INPUT_CHANNEL_CONNECTED, consumerEventHandler);
 
@@ -153,12 +72,10 @@ public final class TaskDataConsumer implements IDataConsumer {
 
         this.absorber = new ArrayList<>();
 
-        // create mappings for input gates.
         this.taskIDToGateIndex = new HashMap<>();
 
         this.channelIndexToTaskID = new HashMap<>();
 
-        // setup input gates.
         this.activeGates = new ArrayList<>();
 
         this.closedGates = new ArrayList<>();
@@ -170,12 +87,6 @@ public final class TaskDataConsumer implements IDataConsumer {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     *
-     * @param gateIndex
-     * @return
-     * @throws InterruptedException
-     */
     public IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException {
 
         if (activeGates.get(gateIndex).size() == 0)
@@ -186,7 +97,6 @@ public final class TaskDataConsumer implements IDataConsumer {
         IOEvents.DataIOEvent event = null;
 
         while (retrieve) {
-            //event = inputGates.get(gateIndex).getInputQueue().take();
 
             event = absorber.get(gateIndex).take();
 
@@ -242,13 +152,6 @@ public final class TaskDataConsumer implements IDataConsumer {
         return (IOEvents.TransferBufferEvent) event;
     }
 
-    /**
-     *
-     * @param gateIndex
-     * @param channelIndex
-     * @return
-     * @throws InterruptedException
-     */
     public IOEvents.TransferBufferEvent absorb(int gateIndex, int channelIndex) throws InterruptedException {
 
         if (activeGates.get(gateIndex).size() == 0)
@@ -314,82 +217,48 @@ public final class TaskDataConsumer implements IDataConsumer {
         return (IOEvents.TransferBufferEvent) event;
     }
 
-
-    /**
-     *
-     */
     public void shutdownConsumer() {
         // taskIDToGateIndex.clear();
         // channelIndexToTaskID.clear();
     }
 
-    /**
-     * @param gateIndex
-     */
     public void openGate(int gateIndex) {
-        if (inputGates == null) {
-            throw new IllegalStateException("Task has no input gates.");
-        }
+        // Sanity check.
         inputGates.get(gateIndex).openGate();
     }
 
-    /**
-     * @param gateIndex
-     */
     public void closeGate(final int gateIndex) {
-        if (inputGates == null) {
-            throw new IllegalStateException("Task has no input gates.");
-        }
-
+        // Sanity check.
         gateCloseFinished.get(gateIndex).set(false);
         inputGates.get(gateIndex).closeGate();
     }
 
-    /**
-     * @param gateIndex
-     * @return
-     */
     public boolean isGateClosed(final int gateIndex) {
         return gateCloseFinished.get(gateIndex).get();
     }
 
-    /**
-     * @param channelIndex
-     * @return
-     */
     public UUID getInputTaskIDFromChannelIndex(final int channelIndex) {
         return null; //return channelIndexToTaskID.get(channelIndex); // TODO: that´s a wrong implementation, not channelIndex but gateIndex...
     }
 
-    /**
-     *
-     * @param taskID
-     * @return
-     */
     public int getChannelIndexFromTaskID(final UUID taskID) {
         return taskIDToChannelIndex.get(taskID);
     }
 
     /**
-     * Return the gate index for the corresponding task ID.
+     * Return the gate index for the corresponding taskmanager ID.
      * 
-     * @param taskID The unique ID of a connected task.
+     * @param taskID The unique ID of a connected taskmanager.
      * @return The gate index or null if no suitable mapping exists.
      */
     public int getInputGateIndexFromTaskID(final UUID taskID) {
         return taskIDToGateIndex.get(taskID);
     }
 
-    /**
-     * @return
-     */
     public boolean isExhausted() {
         return areInputsGatesExhausted;
     }
 
-    /**
-     *
-     */
     @Override
     public void bind(final List<List<Descriptors.AbstractNodeDescriptor>> inputBinding, final IAllocator allocator) {
         // sanity check.
@@ -402,41 +271,24 @@ public final class TaskDataConsumer implements IDataConsumer {
 
         // create mappings for input gates.
         this.taskIDToGateIndex.clear();
-
         this.channelIndexToTaskID.clear();
-
         createInputMappings(inputBinding);
-
         // create input gates.
         createInputGates(inputBinding);
 
         // setup input gates.
         this.activeGates.clear();
-
         this.closedGates.clear();
-
         this.gateCloseFinished.clear();
-
         this.areInputsGatesExhausted = false;
-
         setupInputGates(inputBinding);
     }
 
-    /**
-     *
-     * @return
-     */
     @Override
     public IAllocator getAllocator() {
         return allocator;
     }
 
-
-    /**
-     *
-     * @param srcTaskID
-     * @return
-     */
     public boolean isInputChannelExhausted(final int gateIndex, final UUID srcTaskID) {
         // sanity check.
         if (srcTaskID == null)
@@ -453,15 +305,12 @@ public final class TaskDataConsumer implements IDataConsumer {
 
     /**
      * Create the output gates from the binding descriptor.
-     * 
-     * @return The list of output gates or null if no the task has no outputs.
      */
     private void createInputGates(final List<List<Descriptors.AbstractNodeDescriptor>> inputBinding) {
 
         this.inputGates.clear();
 
         if (inputBinding.size() <= 0) {
-
             taskDriver.getTaskStateMachine().dispatchEvent(
                     new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED)
             );
@@ -469,20 +318,13 @@ public final class TaskDataConsumer implements IDataConsumer {
         }
 
         for (int gateIndex = 0; gateIndex < inputBinding.size(); ++gateIndex) {
-
             final InputGate inputGate = new InputGate(taskDriver, gateIndex);
-
             inputGates.add(inputGate);
-
-            final RoundRobinAbsorber rra = new RoundRobinAbsorber(gateIndex, inputGate);
-
+            final RoundRobinAbsorber rra = new RoundRobinAbsorber(inputGate);
             absorber.add(rra);
         }
     }
 
-    /**
-     *
-     */
     private void setupInputGates(final List<List<Descriptors.AbstractNodeDescriptor>> inputBinding) {
 
         remainingChannelsToConnect = new int[inputBinding.size()];
@@ -492,23 +334,22 @@ public final class TaskDataConsumer implements IDataConsumer {
 
             final Map<UUID, Boolean> closedChannels = new HashMap<>();
             closedGates.add(closedChannels);
-
             final Set<UUID> activeChannelSet = new HashSet<>();
             activeGates.add(activeChannelSet);
-
             gateCloseFinished.add(new AtomicBoolean(false));
 
             for (final Descriptors.AbstractNodeDescriptor td : tdList) {
                 closedChannels.put(td.taskID, false);
                 activeChannelSet.add(td.taskID);
             }
+
             remainingChannelsToConnect[gateIndex++] = tdList.size();
         }
     }
 
     /**
-     * Create the mapping between task ID and corresponding gate index and the between channel index
-     * and the corresponding task ID.
+     * Create the mapping between taskmanager ID and corresponding gate index and the between channel index
+     * and the corresponding taskmanager ID.
      */
     private void createInputMappings(final List<List<Descriptors.AbstractNodeDescriptor>> inputBinding) {
         int gateIndex = 0;
@@ -518,9 +359,8 @@ public final class TaskDataConsumer implements IDataConsumer {
             for (final Descriptors.AbstractNodeDescriptor inputTask : inputGate) {
 
                 taskIDToGateIndex.put(inputTask.taskID, gateIndex);
-                channelIndexToTaskID.put(new Pair<Integer,Integer>(gateIndex, channelIndex), inputTask.taskID);
+                channelIndexToTaskID.put(new Pair<>(gateIndex, channelIndex), inputTask.taskID);
                 taskIDToChannelIndex.put(inputTask.taskID, channelIndex);
-
                 ++channelIndex;
             }
             ++gateIndex;
@@ -539,45 +379,95 @@ public final class TaskDataConsumer implements IDataConsumer {
             try {
                 int gateIndex = taskIDToGateIndex.get(event.srcTaskID);
                 int channelIndex = taskIDToChannelIndex.get(event.srcTaskID);
-
                 // wire queue to input gate
                 final DataReader channelReader = (DataReader) event.getPayload();
-
                 // create queue, if there is none yet as we can have multiple channels
                 // insert in one queue (aka multiple channels per gate)
                 final BufferQueue<IOEvents.DataIOEvent> queue = taskDriver.getQueueManager().getInboundQueue(gateIndex, channelIndex);
                 channelReader.bindQueue(taskDriver.getNodeDescriptor().taskID, event.getChannel(), gateIndex, channelIndex, queue);
-
                 inputGates.get(gateIndex).setDataReader(channelReader);
-
-                Descriptors.AbstractNodeDescriptor src = taskDriver.getBindingDescriptor().inputGateBindings.get(gateIndex).get(channelIndex);
+                final Descriptors.AbstractNodeDescriptor src = taskDriver.getBindingDescriptor().inputGateBindings.get(gateIndex).get(channelIndex);
 
                 LOG.debug("INPUT CONNECTION FROM " + src.name + " [" + src.taskID + "] TO TASK "
                         + taskDriver.getNodeDescriptor().name + " [" + taskDriver.getNodeDescriptor().taskID + "] IS ESTABLISHED");
 
-
                 remainingChannelsToConnect[gateIndex]--;
-
                 if (remainingChannelsToConnect[gateIndex] < 0) {
                     throw new IllegalStateException("unexpected channel connected to gate: " + gateIndex);
                 }
 
                 // if all channels for gate are connected
                 if (remainingChannelsToConnect[gateIndex] == 0) {
+
                     absorber.get(gateIndex).initQueues();
 
                     // if all gates are fully connected
                     boolean fullyConnected = true;
-                    for (int remaining: remainingChannelsToConnect) {
+                    for (int remaining: remainingChannelsToConnect)
                         fullyConnected &= remaining == 0;
-                    }
+
                     if (fullyConnected) {
                         taskDriver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_INPUTS_CONNECTED));
                     }
                 }
+
             } catch (Exception ex) {
                 throw new IllegalStateException("unexpected channel tried to connect");
             }
+        }
+    }
+
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
+
+    private final class RoundRobinAbsorber {
+
+        private final InputGate inputGate;
+
+        private final BlockingQueue<BufferQueue<IOEvents.DataIOEvent>> absorberQueue = new LinkedBlockingQueue<>();
+
+        public RoundRobinAbsorber(final InputGate inputGate) {
+            // sanity check.
+            if (inputGate == null)
+                throw new IllegalArgumentException("inputGate == null");
+
+            this.inputGate = inputGate;
+        }
+
+        public void initQueues() {
+
+            for (int channelIndex = 0; channelIndex < inputGate.getNumOfChannels(); ++channelIndex) {
+
+                final BufferQueue<IOEvents.DataIOEvent> bufferQueue = inputGate.getInputQueue(channelIndex);
+
+                final BufferQueue.QueueObserver qo = new BufferQueue.QueueObserver() {
+
+                    @Override
+                    public void signalNotEmpty() {
+                        absorberQueue.add(bufferQueue);
+                    }
+
+                    @Override
+                    public void signalNotFull() {}
+
+                    @Override
+                    public void signalNewElement() {}
+                };
+
+                bufferQueue.registerObserver(qo);
+            }
+        }
+
+        public IOEvents.DataIOEvent take() throws InterruptedException {
+            IOEvents.DataIOEvent event = null;
+            while(event == null) {
+                final BufferQueue<IOEvents.DataIOEvent> bq = absorberQueue.take();
+                event = bq.poll();
+                if (event != null)
+                    absorberQueue.add(bq);
+            }
+            return event;
         }
     }
 }

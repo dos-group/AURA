@@ -12,6 +12,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import de.tuberlin.aura.core.iosystem.spi.IIOManager;
+import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +25,7 @@ import de.tuberlin.aura.core.iosystem.IOEvents.ControlEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.RPCCalleeResponseEvent;
 import de.tuberlin.aura.core.iosystem.IOEvents.RPCCallerRequestEvent;
 
-public final class RPCManager {
+public final class RPCManager implements IRPCManager{
 
     // ---------------------------------------------------
     // Fields.
@@ -33,11 +35,9 @@ public final class RPCManager {
 
     private final IConfig config;
 
-    private final IOManager ioManager;
+    private final IIOManager ioManager;
 
     private final Map<Pair<Class<?>, UUID>, Object> cachedProxies;
-
-    private final RPCEventHandler rpcEventHandler;
 
     private final ProtocolCalleeProxy calleeProxy;
 
@@ -45,11 +45,7 @@ public final class RPCManager {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param ioManager
-     * @param config
-     */
-    public RPCManager(final IOManager ioManager, IConfig config) {
+    public RPCManager(final IIOManager ioManager, IConfig config) {
         // sanity check.
         if (ioManager == null)
             throw new IllegalArgumentException("ioManager == null");
@@ -58,7 +54,7 @@ public final class RPCManager {
 
         this.ioManager = ioManager;
 
-        this.rpcEventHandler = new RPCEventHandler();
+        final RPCEventHandler rpcEventHandler = new RPCEventHandler();
 
         this.cachedProxies = new HashMap<>();
 
@@ -73,11 +69,7 @@ public final class RPCManager {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     * @param protocolImplementation
-     * @param protocolInterface
-     */
-    public void registerRPCProtocolImpl(final Object protocolImplementation, final Class<?> protocolInterface) {
+    public void registerRPCProtocol(final Object protocolImplementation, final Class<?> protocolInterface) {
         // sanity check.
         if (protocolImplementation == null)
             throw new IllegalArgumentException("protocolImplementation == null");
@@ -88,12 +80,6 @@ public final class RPCManager {
         calleeProxy.registerProtocol(protocolImplementation, protocolInterface);
     }
 
-    /**
-     * @param protocolInterface
-     * @param dstMachine
-     * @param <T>
-     * @return
-     */
     public <T> T getRPCProtocolProxy(final Class<T> protocolInterface, final MachineDescriptor dstMachine) {
         // sanity check.
         if (protocolInterface == null)
@@ -116,9 +102,6 @@ public final class RPCManager {
     // Inner Classes.
     // ---------------------------------------------------
 
-    /**
-     *
-     */
     public static final class MethodSignature implements Serializable {
 
         private static final long serialVersionUID = -1L;
@@ -158,9 +141,6 @@ public final class RPCManager {
         }
     }
 
-    /**
-     *
-     */
     @SuppressWarnings("unused")
     private static final class ProtocolCallerProxy implements InvocationHandler {
 
@@ -168,13 +148,13 @@ public final class RPCManager {
 
         private final UUID dstMachineID;
 
-        private final IOManager ioManager;
+        private final IIOManager ioManager;
 
         private final static Map<UUID, CountDownLatch> callerTable = new HashMap<>();
 
         private final static Map<UUID, Object> callerResultTable = new HashMap<>();
 
-        public ProtocolCallerProxy(long responseTimeout, final UUID dstMachineID, final IOManager ioManager) {
+        public ProtocolCallerProxy(long responseTimeout, final UUID dstMachineID, final IIOManager ioManager) {
             // sanity check.
             if (ioManager == null)
                 throw new IllegalArgumentException("ioManager == null");
@@ -190,22 +170,12 @@ public final class RPCManager {
         public static <T> T createProtocolProxy(final long responseTimeout,
                                                 final UUID dstMachineID,
                                                 final Class<T> protocolInterface,
-                                                final IOManager ioManager) {
+                                                final IIOManager ioManager) {
 
             final ProtocolCallerProxy pc = new ProtocolCallerProxy(responseTimeout, dstMachineID, ioManager);
             return (T) Proxy.newProxyInstance(protocolInterface.getClassLoader(), new Class[] {protocolInterface}, pc);
         }
 
-        /**
-         * TODO: It should be possible to invoke methods in a non-blocking fashion. This could speed
-         * up our deployment time significantly!
-         * 
-         * @param proxy
-         * @param method
-         * @param methodArguments
-         * @return
-         * @throws Throwable
-         */
         @Override
         public Object invoke(Object proxy, Method method, Object[] methodArguments) throws Throwable {
 
@@ -275,9 +245,6 @@ public final class RPCManager {
         }
     }
 
-    /**
-     *
-     */
     private final class ProtocolCalleeProxy {
 
         private final Map<String, Object> calleeTable = new HashMap<>();
@@ -299,9 +266,9 @@ public final class RPCManager {
                 return new RPCCalleeResponseEvent(callUID, new IllegalStateException("found no protocol implementation"));
             }
 
-            synchronized (protocolImplementation) { // TODO: Synchronization on local variable
-                                                    // 'protocolImplementation'
-                // TODO: Maybe we could do some caching of method signatures
+            //synchronized (protocolImplementation) { // TODO: Synchronization on local variable 'protocolImplementation'
+
+                // Maybe we could do some caching of method signatures
                 // on the callee site for frequent repeated calls...
 
                 try {
@@ -311,13 +278,10 @@ public final class RPCManager {
                 } catch (Exception e) {
                     return new RPCCalleeResponseEvent(callUID, e);
                 }
-            }
+            //}
         }
     }
 
-    /**
-     *
-     */
     private final class RPCEventHandler extends EventHandler {
 
         private ExecutorService executor = Executors.newCachedThreadPool();

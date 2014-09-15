@@ -49,10 +49,10 @@ public class DataWriter {
      * Creates a new {@link de.tuberlin.aura.core.iosystem.DataWriter.ChannelWriter} for the
      * specified arguments.
      * 
-     * @param srcTaskID the UUID of the sending task
-     * @param dstTaskID the UUID of the receiving task
+     * @param srcTaskID the UUID of the sending taskmanager
+     * @param dstTaskID the UUID of the receiving taskmanager
      * @param connectionType the type of connection (e.g. local / tcp)
-     * @param address the address of the receiving task
+     * @param address the address of the receiving taskmanager
      * @param eventLoopGroup the event loop group used
      * @param <T> the type of channel this connection uses
      * @return a new data writer for the specified arguments
