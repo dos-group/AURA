@@ -10,9 +10,6 @@ import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.record.TypeInformation;
 
-/**
- *
- */
 public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,I> {
 
     // ---------------------------------------------------

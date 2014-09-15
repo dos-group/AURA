@@ -5,8 +5,11 @@ import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.dataflow.operators.impl.*;
 import de.tuberlin.aura.core.dataflow.udfs.FunctionFactory;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
+import de.tuberlin.aura.core.dataflow.udfs.functions.FlatMapFunction;
+import de.tuberlin.aura.core.dataflow.udfs.functions.FilterFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
+
 
 /**
  *
@@ -36,15 +39,15 @@ public final class PhysicalOperatorFactory {
             case MAP_GROUP_OPERATOR:
                 break;
             case FLAT_MAP_TUPLE_OPERATOR:
-                break;
+                return new FlatMapPhysicalOperator(environment, inputOp1, FunctionFactory.createFlatMapFunction((Class< FlatMapFunction<Object,Object>>) environment.getProperties().function));
             case FLAT_MAP_GROUP_OPERATOR:
                 break;
             case FILTER_OPERATOR:
-                break;
+                return new FilterPhysicalOperator(environment, inputOp1, FunctionFactory.createFilterFunction((Class<FilterFunction<Object>>) environment.getProperties().function));
             case UNION_OPERATOR:
                 return new UnionPhysicalOperator<>(environment, inputOp1, inputOp2);
             case DIFFERENCE_OPERATOR:
-                break;
+                return new DifferencePhysicalOperator<>(environment, inputOp1, inputOp2);
             case HASH_JOIN_OPERATOR:
                 return new HashJoinPhysicalOperator<>(environment, inputOp1, inputOp2);
             case MERGE_JOIN_OPERATOR:
