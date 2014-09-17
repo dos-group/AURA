@@ -3,6 +3,7 @@ package de.tuberlin.aura.taskmanager;
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Logger;
@@ -41,7 +42,7 @@ public final class TaskDataConsumer implements IDataConsumer {
 
     private final Map<UUID, Integer> taskIDToGateIndex;
 
-    private final Map<Pair<Integer,Integer>, UUID> channelIndexToTaskID;
+    private final Map<Pair<Integer,Integer>, UUID> channelIndexToSenderTaskID;
 
     private boolean areInputsGatesExhausted;
 
@@ -49,7 +50,7 @@ public final class TaskDataConsumer implements IDataConsumer {
 
     private final List<RoundRobinAbsorber> absorber;
 
-    private final Map<UUID, Integer> taskIDToChannelIndex = new HashMap<>();
+    private final Map<UUID, Integer> senderTaskIDToChannelIndex = new HashMap<>();
 
     private int[] remainingChannelsToConnect;
 
@@ -74,7 +75,7 @@ public final class TaskDataConsumer implements IDataConsumer {
 
         this.taskIDToGateIndex = new HashMap<>();
 
-        this.channelIndexToTaskID = new HashMap<>();
+        this.channelIndexToSenderTaskID = new HashMap<>();
 
         this.activeGates = new ArrayList<>();
 
@@ -111,6 +112,7 @@ public final class TaskDataConsumer implements IDataConsumer {
                     if (activeChannelSet.isEmpty()) {
                         retrieve = false;
                         event = null;
+                        LOG.debug("all channels exhausted.");
                     }
 
                     // check if all gates are exhausted
@@ -163,7 +165,14 @@ public final class TaskDataConsumer implements IDataConsumer {
 
         while (retrieve) {
 
-            event = inputGates.get(gateIndex).getInputQueue(channelIndex).take();
+            event = inputGates.get(gateIndex).getInputQueue(channelIndex).poll(20, TimeUnit.SECONDS);
+            if (event == null) {
+                for (int i =  0; i < inputGates.get(gateIndex).getNumOfChannels(); i++) {
+                    LOG.warn(i + " queue: " + inputGates.get(gateIndex).getInputQueue(i).size());
+                }
+                event = inputGates.get(gateIndex).getInputQueue(channelIndex).take();
+            }
+
 
             switch (event.type) {
 
@@ -219,7 +228,7 @@ public final class TaskDataConsumer implements IDataConsumer {
 
     public void shutdownConsumer() {
         // taskIDToGateIndex.clear();
-        // channelIndexToTaskID.clear();
+        // channelIndexToSenderTaskID.clear();
     }
 
     public void openGate(int gateIndex) {
@@ -238,11 +247,11 @@ public final class TaskDataConsumer implements IDataConsumer {
     }
 
     public UUID getInputTaskIDFromChannelIndex(final int channelIndex) {
-        return null; //return channelIndexToTaskID.get(channelIndex); // TODO: that´s a wrong implementation, not channelIndex but gateIndex...
+        return null; //return channelIndexToSenderTaskID.get(channelIndex); // TODO: that´s a wrong implementation, not channelIndex but gateIndex...
     }
 
     public int getChannelIndexFromTaskID(final UUID taskID) {
-        return taskIDToChannelIndex.get(taskID);
+        return senderTaskIDToChannelIndex.get(taskID);
     }
 
     /**
@@ -271,7 +280,7 @@ public final class TaskDataConsumer implements IDataConsumer {
 
         // create mappings for input gates.
         this.taskIDToGateIndex.clear();
-        this.channelIndexToTaskID.clear();
+        this.channelIndexToSenderTaskID.clear();
         createInputMappings(inputBinding);
         // create input gates.
         createInputGates(inputBinding);
@@ -359,8 +368,8 @@ public final class TaskDataConsumer implements IDataConsumer {
             for (final Descriptors.AbstractNodeDescriptor inputTask : inputGate) {
 
                 taskIDToGateIndex.put(inputTask.taskID, gateIndex);
-                channelIndexToTaskID.put(new Pair<>(gateIndex, channelIndex), inputTask.taskID);
-                taskIDToChannelIndex.put(inputTask.taskID, channelIndex);
+                channelIndexToSenderTaskID.put(new Pair<>(gateIndex, channelIndex), inputTask.taskID);
+                senderTaskIDToChannelIndex.put(inputTask.taskID, channelIndex);
                 ++channelIndex;
             }
             ++gateIndex;
@@ -378,7 +387,7 @@ public final class TaskDataConsumer implements IDataConsumer {
 
             try {
                 int gateIndex = taskIDToGateIndex.get(event.srcTaskID);
-                int channelIndex = taskIDToChannelIndex.get(event.srcTaskID);
+                int channelIndex = senderTaskIDToChannelIndex.get(event.srcTaskID);
                 // wire queue to input gate
                 final DataReader channelReader = (DataReader) event.getPayload();
                 // create queue, if there is none yet as we can have multiple channels

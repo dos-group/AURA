@@ -6,14 +6,15 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
+import de.tuberlin.aura.core.record.RowRecordWriter;
+
 /**
  *
  */
 public final class BufferStream {
 
     // Disallow instantiation.
-    private BufferStream() {
-    }
+    private BufferStream() {}
 
     /**
      *
@@ -52,8 +53,7 @@ public final class BufferStream {
         // Constructors.
         // ---------------------------------------------------
 
-        public ContinuousByteOutputStream() {
-        }
+        public ContinuousByteOutputStream() {}
 
         // ---------------------------------------------------
         // Public Methods.
@@ -91,8 +91,7 @@ public final class BufferStream {
         }
 
         public synchronized void write(byte b[], int off, int len) {
-            if ((off < 0) || (off > b.length) || (len < 0) ||
-                    ((off + len) - b.length > 0)) {
+            if ((off < 0) || (off > b.length) || (len < 0) || ((off + len) - b.length > 0)) {
                 throw new IndexOutOfBoundsException();
             }
 
@@ -100,46 +99,55 @@ public final class BufferStream {
                 nextBuf();
             }
 
-            //if (count + len > buf.size) {
+            // if block + block end marker does not fit in buffer -> write marker and flush buffer
+            final int avail = (buf.size - RowRecordWriter.BLOCK_END.length) - (count - buf.baseOffset);
+            if (avail < len) {
+                System.arraycopy(RowRecordWriter.BLOCK_END, 0, buf.memory, count, RowRecordWriter.BLOCK_END.length);
+                nextBuf();
+            }
 
-                int copiedLen = 0;
+            System.arraycopy(b, off, buf.memory, count, len);
+            count += len;
 
-                int originalLen = len;
+            // if (count + len > buf.size) {
 
-                while (!(originalLen == copiedLen)) {
+            // int copiedLen = 0;
+            //
+            // int originalLen = len;
+            //
+            // while (!(originalLen == copiedLen)) {
+            //
+            // final int avail = buf.size - (count - buf.baseOffset);
+            //
+            // if (originalLen - copiedLen > avail)
+            // len = avail;
+            // else
+            // len = originalLen - copiedLen;
+            //
+            // System.arraycopy(b, off, buf.memory, count, len);
+            //
+            // off += len;
+            //
+            // copiedLen += len;
+            //
+            // if (!(originalLen == copiedLen)) {
+            // nextBuf();
+            // }
+            // }
+            //
+            // count += len;
 
-                    final int avail = buf.size - (count - buf.baseOffset);
+            // return;
 
-                    if (originalLen - copiedLen > avail)
-                        len = avail;
-                    else
-                        len = originalLen - copiedLen;
-
-                    System.arraycopy(b, off, buf.memory, count, len);
-
-                    off += len;
-
-                    copiedLen += len;
-
-                    if (!(originalLen == copiedLen)) {
-                        nextBuf();
-                    }
-                }
-
-                count += len;
-
-                return;
-
-            /*} else {
-
-                System.arraycopy(b, off, buf.memory, count, len);
-
-                count += len;
-
-                if (count >= buf.size) {
-                    nextBuf();
-                }
-            }*/
+            /*
+             * } else {
+             * 
+             * System.arraycopy(b, off, buf.memory, count, len);
+             * 
+             * count += len;
+             * 
+             * if (count >= buf.size) { nextBuf(); } }
+             */
         }
 
         public synchronized void writeTo(OutputStream out) throws IOException {
@@ -162,8 +170,7 @@ public final class BufferStream {
             throw new UnsupportedOperationException();
         }
 
-        public synchronized String toString(String charsetName)
-                throws UnsupportedEncodingException {
+        public synchronized String toString(String charsetName) throws UnsupportedEncodingException {
             throw new UnsupportedOperationException();
         }
 
@@ -192,7 +199,7 @@ public final class BufferStream {
 
             buf = bufferInput.get();
 
-            if(buf == null) {
+            if (buf == null) {
                 System.out.println("STOP");
             }
 
@@ -307,7 +314,7 @@ public final class BufferStream {
 
                         int res = nextBuf();
 
-                        if(res == -1)
+                        if (res == -1)
                             return -1;
 
                         avail = count - (pos - buf.baseOffset);
@@ -334,7 +341,7 @@ public final class BufferStream {
 
             if (n > avail) {
 
-                int originalLen = (int)n;
+                int originalLen = (int) n;
 
                 int skippedLen = 0;
 
@@ -396,14 +403,14 @@ public final class BufferStream {
         // Private Methods.
         // ---------------------------------------------------
 
-        private int nextBuf() {
+        public int nextBuf() {
 
             if (buf != null && bufferOutput != null)
                 bufferOutput.put(buf);
 
             buf = bufferInput.get();
 
-            if(buf == null)
+            if (buf == null)
                 return -1;
 
             pos = buf.baseOffset;

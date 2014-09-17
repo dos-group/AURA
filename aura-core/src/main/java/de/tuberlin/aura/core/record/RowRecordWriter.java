@@ -1,5 +1,6 @@
 package de.tuberlin.aura.core.record;
 
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +39,17 @@ public class RowRecordWriter implements IRecordWriter {
 
     private final int gateIndex;
 
+    // block end marker
+    public static byte[] BLOCK_END;
+    static {
+        Kryo k = new Kryo(null);
+        ByteArrayOutputStream s = new ByteArrayOutputStream(1000);
+        Output out = new FastOutput(s);
+        k.writeClassAndObject(out, new RowRecordModel.RECORD_CLASS_BLOCK_END());
+        out.flush();
+        BLOCK_END = s.toByteArray();
+    }
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -59,7 +71,7 @@ public class RowRecordWriter implements IRecordWriter {
 
         final int bufferSize = driver.getDataProducer().getAllocator().getBufferSize();
 
-        this.kryo = new Kryo();
+        this.kryo = new Kryo(null);
 
         this.kryoOutputs = new ArrayList<>();
 
@@ -100,11 +112,8 @@ public class RowRecordWriter implements IRecordWriter {
                 public void put(MemoryView buffer) {
 
                     if (partitioner != null) {
-
                         driver.getDataProducer().emit(gateIndex, index, buffer);
-
                     } else {
-
                         driver.getDataProducer().broadcast(gateIndex, buffer);
                     }
                 }
@@ -136,7 +145,7 @@ public class RowRecordWriter implements IRecordWriter {
 
     public void writeRecord(final RowRecordModel.Record record) {
         // sanity check.
-        if(record == null)
+        if (record == null)
             throw new IllegalArgumentException("record == null");
 
         final int channelIndex;
@@ -151,7 +160,7 @@ public class RowRecordWriter implements IRecordWriter {
 
     public void writeObject(final Object object) {
         // sanity check.
-        if(object == null)
+        if (object == null)
             throw new IllegalArgumentException("object == null");
 
         final int channelIndex;
@@ -162,6 +171,8 @@ public class RowRecordWriter implements IRecordWriter {
         }
 
         kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
+        // ensure object is written to one buffer only
+        kryoOutputs.get(channelIndex).flush();
     }
 
     public void end() {
@@ -175,7 +186,6 @@ public class RowRecordWriter implements IRecordWriter {
             }
 
             for (int i = 0; i < channelCount; ++i) {
-                kryo.writeClassAndObject(kryoOutputs.get(i), new RowRecordModel.RECORD_CLASS_STREAM_END());
                 kryoOutputs.get(i).close();
             }
 

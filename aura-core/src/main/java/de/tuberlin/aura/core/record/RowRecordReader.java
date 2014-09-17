@@ -15,7 +15,6 @@ import com.esotericsoftware.kryo.io.Input;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.utils.Pair;
-import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.BufferStream;
 import de.tuberlin.aura.core.memory.MemoryView;
@@ -47,13 +46,9 @@ public class RowRecordReader implements IRecordReader {
 
     private final Kryo kryo;
 
+    private final Input kryoInput;
 
-    private final List<Input> kryoInputs = new ArrayList<>();
-
-    private final List<BufferStream.ContinuousByteInputStream> inputStreams = new ArrayList<>();
-
-    private int selectedChannel = 0;
-
+    private final BufferStream.ContinuousByteInputStream inputStream;
 
     private List<InputBufferAccessor> inputBufferAccessors;
 
@@ -72,55 +67,52 @@ public class RowRecordReader implements IRecordReader {
 
         this.bufferSize = driver.getDataProducer().getAllocator().getBufferSize();
 
-        this.kryo = new Kryo();
+        this.kryo = new Kryo(null);
 
         this.inputBufferAccessors = new ArrayList<>();
 
+        final BufferStream.ContinuousByteInputStream inputStream = new BufferStream.ContinuousByteInputStream();
 
-        for(final Descriptors.AbstractNodeDescriptor node : driver.getBindingDescriptor().inputGateBindings.get(gateIndex)) {
+        inputStream.setBufferInput(new BufferStream.IBufferInput() {
 
-            final BufferStream.ContinuousByteInputStream inputStream = new BufferStream.ContinuousByteInputStream();
+            @Override
+            public MemoryView get() {
+                try {
+                    final IOEvents.TransferBufferEvent event =  driver.getDataConsumer().absorb(gateIndex);
 
-            inputStream.setBufferInput(new BufferStream.IBufferInput() {
+                    if (event == null) {
+                        isFinished = true;
+                        return null;
+                    }
 
-                private final int channelIndex = driver.getDataConsumer().getChannelIndexFromTaskID(node.taskID);
-
-                @Override
-                public MemoryView get() {
-                    try {
-                        // TODO: VERIFY: channel selection should only take place in the <code>readObject</code> method.
-                        // selectedChannel = ++selectedChannel % kryoInputs.size();
-
-                        final MemoryView buffer =  driver.getDataConsumer().absorb(gateIndex, channelIndex).buffer;
-
-                        for (final InputBufferAccessor bufferAccessor : inputBufferAccessors) {
-                            if (buffer != null) {
-                                bufferAccessor.accessInputBuffer(buffer);
-                            }
+                    final MemoryView buffer = event.buffer;
+                    for (final InputBufferAccessor bufferAccessor : inputBufferAccessors) {
+                        if (buffer != null) {
+                            bufferAccessor.accessInputBuffer(buffer);
                         }
-
-                        return buffer;
-
-                    } catch (InterruptedException e) {
-                        throw new IllegalStateException(e);
                     }
+
+                    return buffer;
+
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException(e);
                 }
-            });
+            }
+        });
 
-            inputStream.setBufferOutput(new BufferStream.IBufferOutput() {
+        inputStream.setBufferOutput(new BufferStream.IBufferOutput() {
 
-                @Override
-                public void put(final MemoryView buffer) {
-                    if (buffer != null) {
-                        buffer.free();
-                    }
+            @Override
+            public void put(final MemoryView buffer) {
+                if (buffer != null) {
+                    buffer.free();
                 }
-            });
+            }
+        });
 
-            inputStreams.add(inputStream);
+        this.inputStream = inputStream;
 
-            kryoInputs.add(new FastInput(inputStream, bufferSize));
-        }
+        this.kryoInput = new FastInput(inputStream, bufferSize);
 
         driver.getTaskManager().getIOManager().addEventListener(IOEvents.DataEventType.DATA_EVENT_RECORD_TYPE, new RecordTypeEventHandler());
     }
@@ -145,33 +137,34 @@ public class RowRecordReader implements IRecordReader {
      */
     public RowRecordModel.Record readRecord() {
 
-        Object object = null;
-
-        try {
-
-            object = kryo.readClassAndObject(kryoInputs.get(selectedChannel));;
-
-            if(object != null && object.getClass() == RowRecordModel.RECORD_CLASS_STREAM_END.class) {
-
-                kryoInputs.remove(selectedChannel);
-
-                inputStreams.remove(selectedChannel);
-
-                if (kryoInputs.size() == 0) {
-                    isFinished = true;
-                    return null;
-                }
-
-                selectedChannel = ++selectedChannel % kryoInputs.size();
-
-                return null;
-            }
-
-        } catch (Exception e) {
-            isFinished = true;
-        }
-
-        return new RowRecordModel.Record(object);
+        // Object object = null;
+        //
+        // try {
+        //
+        // object = kryo.readClassAndObject(kryoInputs.get(selectedChannel));;
+        //
+        // if(object != null && object.getClass() == RowRecordModel.RECORD_CLASS_STREAM_END.class) {
+        //
+        // kryoInputs.remove(selectedChannel);
+        //
+        // inputStreams.remove(selectedChannel);
+        //
+        // if (kryoInputs.size() == 0) {
+        // isFinished = true;
+        // return null;
+        // }
+        //
+        // selectedChannel = ++selectedChannel % kryoInputs.size();
+        //
+        // return null;
+        // }
+        //
+        // } catch (Exception e) {
+        // isFinished = true;
+        // }
+        //
+        // return new RowRecordModel.Record(object);
+        return null;
     }
 
     /**
@@ -179,35 +172,23 @@ public class RowRecordReader implements IRecordReader {
      * @return
      */
     public Object readObject() {
-
-        Object object = null;
-
-        try {
-            object = kryo.readClassAndObject(kryoInputs.get(selectedChannel));
-
-            if(object != null && object.getClass() == RowRecordModel.RECORD_CLASS_STREAM_END.class) {
-
-                kryoInputs.get(selectedChannel).close();
-
-                kryoInputs.remove(selectedChannel);
-
-                inputStreams.remove(selectedChannel);
-
-                if (kryoInputs.size() == 0) {
-                    isFinished = true;
-                    return null;
-                }
-
-                selectedChannel = ++selectedChannel % kryoInputs.size();
-
-                // We are not allowed to return null in that case, because that would stop
-                // the operators driver <code>while(input != null) {...}</code> of the calling operators.
-                return readObject(); // TODO: VERIFY FIX, recursive call is ok?
+        Object object = kryo.readClassAndObject(kryoInput);
+        if (object != null && object.getClass() == RowRecordModel.RECORD_CLASS_BLOCK_END.class) {
+            inputStream.nextBuf();
+            // stream is exhausted
+            if (isFinished) {
+                return null;
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
+            kryoInput.setLimit(0);
+            kryoInput.rewind();
+            return readObject();
         }
+        // if (object == null) {
+        // kryoInput.close();
+        // isFinished = true;
+        // return null;
+        // }
 
         return object;
     }
@@ -215,8 +196,7 @@ public class RowRecordReader implements IRecordReader {
     /**
      *
      */
-    public void end() {
-    }
+    public void end() {}
 
     /**
      *
@@ -251,9 +231,9 @@ public class RowRecordReader implements IRecordReader {
         @Override
         public void handleEvent(Event event) {
 
-            final IOEvents.DataIOEvent rte = (IOEvents.DataIOEvent)event;
+            final IOEvents.DataIOEvent rte = (IOEvents.DataIOEvent) event;
 
-            final Pair<String, Byte[]> recordTypeDesc = (Pair<String, Byte[]>)rte.getPayload();
+            final Pair<String, Byte[]> recordTypeDesc = (Pair<String, Byte[]>) rte.getPayload();
 
             try {
 
@@ -275,7 +255,7 @@ public class RowRecordReader implements IRecordReader {
             }
 
             threadLock.lock();
-                condition.signal();
+            condition.signal();
             threadLock.unlock();
         }
     }

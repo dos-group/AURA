@@ -31,7 +31,8 @@ public final class OperatorTest {
 
     public static final class Source1 extends SourceFunction<Tuple2<String,Integer>> {
 
-        int count = 350000;
+        int count = 159500000;
+//        int count = 1200000;
 
         @Override
         public  Tuple2<String,Integer> produce() {
@@ -52,8 +53,8 @@ public final class OperatorTest {
         @Override
         public void consume(final Tuple2<String,Integer> in) {
 
-            //if (in._1 % 1 == 0)
-            //    System.out.println(in);
+            if (in._1 % 1000000 == 0)
+                System.out.println(in);
         }
     }
 
@@ -79,7 +80,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                4,
                                 "Source1",
                                 null,
                                 null,
@@ -100,7 +101,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                4,
                                 "Map1",
                                 source1TypeInfo,
                                 null,
@@ -122,7 +123,7 @@ public final class OperatorTest {
                                 1,
                                 null,
                                 null,
-                                1,
+                                4,
                                 "Sink1",
                                 source1TypeInfo,
                                 null,
