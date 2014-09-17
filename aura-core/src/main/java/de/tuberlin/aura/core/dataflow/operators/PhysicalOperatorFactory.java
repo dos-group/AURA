@@ -53,7 +53,7 @@ public final class PhysicalOperatorFactory {
             case MERGE_JOIN_OPERATOR:
                 break;
             case GROUP_BY_OPERATOR:
-                break;
+                return new GroupByPhysicalOperator<>(environment, inputOp1);
             case SORT_OPERATOR:
                 return new SortPhysicalOperator<>(environment, inputOp1);
             case REDUCE_OPERATOR:

@@ -121,9 +121,11 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final Class<? extends IFunction> function;
 
-    public final int[][] keyIndices1;
+    public final int[][] groupByKeyIndices;
 
-    public final int[][] keyIndices2;
+    public final int[][] joinKeyIndices1;
+
+    public final int[][] joinKeyIndices2;
 
     public final int[][] sortKeyIndices;
 
@@ -134,7 +136,7 @@ public final class DataflowNodeProperties implements Serializable {
     // ---------------------------------------------------
 
     public DataflowNodeProperties(final UUID operatorUID, final String instanceName) {
-        this(operatorUID, null, 0, null, null, 0, instanceName, null, null, null, null, null, null, null, null);
+        this(operatorUID, null, 0, null, null, 0, instanceName, null, null, null, null, null, null, null, null, null);
     }
 
     public DataflowNodeProperties(final UUID operatorUID,
@@ -148,6 +150,7 @@ public final class DataflowNodeProperties implements Serializable {
                                   final TypeInformation input2Type,
                                   final TypeInformation outputType,
                                   final Class<? extends IFunction> function,
+                                  final int[][] groupByKeyIndices,
                                   final int[][] keyIndices1,
                                   final int[][] keyIndices2,
                                   final int[][] sortKeyIndices,
@@ -155,6 +158,8 @@ public final class DataflowNodeProperties implements Serializable {
         // sanity check.
         if (operatorUID == null)
             throw new IllegalArgumentException("operatorUID == null");
+
+        // TODO: for GroupBy operators: should we check that the PartitioningKeys are a subset of the GroupByKeys?
 
         this.operatorUID = operatorUID;
 
@@ -178,9 +183,11 @@ public final class DataflowNodeProperties implements Serializable {
 
         this.function = function;
 
-        this.keyIndices1 = keyIndices1;
+        this.groupByKeyIndices = groupByKeyIndices;
 
-        this.keyIndices2 = keyIndices2;
+        this.joinKeyIndices1 = keyIndices1;
+
+        this.joinKeyIndices2 = keyIndices2;
 
         this.sortKeyIndices = sortKeyIndices;
 

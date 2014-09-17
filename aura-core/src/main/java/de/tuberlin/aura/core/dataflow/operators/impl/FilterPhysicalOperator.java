@@ -40,6 +40,8 @@ public class FilterPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator<
         }
 
         return input;
+
+        // TODO: should not return each tuple separately, but ALEX: "return an iterator"
     }
 
     @Override

@@ -15,6 +15,7 @@ import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
+import de.tuberlin.aura.core.record.ElementTypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
 
@@ -84,10 +85,10 @@ public final class DataflowTest {
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
-        final TypeInformation source1TypeInfo =
-                new TypeInformation(Tuple2.class,
-                        new TypeInformation(String.class),
-                        new TypeInformation(Integer.class));
+        final ElementTypeInformation source1TypeInfo =
+                new ElementTypeInformation(Tuple2.class,
+                        new ElementTypeInformation(String.class),
+                        new ElementTypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source1 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -103,17 +104,17 @@ public final class DataflowTest {
                                 null,
                                 source1TypeInfo,
                                 Source1.class,
-                                null,
+                                null, null,
                                 null,
                                 null,
                                 null
                         )
                 );
 
-        final TypeInformation source2TypeInfo =
-                new TypeInformation(Tuple2.class,
-                        new TypeInformation(String.class),
-                        new TypeInformation(Integer.class));
+        final ElementTypeInformation source2TypeInfo =
+                new ElementTypeInformation(Tuple2.class,
+                        new ElementTypeInformation(String.class),
+                        new ElementTypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source2 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -129,7 +130,7 @@ public final class DataflowTest {
                                 null,
                                 source2TypeInfo,
                                 Source2.class,
-                                null,
+                                null, null,
                                 null,
                                 null,
                                 null
@@ -137,7 +138,7 @@ public final class DataflowTest {
                 );
 
         final TypeInformation join1TypeInfo =
-                new TypeInformation(Tuple2.class,
+                new ElementTypeInformation(Tuple2.class,
                         source1TypeInfo,
                         source2TypeInfo);
 
@@ -155,7 +156,7 @@ public final class DataflowTest {
                                 source2TypeInfo,
                                 join1TypeInfo,
                                 null,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 new int[][] { source2TypeInfo.buildFieldSelectorChain("_1") },
                                 null,
                                 null
@@ -176,7 +177,7 @@ public final class DataflowTest {
                 null,
                 join1TypeInfo,
                 null,
-                null,
+                null, null,
                 null,
                 null,
                 null
@@ -202,7 +203,7 @@ public final class DataflowTest {
                                 null,
                                 join1TypeInfo,
                                 null,
-                                null,
+                                null, null,
                                 null,
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._1") },
                                 DataflowNodeProperties.SortOrder.DESCENDING
@@ -224,7 +225,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 Sink1.class,
-                                null,
+                                null, null,
                                 null,
                                 null,
                                 null
@@ -254,7 +255,7 @@ public final class DataflowTest {
                                 null,
                                 join1TypeInfo,
                                 Map1.class,
-                                null,
+                                null, null,
                                 null,
                                 null,
                                 null
@@ -276,7 +277,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 Sink1.class,
-                                null,
+                                null, null,
                                 null,
                                 null,
                                 null
@@ -306,7 +307,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 Sink1.class,
-                                null,
+                                null, null,
                                 null,
                                 null,
                                 null

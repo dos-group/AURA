@@ -14,6 +14,8 @@ import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperti
 import de.tuberlin.aura.core.dataflow.udfs.functions.*;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
+import de.tuberlin.aura.core.record.ElementTypeInformation;
+import de.tuberlin.aura.core.record.GroupTypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
 
@@ -107,12 +109,20 @@ public final class OperatorTest {
         }
     }
 
+    public static final class GroupSink extends SinkFunction<Collection<Tuple2<String,Integer>>> {
+
+        @Override
+        public void consume(final Collection<Tuple2<String,Integer>>in) {
+            System.out.println(in);
+        }
+    }
+
     public static Topology.AuraTopology testJob1(AuraClient ac) {
 
         final TypeInformation source1TypeInfo =
-                new TypeInformation(Tuple2.class,
-                        new TypeInformation(String.class),
-                        new TypeInformation(Integer.class));
+                new ElementTypeInformation(Tuple2.class,
+                        new ElementTypeInformation(String.class),
+                        new ElementTypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source1 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -128,6 +138,7 @@ public final class OperatorTest {
                                 null,
                                 source1TypeInfo,
                                 Source1.class,
+                                null,
                                 null,
                                 null,
                                 null,
@@ -149,6 +160,7 @@ public final class OperatorTest {
                                 null,
                                 source1TypeInfo,
                                 Map1.class,
+                                null,
                                 null,
                                 null,
                                 null,
@@ -174,6 +186,7 @@ public final class OperatorTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 null
                         ),
                         map1
@@ -193,6 +206,7 @@ public final class OperatorTest {
                                 null,
                                 source1TypeInfo,
                                 Filter1.class,
+                                null,
                                 null,
                                 null,
                                 null,
@@ -218,6 +232,7 @@ public final class OperatorTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 null
                         ),
                         filter1
@@ -228,10 +243,10 @@ public final class OperatorTest {
 
     public static Topology.AuraTopology testJob2(AuraClient ac) {
 
-        final TypeInformation source1TypeInfo =
-                new TypeInformation(Tuple2.class,
-                        new TypeInformation(String.class),
-                        new TypeInformation(Integer.class));
+        final ElementTypeInformation source1TypeInfo =
+                new ElementTypeInformation(Tuple2.class,
+                        new ElementTypeInformation(String.class),
+                        new ElementTypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source1 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -247,6 +262,7 @@ public final class OperatorTest {
                                 null,
                                 source1TypeInfo,
                                 Source1.class,
+                                null,
                                 null,
                                 null,
                                 null,
@@ -271,6 +287,7 @@ public final class OperatorTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 null
                         )
                 );
@@ -289,6 +306,7 @@ public final class OperatorTest {
                                 null,
                                 source1TypeInfo,
                                 Source3.class,
+                                null,
                                 null,
                                 null,
                                 null,
@@ -313,6 +331,7 @@ public final class OperatorTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 null
                         ),
                         source2,
@@ -320,7 +339,7 @@ public final class OperatorTest {
                 );
 
         final TypeInformation join1TypeInfo =
-                new TypeInformation(Tuple2.class,
+                new ElementTypeInformation(Tuple2.class,
                         source1TypeInfo,
                         source1TypeInfo);
 
@@ -337,6 +356,7 @@ public final class OperatorTest {
                                 source1TypeInfo,
                                 source1TypeInfo,
                                 join1TypeInfo,
+                                null,
                                 null,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
@@ -363,6 +383,7 @@ public final class OperatorTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._1") },
                                 DataflowNodeProperties.SortOrder.DESCENDING
                         ),
@@ -386,12 +407,120 @@ public final class OperatorTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 null
                         ),
                         sort1
                 );
 
-        return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
+        return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB2");
+    }
+
+    public static Topology.AuraTopology testJob3(AuraClient ac) {
+
+        final TypeInformation source1TypeInfo =
+                new ElementTypeInformation(Tuple2.class,
+                        new ElementTypeInformation(String.class),
+                        new ElementTypeInformation(Integer.class));
+
+        final DataflowAPI.DataflowNodeDescriptor source2 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
+                                1,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "Source2",
+                                null,
+                                null,
+                                source1TypeInfo,
+                                Source2.class,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        )
+                );
+
+
+        // the optimizer will insert Sorts before GroupBys (using the same keys for sorting as for grouping)
+        final DataflowAPI.DataflowNodeDescriptor sort1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
+                                1,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "Sort1",
+                                source1TypeInfo,
+                                null,
+                                source1TypeInfo,
+                                null,
+                                null,
+                                null,
+                                null,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                DataflowNodeProperties.SortOrder.ASCENDING
+                        ),
+                        source2
+                );
+
+        final TypeInformation groupBy1TypeInfo =
+                new GroupTypeInformation(source1TypeInfo);
+
+        final DataflowAPI.DataflowNodeDescriptor groupBy1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
+                                1,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "GroupBy1",
+                                source1TypeInfo,
+                                null,
+                                groupBy1TypeInfo,
+                                null,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        sort1
+                );
+
+
+        final DataflowAPI.DataflowNodeDescriptor sink1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                                1,
+                                null,
+                                null,
+                                2,
+                                "Sink1",
+                                groupBy1TypeInfo,
+                                null,
+                                null,
+                                GroupSink.class,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        groupBy1
+                );
+
+        return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB3");
     }
 
 
@@ -404,12 +533,16 @@ public final class OperatorTest {
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
-        final Topology.AuraTopology topology1 = testJob1(ac);
-        ac.submitTopology(topology1, null);
-        ac.awaitSubmissionResult(1);
+//        final Topology.AuraTopology topology1 = testJob1(ac);
+//        ac.submitTopology(topology1, null);
+//        ac.awaitSubmissionResult(1);
 
-        final Topology.AuraTopology topology2 = testJob2(ac);
-        ac.submitTopology(topology2, null);
+//        final Topology.AuraTopology topology2 = testJob2(ac);
+//        ac.submitTopology(topology2, null);
+//        ac.awaitSubmissionResult(1);
+
+        final Topology.AuraTopology topology3 = testJob3(ac);
+        ac.submitTopology(topology3, null);
         ac.awaitSubmissionResult(1);
 
         ac.closeSession();

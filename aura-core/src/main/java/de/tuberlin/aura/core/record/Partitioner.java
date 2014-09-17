@@ -96,8 +96,8 @@ public final class Partitioner {
 
         public HashPartitioner(final TypeInformation typeInfo, final int[][] partitioningKeys) {
             // sanity check.
-            if (partitioningKeys == null)
-                throw new IllegalArgumentException("partitioningKeys == null");
+            if (typeInfo == null)
+                throw new IllegalArgumentException("typeInfo == null");
 
             this.typeInfo = typeInfo;
 
@@ -123,8 +123,14 @@ public final class Partitioner {
         @Override
         public int partition(final Object object, final int receiver) {
             int result = 17;
-            for(final int[] selectorChain : partitioningKeys)
-                result = 31 * result + typeInfo.selectField(selectorChain, object).hashCode();
+
+            if (partitioningKeys != null) {
+                for (final int[] selectorChain : partitioningKeys)
+                    result = 31 * result + typeInfo.selectField(selectorChain, object).hashCode();
+            } else {
+                result = 31 * result + object.hashCode();
+            }
+
             return (result & Integer.MAX_VALUE) % receiver;
         }
     }
