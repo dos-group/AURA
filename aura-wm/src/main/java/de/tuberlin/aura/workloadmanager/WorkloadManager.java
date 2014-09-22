@@ -63,6 +63,8 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol {
 
     private static final Logger LOG = Logger.getLogger(WorkloadManager.class);
 
+    private final IConfig config;
+
     public final MachineDescriptor machineDescriptor;
 
     public final IIOManager ioManager;
@@ -85,6 +87,8 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol {
         // Sanity check.
         if (config == null)
             throw new IllegalArgumentException("config == null");
+
+        this.config = config;
 
         this.registeredTopologies = new ConcurrentHashMap<>();
 
@@ -183,7 +187,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol {
 
         // TODO: sessionID not further used at the moment.
 
-        final TopologyController topologyController = new TopologyController(this, topology.topologyID, topology);
+        final TopologyController topologyController = new TopologyController(this, topology.topologyID, topology, this.config);
         registeredTopologies.put(topology.topologyID, topologyController);
         return topologyController;
     }

@@ -2,10 +2,12 @@ package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
 
+import com.typesafe.config.ConfigException;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
+import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
@@ -21,18 +23,22 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
     // Fields.
     // ---------------------------------------------------
 
+    private final IConfig config;
+
     private final IDistributedEnvironment environmentManager;
 
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public TopologyParallelizer(final IDistributedEnvironment environmentManager) {
+    public TopologyParallelizer(final IDistributedEnvironment environmentManager, IConfig config) {
         // sanity check.
         if (environmentManager == null)
             throw new IllegalArgumentException("environmentManager == null");
 
         this.environmentManager = environmentManager;
+
+        this.config = config;
     }
 
     // ---------------------------------------------------
@@ -54,13 +60,29 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
     // ---------------------------------------------------
 
     private void parallelizeTopology(final AuraTopology topology) {
+
         // sanity check.
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
+        try {
+            int availableExecutionUnits = config.getInt("simulator.tm.number") * config.getInt("tm.execution.units.number");
+            int requiredExecutionUnits = 0;
+
+            for (LogicalNode node : topology.nodeMap.values()) {
+                requiredExecutionUnits += node.degreeOfParallelism;
+            }
+
+            if (requiredExecutionUnits > availableExecutionUnits) {
+                throw new IllegalStateException("Not enough execution units available to execute the query with the given DOPs");
+            }
+        } catch (ConfigException e) {
+            // skip this sanity check when the configuration isn't available
+        }
+
+        // First pass, create taskmanager descriptors
         final Map<UUID, ExecutionNode> executionNodeMap = new HashMap<>();
 
-        // First pass, create taskmanager descriptors.
         TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<LogicalNode>() {
 
             @Override

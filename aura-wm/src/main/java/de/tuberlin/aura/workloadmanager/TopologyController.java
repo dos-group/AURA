@@ -3,6 +3,7 @@ package de.tuberlin.aura.workloadmanager;
 import java.util.*;
 
 import de.tuberlin.aura.core.common.utils.DeepCopy;
+import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.workloadmanager.spi.ITopologyController;
 import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
 import org.apache.log4j.Logger;
@@ -30,6 +31,8 @@ public final class TopologyController extends EventDispatcher implements ITopolo
 
     private static final Logger LOG = Logger.getLogger(TopologyController.class);
 
+    private final IConfig config;
+
     private final IWorkloadManager workloadManager;
 
     private final AuraTopology topology;
@@ -40,7 +43,7 @@ public final class TopologyController extends EventDispatcher implements ITopolo
     // Constructors.
     // ---------------------------------------------------
 
-    public TopologyController(final IWorkloadManager workloadManager, final UUID topologyID, final AuraTopology topology) {
+    public TopologyController(final IWorkloadManager workloadManager, final UUID topologyID, final AuraTopology topology, IConfig config) {
         super(true, "TopologyControllerEventDispatcher");
 
         // Sanity check.
@@ -54,6 +57,8 @@ public final class TopologyController extends EventDispatcher implements ITopolo
         this.topology = topology;
 
         this.topologyFSM = createTopologyFSM();
+
+        this.config = config;
     }
 
     // ---------------------------------------------------
@@ -72,7 +77,7 @@ public final class TopologyController extends EventDispatcher implements ITopolo
 
         final AssemblyPipeline assemblyPipeline = new AssemblyPipeline(this.topologyFSM);
 
-        assemblyPipeline.addPhase(new TopologyParallelizer(workloadManager.getEnvironmentManager()));
+        assemblyPipeline.addPhase(new TopologyParallelizer(workloadManager.getEnvironmentManager(), config));
 
         assemblyPipeline.addPhase(new TopologyScheduler(workloadManager.getInfrastructureManager()));
 
