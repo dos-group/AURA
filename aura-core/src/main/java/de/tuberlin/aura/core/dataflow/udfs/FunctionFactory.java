@@ -1,10 +1,6 @@
 package de.tuberlin.aura.core.dataflow.udfs;
 
-import de.tuberlin.aura.core.dataflow.udfs.functions.FilterFunction;
-import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
-import de.tuberlin.aura.core.dataflow.udfs.functions.FlatMapFunction;
-import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
-import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
+import de.tuberlin.aura.core.dataflow.udfs.functions.*;
 
 /**
  *
@@ -60,6 +56,18 @@ public final class FunctionFactory {
     }
 
     public static <I> SinkFunction<I> createSinkFunction(final Class<SinkFunction<I>> functionType) {
+        // sanity check.
+        if (functionType == null)
+            throw new IllegalArgumentException("functionType == null");
+
+        try {
+            return functionType.getConstructor().newInstance();
+        } catch(Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public static <I,M,O> FoldFunction<I,M,O> createFoldFunction(Class<FoldFunction<I,M,O>> functionType) {
         // sanity check.
         if (functionType == null)
             throw new IllegalArgumentException("functionType == null");

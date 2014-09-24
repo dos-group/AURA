@@ -4,11 +4,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.AbstractPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.dataflow.operators.impl.*;
 import de.tuberlin.aura.core.dataflow.udfs.FunctionFactory;
-import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
-import de.tuberlin.aura.core.dataflow.udfs.functions.FlatMapFunction;
-import de.tuberlin.aura.core.dataflow.udfs.functions.FilterFunction;
-import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
-import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
+import de.tuberlin.aura.core.dataflow.udfs.functions.*;
 
 
 /**
@@ -56,6 +52,8 @@ public final class PhysicalOperatorFactory {
                 return new GroupByPhysicalOperator<>(environment, inputOp1);
             case SORT_OPERATOR:
                 return new SortPhysicalOperator<>(environment, inputOp1);
+            case FOLD_OPERATOR:
+                return new FoldPhysicalOperator(environment, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object,Object>>) environment.getProperties().function));
             case REDUCE_OPERATOR:
                 break;
             case UDF_SOURCE:

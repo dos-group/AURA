@@ -85,6 +85,25 @@ public final class OperatorTest {
 
     }
 
+    // TODO: have Fold1 return an integer instead.. ??
+    public static final class Fold1 extends FoldFunction<Tuple2<String,Integer>,Tuple2<String,Integer>,Tuple2<String,Integer>> {
+
+        @Override
+        public Tuple2<String,Integer> initialValue() {
+            return new Tuple2<>("RESULT", 0);
+        }
+
+        @Override
+        public Tuple2<String, Integer> map(Tuple2<String, Integer> in) {
+            return new Tuple2<>(in._0, 1);
+        }
+
+        @Override
+        public Tuple2<String,Integer> add(Tuple2<String,Integer> currentValue, Tuple2<String, Integer> in) {
+            return new Tuple2<>("RESULT", currentValue._1 + in._1);
+        }
+    }
+
     public static final class Filter1 extends FilterFunction<Tuple2<String,Integer>> {
 
         @Override
@@ -97,7 +116,7 @@ public final class OperatorTest {
 
         @Override
         public void consume(final Tuple2<String,Integer> in) {
-//            System.out.println(in);
+            System.out.println(in);
         }
     }
 
@@ -132,7 +151,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                4,
+                                2,
                                 "Source1",
                                 null,
                                 null,
@@ -154,7 +173,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                4,
+                                1,
                                 "Map1",
                                 source1TypeInfo,
                                 null,
@@ -215,6 +234,29 @@ public final class OperatorTest {
                         flatMap1
                 );
 
+        final DataflowAPI.DataflowNodeDescriptor fold1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
+                                1,
+                                new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                2,  // TODO: make this aggregation work with a DOP > 1.. merge the results of partition-results
+                                "Fold1",
+                                source1TypeInfo,
+                                null,
+                                source1TypeInfo,
+                                Fold1.class,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        filter1
+                );
+
         final DataflowAPI.DataflowNodeDescriptor sink1 =
                 new DataflowAPI.DataflowNodeDescriptor(
                         new DataflowNodeProperties(
@@ -223,7 +265,7 @@ public final class OperatorTest {
                                 1,
                                 null,
                                 null,
-                                4,
+                                1,
                                 "Sink1",
                                 source1TypeInfo,
                                 null,
@@ -235,7 +277,7 @@ public final class OperatorTest {
                                 null,
                                 null
                         ),
-                        filter1
+                        fold1
                 );
 
         return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
@@ -496,7 +538,6 @@ public final class OperatorTest {
                         sort1
                 );
 
-
         final DataflowAPI.DataflowNodeDescriptor sink1 =
                 new DataflowAPI.DataflowNodeDescriptor(
                         new DataflowNodeProperties(
@@ -533,17 +574,17 @@ public final class OperatorTest {
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
-//        final Topology.AuraTopology topology1 = testJob1(ac);
-//        ac.submitTopology(topology1, null);
-//        ac.awaitSubmissionResult(1);
+        final Topology.AuraTopology topology1 = testJob1(ac);
+        ac.submitTopology(topology1, null);
+        ac.awaitSubmissionResult(1);
 
 //        final Topology.AuraTopology topology2 = testJob2(ac);
 //        ac.submitTopology(topology2, null);
 //        ac.awaitSubmissionResult(1);
 
-        final Topology.AuraTopology topology3 = testJob3(ac);
-        ac.submitTopology(topology3, null);
-        ac.awaitSubmissionResult(1);
+//        final Topology.AuraTopology topology3 = testJob3(ac);
+//        ac.submitTopology(topology3, null);
+//        ac.awaitSubmissionResult(1);
 
         ac.closeSession();
         lcs.shutdown();
