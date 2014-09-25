@@ -152,7 +152,7 @@ public final class DataflowNodeProperties implements Serializable {
                                   final TypeInformation input2Type,
                                   final TypeInformation outputType,
                                   final Class<? extends IFunction> function,
-                                  final int[][] groupByKeyIndices,
+                                  int[][] groupByKeyIndices,
                                   final int[][] keyIndices1,
                                   final int[][] keyIndices2,
                                   final int[][] sortKeyIndices,
@@ -160,8 +160,6 @@ public final class DataflowNodeProperties implements Serializable {
         // sanity check.
         if (operatorUID == null)
             throw new IllegalArgumentException("operatorUID == null");
-
-        // TODO: for GroupBy operators: should we check that the PartitioningKeys are a subset of the GroupByKeys?
 
         this.operatorUID = operatorUID;
 

@@ -5,6 +5,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOpe
 import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FoldFunction;
+import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
 
 /**
  *
@@ -31,7 +32,7 @@ public class FoldPhysicalOperator<I,M,O> extends AbstractUnaryUDFPhysicalOperato
     @Override
     public O next() throws Throwable {
 
-        if (!inputOp.isOpen()) {
+        if (!this.isOpen()) {
             return null;
         }
 
@@ -40,12 +41,18 @@ public class FoldPhysicalOperator<I,M,O> extends AbstractUnaryUDFPhysicalOperato
         O value = function.initialValue();
 
         I input = inputOp.next();
+
         while (input != null) {
+
+            if (input == GroupEndMarker.class) {
+                return value;
+            }
+
             value = function.add(value, function.map(input));
             input = inputOp.next();
         }
 
-        inputOp.close();
+        this.close();
 
         return value;
     }

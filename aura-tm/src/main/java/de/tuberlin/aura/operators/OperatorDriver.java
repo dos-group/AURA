@@ -13,6 +13,7 @@ import de.tuberlin.aura.core.dataflow.operators.impl.OperatorEnvironment;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
+import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
 import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.taskmanager.spi.IDataConsumer;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
@@ -140,7 +141,7 @@ public final class OperatorDriver extends AbstractInvokeable {
                     );
 
             for (int i = 0; i <  driver.getBindingDescriptor().outputGateBindings.size(); ++i) {
-                final RowRecordWriter reader = new RowRecordWriter(driver, operatorNodeDescriptor.properties.outputType.getType(), i, partitioner);
+                final RowRecordWriter reader = new RowRecordWriter(driver, operatorNodeDescriptor.properties.outputType.type, i, partitioner);
                 recordWriters.add(reader);
             }
         }
@@ -176,12 +177,45 @@ public final class OperatorDriver extends AbstractInvokeable {
 
     @Override
     public void run() throws Throwable {
-        Object object = rootOperator.next();
-        while (object != null) {
-            if(recordWriters.size() == 1) {
-                recordWriters.get(0).writeObject(object);
+
+        if (operatorNodeDescriptor.properties.outputType != null &&
+                operatorNodeDescriptor.properties.outputType.isGrouped()) {
+
+            // groups: null as return value = end of a group
+            //              operator closed = end of data
+
+            // -> as this is currently only handled here in the OperatorDriver, this will be a problem as soon as
+            // multiple ops are executed within the same execution unit (e.g. after compactification)
+
+            while (rootOperator.isOpen()) {
+
+                Object object = rootOperator.next();
+
+                if (object != null) {
+                    if(recordWriters.size() == 1) {
+                        recordWriters.get(0).writeObject(object);
+                    }
+                } else {
+                    if(recordWriters.size() == 1) {
+                        if (rootOperator.isOpen()) {
+                            recordWriters.get(0).writeObject(GroupEndMarker.class);
+                        }
+                    }
+                }
             }
-            object = rootOperator.next();
+
+        } else {
+
+            // elements: null = end of data
+
+            Object object = rootOperator.next();
+
+            while (object != null) {
+                if(recordWriters.size() == 1) {
+                    recordWriters.get(0).writeObject(object);
+                }
+                object = rootOperator.next();
+            }
         }
     }
 

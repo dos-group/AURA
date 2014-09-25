@@ -15,7 +15,6 @@ import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
-import de.tuberlin.aura.core.record.ElementTypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
 
@@ -85,10 +84,10 @@ public final class DataflowTest {
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
-        final ElementTypeInformation source1TypeInfo =
-                new ElementTypeInformation(Tuple2.class,
-                        new ElementTypeInformation(String.class),
-                        new ElementTypeInformation(Integer.class));
+        final TypeInformation source1TypeInfo =
+                new TypeInformation(Tuple2.class,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source1 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -111,10 +110,10 @@ public final class DataflowTest {
                         )
                 );
 
-        final ElementTypeInformation source2TypeInfo =
-                new ElementTypeInformation(Tuple2.class,
-                        new ElementTypeInformation(String.class),
-                        new ElementTypeInformation(Integer.class));
+        final TypeInformation source2TypeInfo =
+                new TypeInformation(Tuple2.class,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source2 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -138,7 +137,7 @@ public final class DataflowTest {
                 );
 
         final TypeInformation join1TypeInfo =
-                new ElementTypeInformation(Tuple2.class,
+                new TypeInformation(Tuple2.class,
                         source1TypeInfo,
                         source2TypeInfo);
 

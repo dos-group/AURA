@@ -1,6 +1,8 @@
 package de.tuberlin.aura.demo.examples;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Random;
 import java.util.UUID;
 
@@ -14,8 +16,6 @@ import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperti
 import de.tuberlin.aura.core.dataflow.udfs.functions.*;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
-import de.tuberlin.aura.core.record.ElementTypeInformation;
-import de.tuberlin.aura.core.record.GroupTypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
 
@@ -65,6 +65,18 @@ public final class OperatorTest {
         }
     }
 
+    public static final class Source4 extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 100000;
+
+        Random rand = new Random(13454);
+
+        @Override
+        public Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("RIGHT_SOURCE", rand.nextInt(100)) : null;
+        }
+    }
+
     public static final class Map1 extends MapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
 
         @Override
@@ -81,6 +93,25 @@ public final class OperatorTest {
                 c.add(new Tuple2<>("HEL", in._1));
                 c.add(new Tuple2<>("LO", in._1 + 1));
             }
+        }
+
+    }
+
+    public static final class GroupMap1 extends GroupMapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
+
+        @Override
+        public void map(Iterator<Tuple2<String,Integer>> in, Collection<Tuple2<String,Integer>> output) {
+
+            if (!in.hasNext()) {
+                return;
+            }
+
+            Integer key = in.next()._1;
+
+            while (in.hasNext()) {
+                output.add(new Tuple2<>(in.next()._0, key));
+            }
+
         }
 
     }
@@ -132,16 +163,16 @@ public final class OperatorTest {
 
         @Override
         public void consume(final Collection<Tuple2<String,Integer>>in) {
-            System.out.println(in);
+//            System.out.println(in);
         }
     }
 
     public static Topology.AuraTopology testJob1(AuraClient ac) {
 
         final TypeInformation source1TypeInfo =
-                new ElementTypeInformation(Tuple2.class,
-                        new ElementTypeInformation(String.class),
-                        new ElementTypeInformation(Integer.class));
+                new TypeInformation(Tuple2.class,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source1 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -242,7 +273,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,  // TODO: make this aggregation work with a DOP > 1.. merge the results of partition-results
+                                1,  // TODO: when DOP > 2, how to get the sink1 to print both partial results?
                                 "Fold1",
                                 source1TypeInfo,
                                 null,
@@ -285,10 +316,10 @@ public final class OperatorTest {
 
     public static Topology.AuraTopology testJob2(AuraClient ac) {
 
-        final ElementTypeInformation source1TypeInfo =
-                new ElementTypeInformation(Tuple2.class,
-                        new ElementTypeInformation(String.class),
-                        new ElementTypeInformation(Integer.class));
+        final TypeInformation source1TypeInfo =
+                new TypeInformation(Tuple2.class,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source1 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -381,7 +412,7 @@ public final class OperatorTest {
                 );
 
         final TypeInformation join1TypeInfo =
-                new ElementTypeInformation(Tuple2.class,
+                new TypeInformation(Tuple2.class,
                         source1TypeInfo,
                         source1TypeInfo);
 
@@ -461,11 +492,11 @@ public final class OperatorTest {
     public static Topology.AuraTopology testJob3(AuraClient ac) {
 
         final TypeInformation source1TypeInfo =
-                new ElementTypeInformation(Tuple2.class,
-                        new ElementTypeInformation(String.class),
-                        new ElementTypeInformation(Integer.class));
+                new TypeInformation(Tuple2.class,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class));
 
-        final DataflowAPI.DataflowNodeDescriptor source2 =
+        final DataflowAPI.DataflowNodeDescriptor source4 =
                 new DataflowAPI.DataflowNodeDescriptor(
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
@@ -474,11 +505,11 @@ public final class OperatorTest {
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 1,
-                                "Source2",
+                                "Source4",
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Source2.class,
+                                Source4.class,
                                 null,
                                 null,
                                 null,
@@ -486,7 +517,6 @@ public final class OperatorTest {
                                 null
                         )
                 );
-
 
         // the optimizer will insert Sorts before GroupBys (using the same keys for sorting as for grouping)
         final DataflowAPI.DataflowNodeDescriptor sort1 =
@@ -509,11 +539,13 @@ public final class OperatorTest {
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 DataflowNodeProperties.SortOrder.ASCENDING
                         ),
-                        source2
+                        source4
                 );
 
         final TypeInformation groupBy1TypeInfo =
-                new GroupTypeInformation(source1TypeInfo);
+                new TypeInformation(Tuple2.class, true,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor groupBy1 =
                 new DataflowAPI.DataflowNodeDescriptor(
@@ -521,7 +553,7 @@ public final class OperatorTest {
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
                                 1,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                null,
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 1,
                                 "GroupBy1",
@@ -538,6 +570,29 @@ public final class OperatorTest {
                         sort1
                 );
 
+        final DataflowAPI.DataflowNodeDescriptor fold1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
+                                1,
+                                new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,  // TODO: when DOP > 2, how to get the sink1 to print both partial results?
+                                "Fold1",
+                                groupBy1TypeInfo,
+                                null,
+                                source1TypeInfo,
+                                Fold1.class,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        groupBy1
+                );
+
         final DataflowAPI.DataflowNodeDescriptor sink1 =
                 new DataflowAPI.DataflowNodeDescriptor(
                         new DataflowNodeProperties(
@@ -546,19 +601,19 @@ public final class OperatorTest {
                                 1,
                                 null,
                                 null,
-                                2,
+                                1,
                                 "Sink1",
-                                groupBy1TypeInfo,
+                                source1TypeInfo,
                                 null,
                                 null,
-                                GroupSink.class,
+                                Sink1.class,
                                 null,
                                 null,
                                 null,
                                 null,
                                 null
                         ),
-                        groupBy1
+                        fold1
                 );
 
         return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB3");
@@ -574,17 +629,17 @@ public final class OperatorTest {
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
-        final Topology.AuraTopology topology1 = testJob1(ac);
-        ac.submitTopology(topology1, null);
-        ac.awaitSubmissionResult(1);
+//        final Topology.AuraTopology topology1 = testJob1(ac);
+//        ac.submitTopology(topology1, null);
+//        ac.awaitSubmissionResult(1);
 
 //        final Topology.AuraTopology topology2 = testJob2(ac);
 //        ac.submitTopology(topology2, null);
 //        ac.awaitSubmissionResult(1);
 
-//        final Topology.AuraTopology topology3 = testJob3(ac);
-//        ac.submitTopology(topology3, null);
-//        ac.awaitSubmissionResult(1);
+        final Topology.AuraTopology topology3 = testJob3(ac);
+        ac.submitTopology(topology3, null);
+        ac.awaitSubmissionResult(1);
 
         ac.closeSession();
         lcs.shutdown();

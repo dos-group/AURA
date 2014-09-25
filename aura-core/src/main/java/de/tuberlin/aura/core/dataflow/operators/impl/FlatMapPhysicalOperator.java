@@ -51,6 +51,8 @@ public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
 
         I input;
 
+        // FIXME: flatmap should be able to return/write all returned tuples at once, maybe also through a Collector
+
         while (elementQueue.isEmpty()) {
             input = inputOp.next();
 

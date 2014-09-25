@@ -12,7 +12,6 @@ import de.tuberlin.aura.core.dataflow.generator.TopologyGenerator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
-import de.tuberlin.aura.core.record.ElementTypeInformation;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple1;
@@ -60,8 +59,8 @@ public class ParallelDataflowTest {
     public static void main(final String[] args) {
 
         final TypeInformation source1OutputTypeInfo =
-                new ElementTypeInformation(Tuple1.class,
-                        new ElementTypeInformation(Integer.class));
+                new TypeInformation(Tuple1.class,
+                        new TypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source1 = new DataflowAPI.DataflowNodeDescriptor(
                 new DataflowNodeProperties(
@@ -84,9 +83,9 @@ public class ParallelDataflowTest {
         );
 
         final TypeInformation map1OutputTypeInfo =
-                new ElementTypeInformation(Tuple2.class,
-                        new ElementTypeInformation(Integer.class),
-                        new ElementTypeInformation(String.class));
+                new TypeInformation(Tuple2.class,
+                        new TypeInformation(Integer.class),
+                        new TypeInformation(String.class));
 
         final DataflowAPI.DataflowNodeDescriptor map1 = new DataflowAPI.DataflowNodeDescriptor(
                 new DataflowNodeProperties(

@@ -10,16 +10,15 @@ import java.util.Collection;
 import java.util.List;
 import java.util.ArrayList;
 
-public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,Collection<I>> {
+public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,I> {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
     private final TypeInformation inputTypeInfo;
-    private I firstElementOfCurrentGroup;
-    private boolean isEndOfStream;
-
+    private I firstElementOfNewGroup;
+    private ArrayList<Object> groupKeys;
 
     // ---------------------------------------------------
     // Constructor.
@@ -27,8 +26,6 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
 
     public GroupByPhysicalOperator(IOperatorEnvironment environment, IPhysicalOperator<I> inputOp) {
         super(environment, inputOp);
-
-        isEndOfStream = false;
 
         this.inputTypeInfo = getEnvironment().getProperties().input1Type;
     }
@@ -45,54 +42,55 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
     }
 
     @Override
-    public Collection<I> next() throws Throwable {
+    public I next() throws Throwable {
 
-        final List<I> group = new ArrayList<>();
         int[][] groupKeyIndices = getEnvironment().getProperties().groupByKeyIndices;
 
-        if (isEndOfStream)
-            return null;
+        I input;
 
-        // first group
-        if (firstElementOfCurrentGroup == null) {
-            firstElementOfCurrentGroup = inputOp.next();
+        // start of a new group
+        if (groupKeys == null) {
 
-            // empty stream
-            if (firstElementOfCurrentGroup == null) {
-                return null;
+            if (firstElementOfNewGroup == null) { // very first group
+                input = inputOp.next();
+
+                if (input == null) {
+                    this.close();
+                    return null;
+                }
+            } else { // another group
+                input = firstElementOfNewGroup;
             }
-        }
 
-        // determine the group's keys
-        final ArrayList<Object> groupKeys = new ArrayList<>(groupKeyIndices.length);
-        for (int i = 0; i < groupKeyIndices.length; i++) {
-            groupKeys.add(i, inputTypeInfo.selectField(groupKeyIndices[i], firstElementOfCurrentGroup));
-        }
+            groupKeys = new ArrayList<>(groupKeyIndices.length);
+            for (int i = 0; i < groupKeyIndices.length; i++) {
+                groupKeys.add(i, inputTypeInfo.selectField(groupKeyIndices[i], input));
+            }
 
-        // add elements as long as their keys matches the group's keys
-        I input = firstElementOfCurrentGroup;
-        while (input != null) {
+            firstElementOfNewGroup = null;
 
-            group.add(input);
+            return input;
 
+        } else { // (potential) continuation of a group
             input = inputOp.next();
 
             if (input == null) {
-                isEndOfStream = true;
-                return group;
+                this.close();
+                return null;
             }
 
             for (int i = 0; i < groupKeyIndices.length; i++) {
                 if (groupKeys.get(i) != inputTypeInfo.selectField(groupKeyIndices[i], input)) {
-                    // the keys doesn't match the group's keys -> the group is finished with the previous element
-                    firstElementOfCurrentGroup = input;
-                    return group;
+                    // the keys doesn't match the group's keys -> the group was finished with the previous element
+                    groupKeys = null; // indicate that a group is finished
+                    firstElementOfNewGroup = input; //
+
+                    return null;
                 }
             }
 
+            return input;
         }
-
-        return group;
     }
 
     @Override

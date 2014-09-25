@@ -9,11 +9,10 @@ import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.RowRecordReader;
 import de.tuberlin.aura.core.record.RowRecordWriter;
-import de.tuberlin.aura.core.record.TypeInformation;
-import de.tuberlin.aura.core.record.ElementTypeInformation;
-import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import de.tuberlin.aura.core.record.tuples.Tuple3;
 import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
@@ -51,10 +50,10 @@ public final class RecordModelTest {
         public void open() throws Throwable {
 
             final TypeInformation outputTypeInfo =
-                    new ElementTypeInformation(Tuple3.class,
-                            new ElementTypeInformation(String.class),
-                            new ElementTypeInformation(Integer.class),
-                            new ElementTypeInformation(Integer.class));
+                    new TypeInformation(Tuple3.class,
+                            new TypeInformation(String.class),
+                            new TypeInformation(Integer.class),
+                            new TypeInformation(Integer.class));
 
             final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(outputTypeInfo, new int[][] { {0} });
             this.recordWriter = new RowRecordWriter(driver, AbstractTuple.class, 0, partitioner);
