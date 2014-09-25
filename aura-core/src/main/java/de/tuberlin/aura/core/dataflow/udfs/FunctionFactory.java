@@ -31,6 +31,18 @@ public final class FunctionFactory {
         }
     }
 
+    public static <I,O> GroupMapFunction<I,O> createGroupMapFunction(final Class<GroupMapFunction<I,O>> functionType) {
+        // sanity check.
+        if (functionType == null)
+            throw new IllegalArgumentException("functionType == null");
+
+        try {
+            return functionType.getConstructor().newInstance();
+        } catch(Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     public static <I> FilterFunction<I> createFilterFunction(final Class<FilterFunction<I>> functionType) {
         // sanity check.
         if (functionType == null)

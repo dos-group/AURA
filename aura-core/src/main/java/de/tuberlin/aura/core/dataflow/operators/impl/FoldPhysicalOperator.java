@@ -5,7 +5,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOpe
 import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FoldFunction;
-import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
+import de.tuberlin.aura.core.record.GroupedOperatorInputIterator;
 
 /**
  *
@@ -36,23 +36,22 @@ public class FoldPhysicalOperator<I,M,O> extends AbstractUnaryUDFPhysicalOperato
             return null;
         }
 
+        GroupedOperatorInputIterator<I> inputIterator = new GroupedOperatorInputIterator<>(inputOp);
+
         FoldFunction<I,M,O> function = ((FoldFunction<I,M,O>) this.function);
 
         O value = function.initialValue();
 
-        I input = inputOp.next();
+        while (inputIterator.hasNext()) {
 
-        while (input != null) {
-
-            if (input == GroupEndMarker.class) {
-                return value;
-            }
+            I input = inputIterator.next();
 
             value = function.add(value, function.map(input));
-            input = inputOp.next();
         }
 
-        this.close();
+        if (inputIterator.isDrained()) {
+            this.close();
+        }
 
         return value;
     }

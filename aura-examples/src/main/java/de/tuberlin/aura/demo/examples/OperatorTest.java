@@ -102,16 +102,12 @@ public final class OperatorTest {
         @Override
         public void map(Iterator<Tuple2<String,Integer>> in, Collection<Tuple2<String,Integer>> output) {
 
-            if (!in.hasNext()) {
-                return;
-            }
-
-            Integer key = in.next()._1;
+            Integer count = 0;
 
             while (in.hasNext()) {
-                output.add(new Tuple2<>(in.next()._0, key));
+                Tuple2<String,Integer> t = in.next();
+                output.add(new Tuple2<>(t._0, t._1 + count++));
             }
-
         }
 
     }
@@ -147,7 +143,7 @@ public final class OperatorTest {
 
         @Override
         public void consume(final Tuple2<String,Integer> in) {
-            System.out.println(in);
+//            System.out.println(in);
         }
     }
 
@@ -619,6 +615,159 @@ public final class OperatorTest {
         return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB3");
     }
 
+    public static Topology.AuraTopology testJob4(AuraClient ac) {
+
+        final TypeInformation source1TypeInfo =
+                new TypeInformation(Tuple2.class,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class));
+
+        final DataflowAPI.DataflowNodeDescriptor source4 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
+                                1,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "Source4",
+                                null,
+                                null,
+                                source1TypeInfo,
+                                Source4.class,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        )
+                );
+
+        // the optimizer will insert Sorts before GroupBys (using the same keys for sorting as for grouping)
+        final DataflowAPI.DataflowNodeDescriptor sort1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
+                                1,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "Sort1",
+                                source1TypeInfo,
+                                null,
+                                source1TypeInfo,
+                                null,
+                                null,
+                                null,
+                                null,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                DataflowNodeProperties.SortOrder.ASCENDING
+                        ),
+                        source4
+                );
+
+        final TypeInformation groupBy1TypeInfo =
+                new TypeInformation(Tuple2.class, true,
+                        new TypeInformation(String.class),
+                        new TypeInformation(Integer.class));
+
+        final DataflowAPI.DataflowNodeDescriptor groupBy1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
+                                1,
+                                null,
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "GroupBy1",
+                                source1TypeInfo,
+                                null,
+                                groupBy1TypeInfo,
+                                null,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        sort1
+                );
+
+        final DataflowAPI.DataflowNodeDescriptor mapGroup1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.MAP_GROUP_OPERATOR,
+                                1,
+                                null,
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "MapGroup1",
+                                groupBy1TypeInfo,
+                                null,
+                                groupBy1TypeInfo,
+                                GroupMap1.class,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        groupBy1
+                );
+
+        final DataflowAPI.DataflowNodeDescriptor fold1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
+                                1,
+                                new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,  // TODO: when DOP > 2, how to get the sink1 to print both partial results?
+                                "Fold1",
+                                groupBy1TypeInfo,
+                                null,
+                                source1TypeInfo,
+                                Fold1.class,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        mapGroup1
+                );
+
+        final DataflowAPI.DataflowNodeDescriptor sink1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                                1,
+                                null,
+                                null,
+                                1,
+                                "Sink1",
+                                source1TypeInfo,
+                                null,
+                                null,
+                                Sink1.class,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        fold1
+                );
+
+        return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB4");
+    }
+
 
     // ---------------------------------------------------
     // Entry Point.
@@ -640,6 +789,10 @@ public final class OperatorTest {
         final Topology.AuraTopology topology3 = testJob3(ac);
         ac.submitTopology(topology3, null);
         ac.awaitSubmissionResult(1);
+
+//        final Topology.AuraTopology topology4 = testJob4(ac);
+//        ac.submitTopology(topology4, null);
+//        ac.awaitSubmissionResult(1);
 
         ac.closeSession();
         lcs.shutdown();

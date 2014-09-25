@@ -196,8 +196,8 @@ public final class OperatorDriver extends AbstractInvokeable {
                         recordWriters.get(0).writeObject(object);
                     }
                 } else {
-                    if(recordWriters.size() == 1) {
-                        if (rootOperator.isOpen()) {
+                    if (rootOperator.isOpen()) {
+                        if(recordWriters.size() == 1) {
                             recordWriters.get(0).writeObject(GroupEndMarker.class);
                         }
                     }

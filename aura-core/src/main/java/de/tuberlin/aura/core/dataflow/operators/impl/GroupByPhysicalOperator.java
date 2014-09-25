@@ -6,8 +6,6 @@ import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.record.TypeInformation;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.ArrayList;
 
 public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,I> {
@@ -18,7 +16,7 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
 
     private final TypeInformation inputTypeInfo;
     private I firstElementOfNewGroup;
-    private ArrayList<Object> groupKeys;
+    private ArrayList<Object> currentGroupKeys;
 
     // ---------------------------------------------------
     // Constructor.
@@ -49,22 +47,22 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
         I input;
 
         // start of a new group
-        if (groupKeys == null) {
+        if (currentGroupKeys == null) {
 
             if (firstElementOfNewGroup == null) { // very first group
                 input = inputOp.next();
 
-                if (input == null) {
+                if (input == null) { // empty stream
                     this.close();
                     return null;
                 }
-            } else { // another group
+            } else {
                 input = firstElementOfNewGroup;
             }
 
-            groupKeys = new ArrayList<>(groupKeyIndices.length);
+            currentGroupKeys = new ArrayList<>(groupKeyIndices.length);
             for (int i = 0; i < groupKeyIndices.length; i++) {
-                groupKeys.add(i, inputTypeInfo.selectField(groupKeyIndices[i], input));
+                currentGroupKeys.add(i, inputTypeInfo.selectField(groupKeyIndices[i], input));
             }
 
             firstElementOfNewGroup = null;
@@ -74,18 +72,17 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
         } else { // (potential) continuation of a group
             input = inputOp.next();
 
-            if (input == null) {
+            if (input == null) { // finished stream
                 this.close();
                 return null;
             }
 
             for (int i = 0; i < groupKeyIndices.length; i++) {
-                if (groupKeys.get(i) != inputTypeInfo.selectField(groupKeyIndices[i], input)) {
-                    // the keys doesn't match the group's keys -> the group was finished with the previous element
-                    groupKeys = null; // indicate that a group is finished
-                    firstElementOfNewGroup = input; //
-
-                    return null;
+                if (currentGroupKeys.get(i) != inputTypeInfo.selectField(groupKeyIndices[i], input)) {
+                    // the group was finished with the previous element
+                    firstElementOfNewGroup = input;
+                    currentGroupKeys = null;
+                    return null; // indicate that a group is finished
                 }
             }
 

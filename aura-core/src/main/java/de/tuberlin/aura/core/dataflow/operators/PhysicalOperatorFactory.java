@@ -33,7 +33,7 @@ public final class PhysicalOperatorFactory {
             case MAP_TUPLE_OPERATOR:
                 return new MapPhysicalOperator(environment, inputOp1, FunctionFactory.createMapFunction((Class<MapFunction<Object,Object>>) environment.getProperties().function));
             case MAP_GROUP_OPERATOR:
-                break;
+                return new GroupMapPhysicalOperator(environment, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object,Object>>) environment.getProperties().function));
             case FLAT_MAP_TUPLE_OPERATOR:
                 return new FlatMapPhysicalOperator(environment, inputOp1, FunctionFactory.createFlatMapFunction((Class< FlatMapFunction<Object,Object>>) environment.getProperties().function));
             case FLAT_MAP_GROUP_OPERATOR:
