@@ -184,11 +184,6 @@ public class RowRecordReader implements IRecordReader {
             kryoInput.rewind();
             return readObject();
         }
-        // if (object == null) {
-        // kryoInput.close();
-        // isFinished = true;
-        // return null;
-        // }
 
         return object;
     }

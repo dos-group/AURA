@@ -180,6 +180,7 @@ public final class BufferStream {
         }
 
         public void close() throws IOException {
+            System.arraycopy(RowRecordWriter.BLOCK_END, 0, buf.memory, count, RowRecordWriter.BLOCK_END.length);
             flush();
         }
 
