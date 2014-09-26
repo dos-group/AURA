@@ -206,7 +206,7 @@ public class DatasetDriver extends AbstractInvokeable {
 
 
 
-                final IRecordWriter writer = new RowRecordWriter(driver, datasetNodeDescriptor.properties.outputType.type, 0, partitioner);
+                final IRecordWriter writer = new RowRecordWriter(driver, datasetNodeDescriptor.properties.outputType, 0, partitioner);
 
                 writer.begin();
 

@@ -1,8 +1,10 @@
 package de.tuberlin.aura.core.record;
 
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -18,6 +20,7 @@ import de.tuberlin.aura.core.memory.BufferStream;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordWriter;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
 
 public class RowRecordWriter implements IRecordWriter {
 
@@ -35,9 +38,13 @@ public class RowRecordWriter implements IRecordWriter {
 
     private final List<Descriptors.AbstractNodeDescriptor> outputBinding;
 
-    private final Class<?> recordType;
+    private final TypeInformation typeInformation;
 
     private final int gateIndex;
+
+    private Integer groupChannelIndex;
+
+    private Map<Integer,Boolean> channelNeedsGroupEndMarkerBeforeNextWrite;
 
     // block end marker
     public static byte[] BLOCK_END;
@@ -54,16 +61,16 @@ public class RowRecordWriter implements IRecordWriter {
     // Constructors.
     // ---------------------------------------------------
 
-    public RowRecordWriter(final ITaskDriver driver, final Class<?> recordType, final int gateIndex, final Partitioner.IPartitioner partitioner) {
+    public RowRecordWriter(final ITaskDriver driver, final TypeInformation typeInformation, final int gateIndex, final Partitioner.IPartitioner partitioner) {
         // sanity check.
         if (driver == null)
             throw new IllegalArgumentException("driver == null");
-        if (recordType == null)
-            throw new IllegalArgumentException("recordType == null");
+        if (typeInformation == null)
+            throw new IllegalArgumentException("typeInformation == null");
 
         this.driver = driver;
 
-        this.recordType = recordType;
+        this.typeInformation = typeInformation;
 
         this.gateIndex = gateIndex;
 
@@ -76,6 +83,10 @@ public class RowRecordWriter implements IRecordWriter {
         this.kryoOutputs = new ArrayList<>();
 
         this.outputBinding = driver.getBindingDescriptor().outputGateBindings.get(gateIndex); // 1
+
+        this.groupChannelIndex = null;
+
+        this.channelNeedsGroupEndMarkerBeforeNextWrite = new HashMap<>();
 
         final int channelCount;
         if (partitioner != null) {
@@ -135,9 +146,9 @@ public class RowRecordWriter implements IRecordWriter {
 
             final IOEvents.DataIOEvent event = new IOEvents.DataIOEvent(IOEvents.DataEventType.DATA_EVENT_RECORD_TYPE, srcTaskID, dstTaskID);
 
-            final byte[] tmp = RowRecordModel.RecordTypeBuilder.getRecordByteCode(recordType);
+            final byte[] tmp = RowRecordModel.RecordTypeBuilder.getRecordByteCode(typeInformation.type);
 
-            event.setPayload(new Pair<>(recordType.getName(), ArrayUtils.toObject(tmp)));
+            event.setPayload(new Pair<>(typeInformation.type.getName(), ArrayUtils.toObject(tmp)));
 
             driver.getDataProducer().emit(gateIndex, i, event);
         }
@@ -163,16 +174,55 @@ public class RowRecordWriter implements IRecordWriter {
         if (object == null)
             throw new IllegalArgumentException("object == null");
 
-        final int channelIndex;
-        if (partitioner != null) {
-            channelIndex = partitioner.partition(object, outputBinding.size());
-        } else {
-            channelIndex = 0;
-        }
+        // handle groups in writeRecord as well (even though partitioner.partition record is not implemented yet..)
 
-        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
-        // ensure object is written to one buffer only
-        kryoOutputs.get(channelIndex).flush();
+        if (typeInformation.isGrouped()) {
+
+            if (object == GroupEndMarker.class) {
+                channelNeedsGroupEndMarkerBeforeNextWrite.put(groupChannelIndex, true);
+                groupChannelIndex = null;
+            } else {
+
+                Integer channelIndex;
+
+                if (groupChannelIndex == null) {
+                    if (partitioner != null) {
+                        channelIndex = partitioner.partition(object, outputBinding.size());
+                    } else {
+                        channelIndex = 0;
+                    }
+                    if (channelNeedsGroupEndMarkerBeforeNextWrite.containsKey(channelIndex)
+                            && channelNeedsGroupEndMarkerBeforeNextWrite.get(channelIndex)) {
+
+                        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), GroupEndMarker.class);
+                        // ensure object is written to one buffer only
+                        kryoOutputs.get(channelIndex).flush();
+
+                        channelNeedsGroupEndMarkerBeforeNextWrite.put(channelIndex, false);
+                    }
+                } else {
+                    channelIndex = groupChannelIndex;
+                }
+
+                kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
+                groupChannelIndex = channelIndex;
+                // ensure object is written to one buffer only
+                kryoOutputs.get(groupChannelIndex).flush();
+            }
+        } else {
+
+            Integer channelIndex;
+
+            if (partitioner != null) {
+                channelIndex = partitioner.partition(object, outputBinding.size());
+            } else {
+                channelIndex = 0;
+            }
+
+            kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
+            // ensure object is written to one buffer only
+            kryoOutputs.get(channelIndex).flush();
+        }
     }
 
     public void end() {

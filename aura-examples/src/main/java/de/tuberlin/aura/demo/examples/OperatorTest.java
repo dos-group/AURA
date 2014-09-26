@@ -155,14 +155,6 @@ public final class OperatorTest {
         }
     }
 
-    public static final class GroupSink extends SinkFunction<Collection<Tuple2<String,Integer>>> {
-
-        @Override
-        public void consume(final Collection<Tuple2<String,Integer>>in) {
-//            System.out.println(in);
-        }
-    }
-
     public static Topology.AuraTopology testJob1(AuraClient ac) {
 
         final TypeInformation source1TypeInfo =
@@ -500,7 +492,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                2,
                                 "Source4",
                                 null,
                                 null,
@@ -523,7 +515,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                2,
                                 "Sort1",
                                 source1TypeInfo,
                                 null,
@@ -549,9 +541,9 @@ public final class OperatorTest {
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
                                 1,
-                                null,
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                4,
                                 "GroupBy1",
                                 source1TypeInfo,
                                 null,
@@ -574,7 +566,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,  // TODO: when DOP > 2, how to get the sink1 to print both partial results?
+                                4,  // TODO: when DOP > 2, how to get the sink1 to print all partial results?
                                 "Fold1",
                                 groupBy1TypeInfo,
                                 null,
@@ -778,21 +770,21 @@ public final class OperatorTest {
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
-//        final Topology.AuraTopology topology1 = testJob1(ac);
-//        ac.submitTopology(topology1, null);
-//        ac.awaitSubmissionResult(1);
+        final Topology.AuraTopology topology1 = testJob1(ac);
+        ac.submitTopology(topology1, null);
+        ac.awaitSubmissionResult(1);
 
-//        final Topology.AuraTopology topology2 = testJob2(ac);
-//        ac.submitTopology(topology2, null);
-//        ac.awaitSubmissionResult(1);
+        final Topology.AuraTopology topology2 = testJob2(ac);
+        ac.submitTopology(topology2, null);
+        ac.awaitSubmissionResult(1);
 
         final Topology.AuraTopology topology3 = testJob3(ac);
         ac.submitTopology(topology3, null);
         ac.awaitSubmissionResult(1);
 
-//        final Topology.AuraTopology topology4 = testJob4(ac);
-//        ac.submitTopology(topology4, null);
-//        ac.awaitSubmissionResult(1);
+        final Topology.AuraTopology topology4 = testJob4(ac);
+        ac.submitTopology(topology4, null);
+        ac.awaitSubmissionResult(1);
 
         ac.closeSession();
         lcs.shutdown();

@@ -141,7 +141,7 @@ public final class OperatorDriver extends AbstractInvokeable {
                     );
 
             for (int i = 0; i <  driver.getBindingDescriptor().outputGateBindings.size(); ++i) {
-                final RowRecordWriter reader = new RowRecordWriter(driver, operatorNodeDescriptor.properties.outputType.type, i, partitioner);
+                final RowRecordWriter reader = new RowRecordWriter(driver, operatorNodeDescriptor.properties.outputType, i, partitioner);
                 recordWriters.add(reader);
             }
         }

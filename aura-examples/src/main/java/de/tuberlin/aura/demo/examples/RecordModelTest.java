@@ -56,7 +56,7 @@ public final class RecordModelTest {
                             new TypeInformation(Integer.class));
 
             final Partitioner.IPartitioner partitioner = new Partitioner.HashPartitioner(outputTypeInfo, new int[][] { {0} });
-            this.recordWriter = new RowRecordWriter(driver, AbstractTuple.class, 0, partitioner);
+            this.recordWriter = new RowRecordWriter(driver, outputTypeInfo, 0, partitioner);
             recordWriter.begin();
         }
 
