@@ -43,6 +43,8 @@ public final class DataflowNodeProperties implements Serializable {
 
         DIFFERENCE_OPERATOR(InputArity.BINARY),
 
+        DISTINCT_OPERATOR(InputArity.UNARY),
+
         HASH_JOIN_OPERATOR(InputArity.BINARY),
 
         MERGE_JOIN_OPERATOR(InputArity.BINARY),

@@ -44,6 +44,8 @@ public final class PhysicalOperatorFactory {
                 return new UnionPhysicalOperator<>(environment, inputOp1, inputOp2);
             case DIFFERENCE_OPERATOR:
                 return new DifferencePhysicalOperator<>(environment, inputOp1, inputOp2);
+            case DISTINCT_OPERATOR:
+                return new DistinctPhysicalOperator<>(environment, inputOp1);
             case HASH_JOIN_OPERATOR:
                 return new HashJoinPhysicalOperator<>(environment, inputOp1, inputOp2);
             case MERGE_JOIN_OPERATOR:

@@ -428,6 +428,30 @@ public final class OperatorTest {
                         difference1
                 );
 
+
+        final DataflowAPI.DataflowNodeDescriptor distinct1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.DISTINCT_OPERATOR,
+                                1,
+                                new int[][] { join1TypeInfo.buildFieldSelectorChain("_0._1") },
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "Distinct1",
+                                join1TypeInfo,
+                                null,
+                                join1TypeInfo,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        join1
+                );
+
         final DataflowAPI.DataflowNodeDescriptor sort1 =
                 new DataflowAPI.DataflowNodeDescriptor(
                         new DataflowNodeProperties(
@@ -448,7 +472,7 @@ public final class OperatorTest {
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._1") },
                                 DataflowNodeProperties.SortOrder.DESCENDING
                         ),
-                        join1
+                        distinct1
                 );
 
         final DataflowAPI.DataflowNodeDescriptor sink1 =
