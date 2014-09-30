@@ -2,10 +2,12 @@ package de.tuberlin.aura.core.dataflow.udfs.contracts;
 
 import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 
+import java.io.Serializable;
+
 /**
  *
  */
-public interface IFunction {
+public interface IFunction extends Serializable {
 
     public void create();
 

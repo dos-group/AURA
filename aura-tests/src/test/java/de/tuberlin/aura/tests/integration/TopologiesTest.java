@@ -1,10 +1,13 @@
-package de.tuberlin.aura.demo.examples;
+package de.tuberlin.aura.tests.integration;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
+
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
@@ -18,141 +21,144 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
+import de.tuberlin.aura.tests.util.TestHelper;
+import de.tuberlin.aura.demo.examples.ExampleTopologies;
+
 
 /**
  *
  */
-public final class OperatorTest {
+public final class TopologiesTest {
 
-    // Disallow instantiation.
-    private OperatorTest() {}
+    private static final Logger LOG = LoggerFactory.getLogger(TopologiesTest.class);
 
-    // ---------------------------------------------------
-    // User-defined Functions.
-    // ---------------------------------------------------
+    private static AuraClient auraClient;
 
-    public static final class Source1 extends SourceFunction<Tuple2<String,Integer>> {
+    private static LocalClusterSimulator clusterSimulator = null;
 
-        int count = 1200000;
+    private static int executionUnits;
 
-        @Override
-        public  Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("SOURCE1", count) : null;
+
+    // --------------------------------------------------
+    // TESTS
+    // --------------------------------------------------
+
+    @BeforeClass
+    public static void setup() {
+        IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
+        switch (simConfig.getString("simulator.mode")) {
+            case "LOCAL":
+                new LocalClusterSimulator(simConfig);
+                break;
+            case "cluster":
+                break;
+            default:
+                LOG.warn("'simulator mode' has unknown value. Fallback to LOCAL mode.");
+                new LocalClusterSimulator(simConfig);
         }
+
+        auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
+
+        int nodes = simConfig.getInt("simulator.tm.number");
+        int cores = simConfig.getInt("tm.execution.units.number");
+
+        executionUnits = nodes * cores;
+
+        LOG.info("start test with: " + nodes + " nodes and " + cores + " cores per node");
     }
 
-    public static final class Source2 extends SourceFunction<Tuple2<String,Integer>> {
-
-        int count = 100000;
-
-        Random rand = new Random(13454);
-
-        @Override
-        public Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("RIGHT_SOURCE", rand.nextInt(10000)) : null;
-        }
+    @Test
+    public void testMinimalPlainTopology() {
+        TestHelper.runTopology(auraClient, ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
     }
 
-    public static final class Source3 extends SourceFunction<Tuple2<String,Integer>> {
-
-        int count = 1000;
-
-        Random rand = new Random(54321);
-
-        @Override
-        public Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("RIGHT_SOURCE", rand.nextInt(10000)) : null;
-        }
+    @Test
+    public void testExtendedTopology() {
+        TestHelper.runTopology(auraClient, ExampleTopologies.six_layer_all2all(auraClient, executionUnits));
     }
 
-    public static final class Source4 extends SourceFunction<Tuple2<String,Integer>> {
-
-        int count = 100000;
-
-        Random rand = new Random(13454);
-
-        @Override
-        public Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("RIGHT_SOURCE", rand.nextInt(100)) : null;
-        }
+    @Test
+    public void testPlainTopologiesConcurrently() {
+        List<Topology.AuraTopology> topologies = new ArrayList<>();
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
+        TestHelper.runTopologiesConcurrently(auraClient, topologies);
     }
 
-    public static final class Map1 extends MapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
+    @Test
+    public void testMultipleQueriesSequentially() {
+        List<Topology.AuraTopology> topologies = new ArrayList<>();
 
-        @Override
-        public Tuple2<String,Integer> map(final Tuple2<String,Integer> in) {
-            return new Tuple2<>("HELLO", in._1);
-        }
+        // 2 layered - all2all connection
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
+
+        // 3 layered - point2point + point2point connection
+        topologies.add(ExampleTopologies.three_layer_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all + point2point connection
+        topologies.add(ExampleTopologies.three_layer_all2all_point2point(auraClient, executionUnits));
+
+        // 3 layered - point2point + all2all connection
+        topologies.add(ExampleTopologies.three_layer_point2point_all2all(auraClient, executionUnits));
+
+        // 3 layered - all2all + all2all connection
+        topologies.add(ExampleTopologies.three_layer_all2all_all2all(auraClient, executionUnits));
+
+        // 3 layered - point2point (join) point2point connection
+        topologies.add(ExampleTopologies.three_layer_point2point_join_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) point2point connection
+        topologies.add(ExampleTopologies.three_layer_all2all_join_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) all2all connection
+        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) all2all connection (small/large)
+        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all_sl(auraClient, executionUnits));
+
+        TestHelper.runTopologies(auraClient, topologies);
     }
 
-    public static final class FlatMap1 extends FlatMapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
+    @Test
+    public void testOperatorTopology1() {
 
-        @Override
-        public void flatMap(Tuple2<String,Integer> in, Collection<Tuple2<String,Integer>> c) {
-            if ((in._1 % 10) == 0) {
-                c.add(new Tuple2<>("HEL", in._1));
-                c.add(new Tuple2<>("LO", in._1 + 1));
-            }
-        }
-
-    }
-
-    public static final class GroupMap1 extends GroupMapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
-
-        @Override
-        public void map(Iterator<Tuple2<String,Integer>> in, Collection<Tuple2<String,Integer>> output) {
-
-            Integer count = 0;
-
-            while (in.hasNext()) {
-                Tuple2<String,Integer> t = in.next();
-                output.add(new Tuple2<>(t._0, t._1 + count++));
-            }
-        }
+        final Topology.AuraTopology topology1 = testJob1(auraClient);
+        TestHelper.runTopology(auraClient, topology1);
 
     }
 
-    // TODO: have Fold1 return an integer instead.. ??
-    public static final class Fold1 extends FoldFunction<Tuple2<String,Integer>,Tuple2<String,Integer>,Tuple2<String,Integer>> {
+    @Test
+    public void testOperatorTopology2() {
 
-        @Override
-        public Tuple2<String,Integer> initialValue() {
-            return new Tuple2<>("RESULT", 0);
-        }
+        final Topology.AuraTopology topology2 = testJob2(auraClient);
+        TestHelper.runTopology(auraClient, topology2);
 
-        @Override
-        public Tuple2<String, Integer> map(Tuple2<String, Integer> in) {
-            return new Tuple2<>(in._0, 1);
-        }
-
-        @Override
-        public Tuple2<String,Integer> add(Tuple2<String,Integer> currentValue, Tuple2<String, Integer> in) {
-            return new Tuple2<>("RESULT", currentValue._1 + in._1);
-        }
     }
 
-    public static final class Filter1 extends FilterFunction<Tuple2<String,Integer>> {
+    @Test
+    public void testOperatorTopology3() {
 
-        @Override
-        public boolean filter(final Tuple2<String,Integer> in) {
-            return in._1 % 2 == 0;
-        }
+        final Topology.AuraTopology topology3 = testJob3(auraClient);
+        TestHelper.runTopology(auraClient, topology3);
+
     }
 
-    public static final class Sink1 extends SinkFunction<Tuple2<String,Integer>> {
+    @Test
+    public void testOperatorTopology4() {
 
-        @Override
-        public void consume(final Tuple2<String,Integer> in) {
-//            System.out.println(in);
-        }
+        final Topology.AuraTopology topology4 = testJob4(auraClient);
+        TestHelper.runTopology(auraClient, topology4);
+
     }
 
-    public static final class JoinSink1 extends SinkFunction<Tuple2<Tuple2<String,Integer>,Tuple2<String,Integer>>> {
+    @AfterClass
+    public static void tearDown() {
 
-        @Override
-        public void consume(final Tuple2<Tuple2<String,Integer>,Tuple2<String,Integer>> in) {
-//            System.out.println(in);
+        if (clusterSimulator != null) {
+            clusterSimulator.shutdown();
         }
+
+        auraClient.closeSession();
     }
 
     public static Topology.AuraTopology testJob1(AuraClient ac) {
@@ -539,7 +545,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                1,
                                 "Sort1",
                                 source1TypeInfo,
                                 null,
@@ -567,7 +573,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                4,
+                                2,
                                 "GroupBy1",
                                 source1TypeInfo,
                                 null,
@@ -590,7 +596,7 @@ public final class OperatorTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                4,  // TODO: when DOP > 2, how to get the sink1 to print all partial results?
+                                2,  // TODO: when DOP > 2, how to get the sink1 to print all partial results?
                                 "Fold1",
                                 groupBy1TypeInfo,
                                 null,
@@ -784,33 +790,131 @@ public final class OperatorTest {
         return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB4");
     }
 
-
     // ---------------------------------------------------
-    // Entry Point.
+    // User-defined Functions.
     // ---------------------------------------------------
 
-    public static void main(final String[] args) {
+    public static final class Source1 extends SourceFunction<Tuple2<String,Integer>> {
 
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
-        final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
+        int count = 1200000;
 
-        final Topology.AuraTopology topology1 = testJob1(ac);
-        ac.submitTopology(topology1, null);
-        ac.awaitSubmissionResult(1);
-
-        final Topology.AuraTopology topology2 = testJob2(ac);
-        ac.submitTopology(topology2, null);
-        ac.awaitSubmissionResult(1);
-
-        final Topology.AuraTopology topology3 = testJob3(ac);
-        ac.submitTopology(topology3, null);
-        ac.awaitSubmissionResult(1);
-
-        final Topology.AuraTopology topology4 = testJob4(ac);
-        ac.submitTopology(topology4, null);
-        ac.awaitSubmissionResult(1);
-
-        ac.closeSession();
-        lcs.shutdown();
+        @Override
+        public  Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("SOURCE1", count) : null;
+        }
     }
+
+    public static final class Source2 extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 100000;
+
+        Random rand = new Random(13454);
+
+        @Override
+        public Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("RIGHT_SOURCE", rand.nextInt(10000)) : null;
+        }
+    }
+
+    public static final class Source3 extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 1000;
+
+        Random rand = new Random(54321);
+
+        @Override
+        public Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("RIGHT_SOURCE", rand.nextInt(10000)) : null;
+        }
+    }
+
+    public static final class Source4 extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 100000;
+
+        Random rand = new Random(13454);
+
+        @Override
+        public Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("RIGHT_SOURCE", rand.nextInt(100)) : null;
+        }
+    }
+
+    public static final class Map1 extends MapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
+
+        @Override
+        public Tuple2<String,Integer> map(final Tuple2<String,Integer> in) {
+            return new Tuple2<>("HELLO", in._1);
+        }
+    }
+
+    public static final class FlatMap1 extends FlatMapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
+
+        @Override
+        public void flatMap(Tuple2<String,Integer> in, Collection<Tuple2<String,Integer>> c) {
+            if ((in._1 % 10) == 0) {
+                c.add(new Tuple2<>("HEL", in._1));
+                c.add(new Tuple2<>("LO", in._1 + 1));
+            }
+        }
+
+    }
+
+    public static final class GroupMap1 extends GroupMapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
+
+        @Override
+        public void map(Iterator<Tuple2<String,Integer>> in, Collection<Tuple2<String,Integer>> output) {
+
+            Integer count = 0;
+
+            while (in.hasNext()) {
+                Tuple2<String,Integer> t = in.next();
+                output.add(new Tuple2<>(t._0, t._1 + count++));
+            }
+        }
+
+    }
+
+    public static final class Fold1 extends FoldFunction<Tuple2<String,Integer>,Tuple2<String,Integer>,Tuple2<String,Integer>> {
+
+        @Override
+        public Tuple2<String,Integer> initialValue() {
+            return new Tuple2<>("RESULT", 0);
+        }
+
+        @Override
+        public Tuple2<String, Integer> map(Tuple2<String, Integer> in) {
+            return new Tuple2<>(in._0, 1);
+        }
+
+        @Override
+        public Tuple2<String,Integer> add(Tuple2<String,Integer> currentValue, Tuple2<String, Integer> in) {
+            return new Tuple2<>("RESULT", currentValue._1 + in._1);
+        }
+    }
+
+    public static final class Filter1 extends FilterFunction<Tuple2<String,Integer>> {
+
+        @Override
+        public boolean filter(final Tuple2<String,Integer> in) {
+            return in._1 % 2 == 0;
+        }
+    }
+
+    public static final class Sink1 extends SinkFunction<Tuple2<String,Integer>> {
+
+        @Override
+        public void consume(final Tuple2<String,Integer> in) {
+//            System.out.println(in);
+        }
+    }
+
+    public static final class JoinSink1 extends SinkFunction<Tuple2<Tuple2<String,Integer>,Tuple2<String,Integer>>> {
+
+        @Override
+        public void consume(final Tuple2<Tuple2<String,Integer>,Tuple2<String,Integer>> in) {
+//            System.out.println(in);
+        }
+    }
+
 }
