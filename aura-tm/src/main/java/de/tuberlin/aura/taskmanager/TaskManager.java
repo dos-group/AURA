@@ -1,6 +1,7 @@
 package de.tuberlin.aura.taskmanager;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
@@ -67,7 +68,7 @@ public final class TaskManager implements ITaskManager {
         if (config == null)
             throw new IllegalArgumentException("config == null");
 
-        this.deployedTasks = new HashMap<>();
+        this.deployedTasks = new ConcurrentHashMap<>();
 
         // Generate MachineDescriptor for this TaskManager.
         this.taskManagerMachine = DescriptorFactory.createMachineDescriptor(config.getConfig("tm"));
