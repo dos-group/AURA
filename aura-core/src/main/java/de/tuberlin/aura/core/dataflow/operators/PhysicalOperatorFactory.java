@@ -29,17 +29,19 @@ public final class PhysicalOperatorFactory {
         if (environment == null)
             throw new IllegalArgumentException("environment == null");
 
+        Class<?> udfType = environment.getUdfType(environment.getProperties().functionTypeName);
+
         switch(environment.getProperties().operatorType) {
             case MAP_TUPLE_OPERATOR:
-                return new MapPhysicalOperator(environment, inputOp1, FunctionFactory.createMapFunction((Class<MapFunction<Object,Object>>) environment.getProperties().function));
+                return new MapPhysicalOperator(environment, inputOp1, FunctionFactory.createMapFunction((Class<MapFunction<Object,Object>>) udfType));
             case MAP_GROUP_OPERATOR:
-                return new GroupMapPhysicalOperator(environment, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object,Object>>) environment.getProperties().function));
+                return new GroupMapPhysicalOperator(environment, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object,Object>>) udfType));
             case FLAT_MAP_TUPLE_OPERATOR:
-                return new FlatMapPhysicalOperator(environment, inputOp1, FunctionFactory.createFlatMapFunction((Class< FlatMapFunction<Object,Object>>) environment.getProperties().function));
+                return new FlatMapPhysicalOperator(environment, inputOp1, FunctionFactory.createFlatMapFunction((Class<FlatMapFunction<Object,Object>>) udfType));
             case FLAT_MAP_GROUP_OPERATOR:
                 break;
             case FILTER_OPERATOR:
-                return new FilterPhysicalOperator(environment, inputOp1, FunctionFactory.createFilterFunction((Class<FilterFunction<Object>>) environment.getProperties().function));
+                return new FilterPhysicalOperator(environment, inputOp1, FunctionFactory.createFilterFunction((Class<FilterFunction<Object>>) udfType));
             case UNION_OPERATOR:
                 return new UnionPhysicalOperator<>(environment, inputOp1, inputOp2);
             case DIFFERENCE_OPERATOR:
@@ -55,17 +57,17 @@ public final class PhysicalOperatorFactory {
             case SORT_OPERATOR:
                 return new SortPhysicalOperator<>(environment, inputOp1);
             case FOLD_OPERATOR:
-                return new FoldPhysicalOperator(environment, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object,Object>>) environment.getProperties().function));
+                return new FoldPhysicalOperator(environment, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object,Object>>) udfType));
             case REDUCE_OPERATOR:
                 break;
             case UDF_SOURCE:
-                return new UDFSourcePhysicalOperator(environment, FunctionFactory.createSourceFunction((Class<SourceFunction<Object>>) environment.getProperties().function));
+                return new UDFSourcePhysicalOperator(environment, FunctionFactory.createSourceFunction((Class<SourceFunction<Object>>) udfType));
             case FILE_SOURCE:
                 break;
             case STREAM_SOURCE:
                 break;
             case UDF_SINK:
-                return new UDFSinkPhysicalOperator(environment, inputOp1, FunctionFactory.createSinkFunction((Class<SinkFunction<Object>>) environment.getProperties().function));
+                return new UDFSinkPhysicalOperator(environment, inputOp1, FunctionFactory.createSinkFunction((Class<SinkFunction<Object>>) udfType));
             case FILE_SINK:
                 break;
             case STREAM_SINK:

@@ -107,6 +107,8 @@ public final class OperatorDriver extends AbstractInvokeable {
 
     private final List<GateReaderOperator> gateReaderOperators;
 
+    private final OperatorEnvironment environment;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -120,6 +122,8 @@ public final class OperatorDriver extends AbstractInvokeable {
         this.recordWriters = new ArrayList<>();
 
         this.gateReaderOperators = new ArrayList<>();
+
+        environment = new OperatorEnvironment(operatorNodeDescriptor.properties, operatorNodeDescriptor);
     }
 
     // ---------------------------------------------------
@@ -128,8 +132,6 @@ public final class OperatorDriver extends AbstractInvokeable {
 
     @Override
     public void create() throws Throwable {
-
-        final IOperatorEnvironment environment = new OperatorEnvironment(driver.getLogger(), operatorNodeDescriptor.properties, operatorNodeDescriptor);
 
         if (driver.getBindingDescriptor().outputGateBindings.size() > 0) {
 
@@ -231,5 +233,9 @@ public final class OperatorDriver extends AbstractInvokeable {
 
     @Override
     public void release() throws Throwable {
+    }
+
+    public IOperatorEnvironment getOperatorEnvironment() {
+        return environment;
     }
 }

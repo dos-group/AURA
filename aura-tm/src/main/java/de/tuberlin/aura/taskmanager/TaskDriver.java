@@ -141,6 +141,9 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             invokeable.setDataConsumer(dataConsumer);
             invokeable.setLogger(LOG);
 
+            for (final Class<?> udfType : userClasses)
+                ((OperatorDriver)invokeable).getOperatorEnvironment().putUdfType(udfType.getName(), udfType);
+
         } else if (nodeDescriptor instanceof Descriptors.DatasetNodeDescriptor) {
 
             invokeable = new DatasetDriver((Descriptors.DatasetNodeDescriptor) nodeDescriptor, bindingDescriptor);

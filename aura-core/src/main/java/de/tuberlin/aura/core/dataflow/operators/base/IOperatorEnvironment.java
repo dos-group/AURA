@@ -13,9 +13,11 @@ import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperti
  */
 public interface IOperatorEnvironment extends Serializable {
 
-    public abstract Logger getLogger();
-
     public abstract DataflowNodeProperties getProperties();
 
     public abstract Descriptors.OperatorNodeDescriptor getNodeDescriptor();
+
+    public abstract void putUdfType(String udfTypeName, Class<?> udfType);
+
+    public abstract Class<?> getUdfType(String udfTypeName);
 }

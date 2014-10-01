@@ -123,7 +123,7 @@ public final class DataflowNodeProperties implements Serializable {
 
     public TypeInformation outputType;
 
-    public final Class<? extends IFunction> function;
+    public final String functionTypeName;
 
     public final int[][] groupByKeyIndices;
 
@@ -153,7 +153,7 @@ public final class DataflowNodeProperties implements Serializable {
                                   final TypeInformation input1Type,
                                   final TypeInformation input2Type,
                                   final TypeInformation outputType,
-                                  final Class<? extends IFunction> function,
+                                  final String functionTypeName,
                                   int[][] groupByKeyIndices,
                                   final int[][] keyIndices1,
                                   final int[][] keyIndices2,
@@ -183,7 +183,7 @@ public final class DataflowNodeProperties implements Serializable {
 
         this.outputType = outputType;
 
-        this.function = function;
+        this.functionTypeName = functionTypeName;
 
         this.groupByKeyIndices = groupByKeyIndices;
 

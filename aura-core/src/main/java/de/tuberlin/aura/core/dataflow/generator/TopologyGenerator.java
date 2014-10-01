@@ -71,8 +71,12 @@ public final class TopologyGenerator implements IVisitor<DataflowAPI.DataflowNod
             //typeList.addAll(element.properties.input2Type.extractTypes());
             //typeList.addAll(element.properties.outputType.extractTypes());
 
-            if (element.properties.function != null) {
-                typeList.add(element.properties.function);
+            if (element.properties.functionTypeName != null) {
+                try {
+                    typeList.add(Class.forName(element.properties.functionTypeName));
+                } catch (ClassNotFoundException e) {
+                    throw new IllegalStateException("UDF class " + element.properties.functionTypeName + " not found");
+                }
             }
 
             if (element.properties.operatorType == DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET ||

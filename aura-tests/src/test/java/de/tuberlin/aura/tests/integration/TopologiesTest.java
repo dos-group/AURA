@@ -64,92 +64,96 @@ public final class TopologiesTest {
 
         executionUnits = nodes * cores;
 
+        if (executionUnits < 8) {
+            throw new IllegalStateException("TopologiesTest requires at least 8 execution units.");
+        }
+
         LOG.info("start test with: " + nodes + " nodes and " + cores + " cores per node");
     }
 
-    @Test
-    public void testMinimalPlainTopology() {
-        TestHelper.runTopology(auraClient, ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
-    }
-
-    @Test
-    public void testExtendedTopology() {
-        TestHelper.runTopology(auraClient, ExampleTopologies.six_layer_all2all(auraClient, executionUnits));
-    }
-
-    @Test
-    public void testPlainTopologiesConcurrently() {
-        List<Topology.AuraTopology> topologies = new ArrayList<>();
-        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
-        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
-        TestHelper.runTopologiesConcurrently(auraClient, topologies);
-    }
-
-    @Test
-    public void testMultipleQueriesSequentially() {
-        List<Topology.AuraTopology> topologies = new ArrayList<>();
-
-        // 2 layered - all2all connection
-        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
-
-        // 3 layered - point2point + point2point connection
-        topologies.add(ExampleTopologies.three_layer_point2point(auraClient, executionUnits));
-
-        // 3 layered - all2all + point2point connection
-        topologies.add(ExampleTopologies.three_layer_all2all_point2point(auraClient, executionUnits));
-
-        // 3 layered - point2point + all2all connection
-        topologies.add(ExampleTopologies.three_layer_point2point_all2all(auraClient, executionUnits));
-
-        // 3 layered - all2all + all2all connection
-        topologies.add(ExampleTopologies.three_layer_all2all_all2all(auraClient, executionUnits));
-
-        // 3 layered - point2point (join) point2point connection
-        topologies.add(ExampleTopologies.three_layer_point2point_join_point2point(auraClient, executionUnits));
-
-        // 3 layered - all2all (join) point2point connection
-        topologies.add(ExampleTopologies.three_layer_all2all_join_point2point(auraClient, executionUnits));
-
-        // 3 layered - all2all (join) all2all connection
-        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all(auraClient, executionUnits));
-
-        // 3 layered - all2all (join) all2all connection (small/large)
-        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all_sl(auraClient, executionUnits));
-
-        TestHelper.runTopologies(auraClient, topologies);
-    }
+//    @Test
+//    public void testMinimalPlainTopology() {
+//        TestHelper.runTopology(auraClient, ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
+//    }
+//
+//    @Test
+//    public void testExtendedTopology() {
+//        TestHelper.runTopology(auraClient, ExampleTopologies.six_layer_all2all(auraClient, executionUnits));
+//    }
+//
+//    @Test
+//    public void testPlainTopologiesConcurrently() {
+//        List<Topology.AuraTopology> topologies = new ArrayList<>();
+//        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
+//        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
+//        TestHelper.runTopologiesConcurrently(auraClient, topologies);
+//    }
+//
+//    @Test
+//    public void testMultipleQueriesSequentially() {
+//        List<Topology.AuraTopology> topologies = new ArrayList<>();
+//
+//        // 2 layered - all2all connection
+//        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
+//
+//        // 3 layered - point2point + point2point connection
+//        topologies.add(ExampleTopologies.three_layer_point2point(auraClient, executionUnits));
+//
+//        // 3 layered - all2all + point2point connection
+//        topologies.add(ExampleTopologies.three_layer_all2all_point2point(auraClient, executionUnits));
+//
+//        // 3 layered - point2point + all2all connection
+//        topologies.add(ExampleTopologies.three_layer_point2point_all2all(auraClient, executionUnits));
+//
+//        // 3 layered - all2all + all2all connection
+//        topologies.add(ExampleTopologies.three_layer_all2all_all2all(auraClient, executionUnits));
+//
+//        // 3 layered - point2point (join) point2point connection
+//        topologies.add(ExampleTopologies.three_layer_point2point_join_point2point(auraClient, executionUnits));
+//
+//        // 3 layered - all2all (join) point2point connection
+//        topologies.add(ExampleTopologies.three_layer_all2all_join_point2point(auraClient, executionUnits));
+//
+//        // 3 layered - all2all (join) all2all connection
+//        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all(auraClient, executionUnits));
+//
+//        // 3 layered - all2all (join) all2all connection (small/large)
+//        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all_sl(auraClient, executionUnits));
+//
+//        TestHelper.runTopologies(auraClient, topologies);
+//    }
 
     @Test
     public void testOperatorTopology1() {
 
-        final Topology.AuraTopology topology1 = testJob1(auraClient);
+        final Topology.AuraTopology topology1 = testJob1(auraClient, executionUnits);
         TestHelper.runTopology(auraClient, topology1);
 
     }
-
-    @Test
-    public void testOperatorTopology2() {
-
-        final Topology.AuraTopology topology2 = testJob2(auraClient);
-        TestHelper.runTopology(auraClient, topology2);
-
-    }
-
-    @Test
-    public void testOperatorTopology3() {
-
-        final Topology.AuraTopology topology3 = testJob3(auraClient);
-        TestHelper.runTopology(auraClient, topology3);
-
-    }
-
-    @Test
-    public void testOperatorTopology4() {
-
-        final Topology.AuraTopology topology4 = testJob4(auraClient);
-        TestHelper.runTopology(auraClient, topology4);
-
-    }
+//
+//    @Test
+//    public void testOperatorTopology2() {
+//
+//        final Topology.AuraTopology topology2 = testJob2(auraClient, executionUnits);
+//        TestHelper.runTopology(auraClient, topology2);
+//
+//    }
+//
+//    @Test
+//    public void testOperatorTopology3() {
+//
+//        final Topology.AuraTopology topology3 = testJob3(auraClient, executionUnits);
+//        TestHelper.runTopology(auraClient, topology3);
+//
+//    }
+//
+//    @Test
+//    public void testOperatorTopology4() {
+//
+//        final Topology.AuraTopology topology4 = testJob4(auraClient, executionUnits);
+//        TestHelper.runTopology(auraClient, topology4);
+//
+//    }
 
     @AfterClass
     public static void tearDown() {
@@ -161,7 +165,7 @@ public final class TopologiesTest {
         auraClient.closeSession();
     }
 
-    public static Topology.AuraTopology testJob1(AuraClient ac) {
+    public static Topology.AuraTopology testJob1(AuraClient ac, int executionUnits) {
 
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
@@ -176,12 +180,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                executionUnits / 6,
                                 "Source1",
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Source1.class,
+                                Source1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -198,12 +202,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 6,
                                 "Map1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
-                                Map1.class,
+                                Map1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -221,12 +225,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 6,
                                 "FlatMap1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
-                                FlatMap1.class,
+                                FlatMap1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -244,12 +248,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 6,
                                 "Filter1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
-                                Filter1.class,
+                                Filter1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -267,12 +271,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,  // TODO: when DOP > 2, how to get the sink1 to print both partial results?
+                                executionUnits / 6,
                                 "Fold1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
-                                Fold1.class,
+                                Fold1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -295,7 +299,7 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 null,
                                 null,
-                                Sink1.class,
+                                Sink1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -308,7 +312,7 @@ public final class TopologiesTest {
         return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
     }
 
-    public static Topology.AuraTopology testJob2(AuraClient ac) {
+    public static Topology.AuraTopology testJob2(AuraClient ac, int executionUnits) {
 
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
@@ -323,12 +327,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 8,
                                 "Source1",
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Source1.class,
+                                Source1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -345,12 +349,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 8,
                                 "Source2",
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Source2.class,
+                                Source2.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -367,12 +371,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 8,
                                 "Source3",
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Source3.class,
+                                Source3.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -389,7 +393,7 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 8,
                                 "Difference1",
                                 source1TypeInfo,
                                 source1TypeInfo,
@@ -418,7 +422,7 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_0._1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 8,
                                 "Join1",
                                 source1TypeInfo,
                                 source1TypeInfo,
@@ -443,7 +447,7 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_0._1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 8,
                                 "Distinct1",
                                 join1TypeInfo,
                                 null,
@@ -466,7 +470,7 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_0._1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 8,
                                 "Sort1",
                                 join1TypeInfo,
                                 null,
@@ -494,7 +498,7 @@ public final class TopologiesTest {
                                 join1TypeInfo,
                                 null,
                                 null,
-                                JoinSink1.class,
+                                JoinSink1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -507,7 +511,7 @@ public final class TopologiesTest {
         return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB2");
     }
 
-    public static Topology.AuraTopology testJob3(AuraClient ac) {
+    public static Topology.AuraTopology testJob3(AuraClient ac, int executionUnits) {
 
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
@@ -522,12 +526,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                executionUnits / 5,
                                 "Source4",
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Source4.class,
+                                Source4.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -545,7 +549,7 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 5,
                                 "Sort1",
                                 source1TypeInfo,
                                 null,
@@ -573,7 +577,7 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,
+                                executionUnits / 5,
                                 "GroupBy1",
                                 source1TypeInfo,
                                 null,
@@ -596,12 +600,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                2,  // TODO: when DOP > 2, how to get the sink1 to print all partial results?
+                                executionUnits / 5,
                                 "Fold1",
                                 groupBy1TypeInfo,
                                 null,
                                 source1TypeInfo,
-                                Fold1.class,
+                                Fold1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -624,7 +628,7 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 null,
                                 null,
-                                Sink1.class,
+                                Sink1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -637,7 +641,7 @@ public final class TopologiesTest {
         return new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB3");
     }
 
-    public static Topology.AuraTopology testJob4(AuraClient ac) {
+    public static Topology.AuraTopology testJob4(AuraClient ac, int executionUnits) {
 
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
@@ -652,12 +656,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 6,
                                 "Source4",
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Source4.class,
+                                Source4.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -675,7 +679,7 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 6,
                                 "Sort1",
                                 source1TypeInfo,
                                 null,
@@ -703,7 +707,7 @@ public final class TopologiesTest {
                                 1,
                                 null,
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 6,
                                 "GroupBy1",
                                 source1TypeInfo,
                                 null,
@@ -726,12 +730,12 @@ public final class TopologiesTest {
                                 1,
                                 null,
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
+                                executionUnits / 6,
                                 "MapGroup1",
                                 groupBy1TypeInfo,
                                 null,
                                 groupBy1TypeInfo,
-                                GroupMap1.class,
+                                GroupMap1.class.getName(),
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 null,
                                 null,
@@ -749,12 +753,12 @@ public final class TopologiesTest {
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,  // TODO: when DOP > 2, how to get the sink1 to print both partial results?
+                                executionUnits / 6,
                                 "Fold1",
                                 groupBy1TypeInfo,
                                 null,
                                 source1TypeInfo,
-                                Fold1.class,
+                                Fold1.class.getName(),
                                 null,
                                 null,
                                 null,
@@ -777,7 +781,7 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 null,
                                 null,
-                                Sink1.class,
+                                Sink1.class.getName(),
                                 null,
                                 null,
                                 null,
