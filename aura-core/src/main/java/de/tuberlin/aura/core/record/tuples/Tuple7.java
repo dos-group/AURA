@@ -8,11 +8,9 @@ import com.google.common.collect.ComparisonChain;
 /**
  *
  */
-public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
+public final class Tuple7<T1, T2, T3, T4, T5, T6, T7> extends AbstractTuple {
 
     private static final long serialVersionUID = -1L;
-
-    public T0 _0;
 
     public T1 _1;
 
@@ -26,13 +24,13 @@ public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
 
     public T6 _6;
 
+    public T7 _7;
+
     public Tuple7() {
         this(null, null, null, null, null, null, null);
     }
 
-    public Tuple7(final T0 _0, final T1 _1, final T2 _2, final T3 _3, final T4 _4, final T5 _5, final T6 _6) {
-
-        this._0 = _0;
+    public Tuple7(final T1 _1, final T2 _2, final T3 _3, final T4 _4, final T5 _5, final T6 _6, final T7 _7) {
 
         this._1 = _1;
 
@@ -45,23 +43,25 @@ public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
         this._5 = _5;
 
         this._6 = _6;
+
+        this._7 = _7;
     }
 
-    public Tuple7(final Tuple7<T0, T1, T2, T3, T4, T5, T6> t) {
-        this(t._0, t._1, t._2, t._3, t._4, t._5, t._6);
+    public Tuple7(final Tuple7<T1, T2, T3, T4, T5, T6, T7> t) {
+        this(t._1, t._2, t._3, t._4, t._5, t._6, t._7);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T getField(final int pos) {
         switch(pos) {
-            case 0: return (T) this._0;
-            case 1: return (T) this._1;
-            case 2: return (T) this._2;
-            case 3: return (T) this._3;
-            case 4: return (T) this._4;
-            case 5: return (T) this._5;
-            case 6: return (T) this._6;
+            case 0: return (T) this._1;
+            case 1: return (T) this._2;
+            case 2: return (T) this._3;
+            case 3: return (T) this._4;
+            case 4: return (T) this._5;
+            case 5: return (T) this._6;
+            case 6: return (T) this._7;
             default: throw new IndexOutOfBoundsException(String.valueOf(pos));
         }
     }
@@ -71,25 +71,25 @@ public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
     public <T> void setField(final T value, final int pos) {
         switch(pos) {
             case 0:
-                this._0 = (T0) value;
-                break;
-            case 1:
                 this._1 = (T1) value;
                 break;
-            case 2:
+            case 1:
                 this._2 = (T2) value;
                 break;
-            case 3:
+            case 2:
                 this._3 = (T3) value;
                 break;
-            case 4:
+            case 3:
                 this._4 = (T4) value;
                 break;
-            case 5:
+            case 4:
                 this._5 = (T5) value;
                 break;
-            case 6:
+            case 5:
                 this._6 = (T6) value;
+                break;
+            case 6:
+                this._7 = (T7) value;
                 break;
             default: throw new IndexOutOfBoundsException(String.valueOf(pos));
         }
@@ -102,7 +102,7 @@ public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
 
     @Override
     public Iterator<Object> iterator() {
-        return Arrays.asList(new Object[]{_0, _1, _2, _3, _4, _5, _6}).iterator();
+        return Arrays.asList(new Object[]{_1, _2, _3, _4, _5, _6, _7}).iterator();
     }
 
     @Override
@@ -110,22 +110,22 @@ public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
     public int compareTo(final AbstractTuple t) {
         if (this == t)
             return 0;
-        final Tuple7<T0,T1,T2,T3,T4,T5,T6> o = (Tuple7<T0,T1,T2,T3,T4,T5,T6>)t;
+        final Tuple7<T1, T2, T3, T4, T5, T6, T7> o = (Tuple7<T1, T2, T3, T4, T5, T6, T7>)t;
         final ComparisonChain cc = ComparisonChain.start();
-        if (_0 instanceof Comparable)
-            cc.compare((Comparable<?>)_0, (Comparable<?>) o._0);
         if (_1 instanceof Comparable)
-            cc.compare((Comparable<?>)_1, (Comparable<?>) o._1);
+            cc.compare((Comparable<?>) _1, (Comparable<?>) o._1);
         if (_2 instanceof Comparable)
-            cc.compare((Comparable<?>)_2, (Comparable<?>) o._2);
+            cc.compare((Comparable<?>) _2, (Comparable<?>) o._2);
         if (_3 instanceof Comparable)
-            cc.compare((Comparable<?>)_3, (Comparable<?>) o._3);
+            cc.compare((Comparable<?>) _3, (Comparable<?>) o._3);
         if (_4 instanceof Comparable)
-            cc.compare((Comparable<?>)_4, (Comparable<?>) o._4);
+            cc.compare((Comparable<?>) _4, (Comparable<?>) o._4);
         if (_5 instanceof Comparable)
-            cc.compare((Comparable<?>)_5, (Comparable<?>) o._5);
+            cc.compare((Comparable<?>) _5, (Comparable<?>) o._5);
         if (_6 instanceof Comparable)
-            cc.compare((Comparable<?>)_6, (Comparable<?>) o._6);
+            cc.compare((Comparable<?>) _6, (Comparable<?>) o._6);
+        if (_7 instanceof Comparable)
+            cc.compare((Comparable<?>) _7, (Comparable<?>) o._7);
         return cc.result();
     }
 
@@ -133,13 +133,13 @@ public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((_0 == null) ? 0 : _0.hashCode());
         result = prime * result + ((_1 == null) ? 0 : _1.hashCode());
         result = prime * result + ((_2 == null) ? 0 : _2.hashCode());
         result = prime * result + ((_3 == null) ? 0 : _3.hashCode());
         result = prime * result + ((_4 == null) ? 0 : _4.hashCode());
         result = prime * result + ((_5 == null) ? 0 : _5.hashCode());
         result = prime * result + ((_6 == null) ? 0 : _6.hashCode());
+        result = prime * result + ((_7 == null) ? 0 : _7.hashCode());
         return result;
     }
 
@@ -152,12 +152,7 @@ public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
         if (getClass() != obj.getClass())
             return false;
         @SuppressWarnings("unchecked")
-        final Tuple7<T0,T1,T2,T3,T4,T5,T6> other = (Tuple7<T0,T1,T2,T3,T4,T5,T6>) obj;
-        if (_0 == null) {
-            if (other._0 != null)
-                return false;
-        } else if (!_0.equals(other._0))
-            return false;
+        final Tuple7<T1, T2, T3, T4, T5, T6, T7> other = (Tuple7<T1, T2, T3, T4, T5, T6, T7>) obj;
         if (_1 == null) {
             if (other._1 != null)
                 return false;
@@ -188,11 +183,16 @@ public final class Tuple7<T0, T1, T2, T3, T4, T5, T6> extends AbstractTuple {
                 return false;
         } else if (!_6.equals(other._6))
             return false;
+        if (_7 == null) {
+            if (other._7 != null)
+                return false;
+        } else if (!_7.equals(other._7))
+            return false;
         return true;
     }
 
     @Override
     public String toString() {
-        return "(" + _0 + "," + _1 + "," + _2 + "," + _3 + "," + _4 + "," + _5 + "," + _6 + ")";
+        return "(" + _1 + "," + _2 + "," + _3 + "," + _4 + "," + _5 + "," + _6 + "," + _7 + ")";
     }
 }

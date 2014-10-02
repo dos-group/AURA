@@ -11,9 +11,7 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.spi.IBufferCallback;
 
-/**
- *
- */
+
 public final class BufferAllocator implements IAllocator {
 
     // ---------------------------------------------------

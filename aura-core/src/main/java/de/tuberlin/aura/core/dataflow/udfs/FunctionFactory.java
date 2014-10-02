@@ -2,10 +2,11 @@ package de.tuberlin.aura.core.dataflow.udfs;
 
 import de.tuberlin.aura.core.dataflow.udfs.functions.*;
 
-/**
- *
- */
 public final class FunctionFactory {
+
+    // ---------------------------------------------------
+    // Public Static Methods.
+    // ---------------------------------------------------
 
     public static <I,O> MapFunction<I,O> createMapFunction(final Class<MapFunction<I,O>> functionType) {
         // sanity check.

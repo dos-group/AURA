@@ -7,11 +7,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 
-/**
- *
- * @param <I>
- * @param <O>
- */
+
 public final class MapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
 
     // ---------------------------------------------------

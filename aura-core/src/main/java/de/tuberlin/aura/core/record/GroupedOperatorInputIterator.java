@@ -8,9 +8,17 @@ import java.util.NoSuchElementException;
 
 public class GroupedOperatorInputIterator<I> implements Iterator<I> {
 
-    final IPhysicalOperator<I> inputOperator;
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
-    I next;
+    private final IPhysicalOperator<I> inputOperator;
+
+    private I next;
+
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     public GroupedOperatorInputIterator(IPhysicalOperator<I> inputOperator) {
         this.inputOperator = inputOperator;

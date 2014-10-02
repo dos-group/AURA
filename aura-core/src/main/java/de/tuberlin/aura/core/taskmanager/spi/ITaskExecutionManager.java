@@ -4,10 +4,12 @@ import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 
-/**
- *
- */
+
 public interface ITaskExecutionManager extends IEventDispatcher {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public abstract void scheduleTask(final ITaskDriver taskDriver);
 

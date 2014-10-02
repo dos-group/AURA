@@ -7,10 +7,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.ISourceFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
 
-/**
- *
- * @param <O>
- */
+
 public class UDFSourcePhysicalOperator<O> extends AbstractUnaryUDFPhysicalOperator<Object,O> {
 
     // ---------------------------------------------------

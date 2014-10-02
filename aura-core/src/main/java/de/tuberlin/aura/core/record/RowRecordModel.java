@@ -13,22 +13,13 @@ import org.objectweb.asm.Type;
 import com.esotericsoftware.reflectasm.ConstructorAccess;
 import com.esotericsoftware.reflectasm.FieldAccess;
 
-/**
- *
- */
 public final class RowRecordModel {
 
-    /**
-     *
-     */
     public static interface IKeySelector {
 
         public abstract int[] key();
     }
 
-    /**
-     * 
-     */
     public static final class RecordTypeBuilder {
 
         // ---------------------------------------------------
@@ -52,11 +43,6 @@ public final class RowRecordModel {
         // Public Methods.
         // ---------------------------------------------------
 
-        /**
-         *
-         * @param clazz
-         * @return
-         */
         public static FieldAccess getFieldAccessor(final Class<?> clazz) {
             // sanity check.
             if (clazz == null)
@@ -74,11 +60,6 @@ public final class RowRecordModel {
             return fa;
         }
 
-        /**
-         *
-         * @param clazz
-         * @return
-         */
         public static byte[] getRecordByteCode(final Class<?> clazz) {
             // sanity check.
             if (clazz == null)
@@ -87,11 +68,6 @@ public final class RowRecordModel {
             return byteCodeRepository.get(clazz);
         }
 
-        /**
-         *
-         * @param fieldTypes
-         * @return
-         */
         public static synchronized Class<?> buildRecordType(final Class<?>[] fieldTypes) {
             // sanity check.
             if (fieldTypes == null)
@@ -135,11 +111,6 @@ public final class RowRecordModel {
             return clazz;
         }
 
-        /**
-         *
-         * @param clazz
-         * @param byteCode
-         */
         public static synchronized void addRecordType(final Class<?> clazz, final byte[] byteCode) {
             // sanity check.
             if (clazz == null)
@@ -162,11 +133,6 @@ public final class RowRecordModel {
             byteCodeRepository.put(clazz, byteCode);
         }
 
-        /**
-         *
-         * @param clazz
-         * @return
-         */
         public static Record createRecord(final Class<?> clazz) {
             // sanity check.
             if (clazz == null)
@@ -200,9 +166,6 @@ public final class RowRecordModel {
         }
     }
 
-    /**
-     * 
-     */
     public static final class Record {
 
         // ---------------------------------------------------
@@ -217,10 +180,6 @@ public final class RowRecordModel {
         // Constructors.
         // ---------------------------------------------------
 
-        /**
-         *
-         * @param instance
-         */
         public Record(final Object instance) {
             // sanity check.
             if (instance == null)
@@ -320,32 +279,17 @@ public final class RowRecordModel {
         }
     }
 
-    /**
-     *
-     */
     public static final class RECORD_CLASS_STREAM_END {
        public final int marker = -1;
     }
 
-    /**
-     *
-     */
     public static final class RECORD_CLASS_BLOCK_END {
         public final int marker = -2;
     }
 
-    /**
-     *
-     */
     public static final Class<?> RECORD_TYPE_STREAM_END = RECORD_CLASS_STREAM_END.class;
 
-    /**
-     *
-     */
     public static final Class<?> RECORD_TYPE_BLOCK_END = RECORD_CLASS_BLOCK_END.class;
 
-    /**
-     *
-     */
     public static final Record RECORD_STREAM_END = RecordTypeBuilder.createRecord(RecordTypeBuilder.buildRecordType(new Class<?>[] {RECORD_TYPE_STREAM_END}));
 }

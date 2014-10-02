@@ -4,10 +4,12 @@ import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 
 import java.io.Serializable;
 
-/**
- *
- */
+
 public interface IFunction extends Serializable {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public void create();
 

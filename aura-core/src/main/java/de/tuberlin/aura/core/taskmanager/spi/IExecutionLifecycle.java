@@ -2,6 +2,10 @@ package de.tuberlin.aura.core.taskmanager.spi;
 
 public interface IExecutionLifecycle {
 
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
     public abstract void create() throws Throwable;
 
     public abstract void open() throws Throwable;

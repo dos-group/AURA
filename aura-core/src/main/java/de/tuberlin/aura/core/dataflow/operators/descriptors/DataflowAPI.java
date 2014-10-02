@@ -5,17 +5,11 @@ import java.io.Serializable;
 import de.tuberlin.aura.core.common.utils.IVisitable;
 import de.tuberlin.aura.core.common.utils.IVisitor;
 
-/**
- *
- */
 public final class DataflowAPI {
 
     // Disallow instantiation.
     private DataflowAPI() {}
 
-    /**
-     *
-     */
     public static final class DataflowNodeDescriptor implements Serializable, IVisitable<DataflowNodeDescriptor> {
 
         // ---------------------------------------------------
@@ -62,9 +56,7 @@ public final class DataflowAPI {
         }
     }
 
-    /**
-     *
-     */
+
     public static final class PlanPrinter implements IVisitor<DataflowNodeDescriptor> {
 
         // ---------------------------------------------------
@@ -111,18 +103,18 @@ public final class DataflowAPI {
                 System.out.print("|");
             }
 
-            System.out.print("+-" + element.properties.operatorType);
+            System.out.print("+-" + element.properties.type);
             System.out.print("[");
             System.out.print(element.properties.instanceName);
             System.out.print("]\n");
 
-            if (element.properties.operatorType.operatorInputArity == DataflowNodeProperties.InputArity.UNARY) {
+            if (element.properties.type.operatorInputArity == DataflowNodeProperties.InputArity.UNARY) {
 
                 level++;
                     visit(element.input1);
                 level--;
 
-            } else if (element.properties.operatorType.operatorInputArity == DataflowNodeProperties.InputArity.BINARY) {
+            } else if (element.properties.type.operatorInputArity == DataflowNodeProperties.InputArity.BINARY) {
 
                 level++;
                     visit(element.input1);

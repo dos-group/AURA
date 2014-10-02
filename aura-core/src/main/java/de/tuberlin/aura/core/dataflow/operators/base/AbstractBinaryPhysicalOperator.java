@@ -1,11 +1,6 @@
 package de.tuberlin.aura.core.dataflow.operators.base;
 
-/**
- *
- * @param <I1>
- * @param <I2>
- * @param <O>
- */
+
 public abstract class AbstractBinaryPhysicalOperator<I1,I2,O> extends AbstractPhysicalOperator<O> {
 
     // ---------------------------------------------------

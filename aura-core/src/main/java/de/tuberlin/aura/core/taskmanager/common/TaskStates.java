@@ -9,9 +9,6 @@ public final class TaskStates {
     // Task States & Task Transitions.
     // ---------------------------------------------------
 
-    /**
-     *
-     */
     public enum TaskState {
 
         TASK_STATE_CREATED,
@@ -37,9 +34,6 @@ public final class TaskStates {
         ERROR
     }
 
-    /**
-     *
-     */
     public enum TaskTransition {
 
         TASK_TRANSITION_INVALID,

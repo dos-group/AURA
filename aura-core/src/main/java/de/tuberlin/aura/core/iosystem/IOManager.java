@@ -245,6 +245,11 @@ public final class IOManager extends EventDispatcher implements IIOManager {
         }
     }
 
+    @Override
+    public MachineDescriptor getMachineDescriptor() {
+        return machine;
+    }
+
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------

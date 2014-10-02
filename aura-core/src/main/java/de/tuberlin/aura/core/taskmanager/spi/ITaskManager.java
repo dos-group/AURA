@@ -8,10 +8,12 @@ import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
 
 import java.util.UUID;
 
-/**
- *
- */
+
 public interface ITaskManager extends IWM2TMProtocol {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public abstract IIOManager getIOManager();
 

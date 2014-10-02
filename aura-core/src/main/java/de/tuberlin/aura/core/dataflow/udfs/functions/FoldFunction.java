@@ -2,10 +2,12 @@ package de.tuberlin.aura.core.dataflow.udfs.functions;
 
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IFoldFunction;
 
-/**
- *
- */
+
 public abstract class FoldFunction<I,M,O> extends AbstractFunction implements IFoldFunction<I,M,O> {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public abstract O initialValue();
 

@@ -1,5 +1,6 @@
 package de.tuberlin.aura.core.protocols;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -8,6 +9,10 @@ import de.tuberlin.aura.core.record.Partitioner;
 
 public interface IWM2TMProtocol {
 
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
     public abstract void installTask(final Descriptors.DeploymentDescriptor deploymentDescriptor);
 
     public abstract void addOutputBinding(final UUID taskID,
@@ -15,4 +20,8 @@ public interface IWM2TMProtocol {
                                           final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding,
                                           final Partitioner.PartitioningStrategy partitioningStrategy,
                                           final int[][] partitioningKeys);
+
+    public abstract <E> Collection<E> getDataset(final UUID uid);
+
+    public abstract <E> Collection<E> getBroadcastDataset(final UUID datasetID);
 }

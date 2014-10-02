@@ -1,13 +1,13 @@
 package de.tuberlin.aura.workloadmanager;
 
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
+import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
+import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
+import de.tuberlin.aura.core.topology.Topology;
 import de.tuberlin.aura.workloadmanager.spi.IDistributedEnvironment;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
@@ -35,10 +35,7 @@ import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.taskmanager.TaskManager;
 
 
-/**
- *
- */
-public class WorkloadManager implements IWorkloadManager, IClientWMProtocol {
+public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM2WMProtocol {
 
     // ---------------------------------------------------
     // Execution Modes.
@@ -102,7 +99,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol {
         // Initialize IOManager.
         this.ioManager = new IOManager(this.machineDescriptor, null, config.getConfig("wm.io"));
 
-        // Register EventHandler (acts as an Dispatcher) for taskmanager state updates.
+        // Register EventHandler (acts as an Dispatcher) for TaskManager state updates.
         ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
 
             @Override
@@ -111,7 +108,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol {
                 registeredTopologies.get(event.getTopologyID()).dispatchEvent(event);
             }
         });
-        // Register EventHandler (acts as an Dispatcher) for taskmanager transitions.
+        // Register EventHandler (acts as an Dispatcher) for TaskManager transitions.
         ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, new IEventHandler() {
 
             @Override
@@ -123,8 +120,10 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol {
 
         // Initialize RPC Manager.
         this.rpcManager = new RPCManager(ioManager, config.getConfig("wm.io.rpc"));
-        // Register Client-WorkloadManager Protocol.
+        // Register RPC Protocols.
         rpcManager.registerRPCProtocol(this, IClientWMProtocol.class);
+        rpcManager.registerRPCProtocol(this, ITM2WMProtocol.class);
+
         // Initialize InfrastructureManager.
         this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machineDescriptor);
         // Initialize InfrastructureManager.
@@ -203,6 +202,40 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol {
             if (assignedTopologies.contains(topologyID))
                 assignedTopologies.remove(topologyID);
         }
+    }
+
+    @Override
+    public <E> Collection<E> getDataset(final UUID uid) {
+        // sanity check.
+        if (uid == null)
+            throw new IllegalArgumentException("uid == null");
+
+        final Topology.DatasetNode dataset = environmentManager.getDataset(uid);
+        final List<E> data = new ArrayList<>();
+        for (final Topology.ExecutionNode en : dataset.getExecutionNodes()) {
+            final IWM2TMProtocol tmProtocol =
+                    rpcManager.getRPCProtocolProxy(IWM2TMProtocol.class, en.getNodeDescriptor().getMachineDescriptor());
+            final Collection<E> datasetPartition = (Collection<E>)tmProtocol.getDataset(en.getNodeDescriptor().taskID);
+            data.addAll(datasetPartition);
+        }
+
+        return data;
+    }
+
+    @Override
+    public <E> void broadcastDataset(final UUID datasetID, final Collection<E> dataset) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
+        if (dataset == null)
+            throw new IllegalArgumentException("dataset == null");
+
+        environmentManager.addBroadcastDataset(datasetID, dataset);
+    }
+
+    @Override
+    public <E> Collection<E> getBroadcastDataset(final UUID datasetID) {
+        return environmentManager.getBroadcastDataset(datasetID);
     }
 
     // ---------------------------------------------------

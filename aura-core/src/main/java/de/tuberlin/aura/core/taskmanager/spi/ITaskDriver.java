@@ -9,10 +9,12 @@ import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 
-/**
- *
- */
+
 public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public abstract Descriptors.AbstractNodeDescriptor getNodeDescriptor();
 

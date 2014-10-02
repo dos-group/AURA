@@ -1,4 +1,4 @@
-package de.tuberlin.aura.demo.examples;
+package de.tuberlin.aura.tests.integration;
 
 import java.util.UUID;
 

@@ -8,11 +8,13 @@ import de.tuberlin.aura.core.dataflow.operators.base.AbstractBinaryPhysicalOpera
 import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 
+
 public class DifferencePhysicalOperator<I> extends AbstractBinaryPhysicalOperator<I,I,I> {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
+
     private final Map<I,Boolean> minusSideElements;
 
     // ---------------------------------------------------

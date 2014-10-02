@@ -8,29 +8,29 @@ import com.google.common.collect.ComparisonChain;
 /**
  *
  */
-public final class Tuple1<T0> extends AbstractTuple {
+public final class Tuple1<T1> extends AbstractTuple {
 
     private static final long serialVersionUID = -1L;
 
-    public T0 _0;
+    public T1 _1;
 
     public Tuple1() {
-        this((T0)null);
+        this((T1)null);
     }
 
-    public Tuple1(final T0 _0) {
-        this._0 = _0;
+    public Tuple1(final T1 _1) {
+        this._1 = _1;
     }
 
-    public Tuple1(final Tuple1<T0> t) {
-        this(t._0);
+    public Tuple1(final Tuple1<T1> t) {
+        this(t._1);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T getField(final int pos) {
         switch(pos) {
-            case 0: return (T) this._0;
+            case 0: return (T) this._1;
             default: throw new IndexOutOfBoundsException(String.valueOf(pos));
         }
     }
@@ -40,7 +40,7 @@ public final class Tuple1<T0> extends AbstractTuple {
     public <T> void setField(final T value, final int pos) {
         switch(pos) {
             case 0:
-                this._0 = (T0) value;
+                this._1 = (T1) value;
                 break;
             default: throw new IndexOutOfBoundsException(String.valueOf(pos));
         }
@@ -53,7 +53,7 @@ public final class Tuple1<T0> extends AbstractTuple {
 
     @Override
     public Iterator<Object> iterator() {
-        return Arrays.asList(new Object[]{_0}).iterator();
+        return Arrays.asList(new Object[]{_1}).iterator();
     }
 
     @Override
@@ -61,10 +61,10 @@ public final class Tuple1<T0> extends AbstractTuple {
     public int compareTo(final AbstractTuple t) {
         if (this == t)
             return 0;
-        final Tuple1<T0> o = (Tuple1<T0>)t;
+        final Tuple1<T1> o = (Tuple1<T1>)t;
         final ComparisonChain cc = ComparisonChain.start();
-        if (_0 instanceof Comparable)
-            cc.compare((Comparable<?>)_0, (Comparable<?>) o._0);
+        if (_1 instanceof Comparable)
+            cc.compare((Comparable<?>) _1, (Comparable<?>) o._1);
         return cc.result();
     }
 
@@ -72,7 +72,7 @@ public final class Tuple1<T0> extends AbstractTuple {
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((_0 == null) ? 0 : _0.hashCode());
+        result = prime * result + ((_1 == null) ? 0 : _1.hashCode());
         return result;
     }
 
@@ -85,17 +85,17 @@ public final class Tuple1<T0> extends AbstractTuple {
         if (getClass() != obj.getClass())
             return false;
         @SuppressWarnings("unchecked")
-        final Tuple1<T0> other = (Tuple1<T0>) obj;
-        if (_0 == null) {
-            if (other._0 != null)
+        final Tuple1<T1> other = (Tuple1<T1>) obj;
+        if (_1 == null) {
+            if (other._1 != null)
                 return false;
-        } else if (!_0.equals(other._0))
+        } else if (!_1.equals(other._1))
             return false;
         return true;
     }
 
     @Override
     public String toString() {
-        return "(" + _0 + ")";
+        return "(" + _1 + ")";
     }
 }

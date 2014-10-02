@@ -31,11 +31,6 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
     // Constructor.
     // ---------------------------------------------------
 
-    /**
-     * Constructor.
-     * @param inputOp1
-     * @param inputOp2
-     */
     public HashJoinPhysicalOperator(final IOperatorEnvironment environment,
                                     final IPhysicalOperator<I1> inputOp1,
                                     final IPhysicalOperator<I2> inputOp2) {
@@ -49,7 +44,7 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
         this.buildSide = new HashMap<>();
 
         // sanity check.
-        if (getEnvironment().getProperties().joinKeyIndices1.length != getEnvironment().getProperties().joinKeyIndices1.length)
+        if (getEnvironment().getProperties().keyIndices1.length != getEnvironment().getProperties().keyIndices1.length)
             throw new IllegalStateException("joinKeyIndices1.length != joinKeyIndices2.length");
         // TODO: check types!
     }
@@ -71,9 +66,9 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
         in1 = inputOp1.next();
 
         while (in1 != null) {
-            final List<Object> key1 = new ArrayList<>(getEnvironment().getProperties().joinKeyIndices1.length);
+            final List<Object> key1 = new ArrayList<>(getEnvironment().getProperties().keyIndices1.length);
 
-            for (final int[] selectorChain : getEnvironment().getProperties().joinKeyIndices1) {
+            for (final int[] selectorChain : getEnvironment().getProperties().keyIndices1) {
                 key1.add(input1TypeInfo.selectField(selectorChain, in1));
             }
 
@@ -96,9 +91,9 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
         while (in1 == null) {
             in2 = inputOp2.next();
             if (in2 != null) {
-                final List<Object> key2 = new ArrayList<>(getEnvironment().getProperties().joinKeyIndices2.length);
+                final List<Object> key2 = new ArrayList<>(getEnvironment().getProperties().keyIndices2.length);
 
-                for (final int[] selectorChain : getEnvironment().getProperties().joinKeyIndices2) {
+                for (final int[] selectorChain : getEnvironment().getProperties().keyIndices2) {
                     key2.add(input1TypeInfo.selectField(selectorChain, in2));
                 }
 
@@ -117,10 +112,6 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
         inputOp2.close();
     }
 
-    /**
-     *
-     * @param visitor
-     */
     @Override
     public void accept(final IVisitor<IPhysicalOperator> visitor) {
         visitor.visit(this);

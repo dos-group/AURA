@@ -1,29 +1,22 @@
-package de.tuberlin.aura.core.dataflow.udfs.functions;
+package de.tuberlin.aura.core.dataflow.datasets;
 
 import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
-import de.tuberlin.aura.core.dataflow.udfs.contracts.IFunction;
 
+import java.util.Collection;
 
-public abstract class AbstractFunction implements IFunction {
+public abstract class AbstractDataset<E> {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    private IOperatorEnvironment environment;
+    final protected IOperatorEnvironment environment;
 
     // ---------------------------------------------------
-    // Public Methods.
+    // Constructor.
     // ---------------------------------------------------
 
-    public void create() {
-    }
-
-    public IOperatorEnvironment getEnvironment() {
-        return environment;
-    }
-
-    public void setEnvironment(final IOperatorEnvironment environment) {
+    public AbstractDataset(final IOperatorEnvironment environment) {
         // sanity check.
         if (environment == null)
             throw new IllegalArgumentException("environment == null");
@@ -31,6 +24,11 @@ public abstract class AbstractFunction implements IFunction {
         this.environment = environment;
     }
 
-    public void release() {
-    }
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
+    public abstract void add(final E element);
+
+    public abstract Collection<E> getData();
 }

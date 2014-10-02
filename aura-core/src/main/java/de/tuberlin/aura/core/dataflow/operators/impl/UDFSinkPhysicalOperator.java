@@ -7,10 +7,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.ISinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 
-/**
- *
- * @param <I>
- */
+
 public class UDFSinkPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator<I,Object> {
 
     // ---------------------------------------------------

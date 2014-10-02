@@ -25,7 +25,7 @@ if [ "$AURA_IDENT_STRING" = "" ]; then
     AURA_IDENT_STRING="$USER"
 fi
 
-# auxilliary function to construct a lightweight classpath for the
+# auxilliary functionTypeName to construct a lightweight classpath for the
 # Aura TaskManager
 constructTaskManagerClassPath() {
 

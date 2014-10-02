@@ -7,10 +7,12 @@ import io.netty.channel.Channel;
 
 import java.util.UUID;
 
-/**
- *
- */
+
 public interface IIOManager extends IEventDispatcher {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public abstract void connectDataChannel(final UUID srcTaskID, final UUID dstTaskID, final Descriptors.MachineDescriptor dstMachine);
 
@@ -23,4 +25,6 @@ public interface IIOManager extends IEventDispatcher {
     public abstract void sendEvent(final Descriptors.MachineDescriptor dstMachine, final IOEvents.ControlIOEvent event);
 
     public abstract void sendEvent(final UUID dstMachineID, final IOEvents.ControlIOEvent event);
+
+    public abstract Descriptors.MachineDescriptor getMachineDescriptor();
 }

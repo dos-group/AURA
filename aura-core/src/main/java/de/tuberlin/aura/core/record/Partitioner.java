@@ -10,9 +10,6 @@ public final class Partitioner {
     // disallow instantiation.
     private Partitioner() {}
 
-    /**
-     *
-     */
     public static enum PartitioningStrategy {
 
         BROADCAST,              // TODO:
@@ -26,9 +23,6 @@ public final class Partitioner {
         ROUND_ROBIN_PARTITIONER
     }
 
-    /**
-     *
-     */
     public static final class PartitionerFactory {
 
         public static IPartitioner createPartitioner(final PartitioningStrategy strategy, final TypeInformation typeInfo, final int partitioningKeys[][]) {
@@ -61,9 +55,6 @@ public final class Partitioner {
         }
     }
 
-    /**
-     *
-     */
     public static interface IPartitioner {
 
         public abstract int partition(final RowRecordModel.Record record, final int receiver);
@@ -71,9 +62,6 @@ public final class Partitioner {
         public abstract int partition(final Object object, final int receiver);
     }
 
-    /**
-     *
-     */
     private static abstract class AbstractPartitioner implements IPartitioner {
 
         public int partition(final RowRecordModel.Record record, final int receiver) {
@@ -85,9 +73,6 @@ public final class Partitioner {
         }
     }
 
-    /**
-     *
-     */
     public static class HashPartitioner extends AbstractPartitioner {
 
         private TypeInformation typeInfo;
@@ -135,15 +120,9 @@ public final class Partitioner {
         }
     }
 
-    /**
-     *
-     */
     public static class RangePartitioner extends AbstractPartitioner {
     }
 
-    /**
-     *
-     */
     public static class RoundRobinPartitioner extends AbstractPartitioner {
 
         private int channelIndex = 0;

@@ -625,7 +625,7 @@ public class BlockingSignalQueue<E> extends AbstractQueue<E> implements Blocking
      * 
      * <pre> {@code String[] y = x.toArray(new String[0]);}</pre>
      * <p/>
-     * Note that {@code toArray(new Object[0])} is identical in function to {@code toArray()}.
+     * Note that {@code toArray(new Object[0])} is identical in functionTypeName to {@code toArray()}.
      * 
      * @param a the array into which the elements of the queue are to be stored, if it is big
      *        enough; otherwise, a new array of the same runtime type is allocated for this purpose

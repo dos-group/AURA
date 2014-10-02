@@ -14,10 +14,7 @@ import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 
-/**
- *
- */
-@NotThreadSafe
+
 public class InfrastructureManager extends EventDispatcher implements IInfrastructureManager {
 
     // ---------------------------------------------------
@@ -40,11 +37,6 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * Constructor.
-     * 
-     * @param zkServer This string must contain the connection to the ZooKeeper-cluster.
-     */
     private InfrastructureManager(final String zkServer, final MachineDescriptor wmMachine) {
         super();
         // sanity check.
@@ -84,11 +76,6 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     * Get an instance of the infrastructure manager.
-     * 
-     * @param zkServers This string must contain the connection to the ZooKeeper-cluster.
-     */
     public static InfrastructureManager getInstance(final String zkServers, final MachineDescriptor wmMachine) {
         if (INSTANCE == null) {
             INSTANCE = new InfrastructureManager(zkServers, wmMachine);

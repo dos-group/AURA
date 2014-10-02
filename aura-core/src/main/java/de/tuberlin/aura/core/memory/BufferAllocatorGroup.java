@@ -6,9 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.spi.IBufferCallback;
 
-/**
- *
- */
+
 public final class BufferAllocatorGroup implements IAllocator {
 
     // ---------------------------------------------------

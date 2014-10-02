@@ -35,7 +35,7 @@ if [ "$AURA_IDENT_STRING" = "" ]; then
     AURA_IDENT_STRING="$USER"
 fi
 
-# auxilliary function to construct a the classpath for the wm
+# auxilliary functionTypeName to construct a the classpath for the wm
 constructWorkManagerClassPath() {
     for jarfile in $AURA_LIB_DIR/*.jar ; do
         if [[ $AURA_WM_CLASSPATH = "" ]]; then

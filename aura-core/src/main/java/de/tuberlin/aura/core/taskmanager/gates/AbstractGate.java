@@ -18,11 +18,6 @@ public abstract class AbstractGate {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     * @param taskDriver
-     * @param gateIndex
-     * @param numChannels
-     */
     public AbstractGate(final ITaskDriver taskDriver, int gateIndex, int numChannels) {
         // sanity check.
         if (taskDriver == null)
@@ -35,10 +30,6 @@ public abstract class AbstractGate {
         this.gateIndex = gateIndex;
     }
 
-    /**
-     *
-     * @return
-     */
     public int getNumOfChannels() {
         return numChannels;
     }

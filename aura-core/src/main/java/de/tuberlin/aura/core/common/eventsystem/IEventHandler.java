@@ -1,7 +1,7 @@
 package de.tuberlin.aura.core.common.eventsystem;
 
 /**
- * The IEventListener interface declares the handler function.
+ * The IEventListener interface declares the handler functionTypeName.
  * 
  * @author Tobias Herb
  */

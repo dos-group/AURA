@@ -9,9 +9,7 @@ import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowAPI;
 import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
 import de.tuberlin.aura.core.topology.Topology;
 
-/**
- *
- */
+
 public final class TopologyGenerator implements IVisitor<DataflowAPI.DataflowNodeDescriptor> {
 
     // ---------------------------------------------------
@@ -46,54 +44,43 @@ public final class TopologyGenerator implements IVisitor<DataflowAPI.DataflowNod
     @Override
     public void visit(final DataflowAPI.DataflowNodeDescriptor element) {
 
-            if (element.input1 != null) {
+        if (element.input1 != null) {
+            visit(element.input1);
+            currentConnector.connectTo(
+                    element.properties.instanceName,
+                    selectEdgeTransferType(element.input1.properties, element.properties)
+            );
+        }
 
-                visit(element.input1);
+        if (element.input2 != null) {
+            visit(element.input2);
+            currentConnector.connectTo(
+                    element.properties.instanceName,
+                    selectEdgeTransferType(element.input2.properties, element.properties)
+            );
+        }
 
-                currentConnector.connectTo(
-                        element.properties.instanceName,
-                        selectEdgeTransferType(element.input1.properties, element.properties)
-                );
+        final List<Class<?>> typeList = new ArrayList<>();
+        if (element.properties.functionTypeName != null) {
+            try {
+                typeList.add(Class.forName(element.properties.functionTypeName));
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException("UDF class " + element.properties.functionTypeName + " not found");
             }
+        }
 
-            if (element.input2 != null) {
+        if (element.properties.type == DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET ||
+            element.properties.type == DataflowNodeProperties.DataflowNodeType.MUTABLE_DATASET) {
+            currentConnector = topologyBuilder.addNode(
+                    new Topology.DatasetNode(element.properties),
+                    typeList);
 
-                visit(element.input2);
+        } else {
+            currentConnector = topologyBuilder.addNode(
+                    new Topology.OperatorNode(element.properties),
+                    typeList);
+        }
 
-                currentConnector.connectTo(
-                        element.properties.instanceName,
-                        selectEdgeTransferType(element.input2.properties, element.properties)
-                );
-            }
-
-            final List<Class<?>> typeList = new ArrayList<>();
-            //typeList.addAll(element.properties.input1Type.extractTypes());
-            //typeList.addAll(element.properties.input2Type.extractTypes());
-            //typeList.addAll(element.properties.outputType.extractTypes());
-
-            if (element.properties.functionTypeName != null) {
-                try {
-                    typeList.add(Class.forName(element.properties.functionTypeName));
-                } catch (ClassNotFoundException e) {
-                    throw new IllegalStateException("UDF class " + element.properties.functionTypeName + " not found");
-                }
-            }
-
-            if (element.properties.operatorType == DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET ||
-                element.properties.operatorType == DataflowNodeProperties.DataflowNodeType.MUTABLE_DATASET) {
-
-                currentConnector = topologyBuilder.addNode(
-                        new Topology.DatasetNode(element.properties),
-                        typeList);
-
-            } else {
-
-                currentConnector = topologyBuilder.addNode(
-                        new Topology.OperatorNode(element.properties),
-                        typeList);
-            }
-
-        //}
     }
 
     public Topology.AuraTopology toTopology(final String name) {

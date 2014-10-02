@@ -18,13 +18,11 @@ import de.tuberlin.aura.core.record.tuples.Tuple1;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
 
-/**
- *
- */
-public class ParallelDataflowTest {
+
+public class ConcurrentDataflowTest {
 
     // Disallow instantiation.
-    private ParallelDataflowTest() {}
+    private ConcurrentDataflowTest() {}
 
     // ------------------------------------------------------------------------------------------------
     // Testing.
@@ -32,7 +30,7 @@ public class ParallelDataflowTest {
 
     public static final class Source1 extends SourceFunction<Tuple1<Integer>> {
 
-        int count = 15;
+        int count = 1500000;
 
         @Override
         public Tuple1<Integer> produce() {
@@ -44,7 +42,7 @@ public class ParallelDataflowTest {
 
         @Override
         public Tuple2<Integer,String> map(final Tuple1<Integer> in) {
-            return new Tuple2<>(in._0, toString());
+            return new Tuple2<>(in._1, toString());
         }
     }
 
@@ -52,37 +50,39 @@ public class ParallelDataflowTest {
 
         @Override
         public void consume(final Tuple2<Integer,String> in) {
-            System.out.println(in);
+            //System.out.println(in);
         }
     }
 
     public static void main(final String[] args) {
 
-        final TypeInformation source1OutputTypeInfo =
-                new TypeInformation(Tuple1.class,
-                        new TypeInformation(Integer.class));
+        final TypeInformation source1TypeInfo =
+                new TypeInformation(Tuple1.class, new TypeInformation(Integer.class));
 
         final DataflowAPI.DataflowNodeDescriptor source1 = new DataflowAPI.DataflowNodeDescriptor(
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
                         1,
-                        new int[][] { {0} },
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                         1,
                         "Source1",
                         null,
                         null,
-                        source1OutputTypeInfo,
+                        source1TypeInfo,
                         Source1.class.getName(),
-                        null, null,
+                        null,
+                        null,
+                        null,
+                        null,
                         null,
                         null,
                         null
                 )
         );
 
-        final TypeInformation map1OutputTypeInfo =
+        final TypeInformation map1TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(Integer.class),
                         new TypeInformation(String.class));
@@ -92,15 +92,18 @@ public class ParallelDataflowTest {
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
                         1,
-                        new int[][] { {0} },
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                         1,
                         "Map1",
-                        source1OutputTypeInfo,
+                        source1TypeInfo,
                         null,
-                        map1OutputTypeInfo,
+                        map1TypeInfo,
                         Map1.class.getName(),
-                        null, null,
+                        null,
+                        null,
+                        null,
+                        null,
                         null,
                         null,
                         null
@@ -117,11 +120,14 @@ public class ParallelDataflowTest {
                         null,
                         1,
                         "Sink1",
-                        map1OutputTypeInfo,
+                        map1TypeInfo,
                         null,
                         null,
                         Sink1.class.getName(),
-                        null, null,
+                        null,
+                        null,
+                        null,
+                        null,
                         null,
                         null,
                         null
@@ -142,8 +148,9 @@ public class ParallelDataflowTest {
         final Topology.AuraTopology topology3 = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB3");
         ac.submitTopology(topology3, null);
 
-        //ac.awaitSubmissionResult();
-        //ac.closeSession();
-        //lcs.shutdown();
+        ac.awaitSubmissionResult(3);
+
+        ac.closeSession();
+        lcs.shutdown();
     }
 }

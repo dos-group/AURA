@@ -2,6 +2,7 @@ package de.tuberlin.aura.operators;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.descriptors.Descriptors;
@@ -19,9 +20,7 @@ import de.tuberlin.aura.core.taskmanager.spi.IDataConsumer;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordWriter;
 
-/**
- *
- */
+
 public final class OperatorDriver extends AbstractInvokeable {
 
     // ---------------------------------------------------
@@ -123,7 +122,7 @@ public final class OperatorDriver extends AbstractInvokeable {
 
         this.gateReaderOperators = new ArrayList<>();
 
-        environment = new OperatorEnvironment(operatorNodeDescriptor.properties, operatorNodeDescriptor);
+        environment = new OperatorEnvironment(operatorNodeDescriptor);
     }
 
     // ---------------------------------------------------
@@ -154,7 +153,7 @@ public final class OperatorDriver extends AbstractInvokeable {
             gateReaderOperators.add(new GateReaderOperator(environment, recordReader, consumer, i));
         }
 
-        switch (operatorNodeDescriptor.properties.operatorType.operatorInputArity) {
+        switch (operatorNodeDescriptor.properties.type.operatorInputArity) {
             case NULLARY:
                 rootOperator = PhysicalOperatorFactory.createPhysicalOperator(environment, null, null);
             break;
@@ -171,9 +170,17 @@ public final class OperatorDriver extends AbstractInvokeable {
 
     @Override
     public void open() throws Throwable {
+
         for (final IRecordWriter recordWriter : recordWriters) {
             recordWriter.begin();
         }
+
+        if (operatorNodeDescriptor.properties.broadcastVars != null) {
+            for(final UUID datasetID : operatorNodeDescriptor.properties.broadcastVars) {
+                environment.putDataset(datasetID, driver.getTaskManager().getBroadcastDataset(datasetID));
+            }
+        }
+
         rootOperator.open();
     }
 

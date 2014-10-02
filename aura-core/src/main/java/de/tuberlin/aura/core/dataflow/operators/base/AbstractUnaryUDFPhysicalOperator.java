@@ -2,11 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.base;
 
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IFunction;
 
-/**
- *
- * @param <I>
- * @param <O>
- */
+
 public abstract class AbstractUnaryUDFPhysicalOperator<I,O> extends AbstractUnaryPhysicalOperator<I,O> {
 
     // ---------------------------------------------------

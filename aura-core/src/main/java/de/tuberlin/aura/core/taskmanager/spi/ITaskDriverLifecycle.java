@@ -1,9 +1,12 @@
 package de.tuberlin.aura.core.taskmanager.spi;
 
-
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 
 public interface ITaskDriverLifecycle {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public abstract void startupDriver(final IAllocator inputAllocator, final IAllocator outputAllocator);
 

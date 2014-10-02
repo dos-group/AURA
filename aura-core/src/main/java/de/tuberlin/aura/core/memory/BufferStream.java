@@ -8,33 +8,22 @@ import java.util.Arrays;
 
 import de.tuberlin.aura.core.record.RowRecordWriter;
 
-/**
- *
- */
+
 public final class BufferStream {
 
     // Disallow instantiation.
     private BufferStream() {}
 
-    /**
-     *
-     */
     public static interface IBufferInput {
 
         public abstract MemoryView get();
     }
 
-    /**
-     *
-     */
     public static interface IBufferOutput {
 
         public abstract void put(final MemoryView buffer);
     }
 
-    /**
-     *
-     */
     public static class ContinuousByteOutputStream extends OutputStream {
 
         // ---------------------------------------------------

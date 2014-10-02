@@ -15,8 +15,15 @@ import java.util.*;
  */
 public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     private Queue<O> elementQueue;
 
+    // ---------------------------------------------------
+    // Constructor.
+    // ---------------------------------------------------
 
     public GroupMapPhysicalOperator(final IOperatorEnvironment environment,
                                     final IPhysicalOperator<I> inputOp,
@@ -27,6 +34,9 @@ public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
         elementQueue = new LinkedList<>();
     }
 
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     @Override
     public void open() throws Throwable {

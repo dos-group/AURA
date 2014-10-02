@@ -185,7 +185,7 @@ JVM_ARGS=""
 # Default classpath 
 CLASSPATH=`manglePathList $( echo $AURA_LIB_DIR/*.jar . | sed 's/ /:/g' )`
 
-# Auxilliary function which extracts the name of host from a line which
+# Auxilliary functionTypeName which extracts the name of host from a line which
 # also potentialy includes topology information and the instance type
 extractHostName() {
     # extract first part of string (before any whitespace characters)
@@ -202,7 +202,7 @@ extractHostName() {
     echo $SLAVE
 }
 
-# Auxilliary function for log file rotation
+# Auxilliary functionTypeName for log file rotation
 rotateLogFile() {
     log=$1;
     num=$MAX_LOG_FILE_NUMBER

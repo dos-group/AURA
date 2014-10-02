@@ -3,10 +3,12 @@ package de.tuberlin.aura.core.taskmanager.spi;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RowRecordModel;
 
-/**
- *
- */
+
 public interface IRecordWriter {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public abstract void begin();
 

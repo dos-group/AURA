@@ -1,10 +1,13 @@
 package de.tuberlin.aura.client.api;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
+import de.tuberlin.aura.core.iosystem.spi.IIOManager;
+import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,9 +35,9 @@ public final class AuraClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(AuraClient.class);
 
-    public final IOManager ioManager;
+    public final IIOManager ioManager;
 
-    public final RPCManager rpcManager;
+    public final IRPCManager rpcManager;
 
     public final IClientWMProtocol clientProtocol;
 
@@ -59,40 +62,31 @@ public final class AuraClient {
         final MachineDescriptor md = DescriptorFactory.createMachineDescriptor(config.getConfig("client"));
 
         this.ioManager = new IOManager(md, null, config.getConfig("client.io"));
-
         this.rpcManager = new RPCManager(ioManager, config.getConfig("client.io.rpc"));
 
         this.codeExtractor = new UserCodeExtractor(false);
-
-        this.codeExtractor.addStandardDependency("java")
-                          .addStandardDependency("org/apache/log4j")
-                          .addStandardDependency("io/netty")
-                          .addStandardDependency("de/tuberlin/aura/core");
-
+        this.codeExtractor.addStandardDependency("java");
+        this.codeExtractor.addStandardDependency("org/apache/log4j");
+        this.codeExtractor.addStandardDependency("io/netty");
+        this.codeExtractor.addStandardDependency("de/tuberlin/aura/core");
 
         final MachineDescriptor wmMachineDescriptor;
         try {
             ZookeeperClient client = new ZookeeperClient(zkServer);
-
             wmMachineDescriptor = (MachineDescriptor) client.read(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER);
-
             client.close();
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
 
         ioHandler = new IORedispatcher();
-
         ioManager.addEventListener(ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, ioHandler);
-
         ioManager.addEventListener(ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE, ioHandler);
-
         ioManager.connectMessageChannelBlocking(wmMachineDescriptor);
 
         clientProtocol = rpcManager.getRPCProtocolProxy(IClientWMProtocol.class, wmMachineDescriptor);
 
         this.registeredTopologyMonitors = new HashMap<>();
-
         // create examples session.
         this.clientSessionID = UUID.randomUUID();
 
@@ -105,7 +99,7 @@ public final class AuraClient {
     // ---------------------------------------------------
 
     public AuraTopologyBuilder createTopologyBuilder() {
-        return new AuraTopologyBuilder(ioManager.machine.uid, codeExtractor);
+        return new AuraTopologyBuilder(ioManager.getMachineDescriptor().uid, codeExtractor);
     }
 
 
@@ -150,6 +144,24 @@ public final class AuraClient {
         } catch (InterruptedException e) {
             LOG.error("latch was interrupted", e);
         }
+    }
+
+    public <E> Collection<E> getDataset(final UUID datasetID) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
+
+        return clientProtocol.getDataset(datasetID);
+    }
+
+    public <E> void broadcastDataset(final UUID datasetID, final Collection<E> dataset) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
+        if (dataset == null)
+            throw new IllegalArgumentException("dataset == null");
+
+        clientProtocol.broadcastDataset(datasetID, dataset);
     }
 
     // ---------------------------------------------------

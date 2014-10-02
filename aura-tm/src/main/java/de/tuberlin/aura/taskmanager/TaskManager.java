@@ -5,6 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
+import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
 import de.tuberlin.aura.core.record.Partitioner;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
@@ -36,6 +37,7 @@ import de.tuberlin.aura.core.taskmanager.spi.ITaskManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.datasets.DatasetDriver;
 
+
 public final class TaskManager implements ITaskManager {
 
     // ---------------------------------------------------
@@ -57,6 +59,8 @@ public final class TaskManager implements ITaskManager {
     private final MachineDescriptor taskManagerMachine;
 
     private final Map<UUID, ITaskDriver> deployedTasks;
+
+    private final ITM2WMProtocol workloadManagerProtocol;
 
     // ---------------------------------------------------
     // Constructors.
@@ -104,6 +108,7 @@ public final class TaskManager implements ITaskManager {
         // Configure RPC between WorkloadManager and TaskManager.
         rpcManager.registerRPCProtocol(this, IWM2TMProtocol.class);
         ioManager.connectMessageChannelBlocking(workloadManagerMachine);
+        workloadManagerProtocol = rpcManager.getRPCProtocolProxy(ITM2WMProtocol.class, workloadManagerMachine);
     }
 
     // ---------------------------------------------------
@@ -145,6 +150,30 @@ public final class TaskManager implements ITaskManager {
             final DatasetDriver ds = (DatasetDriver) taskDriver.getInvokeable();
             ds.createOutputBinding(topologyID, outputBinding, partitioningStrategy, partitioningKeys);
         }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <E> Collection<E> getDataset(final UUID uid) {
+        // sanity check.
+        if (uid == null)
+            throw new IllegalArgumentException("uid == null");
+
+        final ITaskDriver driver = deployedTasks.get(uid);
+        if (driver == null)
+            throw new IllegalStateException("driver == null");
+
+        final DatasetDriver datasetDriver = (DatasetDriver)driver.getInvokeable();
+        return (Collection<E>)datasetDriver.getData();
+    }
+
+    @Override
+    public <E> Collection<E> getBroadcastDataset(final UUID datasetID) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
+
+        return workloadManagerProtocol.getBroadcastDataset(datasetID);
     }
 
     @Override
@@ -290,38 +319,6 @@ public final class TaskManager implements ITaskManager {
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
-
-    /*private ITaskDriver getDeployedTask(final DataIOEvent event) {
-        // sanity check.
-        if (event == null)
-            throw new IllegalArgumentException("event == null");
-        int i = 0;
-        while (!deployedTasks.containsKey(event.srcTaskID)) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-            }
-            if (i == 200) {
-                System.err.println("uid to look up: " + event.srcTaskID);
-
-                if (deployedTasks.keySet().isEmpty()) {
-                    System.err.println("no deployed tasks available");
-                }
-
-                for(final UUID uid : deployedTasks.keySet()) {
-                    System.err.println("deployed task: " + uid);
-                }
-                throw new IllegalStateException("event.srcTaskID");
-            }
-            i++;
-        }
-        LOG.info("LÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖFT");
-        if (deployedTasks.get(event.srcTaskID) == null) {
-            LOG.info("NNNNEEEETTTTTTT -----------------------------");
-            throw new IllegalArgumentException("EVENT: src:" + event.srcTaskID + "   dst:" + event.dstTaskID + "   payload:" + event.getPayload());
-        }
-        return deployedTasks.get(event.srcTaskID);
-    }*/
 
     private final class IORedispatcher extends EventHandler {
 

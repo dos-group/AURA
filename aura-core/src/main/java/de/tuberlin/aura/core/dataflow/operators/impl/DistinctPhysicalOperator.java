@@ -8,6 +8,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import java.util.Map;
 import java.util.HashMap;
 
+
 public class DistinctPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,I> {
 
     Map<I,Boolean> hashes;

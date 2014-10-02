@@ -286,6 +286,8 @@ public final class Descriptors {
 
         public final List<UserCode> userCodeList;
 
+        public final DataflowNodeProperties properties;
+
         private MachineDescriptor machine;
 
         private List<Class<?>> userCodeClasses;
@@ -294,7 +296,12 @@ public final class Descriptors {
         // Constructors.
         // ---------------------------------------------------
 
-        public AbstractNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
+        public AbstractNodeDescriptor(final UUID topologyID,
+                                      final UUID taskID,
+                                      final int taskIndex,
+                                      final String name,
+                                      final List<UserCode> userCodeList,
+                                      final DataflowNodeProperties properties) {
             // sanity check.
             if (topologyID == null)
                 throw new IllegalArgumentException("topologyID == null");
@@ -318,6 +325,8 @@ public final class Descriptors {
             this.userCodeList = userCodeList;
 
             this.userCodeClasses = null;
+
+            this.properties = properties;
         }
 
         // ---------------------------------------------------
@@ -390,8 +399,6 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
-        public final DataflowNodeProperties properties;
-
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
@@ -402,9 +409,7 @@ public final class Descriptors {
                                      final String name,
                                      final DataflowNodeProperties properties) {
 
-            super(topologyID, taskID, taskIndex, name, null);
-
-            this.properties = properties;
+            super(topologyID, taskID, taskIndex, name, null, properties);
         }
     }
 
@@ -419,8 +424,6 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
-        public final DataflowNodeProperties properties;
-
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
@@ -432,9 +435,7 @@ public final class Descriptors {
                                       final List<UserCode> userCodeList,
                                       final DataflowNodeProperties properties) {
 
-            super(topologyID, taskID, taskIndex, name, userCodeList);
-
-            this.properties = properties;
+            super(topologyID, taskID, taskIndex, name, userCodeList, properties);
         }
     }
 
@@ -454,7 +455,7 @@ public final class Descriptors {
         // ---------------------------------------------------
 
         public InvokeableNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
-            super(topologyID, taskID, taskIndex, name, userCodeList);
+            super(topologyID, taskID, taskIndex, name, userCodeList, null);
         }
     }
 

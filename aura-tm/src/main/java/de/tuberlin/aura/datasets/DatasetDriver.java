@@ -8,6 +8,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
+import de.tuberlin.aura.core.dataflow.datasets.DatasetFactory;
+import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.impl.OperatorEnvironment;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.record.Partitioner;
@@ -19,9 +23,7 @@ import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordWriter;
 import org.apache.commons.lang3.tuple.Triple;
 
-/**
- *
- */
+
 public class DatasetDriver extends AbstractInvokeable {
 
     // ---------------------------------------------------
@@ -30,7 +32,9 @@ public class DatasetDriver extends AbstractInvokeable {
 
     private final Descriptors.DatasetNodeDescriptor datasetNodeDescriptor;
 
-    private final List<Object> data;
+    private final IOperatorEnvironment environment;
+
+    private final AbstractDataset<Object> dataset;
 
     private final BlockingQueue<List<Descriptors.AbstractNodeDescriptor>> requestingTopologyBinding;
 
@@ -45,7 +49,9 @@ public class DatasetDriver extends AbstractInvokeable {
 
         this.datasetNodeDescriptor = datasetNodeDescriptor;
 
-        this.data = new ArrayList<>();
+        this.environment = new OperatorEnvironment(datasetNodeDescriptor);
+
+        this.dataset = (AbstractDataset<Object>)DatasetFactory.createDataset(environment);
 
         this.requestingTopologyBinding = new LinkedBlockingQueue<>();
 
@@ -84,8 +90,8 @@ public class DatasetDriver extends AbstractInvokeable {
         // --------------------------- PRODUCE PHASE ---------------------------
 
         {
-            if (driver.getBindingDescriptor().inputGateBindings.size() != 1)
-                throw new IllegalStateException();
+            //if (driver.getBindingDescriptor().inputGateBindings.size() != 1)
+            //    throw new IllegalStateException();
 
             final IRecordReader reader = new RowRecordReader(driver, 0);
 
@@ -95,7 +101,7 @@ public class DatasetDriver extends AbstractInvokeable {
 
             while (object != null) {
 
-                data.add(object);
+                dataset.add(object);
 
                 object = reader.readObject();
             }
@@ -153,6 +159,9 @@ public class DatasetDriver extends AbstractInvokeable {
 
                 final Triple<UUID,Partitioner.PartitioningStrategy,int[][]> gateRequestProperties = requestingTopologyProperties.poll();
 
+                //LOG.info("--------------> take");
+
+
                 driver.getNodeDescriptor().topologyID = gateRequestProperties.getLeft();
 
                 final Partitioner.PartitioningStrategy partitioningStrategy = gateRequestProperties.getMiddle();
@@ -205,16 +214,16 @@ public class DatasetDriver extends AbstractInvokeable {
                 }
 
 
-
                 final IRecordWriter writer = new RowRecordWriter(driver, datasetNodeDescriptor.properties.outputType, 0, partitioner);
 
                 writer.begin();
-
-                for (final Object object : data) {
+                for (final Object object : dataset.getData()) {
                     writer.writeObject(object);
                 }
-
                 writer.end();
+
+
+                producer.done(0);
 
                 final CountDownLatch awaitFinishTransition = new CountDownLatch(2);
 
@@ -226,14 +235,14 @@ public class DatasetDriver extends AbstractInvokeable {
                                                     TaskStates.TaskTransition transition,
                                                     TaskStates.TaskState state) {
                                 awaitFinishTransition.countDown();
-                        }
+                            }
                         });
 
                 driver.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, new IEventHandler() {
                     @Override
                     public void handleEvent(Event event) {
                         awaitFinishTransition.countDown();
-                        }
+                    }
                 });
 
                 driver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
@@ -244,11 +253,8 @@ public class DatasetDriver extends AbstractInvokeable {
                     // do nothing.
                 }
 
-
                 driver.getBindingDescriptor().inputGateBindings.clear();
-
                 driver.getBindingDescriptor().outputGateBindings.clear();
-
                 driver.getTaskStateMachine().reset();
 
             } catch(Exception e) {
@@ -261,10 +267,6 @@ public class DatasetDriver extends AbstractInvokeable {
 
     @Override
     public void close() throws Throwable {
-
-        //if (driver.getBindingDescriptor().outputGateBindings.size() == 1)
-        //    producer.done(0);
-
         if (!driver.getBindingDescriptor().outputGateBindings.isEmpty()) {
             throw new IllegalStateException();
         }
@@ -289,8 +291,14 @@ public class DatasetDriver extends AbstractInvokeable {
         if(partitioningKeys == null)
             throw new IllegalArgumentException("partitioningKeys == null");
 
+        requestingTopologyProperties.add(Triple.of(topologyID, partitioningStrategy, partitioningKeys));
+
         requestingTopologyBinding.addAll(outputBinding);
 
-        requestingTopologyProperties.add(Triple.of(topologyID, partitioningStrategy, partitioningKeys));
+        //LOG.info("--------------> createOutputBinding");
+    }
+
+    public Collection<Object> getData() {
+        return dataset.getData();
     }
 }

@@ -5,10 +5,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.AbstractBinaryPhysicalOpera
 import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 
-/**
- *
- * @param <I>
- */
+
 public final class UnionPhysicalOperator<I> extends AbstractBinaryPhysicalOperator<I,I,I> {
 
     // ---------------------------------------------------

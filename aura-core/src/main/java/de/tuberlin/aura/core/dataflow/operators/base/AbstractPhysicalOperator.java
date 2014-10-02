@@ -1,9 +1,6 @@
 package de.tuberlin.aura.core.dataflow.operators.base;
 
-/**
- *
- * @param <O>
- */
+
 public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O> {
 
     // ---------------------------------------------------

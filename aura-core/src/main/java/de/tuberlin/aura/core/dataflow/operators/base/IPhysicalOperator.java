@@ -4,10 +4,7 @@ import java.io.Serializable;
 
 import de.tuberlin.aura.core.common.utils.IVisitable;
 
-/**
- *
- * @param <O>
- */
+
 public interface IPhysicalOperator<O> extends Serializable, IVisitable<IPhysicalOperator> {
 
     public abstract void open() throws Throwable;

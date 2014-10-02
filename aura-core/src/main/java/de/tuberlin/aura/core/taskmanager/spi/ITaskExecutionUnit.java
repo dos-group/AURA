@@ -3,10 +3,12 @@ package de.tuberlin.aura.core.taskmanager.spi;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 
-/**
- *
- */
+
 public interface ITaskExecutionUnit {
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public abstract int getExecutionUnitID();
 
@@ -23,5 +25,4 @@ public interface ITaskExecutionUnit {
     public abstract IAllocator getInputAllocator();
 
     public abstract IAllocator getOutputAllocator();
-
 }

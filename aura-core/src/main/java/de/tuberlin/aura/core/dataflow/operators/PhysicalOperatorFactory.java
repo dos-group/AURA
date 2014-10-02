@@ -29,9 +29,9 @@ public final class PhysicalOperatorFactory {
         if (environment == null)
             throw new IllegalArgumentException("environment == null");
 
-        Class<?> udfType = environment.getUdfType(environment.getProperties().functionTypeName);
+        Class<?> udfType = environment.getUDFType(environment.getProperties().functionTypeName);
 
-        switch(environment.getProperties().operatorType) {
+        switch(environment.getProperties().type) {
             case MAP_TUPLE_OPERATOR:
                 return new MapPhysicalOperator(environment, inputOp1, FunctionFactory.createMapFunction((Class<MapFunction<Object,Object>>) udfType));
             case MAP_GROUP_OPERATOR:
@@ -74,6 +74,6 @@ public final class PhysicalOperatorFactory {
                 break;
         }
 
-        throw new IllegalStateException("'" + environment.getProperties().operatorType + "' is not defined.");
+        throw new IllegalStateException("'" + environment.getProperties().type + "' is not defined.");
     }
 }

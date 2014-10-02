@@ -15,7 +15,9 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
     // ---------------------------------------------------
 
     private final TypeInformation inputTypeInfo;
+
     private I firstElementOfNewGroup;
+
     private ArrayList<Object> currentGroupKeys;
 
     // ---------------------------------------------------

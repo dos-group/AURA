@@ -1,15 +1,13 @@
 package de.tuberlin.aura.core.dataflow.operators.descriptors;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.core.dataflow.udfs.contracts.IFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 
-/**
- *
- */
+
 public final class DataflowNodeProperties implements Serializable {
 
     // ---------------------------------------------------
@@ -73,7 +71,12 @@ public final class DataflowNodeProperties implements Serializable {
 
         IMMUTABLE_DATASET(InputArity.DYNAMIC),
 
-        MUTABLE_DATASET(InputArity.DYNAMIC);
+        MUTABLE_DATASET(InputArity.DYNAMIC),
+
+
+        // ---------------------------------------------------
+
+        LOOP_CONTROL_OPERATOR(InputArity.UNARY);
 
         // ---------------------------------------------------
         // Fields.
@@ -105,7 +108,7 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final UUID operatorUID;
 
-    public final DataflowNodeType operatorType;
+    public final DataflowNodeType type;
 
     public final String instanceName;
 
@@ -127,24 +130,28 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final int[][] groupByKeyIndices;
 
-    public final int[][] joinKeyIndices1;
+    public final int[][] keyIndices1;
 
-    public final int[][] joinKeyIndices2;
+    public final int[][] keyIndices2;
 
     public final int[][] sortKeyIndices;
 
     public final SortOrder sortOrder;
+
+    public final List<UUID> broadcastVars;
+
+    public final int[][] datasetKeyIndices;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
     public DataflowNodeProperties(final UUID operatorUID, final String instanceName) {
-        this(operatorUID, null, 0, null, null, 0, instanceName, null, null, null, null, null, null, null, null, null);
+        this(operatorUID, null, 0, null, null, 0, instanceName, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public DataflowNodeProperties(final UUID operatorUID,
-                                  final DataflowNodeType operatorType,
+                                  final DataflowNodeType type,
                                   final int localDOP,
                                   final int[][] partitioningKeys,
                                   final Partitioner.PartitioningStrategy strategy,
@@ -154,18 +161,20 @@ public final class DataflowNodeProperties implements Serializable {
                                   final TypeInformation input2Type,
                                   final TypeInformation outputType,
                                   final String functionTypeName,
-                                  int[][] groupByKeyIndices,
+                                  final int[][] groupByKeyIndices,
                                   final int[][] keyIndices1,
                                   final int[][] keyIndices2,
                                   final int[][] sortKeyIndices,
-                                  final SortOrder sortOrder) {
+                                  final SortOrder sortOrder,
+                                  final List<UUID> broadcastVars,
+                                  final int[][] datasetKeyIndices) {
         // sanity check.
         if (operatorUID == null)
             throw new IllegalArgumentException("operatorUID == null");
 
         this.operatorUID = operatorUID;
 
-        this.operatorType = operatorType;
+        this.type = type;
 
         this.localDOP = localDOP;
 
@@ -187,12 +196,16 @@ public final class DataflowNodeProperties implements Serializable {
 
         this.groupByKeyIndices = groupByKeyIndices;
 
-        this.joinKeyIndices1 = keyIndices1;
+        this.keyIndices1 = keyIndices1;
 
-        this.joinKeyIndices2 = keyIndices2;
+        this.keyIndices2 = keyIndices2;
 
         this.sortKeyIndices = sortKeyIndices;
 
         this.sortOrder = sortOrder;
+
+        this.broadcastVars = broadcastVars;
+
+        this.datasetKeyIndices = datasetKeyIndices;
     }
 }

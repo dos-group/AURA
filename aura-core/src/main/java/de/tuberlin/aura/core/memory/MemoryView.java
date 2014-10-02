@@ -8,9 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 
-/**
- *
- */
 public final class MemoryView {
 
     // ---------------------------------------------------
@@ -33,22 +30,10 @@ public final class MemoryView {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     *
-     * @param allocator
-     * @param memory
-     */
     public MemoryView(final IAllocator allocator, final byte[] memory) {
         this(allocator, memory, 0, memory.length);
     }
 
-    /**
-     *
-     * @param allocator
-     * @param memory
-     * @param baseOffset
-     * @param size
-     */
     public MemoryView(final IAllocator allocator, final byte[] memory, int baseOffset, int size) {
         // sanity check.
         if (allocator == null)
@@ -75,26 +60,14 @@ public final class MemoryView {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     *
-     * @return
-     */
     public int size() {
         return size;
     }
 
-    /**
-     *
-     * @return
-     */
     public byte[] copy() {
         return Arrays.copyOfRange(memory, baseOffset, baseOffset + size);
     }
 
-    /**
-     *
-     * @param dst
-     */
     public void copy(byte[] dst) {
         // sanity check.
         if (dst == null)
@@ -102,9 +75,6 @@ public final class MemoryView {
         System.arraycopy(memory, baseOffset, dst, 0, baseOffset + size);
     }
 
-    /**
-     *
-     */
     public void free() {
         if (refCount.decrementAndGet() == 0) {
             if(allocator != null) {
@@ -117,41 +87,23 @@ public final class MemoryView {
         }
     }
 
-    /**
-     *
-     * @return
-     */
     public MemoryView weakCopy() {
         retain();
         return this;
     }
 
-    /**
-     *
-     */
     public void retain() {
         refCount.getAndIncrement();
     }
 
-    /**
-     *
-     */
     public void release() {
         refCount.getAndDecrement();
     }
 
-    /**
-     *
-     * @return
-     */
     public int getRefCount() {
         return refCount.get();
     }
 
-    /**
-     *
-     * @param refCount
-     */
     public void setRefCount(final int refCount) {
         // sanity check.
         if (refCount < 0)

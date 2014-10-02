@@ -1,46 +1,42 @@
 package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import org.slf4j.Logger;
 
 import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
-/**
- *
- */
+
 public class OperatorEnvironment implements IOperatorEnvironment {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    private final DataflowNodeProperties properties;
-
-    private final Descriptors.OperatorNodeDescriptor descriptor;
+    private final Descriptors.AbstractNodeDescriptor descriptor;
 
     private final Map<String,Class<?>> udfTypeMap;
+
+    private final Map<UUID, Collection> datasets;
 
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public OperatorEnvironment(final DataflowNodeProperties properties,
-                               final Descriptors.OperatorNodeDescriptor descriptor) {
+    public OperatorEnvironment(final Descriptors.AbstractNodeDescriptor descriptor) {
         // sanity check.
-        if (properties == null)
-            throw new IllegalArgumentException("properties == null");
         if (descriptor == null)
             throw new IllegalArgumentException("descriptor == null");
-
-        this.properties = properties;
 
         this.descriptor = descriptor;
 
         this.udfTypeMap = new HashMap<>();
+
+        this.datasets = new HashMap<>();
     }
 
     // ---------------------------------------------------
@@ -49,21 +45,42 @@ public class OperatorEnvironment implements IOperatorEnvironment {
 
     @Override
     public DataflowNodeProperties getProperties() {
-        return properties;
+        return descriptor.properties;
     }
 
     @Override
-    public Descriptors.OperatorNodeDescriptor getNodeDescriptor() {
+    public Descriptors.AbstractNodeDescriptor getNodeDescriptor() {
         return descriptor;
     }
 
     @Override
-    public void putUdfType(String udfTypeName, Class<?> udfType) {
+    public void putUDFType(final String udfTypeName, final Class<?> udfType) {
         this.udfTypeMap.put(udfTypeName, udfType);
     }
 
     @Override
-    public Class<?> getUdfType(String udfTypeName) {
+    public Class<?> getUDFType(final String udfTypeName) {
         return this.udfTypeMap.get(udfTypeName);
+    }
+
+    @Override
+    public <E> void putDataset(final UUID uid, final Collection<E> dataset) {
+        // sanity check.
+        if (uid == null)
+            throw new IllegalArgumentException("uid == null");
+        if (dataset == null)
+            throw new IllegalArgumentException("dataset == null");
+
+        datasets.put(uid, dataset);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <E> Collection<E> getDataset(final UUID uid) {
+        // sanity check.
+        if (uid == null)
+            throw new IllegalArgumentException("uid == null");
+
+        return datasets.get(uid);
     }
 }

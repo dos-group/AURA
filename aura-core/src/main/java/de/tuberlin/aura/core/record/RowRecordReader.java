@@ -21,9 +21,7 @@ import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
 
-/**
- *
- */
+
 public class RowRecordReader implements IRecordReader {
 
     // ---------------------------------------------------

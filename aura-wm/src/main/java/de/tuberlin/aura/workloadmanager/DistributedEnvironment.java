@@ -3,13 +3,12 @@ package de.tuberlin.aura.workloadmanager;
 import de.tuberlin.aura.core.topology.Topology;
 import de.tuberlin.aura.workloadmanager.spi.IDistributedEnvironment;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- *
- */
+
 public final class DistributedEnvironment implements IDistributedEnvironment {
 
     // ---------------------------------------------------
@@ -18,6 +17,8 @@ public final class DistributedEnvironment implements IDistributedEnvironment {
 
     private Map<UUID, Topology.DatasetNode> datasets;
 
+    private Map<UUID, Collection> broadcastDataset;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -25,6 +26,8 @@ public final class DistributedEnvironment implements IDistributedEnvironment {
     public DistributedEnvironment() {
 
         this.datasets = new ConcurrentHashMap<>();
+
+        this.broadcastDataset = new ConcurrentHashMap<>();
     }
 
     // ---------------------------------------------------
@@ -39,7 +42,7 @@ public final class DistributedEnvironment implements IDistributedEnvironment {
         datasets.put(datasetNode.uid, datasetNode);
     }
 
-    public Topology.LogicalNode getDataset(final UUID uid) {
+    public Topology.DatasetNode getDataset(final UUID uid) {
         // sanity check.
         if (uid == null)
             throw new IllegalArgumentException("uid == null");
@@ -61,5 +64,21 @@ public final class DistributedEnvironment implements IDistributedEnvironment {
             throw new IllegalArgumentException("uid == null");
 
         return datasets.containsKey(uid);
+    }
+
+    @Override
+    public <E> void addBroadcastDataset(final UUID datasetID, final Collection<E> dataset) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("uid == null");
+        if (dataset == null)
+            throw new IllegalArgumentException("dataset == null");
+
+        broadcastDataset.put(datasetID, dataset);
+    }
+
+    @Override
+    public <E> Collection<E> getBroadcastDataset(UUID datasetID) {
+        return broadcastDataset.get(datasetID);
     }
 }

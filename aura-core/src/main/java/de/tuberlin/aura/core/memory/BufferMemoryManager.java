@@ -12,9 +12,7 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
 
-/**
- *
- */
+
 public final class BufferMemoryManager implements IBufferMemoryManager {
 
     // ---------------------------------------------------

@@ -22,9 +22,7 @@ import de.tuberlin.aura.core.taskmanager.usercode.UserCode;
 import de.tuberlin.aura.core.taskmanager.usercode.UserCodeImplanter;
 import de.tuberlin.aura.datasets.DatasetDriver;
 
-/**
- *
- */
+
 public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
     // ---------------------------------------------------
@@ -142,7 +140,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             invokeable.setLogger(LOG);
 
             for (final Class<?> udfType : userClasses)
-                ((OperatorDriver)invokeable).getOperatorEnvironment().putUdfType(udfType.getName(), udfType);
+                ((OperatorDriver)invokeable).getOperatorEnvironment().putUDFType(udfType.getName(), udfType);
 
         } else if (nodeDescriptor instanceof Descriptors.DatasetNodeDescriptor) {
 
@@ -334,8 +332,6 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                         .setInitialState(TaskState.TASK_STATE_CREATED)
                         .build();
 
-        // global state listener, that reacts to all state changes.
-
         taskFSM.addGlobalStateListener(new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
             @Override
@@ -356,8 +352,6 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             }
         });
 
-        // error state listener.
-
         taskFSM.addStateListener(TaskState.ERROR, new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
             @Override
@@ -366,8 +360,6 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                         + " to " + state + " is not defined  [" + transition.toString() + "]");
             }
         });
-
-        // taskmanager ready state listener.
 
         taskFSM.addStateListener(TaskState.TASK_STATE_READY, new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
@@ -382,8 +374,6 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
             }
         });
 
-        // taskmanager finish state listener.
-
         taskFSM.addStateListener(TaskState.TASK_STATE_FINISHED, new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 
             @Override
@@ -396,8 +386,6 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
                 taskManager.getIOManager().sendEvent(taskManager.getWorkloadManagerMachineDescriptor(), transitionUpdate);
             }
         });
-
-        // taskmanager failure state listener.
 
         taskFSM.addStateListener(TaskState.TASK_STATE_FAILURE, new StateMachine.IFSMStateAction<TaskState, TaskTransition>() {
 

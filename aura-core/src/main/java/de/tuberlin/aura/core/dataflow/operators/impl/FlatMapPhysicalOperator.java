@@ -10,11 +10,7 @@ import de.tuberlin.aura.core.dataflow.udfs.functions.FlatMapFunction;
 import java.util.Queue;
 import java.util.LinkedList;
 
-/**
- *
- * @param <I>
- * @param <O>
- */
+
 public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
 
     // ---------------------------------------------------

@@ -11,6 +11,10 @@ import de.tuberlin.aura.core.memory.spi.IAllocator;
 
 public interface IDataProducer {
 
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
     public abstract void emit(final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event);
 
     public abstract void emit(final int gateIndex, final int channelIndex, final MemoryView buffer);

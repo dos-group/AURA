@@ -13,9 +13,6 @@ import java.util.Arrays;
 import java.util.StringTokenizer;
 
 
-/**
- *
- */
 public final class TypeInformation implements Serializable {
 
     // ---------------------------------------------------
@@ -37,11 +34,11 @@ public final class TypeInformation implements Serializable {
     }
 
     public TypeInformation(final Class<?> type, TypeInformation... fieldTypes) {
-        this(type, false, fieldTypes.length > 1 ? Arrays.asList(fieldTypes) : null);
+        this(type, false, fieldTypes.length > 0 ? Arrays.asList(fieldTypes) : null);
     }
 
     public TypeInformation(final Class<?> type, boolean isGrouped, TypeInformation... fieldTypes) {
-        this(type, isGrouped, fieldTypes.length > 1 ? Arrays.asList(fieldTypes) : null);
+        this(type, isGrouped, fieldTypes.length > 0 ? Arrays.asList(fieldTypes) : null);
     }
 
     public TypeInformation(final Class<?> type, boolean isGrouped, List<TypeInformation> fieldTypes) {

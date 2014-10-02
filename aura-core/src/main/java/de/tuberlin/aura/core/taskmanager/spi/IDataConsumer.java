@@ -10,6 +10,10 @@ import de.tuberlin.aura.core.memory.spi.IAllocator;
 
 public interface IDataConsumer {
 
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
     public abstract IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException;
 
     public abstract IOEvents.TransferBufferEvent absorb(int gateIndex, int channelIndex) throws InterruptedException;
