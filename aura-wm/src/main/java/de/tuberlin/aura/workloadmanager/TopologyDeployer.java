@@ -45,9 +45,9 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
     @Override
     public AuraTopology apply(AuraTopology topology) {
 
-        deployTopology(topology);
-
         dispatcher.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_DEPLOY));
+
+        deployTopology(topology);
 
         return topology;
     }

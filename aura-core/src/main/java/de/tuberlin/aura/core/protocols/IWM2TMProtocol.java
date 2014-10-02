@@ -10,8 +10,6 @@ public interface IWM2TMProtocol {
 
     public abstract void installTask(final Descriptors.DeploymentDescriptor deploymentDescriptor);
 
-    public abstract void installTasks(final List<Descriptors.DeploymentDescriptor> deploymentDescriptors);
-
     public abstract void addOutputBinding(final UUID taskID,
                                           final UUID topologyID,
                                           final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding,

@@ -127,20 +127,6 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
     }
 
     // ---------------------------------------------------
-    // Private Methods.
-    // ---------------------------------------------------
-
-    private void unregisterTask(final ITaskDriver taskDriver) {
-        LOG.debug("UNREGISTER TASK NAME:{} INDEX:{} UID:{}", taskDriver.getNodeDescriptor().name, taskDriver.getNodeDescriptor().taskIndex, taskDriver.getNodeDescriptor().taskID);
-        executionManager.dispatchEvent(
-                new TaskExecutionManager.TaskExecutionEvent(
-                        TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK,
-                        taskDriver
-                )
-        );
-    }
-
-    // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
 
@@ -162,9 +148,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
                 final CountDownLatch executeLatch = new CountDownLatch(1);
 
-                final ITaskDriver terminatingTaskDriver = taskDriver;
-
-                executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + terminatingTaskDriver.getNodeDescriptor().name);
+                executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + taskDriver.getNodeDescriptor().name);
 
                 taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
                         new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
@@ -177,58 +161,6 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             }
                         });
 
-                taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
-                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState,
-                                                    TaskStates.TaskTransition transition,
-                                                    TaskStates.TaskState state) {
-                                try {
-
-                                    if (!(terminatingTaskDriver.getNodeDescriptor() instanceof Descriptors.DatasetNodeDescriptor)) {
-                                        terminatingTaskDriver.teardownDriver(true);
-                                        unregisterTask(terminatingTaskDriver);
-                                    }
-
-                                } catch (Throwable t) {
-                                    LOG.error(t.getLocalizedMessage(), t);
-                                    throw t;
-                                }
-                            }
-
-                            @Override
-                            public String toString() {
-                                return "TaskStateFinished Listener (TaskExecutionUnit -> "
-                                        + terminatingTaskDriver.getNodeDescriptor().name + " "
-                                        + terminatingTaskDriver.getNodeDescriptor().taskIndex + ")";
-                            }
-                        });
-
-                taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_CANCELED,
-                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState,
-                                                    TaskStates.TaskTransition transition,
-                                                    TaskStates.TaskState state) {
-                                terminatingTaskDriver.teardownDriver(false);
-                                unregisterTask(terminatingTaskDriver);
-                            }
-                        });
-
-                taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FAILURE,
-                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState,
-                                                    TaskStates.TaskTransition transition,
-                                                    TaskStates.TaskState state) {
-                                terminatingTaskDriver.teardownDriver(false);
-                                unregisterTask(terminatingTaskDriver);
-                            }
-                        });
-
                 taskDriver.startupDriver(inputAllocator, outputAllocator);
 
                 try {
@@ -237,13 +169,13 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                     LOG.error(e.getLocalizedMessage(), e);
                 }
 
-                //if (/*terminatingTaskDriver.getNodeDescriptor() instanceof Descriptors.ComputationNodeDescriptor &&*/
-                //    !taskDriver.getDataProducer().hasStoredBuffers()) {
-                    taskDriver.executeDriver();
-                    LOG.debug("Execution Unit {} completed the execution of taskmanager {}",
-                            TaskExecutionUnit.this.executionUnitID,
-                            taskDriver.getNodeDescriptor().taskID);
-                //}
+                boolean success = taskDriver.executeDriver();
+                LOG.debug("Execution Unit {} completed the execution of taskmanager {}",
+                        TaskExecutionUnit.this.executionUnitID,
+                        taskDriver.getNodeDescriptor().taskID);
+
+                taskDriver.teardownDriver(success);
+                executionManager.getTaskManager().uninstallTask(taskDriver.getNodeDescriptor().taskID);
 
                 // This is necessary to indicate that this execution unit is free via the
                 // getNumberOfEnqueuedTasks()-method. This isn't thread safe in any way!

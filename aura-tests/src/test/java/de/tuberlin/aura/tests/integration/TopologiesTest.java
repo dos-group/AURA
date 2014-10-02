@@ -25,10 +25,11 @@ import de.tuberlin.aura.tests.util.TestHelper;
 import de.tuberlin.aura.demo.examples.ExampleTopologies;
 
 
-/**
- *
- */
 public final class TopologiesTest {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
     private static final Logger LOG = LoggerFactory.getLogger(TopologiesTest.class);
 
@@ -37,7 +38,6 @@ public final class TopologiesTest {
     private static LocalClusterSimulator clusterSimulator = null;
 
     private static int executionUnits;
-
 
     // --------------------------------------------------
     // TESTS
@@ -71,89 +71,81 @@ public final class TopologiesTest {
         LOG.info("start test with: " + nodes + " nodes and " + cores + " cores per node");
     }
 
-//    @Test
-//    public void testMinimalPlainTopology() {
-//        TestHelper.runTopology(auraClient, ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
-//    }
-//
-//    @Test
-//    public void testExtendedTopology() {
-//        TestHelper.runTopology(auraClient, ExampleTopologies.six_layer_all2all(auraClient, executionUnits));
-//    }
-//
-//    @Test
-//    public void testPlainTopologiesConcurrently() {
-//        List<Topology.AuraTopology> topologies = new ArrayList<>();
-//        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
-//        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
-//        TestHelper.runTopologiesConcurrently(auraClient, topologies);
-//    }
-//
-//    @Test
-//    public void testMultipleQueriesSequentially() {
-//        List<Topology.AuraTopology> topologies = new ArrayList<>();
-//
-//        // 2 layered - all2all connection
-//        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
-//
-//        // 3 layered - point2point + point2point connection
-//        topologies.add(ExampleTopologies.three_layer_point2point(auraClient, executionUnits));
-//
-//        // 3 layered - all2all + point2point connection
-//        topologies.add(ExampleTopologies.three_layer_all2all_point2point(auraClient, executionUnits));
-//
-//        // 3 layered - point2point + all2all connection
-//        topologies.add(ExampleTopologies.three_layer_point2point_all2all(auraClient, executionUnits));
-//
-//        // 3 layered - all2all + all2all connection
-//        topologies.add(ExampleTopologies.three_layer_all2all_all2all(auraClient, executionUnits));
-//
-//        // 3 layered - point2point (join) point2point connection
-//        topologies.add(ExampleTopologies.three_layer_point2point_join_point2point(auraClient, executionUnits));
-//
-//        // 3 layered - all2all (join) point2point connection
-//        topologies.add(ExampleTopologies.three_layer_all2all_join_point2point(auraClient, executionUnits));
-//
-//        // 3 layered - all2all (join) all2all connection
-//        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all(auraClient, executionUnits));
-//
-//        // 3 layered - all2all (join) all2all connection (small/large)
-//        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all_sl(auraClient, executionUnits));
-//
-//        TestHelper.runTopologies(auraClient, topologies);
-//    }
+    @Test
+    public void testMinimalPlainTopology() {
+        TestHelper.runTopology(auraClient, ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
+    }
+
+    @Test
+    public void testExtendedTopology() {
+        TestHelper.runTopology(auraClient, ExampleTopologies.six_layer_all2all(auraClient, executionUnits));
+    }
+
+    @Test
+    public void testPlainTopologiesConcurrently() {
+        List<Topology.AuraTopology> topologies = new ArrayList<>();
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits / 2));
+        TestHelper.runTopologiesConcurrently(auraClient, topologies);
+    }
+
+    @Test
+    public void testMultipleQueriesSequentially() {
+        List<Topology.AuraTopology> topologies = new ArrayList<>();
+
+        // 2 layered - all2all connection
+        topologies.add(ExampleTopologies.two_layer_point2point_small(auraClient, executionUnits));
+
+        // 3 layered - point2point + point2point connection
+        topologies.add(ExampleTopologies.three_layer_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all + point2point connection
+        topologies.add(ExampleTopologies.three_layer_all2all_point2point(auraClient, executionUnits));
+
+        // 3 layered - point2point + all2all connection
+        topologies.add(ExampleTopologies.three_layer_point2point_all2all(auraClient, executionUnits));
+
+        // 3 layered - all2all + all2all connection
+        topologies.add(ExampleTopologies.three_layer_all2all_all2all(auraClient, executionUnits));
+
+        // 3 layered - point2point (join) point2point connection
+        topologies.add(ExampleTopologies.three_layer_point2point_join_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) point2point connection
+        topologies.add(ExampleTopologies.three_layer_all2all_join_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) all2all connection
+        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) all2all connection (small/large)
+        topologies.add(ExampleTopologies.three_layer_all2all_join_all2all_sl(auraClient, executionUnits));
+
+        TestHelper.runTopologies(auraClient, topologies);
+    }
 
     @Test
     public void testOperatorTopology1() {
-
         final Topology.AuraTopology topology1 = testJob1(auraClient, executionUnits);
         TestHelper.runTopology(auraClient, topology1);
-
     }
-//
-//    @Test
-//    public void testOperatorTopology2() {
-//
-//        final Topology.AuraTopology topology2 = testJob2(auraClient, executionUnits);
-//        TestHelper.runTopology(auraClient, topology2);
-//
-//    }
-//
-//    @Test
-//    public void testOperatorTopology3() {
-//
-//        final Topology.AuraTopology topology3 = testJob3(auraClient, executionUnits);
-//        TestHelper.runTopology(auraClient, topology3);
-//
-//    }
-//
-//    @Test
-//    public void testOperatorTopology4() {
-//
-//        final Topology.AuraTopology topology4 = testJob4(auraClient, executionUnits);
-//        TestHelper.runTopology(auraClient, topology4);
-//
-//    }
+
+    @Test
+    public void testOperatorTopology2() {
+        final Topology.AuraTopology topology2 = testJob2(auraClient, executionUnits);
+        TestHelper.runTopology(auraClient, topology2);
+    }
+
+    @Test
+    public void testOperatorTopology3() {
+        final Topology.AuraTopology topology3 = testJob3(auraClient, executionUnits);
+        TestHelper.runTopology(auraClient, topology3);
+    }
+
+    @Test
+    public void testOperatorTopology4() {
+        final Topology.AuraTopology topology4 = testJob4(auraClient, executionUnits);
+        TestHelper.runTopology(auraClient, topology4);
+    }
 
     @AfterClass
     public static void tearDown() {

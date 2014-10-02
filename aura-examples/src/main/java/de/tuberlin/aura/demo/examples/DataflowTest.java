@@ -103,14 +103,73 @@ public final class DataflowTest {
                                 null,
                                 source1TypeInfo,
                                 Source1.class.getName(),
-                                null, null,
+                                null,
+                                null,
                                 null,
                                 null,
                                 null
                         )
                 );
 
-        final TypeInformation source2TypeInfo =
+
+        final DataflowAPI.DataflowNodeDescriptor map1 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
+                                1,
+                                new int[][] {source1TypeInfo.buildFieldSelectorChain("_0")},
+                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                                1,
+                                "Map1",
+                                source1TypeInfo,
+                                null,
+                                source1TypeInfo,
+                                Map1.class.getName(),
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        source1
+                );
+
+        final DataflowAPI.DataflowNodeDescriptor sink2 =
+                new DataflowAPI.DataflowNodeDescriptor(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                                1,
+                                null,
+                                null,
+                                1,
+                                "Sink2",
+                                source1TypeInfo,
+                                null,
+                                null,
+                                Sink1.class.getName(),
+                                null,
+                                null,
+                                null,
+                                null,
+                                null
+                        ),
+                        map1
+                );
+
+
+        final Topology.AuraTopology topology3 = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink2).toTopology("JOB3");
+        //ac.submitTopology(topology3, null);*/
+
+        ac.awaitSubmissionResult(1);
+        ac.closeSession();
+        lcs.shutdown();
+
+
+
+
+        /*final TypeInformation source2TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(String.class),
                         new TypeInformation(Integer.class));
@@ -314,13 +373,7 @@ public final class DataflowTest {
                         dataset3
                 );
 
-        final Topology.AuraTopology topology3 = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink3).toTopology("JOB3");
-        //ac.submitTopology(topology3, null);
+        // ---------------------------------------------------*/
 
-        ac.awaitSubmissionResult(1);
-        ac.closeSession();
-        lcs.shutdown();
-
-        // ---------------------------------------------------
     }
 }

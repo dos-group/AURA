@@ -7,7 +7,7 @@ public interface ITaskDriverLifecycle {
 
     public abstract void startupDriver(final IAllocator inputAllocator, final IAllocator outputAllocator);
 
-    public abstract void executeDriver();
+    public abstract boolean executeDriver();
 
     public abstract void teardownDriver(boolean awaitExhaustion);
 }

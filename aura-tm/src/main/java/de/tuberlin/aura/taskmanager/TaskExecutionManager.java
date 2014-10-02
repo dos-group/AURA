@@ -3,6 +3,7 @@ package de.tuberlin.aura.taskmanager;
 
 import java.util.UUID;
 
+import de.tuberlin.aura.core.taskmanager.spi.ITaskManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,21 +45,28 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
 
     private final IBufferMemoryManager bufferMemoryManager;
 
+    private final ITaskManager taskManager;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskExecutionManager(final Descriptors.MachineDescriptor machineDescriptor,
+    public TaskExecutionManager(final ITaskManager taskManager,
+                                final Descriptors.MachineDescriptor machineDescriptor,
                                 final IBufferMemoryManager bufferMemoryManager,
                                 final int numberOfExecutionUnits) {
         // TODO: Cleanup
         super(true, "TaskExecutionManagerEventDispatcher");
 
         // sanity check.
+        if (taskManager == null)
+            throw new IllegalArgumentException("taskManager == null");
         if (machineDescriptor == null)
             throw new IllegalArgumentException("machineDescriptor == null");
         if (bufferMemoryManager == null)
             throw new IllegalArgumentException("bufferMemoryManager == null");
+
+        this.taskManager = taskManager;
 
         this.machineDescriptor = machineDescriptor;
 
@@ -106,7 +114,6 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
-
         for (int i = 0; i < numberOfExecutionUnits; ++i) {
             final ITaskExecutionUnit eu = executionUnit[i];
             final ITaskDriver taskCtx = eu.getTaskDriver();
@@ -114,9 +121,12 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
                 return eu;
             }
         }
-
-        LOG.trace("No taskmanager execution unit was found for this taskmanager ID: {}", taskID);
         return null;
+    }
+
+    @Override
+    public ITaskManager getTaskManager() {
+        return taskManager;
     }
 
     // ---------------------------------------------------

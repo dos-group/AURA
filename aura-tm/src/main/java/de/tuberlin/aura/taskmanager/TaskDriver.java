@@ -158,7 +158,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     }
 
     @Override
-    public void executeDriver() {
+    public boolean executeDriver() {
 
         try {
 
@@ -178,15 +178,10 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
             taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FAIL));
 
-            return;
+            return false;
         }
 
-        if (nodeDescriptor instanceof Descriptors.InvokeableNodeDescriptor
-            || nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
-
-            // TODO: Wait until all gates are closed? -> invokeable.close() emits all DATA_EVENT_SOURCE_EXHAUSTED events
-            taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
-        }
+        return true;
     }
 
     @Override
@@ -200,10 +195,13 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
         dataConsumer.shutdownConsumer();
 
         // Check for memory leaks in the input/output allocator.
-        if (taskFSM.isInFinalState()
-            && taskFSM.getCurrentState() == TaskState.TASK_STATE_FINISHED) {
-            dataConsumer.getAllocator().checkForMemoryLeaks();
-            dataProducer.getAllocator().checkForMemoryLeaks();
+        dataConsumer.getAllocator().checkForMemoryLeaks();
+        dataProducer.getAllocator().checkForMemoryLeaks();
+
+        if (nodeDescriptor instanceof Descriptors.InvokeableNodeDescriptor
+            || nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
+            // TODO: Wait until all gates are closed? -> invokeable.close() emits all DATA_EVENT_SOURCE_EXHAUSTED events
+            taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
         }
     }
 

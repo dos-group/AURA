@@ -16,7 +16,6 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
-import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
@@ -72,20 +71,10 @@ public final class TaskManager implements ITaskManager {
 
         // Generate MachineDescriptor for this TaskManager.
         this.taskManagerMachine = DescriptorFactory.createMachineDescriptor(config.getConfig("tm"));
-
         // Initialize BufferManager.
         this.bufferMemoryManager = new BufferMemoryManager(taskManagerMachine, config.getConfig("tm"));
-
         // Initialize ExecutionManager.
-        this.executionManager = new TaskExecutionManager(taskManagerMachine, this.bufferMemoryManager, config.getInt("tm.execution.units.number"));
-        this.executionManager.addEventListener(TaskExecutionManager.TaskExecutionEvent.EXECUTION_MANAGER_EVENT_UNREGISTER_TASK, new IEventHandler() {
-
-            @Override
-            public void handleEvent(Event e) {
-                unregisterTask((ITaskDriver) e.getPayload());
-            }
-        });
-
+        this.executionManager = new TaskExecutionManager(this, taskManagerMachine, this.bufferMemoryManager, config.getInt("tm.execution.units.number"));
         // Initialize IOManager.
         this.ioManager = new IOManager(taskManagerMachine, executionManager, config.getConfig("tm.io"));
         // Initialize RPC Manager.
@@ -126,21 +115,8 @@ public final class TaskManager implements ITaskManager {
         // sanity check.
         if (deploymentDescriptor == null)
             throw new IllegalArgumentException("nodeDescriptor == null");
-
         final ITaskDriver taskDriver = registerTask(deploymentDescriptor);
         executionManager.scheduleTask(taskDriver);
-    }
-
-    @Override
-    public void installTasks(final List<Descriptors.DeploymentDescriptor> deploymentDescriptors) {
-        // sanity check.
-        if (deploymentDescriptors == null)
-            throw new IllegalArgumentException("deploymentDescriptors == null");
-
-        for (final Descriptors.DeploymentDescriptor tdd : deploymentDescriptors) {
-            final ITaskDriver taskDriver = registerTask(tdd);
-            executionManager.scheduleTask(taskDriver);
-        }
     }
 
     @Override
@@ -171,33 +147,17 @@ public final class TaskManager implements ITaskManager {
         }
     }
 
-    // ---------------------------------------------------
-    // Private Getter Methods.
-    // ---------------------------------------------------
-
     @Override
-    public IIOManager getIOManager() {
-        return ioManager;
-    }
-
-    @Override
-    public IRPCManager getRPCManager() {
-        return rpcManager;
-    }
-
-    @Override
-    public ITaskExecutionManager getTaskExecutionManager() {
-        return executionManager;
-    }
-
-    @Override
-    public MachineDescriptor getWorkloadManagerMachineDescriptor() {
-        return workloadManagerMachine;
-    }
-
-    @Override
-    public MachineDescriptor getTaskManagerMachineDescriptor() {
-        return taskManagerMachine;
+    public void uninstallTask(final UUID taskID) {
+        // sanity check.
+        if (taskID == null)
+            throw new IllegalArgumentException("taskID == null");
+        final ITaskDriver driver = deployedTasks.get(taskID);
+        if (driver == null)
+            throw new IllegalStateException("TaskDriver is not found");
+        driver.shutdown();
+        driver.getTaskStateMachine().shutdown();
+        //deployedTasks.remove(taskID);
     }
 
     // ---------------------------------------------------
@@ -224,29 +184,13 @@ public final class TaskManager implements ITaskManager {
         // Sanity check.
         if (deploymentDescriptor == null)
             throw new IllegalArgumentException("deploymentDescriptor == null");
-
         final UUID taskID = deploymentDescriptor.nodeDescriptor.taskID;
         if (deployedTasks.containsKey(taskID))
             throw new IllegalStateException("Task is already deployed.");
-
-        // Create an taskmanager driver for the submitted taskmanager.
+        // Create an TaskDriver for the submitted task.
         final ITaskDriver taskDriver = new TaskDriver(this, deploymentDescriptor);
         deployedTasks.put(taskID, taskDriver);
-
         return taskDriver;
-    }
-
-    private void unregisterTask(final ITaskDriver taskDriver) {
-        // sanity check.
-        if (taskDriver == null)
-            throw new IllegalArgumentException("driver == null");
-
-        if (deployedTasks.remove(taskDriver.getNodeDescriptor().taskID) == null)
-            throw new IllegalStateException("taskmanager is not deployed");
-
-        LOG.trace("Shutdown event dispatchers");
-        taskDriver.shutdown();
-        taskDriver.getTaskStateMachine().shutdown();
     }
 
     private void dispatchRemoteTaskTransition(final IOEvents.TaskControlIOEvent event) {
@@ -255,16 +199,43 @@ public final class TaskManager implements ITaskManager {
             throw new IllegalArgumentException("event == null");
         if (!(event.getPayload() instanceof StateMachine.FSMTransitionEvent))
             throw new IllegalArgumentException("event is not FSMTransitionEvent");
-
         for (final ITaskDriver taskDriver : deployedTasks.values()) {
             if (taskDriver.getNodeDescriptor().taskID.equals(event.getTaskID())) {
                 taskDriver.getTaskStateMachine().dispatchEvent((Event) event.getPayload());
             }
         }
-
         if (deployedTasks.isEmpty()) {
             LOG.info("Task driver context for topology [" + event.getTopologyID() + "] is removed");
         }
+    }
+
+    // ---------------------------------------------------
+    // Public Getters.
+    // ---------------------------------------------------
+
+    @Override
+    public IIOManager getIOManager() {
+        return ioManager;
+    }
+
+    @Override
+    public IRPCManager getRPCManager() {
+        return rpcManager;
+    }
+
+    @Override
+    public ITaskExecutionManager getTaskExecutionManager() {
+        return executionManager;
+    }
+
+    @Override
+    public MachineDescriptor getWorkloadManagerMachineDescriptor() {
+        return workloadManagerMachine;
+    }
+
+    @Override
+    public MachineDescriptor getTaskManagerMachineDescriptor() {
+        return taskManagerMachine;
     }
 
     // ---------------------------------------------------
@@ -319,6 +290,38 @@ public final class TaskManager implements ITaskManager {
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
+
+    /*private ITaskDriver getDeployedTask(final DataIOEvent event) {
+        // sanity check.
+        if (event == null)
+            throw new IllegalArgumentException("event == null");
+        int i = 0;
+        while (!deployedTasks.containsKey(event.srcTaskID)) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+            }
+            if (i == 200) {
+                System.err.println("uid to look up: " + event.srcTaskID);
+
+                if (deployedTasks.keySet().isEmpty()) {
+                    System.err.println("no deployed tasks available");
+                }
+
+                for(final UUID uid : deployedTasks.keySet()) {
+                    System.err.println("deployed task: " + uid);
+                }
+                throw new IllegalStateException("event.srcTaskID");
+            }
+            i++;
+        }
+        LOG.info("LÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖÖFT");
+        if (deployedTasks.get(event.srcTaskID) == null) {
+            LOG.info("NNNNEEEETTTTTTT -----------------------------");
+            throw new IllegalArgumentException("EVENT: src:" + event.srcTaskID + "   dst:" + event.dstTaskID + "   payload:" + event.getPayload());
+        }
+        return deployedTasks.get(event.srcTaskID);
+    }*/
 
     private final class IORedispatcher extends EventHandler {
 

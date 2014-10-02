@@ -6,6 +6,8 @@ import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
 
+import java.util.UUID;
+
 /**
  *
  */
@@ -20,4 +22,6 @@ public interface ITaskManager extends IWM2TMProtocol {
     public abstract Descriptors.MachineDescriptor getWorkloadManagerMachineDescriptor();
 
     public abstract Descriptors.MachineDescriptor getTaskManagerMachineDescriptor();
+
+    public abstract void uninstallTask(final UUID taskID);
 }
