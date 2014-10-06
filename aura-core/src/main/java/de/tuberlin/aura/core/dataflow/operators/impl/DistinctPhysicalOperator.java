@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 
 import java.util.Map;
@@ -17,7 +17,7 @@ public class DistinctPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I
     // Constructor.
     // ---------------------------------------------------
 
-    public DistinctPhysicalOperator(final IOperatorEnvironment environment,
+    public DistinctPhysicalOperator(final IExecutionContext environment,
                                   final IPhysicalOperator<I> inputOp) {
 
         super(environment, inputOp);

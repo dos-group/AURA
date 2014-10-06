@@ -9,10 +9,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
-import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.taskmanager.common.TaskStates;
-import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 
@@ -29,7 +28,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
     private final Thread executorThread;
 
-    private final BlockingQueue<ITaskDriver> taskQueue;
+    private final BlockingQueue<ITaskRuntime> taskQueue;
 
     private final AtomicBoolean isExecutionUnitRunning;
 
@@ -39,7 +38,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
     private final IAllocator outputAllocator;
 
-    private ITaskDriver taskDriver;
+    private ITaskRuntime runtime;
 
     // ---------------------------------------------------
     // Constructors.
@@ -87,10 +86,10 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         executorThread.start();
     }
 
-    public void enqueueTask(final ITaskDriver taskDriver) {
+    public void enqueueTask(final ITaskRuntime taskDriver) {
         // sanity check.
         if (taskDriver == null) {
-            throw new IllegalArgumentException("driver == null");
+            throw new IllegalArgumentException("runtime == null");
         }
         taskQueue.add(taskDriver);
     }
@@ -108,11 +107,11 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
     // ---------------------------------------------------
 
     public int getNumberOfEnqueuedTasks() {
-        return taskQueue.size() + (taskDriver != null ? 1 : 0);
+        return taskQueue.size() + (runtime != null ? 1 : 0);
     }
 
-    public ITaskDriver getTaskDriver() {
-        return taskDriver;
+    public ITaskRuntime getRuntime() {
+        return runtime;
     }
 
     public IAllocator getInputAllocator() {
@@ -139,19 +138,19 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
             while (isExecutionUnitRunning.get()) {
 
                 try {
-                    taskDriver = taskQueue.take();
+                    runtime = taskQueue.take();
                     LOG.info("Execution Unit {} prepares execution of taskmanager {}",
                             TaskExecutionUnit.this.executionUnitID,
-                            taskDriver.getNodeDescriptor().taskID);
+                            runtime.getNodeDescriptor().taskID);
                 } catch (InterruptedException e) {
                     throw new IllegalStateException(e);
                 }
 
                 final CountDownLatch executeLatch = new CountDownLatch(1);
 
-                executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + taskDriver.getNodeDescriptor().name);
+                executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + runtime.getNodeDescriptor().name);
 
-                taskDriver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
+                runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
                         new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
@@ -162,7 +161,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             }
                         });
 
-                taskDriver.startupDriver(inputAllocator, outputAllocator);
+                runtime.initialize(inputAllocator, outputAllocator);
 
                 try {
                     executeLatch.await();
@@ -170,17 +169,13 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                     LOG.error(e.getLocalizedMessage(), e);
                 }
 
-                boolean success = taskDriver.executeDriver();
-                LOG.debug("Execution Unit {} completed the execution of taskmanager {}",
-                        TaskExecutionUnit.this.executionUnitID,
-                        taskDriver.getNodeDescriptor().taskID);
-
-                taskDriver.teardownDriver(success);
-                executionManager.getTaskManager().uninstallTask(taskDriver.getNodeDescriptor().taskID);
+                boolean success = runtime.execute();
+                runtime.shutdown(success);
+                executionManager.getTaskManager().uninstallTask(runtime.getNodeDescriptor().taskID);
 
                 // This is necessary to indicate that this execution unit is free via the
                 // getNumberOfEnqueuedTasks()-method. This isn't thread safe in any way!
-                taskDriver = null;
+                runtime = null;
             }
 
             LOG.debug("Terminate thread of execution unit {}", TaskExecutionUnit.this.executionUnitID);

@@ -5,8 +5,8 @@ import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.generator.TopologyGenerator;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowAPI;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.api.DataflowAPI;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
 import de.tuberlin.aura.core.record.Partitioner;
@@ -78,11 +78,9 @@ public class DistributedEnvironmentTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                                1,
+                                "Source1", 1, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
-                                "Source1",
                                 null,
                                 null,
                                 source1TypeInfo,
@@ -102,11 +100,11 @@ public class DistributedEnvironmentTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
+                                "Map1",
+                                1,
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
-                                "Map1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
@@ -127,11 +125,11 @@ public class DistributedEnvironmentTest {
         final DataflowNodeProperties dataset1Properties = new DataflowNodeProperties(
                 dataset1UID,
                 DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
+                "Dataset1",
+                1,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                1,
-                "Dataset1",
                 source1TypeInfo,
                 null,
                 source1TypeInfo,
@@ -178,11 +176,10 @@ public class DistributedEnvironmentTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
+                                "Map2", 1,
                                 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                1,
-                                "Map2",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
@@ -192,8 +189,8 @@ public class DistributedEnvironmentTest {
                                 null,
                                 null,
                                 null,
-                                Arrays.asList(broadcastDatasetID),
-                                null
+                                null,
+                                Arrays.asList(broadcastDatasetID)
                         ),
                         dataset1Ref
                 );
@@ -203,11 +200,11 @@ public class DistributedEnvironmentTest {
         final DataflowNodeProperties dataset2Properties = new DataflowNodeProperties(
                 dataset2UID,
                 DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
+                "Dataset2",
+                1,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                1,
-                "Dataset2",
                 source1TypeInfo,
                 null,
                 source1TypeInfo,

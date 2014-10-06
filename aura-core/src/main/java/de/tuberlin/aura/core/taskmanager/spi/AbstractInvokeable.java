@@ -2,13 +2,13 @@ package de.tuberlin.aura.core.taskmanager.spi;
 
 import org.slf4j.Logger;
 
-public abstract class AbstractInvokeable implements IExecutionLifecycle {
+public abstract class AbstractInvokeable implements IInvokeableLifecycle {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    protected ITaskDriver driver;
+    protected ITaskRuntime runtime;
 
     protected IDataProducer producer;
 
@@ -45,15 +45,15 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
 
     // ---------------------------------------------------
 
-    public void setTaskDriver(final ITaskDriver driver) {
+    public void setRuntime(final ITaskRuntime runtime) {
         // sanity check.
-        if (driver == null)
-            throw new IllegalArgumentException("driver == null");
+        if (runtime == null)
+            throw new IllegalArgumentException("runtime == null");
 
-        this.driver = driver;
+        this.runtime = runtime;
     }
 
-    public void setDataProducer(final IDataProducer producer) {
+    public void setProducer(final IDataProducer producer) {
         // sanity check.
         if (producer == null)
             throw new IllegalArgumentException("producer == null");
@@ -61,7 +61,7 @@ public abstract class AbstractInvokeable implements IExecutionLifecycle {
         this.producer = producer;
     }
 
-    public void setDataConsumer(final IDataConsumer consumer) {
+    public void setConsumer(final IDataConsumer consumer) {
         // sanity check.
         if (consumer == null)
             throw new IllegalArgumentException("consumer == null");

@@ -4,9 +4,9 @@ import java.util.Comparator;
 import java.util.PriorityQueue;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.record.TypeInformation;
 
@@ -19,11 +19,11 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
     public class SortComparator<T> implements Comparator<T> {
 
-        private DataflowNodeProperties properties = getEnvironment().getProperties();
+        private DataflowNodeProperties properties = getContext().getProperties();
 
         @Override
         public int compare(final T o1, final T o2) {
-            for(final int[] selectorChain : getEnvironment().getProperties().sortKeyIndices) {
+            for(final int[] selectorChain : getContext().getProperties().sortKeyIndices) {
                 final Comparable f1 = (Comparable)inputType.selectField(selectorChain, o1);
                 final Comparable f2 = (Comparable)inputType.selectField(selectorChain, o2);
                 final int res = properties.sortOrder == DataflowNodeProperties.SortOrder.ASCENDING ? f1.compareTo(f2) : f2.compareTo(f1);
@@ -46,12 +46,12 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
     // Constructor.
     // ---------------------------------------------------
 
-    public SortPhysicalOperator(final IOperatorEnvironment environment,
+    public SortPhysicalOperator(final IExecutionContext environment,
                                 final IPhysicalOperator<I> inputOp) {
 
         super(environment, inputOp);
 
-        this.inputType = getEnvironment().getProperties().input1Type;
+        this.inputType = getContext().getProperties().input1Type;
 
         this.priorityQueue = new PriorityQueue<>(10, new SortComparator<I>());
     }

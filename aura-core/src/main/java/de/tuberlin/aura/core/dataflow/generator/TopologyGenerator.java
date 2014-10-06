@@ -5,8 +5,8 @@ import java.util.List;
 
 import de.tuberlin.aura.core.common.utils.ArrayUtils;
 import de.tuberlin.aura.core.common.utils.IVisitor;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowAPI;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.api.DataflowAPI;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.topology.Topology;
 
 
@@ -98,7 +98,7 @@ public final class TopologyGenerator implements IVisitor<DataflowAPI.DataflowNod
     private Topology.Edge.TransferType selectEdgeTransferType(final DataflowNodeProperties srcOperator,
                                                               final DataflowNodeProperties dstOperator) {
 
-        if (ArrayUtils.equals(srcOperator.partitioningKeys, dstOperator.partitioningKeys) // TODO: only subset of keys should be enough.. isPartOf()
+        if (ArrayUtils.equals(srcOperator.partitionKeyIndices, dstOperator.partitionKeyIndices) // TODO: only subset of keys should be enough.. isPartOf()
                 && srcOperator.strategy == dstOperator.strategy) {
             return Topology.Edge.TransferType.POINT_TO_POINT;
         } else {

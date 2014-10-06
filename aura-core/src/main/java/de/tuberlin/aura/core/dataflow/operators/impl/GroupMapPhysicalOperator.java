@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IGroupMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.GroupMapFunction;
@@ -25,7 +25,7 @@ public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
     // Constructor.
     // ---------------------------------------------------
 
-    public GroupMapPhysicalOperator(final IOperatorEnvironment environment,
+    public GroupMapPhysicalOperator(final IExecutionContext environment,
                                     final IPhysicalOperator<I> inputOp,
                                     final GroupMapFunction<I, O> function) {
 

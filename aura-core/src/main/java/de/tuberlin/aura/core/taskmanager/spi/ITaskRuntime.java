@@ -10,7 +10,7 @@ import de.tuberlin.aura.core.iosystem.QueueManager;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 
 
-public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
+public interface ITaskRuntime extends IEventDispatcher, ITaskRuntimeLifecycle {
 
     // ---------------------------------------------------
     // Public Methods.
@@ -24,9 +24,9 @@ public interface ITaskDriver extends IEventDispatcher, ITaskDriverLifecycle {
 
     public abstract StateMachine.FiniteStateMachine getTaskStateMachine();
 
-    public abstract IDataProducer getDataProducer();
+    public abstract IDataProducer getProducer();
 
-    public abstract IDataConsumer getDataConsumer();
+    public abstract IDataConsumer getConsumer();
 
     public abstract ITaskManager getTaskManager();
 

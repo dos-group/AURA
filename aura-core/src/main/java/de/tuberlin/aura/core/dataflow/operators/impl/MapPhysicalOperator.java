@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
@@ -14,7 +14,7 @@ public final class MapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOper
     // Constructor.
     // ---------------------------------------------------
 
-    public MapPhysicalOperator(final IOperatorEnvironment environment,
+    public MapPhysicalOperator(final IExecutionContext environment,
                                final IPhysicalOperator<I> inputOp,
                                final MapFunction<I, O> function) {
 

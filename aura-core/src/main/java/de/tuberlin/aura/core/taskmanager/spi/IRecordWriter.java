@@ -12,8 +12,6 @@ public interface IRecordWriter {
 
     public abstract void begin();
 
-    public abstract void writeRecord(final RowRecordModel.Record record);
-
     public abstract void writeObject(final Object object);
 
     public abstract void end();

@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.dataflow.datasets;
 
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.record.TypeInformation;
 
 import java.util.Collection;
@@ -23,7 +23,7 @@ public class MutableDataset<E> extends AbstractDataset<E> {
     // Constructor.
     // ---------------------------------------------------
 
-    public MutableDataset(final IOperatorEnvironment environment) {
+    public MutableDataset(final IExecutionContext environment) {
         super(environment);
 
         this.data = new HashMap<>();

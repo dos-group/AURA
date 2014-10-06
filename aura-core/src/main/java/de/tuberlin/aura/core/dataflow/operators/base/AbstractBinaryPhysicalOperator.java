@@ -15,7 +15,7 @@ public abstract class AbstractBinaryPhysicalOperator<I1,I2,O> extends AbstractPh
     // Constructor.
     // ---------------------------------------------------
 
-    public AbstractBinaryPhysicalOperator(final IOperatorEnvironment environment,
+    public AbstractBinaryPhysicalOperator(final IExecutionContext environment,
                                           final IPhysicalOperator<I1> inputOp1,
                                           final IPhysicalOperator<I2> inputOp2) {
         super(environment);

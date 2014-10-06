@@ -80,7 +80,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
             // skip this sanity check when the configuration isn't available
         }
 
-        // First pass, create taskmanager descriptors
+        // First pass, create taskmanager api
         final Map<UUID, ExecutionNode> executionNodeMap = new HashMap<>();
 
         TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<LogicalNode>() {
@@ -154,7 +154,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
 
         topology.setExecutionNodes(executionNodeMap);
 
-        // Second pass, create binding descriptors.
+        // Second pass, create binding api.
         TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<LogicalNode>() {
 
             @Override
@@ -376,7 +376,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                     }
                 }
 
-                // Assign the binding descriptors to the execution nodes.
+                // Assign the binding api to the execution nodes.
                 for (final ExecutionNode en : element.getExecutionNodes()) {
 
                     final Map<UUID, List<Descriptors.AbstractNodeDescriptor>> inputsPerGate = gateExecutionNodeInputs.get(en.uid);

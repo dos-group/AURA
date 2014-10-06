@@ -8,6 +8,7 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
+import de.tuberlin.aura.core.taskmanager.gates.OutputGate;
 
 public interface IDataProducer {
 
@@ -23,7 +24,7 @@ public interface IDataProducer {
 
     public abstract void done(final int outputGateIndex);
 
-    public abstract void shutdownProducer(boolean awaitExhaustion);
+    public abstract void shutdown(boolean awaitExhaustion);
 
     public abstract UUID getOutputTaskIDFromChannelIndex(int channelIndex);
 
@@ -34,4 +35,6 @@ public interface IDataProducer {
     public abstract void bind(final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding, final IAllocator allocator);
 
     public abstract IAllocator getAllocator();
+
+    public abstract List<OutputGate> getOutputGates();
 }

@@ -16,11 +16,11 @@ public interface ITaskExecutionUnit {
 
     public abstract void stop();
 
-    public abstract void enqueueTask(final ITaskDriver context);
+    public abstract void enqueueTask(final ITaskRuntime context);
 
     public abstract int getNumberOfEnqueuedTasks();
 
-    public abstract ITaskDriver getTaskDriver();
+    public abstract ITaskRuntime getRuntime();
 
     public abstract IAllocator getInputAllocator();
 

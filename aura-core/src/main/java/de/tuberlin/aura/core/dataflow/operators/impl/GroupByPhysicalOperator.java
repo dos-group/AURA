@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.record.TypeInformation;
 
@@ -24,10 +24,10 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
     // Constructor.
     // ---------------------------------------------------
 
-    public GroupByPhysicalOperator(IOperatorEnvironment environment, IPhysicalOperator<I> inputOp) {
+    public GroupByPhysicalOperator(IExecutionContext environment, IPhysicalOperator<I> inputOp) {
         super(environment, inputOp);
 
-        this.inputTypeInfo = getEnvironment().getProperties().input1Type;
+        this.inputTypeInfo = getContext().getProperties().input1Type;
     }
 
     // ---------------------------------------------------
@@ -44,7 +44,7 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
     @Override
     public I next() throws Throwable {
 
-        int[][] groupKeyIndices = getEnvironment().getProperties().groupByKeyIndices;
+        int[][] groupKeyIndices = getContext().getProperties().groupByKeyIndices;
 
         I input;
 

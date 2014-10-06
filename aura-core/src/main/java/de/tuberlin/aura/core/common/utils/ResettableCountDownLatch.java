@@ -32,9 +32,9 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  * <b>Sample usage:</b> Here is a pair of classes in which a group of worker threads use two
  * countdown latches:
  * <ul>
- * <li>The first is a start signal that prevents any worker from proceeding until the driver is
+ * <li>The first is a start signal that prevents any worker from proceeding until the runtime is
  * ready for them to proceed;
- * <li>The second is a completion signal that allows the driver to wait until all workers have
+ * <li>The second is a completion signal that allows the runtime to wait until all workers have
  * completed.
  * </ul>
  * <p/>

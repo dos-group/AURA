@@ -2,14 +2,14 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FoldFunction;
 import de.tuberlin.aura.core.record.GroupedOperatorInputIterator;
 
 
 public class FoldPhysicalOperator<I,M,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
-    public FoldPhysicalOperator(final IOperatorEnvironment environment,
+    public FoldPhysicalOperator(final IExecutionContext environment,
                                 final IPhysicalOperator<I> inputOp,
                                 final FoldFunction<I, M, O> function) {
 

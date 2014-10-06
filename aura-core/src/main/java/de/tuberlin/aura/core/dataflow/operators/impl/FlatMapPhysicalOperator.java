@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IFlatMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FlatMapFunction;
@@ -23,7 +23,7 @@ public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
     // Constructor.
     // ---------------------------------------------------
 
-    public FlatMapPhysicalOperator(final IOperatorEnvironment environment,
+    public FlatMapPhysicalOperator(final IExecutionContext environment,
                                    final IPhysicalOperator<I> inputOp,
                                    final FlatMapFunction<I,O> function) {
 

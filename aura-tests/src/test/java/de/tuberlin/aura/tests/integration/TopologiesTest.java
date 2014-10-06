@@ -14,8 +14,8 @@ import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.generator.TopologyGenerator;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowAPI;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.api.DataflowAPI;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.udfs.functions.*;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
@@ -168,22 +168,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                                1,
+                                "Source1", executionUnits / 6, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "Source1",
                                 null,
                                 null,
                                 source1TypeInfo,
                                 Source1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         )
                 );
 
@@ -192,22 +185,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
-                                1,
+                                "Map1", executionUnits / 6, 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "Map1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
                                 Map1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         source1
                 );
@@ -217,22 +203,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.FLAT_MAP_TUPLE_OPERATOR,
-                                1,
+                                "FlatMap1", executionUnits / 6, 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "FlatMap1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
                                 FlatMap1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         map1
                 );
@@ -242,22 +221,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.FILTER_OPERATOR,
-                                1,
+                                "Filter1", executionUnits / 6, 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "Filter1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
                                 Filter1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         flatMap1
                 );
@@ -267,22 +239,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
-                                1,
+                                "Fold1", executionUnits / 6, 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "Fold1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
                                 Fold1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         filter1
                 );
@@ -292,22 +257,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                                1,
+                                "Sink1", 1, 1,
                                 null,
                                 null,
-                                1,
-                                "Sink1",
                                 source1TypeInfo,
                                 null,
                                 null,
                                 Sink1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         fold1
                 );
@@ -327,22 +285,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                                1,
+                                "Source1", executionUnits / 8, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 8,
-                                "Source1",
                                 null,
                                 null,
                                 source1TypeInfo,
                                 Source1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         )
                 );
 
@@ -351,22 +302,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                                1,
+                                "Source2", executionUnits / 8, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 8,
-                                "Source2",
                                 null,
                                 null,
                                 source1TypeInfo,
                                 Source2.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         )
                 );
 
@@ -375,22 +319,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                                1,
+                                "Source3", executionUnits / 8, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 8,
-                                "Source3",
                                 null,
                                 null,
                                 source1TypeInfo,
                                 Source3.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         )
                 );
 
@@ -399,22 +336,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.DIFFERENCE_OPERATOR,
-                                1,
+                                "Difference1", executionUnits / 8, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 8,
-                                "Difference1",
                                 source1TypeInfo,
                                 source1TypeInfo,
                                 source1TypeInfo,
                                 null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         source2,
                         source3
@@ -430,22 +360,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.HASH_JOIN_OPERATOR,
-                                1,
+                                "Join1", executionUnits / 8, 1,
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 8,
-                                "Join1",
                                 source1TypeInfo,
                                 source1TypeInfo,
                                 join1TypeInfo,
                                 null,
-                                null,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                null,
-                                null,
-                                null,
-                                null
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") }, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") }, null, null, null,
+                                null, null
                         ),
                         source1,
                         difference1
@@ -457,22 +380,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.DISTINCT_OPERATOR,
-                                1,
+                                "Distinct1", executionUnits / 8, 1,
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 8,
-                                "Distinct1",
                                 join1TypeInfo,
                                 null,
                                 join1TypeInfo,
                                 null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         join1
                 );
@@ -482,22 +398,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
-                                1,
+                                "Sort1", executionUnits / 8, 1,
                                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 8,
-                                "Sort1",
                                 join1TypeInfo,
                                 null,
                                 join1TypeInfo,
                                 null,
-                                null,
-                                null,
-                                null,
-                                new int[][] { join1TypeInfo.buildFieldSelectorChain("_2._2") },
-                                DataflowNodeProperties.SortOrder.DESCENDING,
-                                null,
-                                null
+                                null, null, new int[][] { join1TypeInfo.buildFieldSelectorChain("_2._2") }, DataflowNodeProperties.SortOrder.DESCENDING, null,
+                                null, null
                         ),
                         distinct1
                 );
@@ -507,22 +416,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                                1,
+                                "Sink1", 1, 1,
                                 null,
                                 null,
-                                1,
-                                "Sink1",
                                 join1TypeInfo,
                                 null,
                                 null,
                                 JoinSink1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         sort1
                 );
@@ -542,22 +444,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                                1,
+                                "Source4", executionUnits / 5, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 5,
-                                "Source4",
                                 null,
                                 null,
                                 source1TypeInfo,
                                 Source4.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         )
                 );
 
@@ -567,22 +462,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
-                                1,
+                                "Sort1", executionUnits / 5, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 5,
-                                "Sort1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
                                 null,
-                                null,
-                                null,
-                                null,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                DataflowNodeProperties.SortOrder.ASCENDING,
-                                null,
-                                null
+                                null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") }, DataflowNodeProperties.SortOrder.ASCENDING, null,
+                                null, null
                         ),
                         source4
                 );
@@ -597,22 +485,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
-                                1,
+                                "GroupBy1", executionUnits / 5, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 5,
-                                "GroupBy1",
                                 source1TypeInfo,
                                 null,
                                 groupBy1TypeInfo,
                                 null,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
+                                null, null
                         ),
                         sort1
                 );
@@ -622,22 +503,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
-                                1,
+                                "Fold1", executionUnits / 5, 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 5,
-                                "Fold1",
                                 groupBy1TypeInfo,
                                 null,
                                 source1TypeInfo,
                                 Fold1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         groupBy1
                 );
@@ -647,22 +521,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                                1,
+                                "Sink1", 1, 1,
                                 null,
                                 null,
-                                1,
-                                "Sink1",
                                 source1TypeInfo,
                                 null,
                                 null,
                                 Sink1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         fold1
                 );
@@ -682,22 +549,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                                1,
+                                "Source4", executionUnits / 6, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "Source4",
                                 null,
                                 null,
                                 source1TypeInfo,
                                 Source4.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         )
                 );
 
@@ -707,22 +567,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
-                                1,
+                                "Sort1", executionUnits / 6, 1,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "Sort1",
                                 source1TypeInfo,
                                 null,
                                 source1TypeInfo,
                                 null,
-                                null,
-                                null,
-                                null,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                DataflowNodeProperties.SortOrder.ASCENDING,
-                                null,
-                                null
+                                null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") }, DataflowNodeProperties.SortOrder.ASCENDING, null,
+                                null, null
                         ),
                         source4
                 );
@@ -737,22 +590,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
-                                1,
+                                "GroupBy1", executionUnits / 6, 1,
                                 null,
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "GroupBy1",
                                 source1TypeInfo,
                                 null,
                                 groupBy1TypeInfo,
                                 null,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
+                                null, null
                         ),
                         sort1
                 );
@@ -762,22 +608,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.MAP_GROUP_OPERATOR,
-                                1,
+                                "MapGroup1", executionUnits / 6, 1,
                                 null,
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "MapGroup1",
                                 groupBy1TypeInfo,
                                 null,
                                 groupBy1TypeInfo,
                                 GroupMap1.class.getName(),
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
+                                null, null
                         ),
                         groupBy1
                 );
@@ -787,22 +626,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
-                                1,
+                                "Fold1", executionUnits / 6, 1,
                                 new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                executionUnits / 6,
-                                "Fold1",
                                 groupBy1TypeInfo,
                                 null,
                                 source1TypeInfo,
                                 Fold1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         mapGroup1
                 );
@@ -812,22 +644,15 @@ public final class TopologiesTest {
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                                1,
+                                "Sink1", 1, 1,
                                 null,
                                 null,
-                                1,
-                                "Sink1",
                                 source1TypeInfo,
                                 null,
                                 null,
                                 Sink1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
+                                null, null, null, null, null,
+                                null, null
                         ),
                         fold1
                 );

@@ -12,7 +12,7 @@ import de.tuberlin.aura.core.iosystem.DataWriter;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataEventType;
 import de.tuberlin.aura.core.iosystem.IOEvents.DataIOEvent;
 import de.tuberlin.aura.core.taskmanager.spi.IDataProducer;
-import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
 public final class OutputGate extends AbstractGate {
 
@@ -32,12 +32,11 @@ public final class OutputGate extends AbstractGate {
     // Constructors.
     // ---------------------------------------------------
 
-    public OutputGate(final ITaskDriver taskDriver, int gateIndex, final IDataProducer producer) {
-        super(taskDriver, gateIndex, taskDriver.getBindingDescriptor().outputGateBindings.get(gateIndex).size());
+    public OutputGate(final ITaskRuntime runtime, int gateIndex, final IDataProducer producer) {
+        super(runtime, gateIndex, runtime.getBindingDescriptor().outputGateBindings.get(gateIndex).size());
 
         this.producer = producer;
 
-        // All channels are by default are closed.
         this.openChannelList = new ArrayList<>(Collections.nCopies(numChannels, false));
 
         if (numChannels > 0) {
@@ -47,8 +46,8 @@ public final class OutputGate extends AbstractGate {
         }
 
         final EventHandler outputGateEventHandler = new OutputGateEventHandler();
-        taskDriver.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, outputGateEventHandler);
-        taskDriver.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, outputGateEventHandler);
+        runtime.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, outputGateEventHandler);
+        runtime.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, outputGateEventHandler);
     }
 
     // ---------------------------------------------------
@@ -57,9 +56,8 @@ public final class OutputGate extends AbstractGate {
 
     public void writeDataToChannel(final int channelIndex, final DataIOEvent data) {
         // sanity check.
-        if (data == null) {
+        if (data == null)
             throw new IllegalArgumentException("data == null");
-        }
 
         channelWriter.get(channelIndex).write(data);
     }
@@ -70,35 +68,37 @@ public final class OutputGate extends AbstractGate {
 
     public void setChannelWriter(int channelIndex, final DataWriter.ChannelWriter channel) {
         // sanity check.
-        if (channelIndex < 0) {
+        if (channelIndex < 0)
             throw new IllegalArgumentException("channelIndex < 0");
-        }
-        if (channelIndex >= numChannels) {
+        if (channelIndex >= numChannels)
             throw new IllegalArgumentException("channelIndex >= numChannels");
-        }
-        if (channelWriter == null) {
+        if (channelWriter == null)
             throw new IllegalStateException("channels == null");
-        }
+
         channelWriter.set(channelIndex, channel);
     }
 
     public DataWriter.ChannelWriter getChannelWriter(int channelIndex) {
         // sanity check.
-        if (channelIndex < 0) {
+        if (channelIndex < 0)
             throw new IllegalArgumentException("channelIndex < 0");
-        }
-        if (channelIndex >= numChannels) {
+        if (channelIndex >= numChannels)
             throw new IllegalArgumentException("channelIndex >= numChannels");
-        }
-        if (channelWriter == null) {
+        if (channelWriter == null)
             throw new IllegalStateException("channels == null");
-        }
 
         return channelWriter.get(channelIndex);
     }
 
-    public boolean isGateOpen(final int channelIndex) {
+    public boolean isChannelOpen(final int channelIndex) {
         return openChannelList.get(channelIndex);
+    }
+
+    public boolean isGateOpen() {
+        boolean isGateOpen = true;
+        for (boolean isChannelOpen : openChannelList)
+            isGateOpen &= isChannelOpen;
+        return isGateOpen;
     }
 
     // ---------------------------------------------------

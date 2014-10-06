@@ -6,8 +6,8 @@ import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowAPI;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.api.DataflowAPI;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.generator.TopologyGenerator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
@@ -63,22 +63,15 @@ public class ConcurrentDataflowTest {
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                        1,
+                        "Source1", 1, 1,
                         new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                        1,
-                        "Source1",
                         null,
                         null,
                         source1TypeInfo,
                         Source1.class.getName(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null
+                        null, null, null, null, null,
+                        null, null
                 )
         );
 
@@ -91,22 +84,15 @@ public class ConcurrentDataflowTest {
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
-                        1,
+                        "Map1", 1, 1,
                         new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                        1,
-                        "Map1",
                         source1TypeInfo,
                         null,
                         map1TypeInfo,
                         Map1.class.getName(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null
+                        null, null, null, null, null,
+                        null, null
                 ),
                 source1
         );
@@ -115,22 +101,15 @@ public class ConcurrentDataflowTest {
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                        1,
+                        "Sink1", 1, 1,
                         null,
                         null,
-                        1,
-                        "Sink1",
                         map1TypeInfo,
                         null,
                         null,
                         Sink1.class.getName(),
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null
+                        null, null, null, null, null,
+                        null, null
                 ),
                 map1
         );

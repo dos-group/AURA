@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 
 /**
- * TODO: Put all watchers in one class like the descriptors?
+ * TODO: Put all watchers in one class like the api?
  */
 @ThreadSafe
 public class ZookeeperConnectionWatcher implements Watcher {

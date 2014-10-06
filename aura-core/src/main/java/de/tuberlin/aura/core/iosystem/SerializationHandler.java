@@ -24,7 +24,7 @@ import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.spi.IBufferCallback;
 import de.tuberlin.aura.core.taskmanager.spi.IDataConsumer;
-import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 import io.netty.buffer.ByteBuf;
@@ -241,8 +241,8 @@ public final class SerializationHandler {
         private void bindAllocator(UUID src, UUID dst) {
             final ITaskExecutionManager tem = executionManager;
             final ITaskExecutionUnit executionUnit = tem.findExecutionUnitByTaskID(dst);
-            final ITaskDriver taskDriver = executionUnit.getTaskDriver();
-            final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
+            final ITaskRuntime taskDriver = executionUnit.getRuntime();
+            final IDataConsumer dataConsumer = taskDriver.getConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
             IAllocator allocatorGroup = executionUnit.getInputAllocator();
 
@@ -423,8 +423,8 @@ public final class SerializationHandler {
         private void bindAllocator(UUID src, UUID dst) {
             final ITaskExecutionManager tem = executionManager;
             final ITaskExecutionUnit executionUnit = tem.findExecutionUnitByTaskID(dst);
-            final ITaskDriver taskDriver = executionUnit.getTaskDriver();
-            final IDataConsumer dataConsumer = taskDriver.getDataConsumer();
+            final ITaskRuntime taskDriver = executionUnit.getRuntime();
+            final IDataConsumer dataConsumer = taskDriver.getConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
             IAllocator allocatorGroup = executionUnit.getInputAllocator();
 

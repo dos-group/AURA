@@ -9,7 +9,7 @@ import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import de.tuberlin.aura.core.taskmanager.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.taskmanager.usercode.UserCode;
@@ -209,12 +209,20 @@ public class Topology {
         // Public Methods.
         // ---------------------------------------------------
 
-        public NodeConnector addNode(final LogicalNode node, Class<?>... userCodeClazzes) {
+        public NodeConnector addNode(final LogicalNode node) {
+            return addNode(node, new ArrayList<Class<?>>());
+        }
+
+        public NodeConnector addNode(final LogicalNode node, Class<?>... userCodeClasses) {
+            return addNode(node, Arrays.asList(userCodeClasses));
+        }
+
+        public NodeConnector addNode(final LogicalNode node, final List<Class<?>> userCodeClasses) {
             // sanity check.
             if (node == null)
                 throw new IllegalArgumentException("node == null");
-            if (userCodeClazzes.length < 1)
-                throw new IllegalArgumentException("No user code classes given for node connector");
+            if (userCodeClasses == null)
+                throw new IllegalArgumentException("userCodeClasses == null");
             if (nodeMap.containsKey(node.name))
                 throw new IllegalStateException("node already exists");
 
@@ -222,34 +230,8 @@ public class Topology {
             sourceMap.put(node.name, node);
             sinkMap.put(node.name, node);
             uidNodeMap.put(node.uid, node);
-            final List<Class<?>> userCodeClazzList = Arrays.asList(userCodeClazzes);
-            userCodeClazzMap.put(node.name, userCodeClazzList);
+            userCodeClazzMap.put(node.name, userCodeClasses);
             return nodeConnector.currentSource(node);
-        }
-
-        public NodeConnector addNode(final LogicalNode node, final List<Class<?>> userCodeClazzList) {
-            // sanity check.
-            if (node == null)
-                throw new IllegalArgumentException("node == null");
-            if (userCodeClazzList == null)
-                throw new IllegalArgumentException("userCodeClazzList == null");
-            if (nodeMap.containsKey(node.name))
-                throw new IllegalStateException("node already exists");
-
-            nodeMap.put(node.name, node);
-            sourceMap.put(node.name, node);
-            sinkMap.put(node.name, node);
-            uidNodeMap.put(node.uid, node);
-            userCodeClazzMap.put(node.name, userCodeClazzList);
-            return nodeConnector.currentSource(node);
-        }
-
-        public NodeConnector and() {
-            return nodeConnector;
-        }
-
-        public AuraTopology build(final String name) {
-            return build(name, DeploymentType.EAGER);
         }
 
         public AuraTopology build(final String name,
@@ -339,6 +321,14 @@ public class Topology {
             return false;
         }
 
+        public NodeConnector and() {
+            return nodeConnector;
+        }
+
+        public AuraTopology build(final String name) {
+            return build(name, DeploymentType.EAGER);
+        }
+
         // ---------------------------------------------------
         // Inner Classes.
         // ---------------------------------------------------
@@ -374,6 +364,10 @@ public class Topology {
             public NodeConnector currentSource(final LogicalNode srcNode) {
                 this.srcNode = srcNode;
                 return this;
+            }
+
+            public AuraTopologyBuilder noConnects() {
+                return tb;
             }
 
             public AuraTopologyBuilder connectTo(final String dstNodeName,

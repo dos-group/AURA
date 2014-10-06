@@ -4,17 +4,17 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.UUID;
 
-import org.slf4j.Logger;
-
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.dataflow.operators.descriptors.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 
 
-public interface IOperatorEnvironment extends Serializable {
+public interface IExecutionContext extends Serializable {
 
     public abstract DataflowNodeProperties getProperties();
 
     public abstract Descriptors.AbstractNodeDescriptor getNodeDescriptor();
+
+    public abstract Descriptors.NodeBindingDescriptor getBindingDescriptor();
 
     public abstract void putUDFType(final String udfTypeName, final Class<?> udfType);
 

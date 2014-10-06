@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.taskmanager.spi;
 
-public interface IExecutionLifecycle {
+public interface IInvokeableLifecycle {
 
     // ---------------------------------------------------
     // Public Methods.

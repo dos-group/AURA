@@ -1,33 +1,32 @@
 package de.tuberlin.aura.core.dataflow.operators.impl;
 
-import java.util.Map;
-import java.util.HashMap;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
-import de.tuberlin.aura.core.dataflow.operators.base.AbstractBinaryPhysicalOperator;
+import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 
+import java.util.Arrays;
 
-public class DifferencePhysicalOperator<I> extends AbstractBinaryPhysicalOperator<I,I,I> {
+
+public class LoopControlPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,I> {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    private final Map<I,Boolean> minusSideElements;
+    private boolean loopTerminated;
 
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public DifferencePhysicalOperator(final IExecutionContext environment,
-                                 final IPhysicalOperator<I> inputOp1,
-                                 final IPhysicalOperator<I> inputOp2) {
+    public LoopControlPhysicalOperator(final IExecutionContext environment,
+                                       final IPhysicalOperator<I> inputOp) {
 
-        super(environment, inputOp1, inputOp2);
+        super(environment, inputOp);
 
-        minusSideElements = new HashMap<>();
+        this.loopTerminated = false;
     }
 
     // ---------------------------------------------------
@@ -37,41 +36,32 @@ public class DifferencePhysicalOperator<I> extends AbstractBinaryPhysicalOperato
     @Override
     public void open() throws Throwable {
         super.open();
-
-        inputOp2.open();
-
-        I in2 = inputOp2.next();
-
-        while (in2 != null) {
-            minusSideElements.put(in2, true);
-            in2 = inputOp2.next();
-        }
-
-        inputOp2.close();
-        inputOp1.open();
+        inputOp.open();
     }
 
     @Override
     public I next() throws Throwable {
-        super.next();
 
-        I in1 = inputOp1.next();
+        if (loopTerminated) {
 
-        while (in1 != null && minusSideElements.containsKey(in1)) {
-            in1 = inputOp1.next();
+            setOutputGates(Arrays.asList(0));
+
+        } else {
+
+            setOutputGates(Arrays.asList(1));
         }
 
-        return in1;
+        return inputOp.next();
     }
 
     @Override
     public void close() throws Throwable {
         super.close();
-        inputOp1.close();
+        inputOp.close();
     }
-
     @Override
     public void accept(final IVisitor<IPhysicalOperator> visitor) {
         visitor.visit(this);
     }
 }
+

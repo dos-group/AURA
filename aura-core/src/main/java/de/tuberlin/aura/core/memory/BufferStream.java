@@ -6,7 +6,7 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
-import de.tuberlin.aura.core.record.RowRecordWriter;
+import de.tuberlin.aura.core.record.RecordWriter;
 
 
 public final class BufferStream {
@@ -89,9 +89,9 @@ public final class BufferStream {
             }
 
             // if block + block end marker does not fit in buffer -> write marker and flush buffer
-            final int avail = (buf.size - RowRecordWriter.BLOCK_END.length) - (count - buf.baseOffset);
+            final int avail = (buf.size - RecordWriter.BLOCK_END.length) - (count - buf.baseOffset);
             if (avail < len) {
-                System.arraycopy(RowRecordWriter.BLOCK_END, 0, buf.memory, count, RowRecordWriter.BLOCK_END.length);
+                System.arraycopy(RecordWriter.BLOCK_END, 0, buf.memory, count, RecordWriter.BLOCK_END.length);
                 nextBuf();
             }
 
@@ -169,7 +169,7 @@ public final class BufferStream {
         }
 
         public void close() throws IOException {
-            System.arraycopy(RowRecordWriter.BLOCK_END, 0, buf.memory, count, RowRecordWriter.BLOCK_END.length);
+            System.arraycopy(RecordWriter.BLOCK_END, 0, buf.memory, count, RecordWriter.BLOCK_END.length);
             flush();
         }
 

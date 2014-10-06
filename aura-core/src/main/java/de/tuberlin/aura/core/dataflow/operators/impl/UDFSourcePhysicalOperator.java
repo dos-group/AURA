@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.ISourceFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
@@ -18,7 +18,7 @@ public class UDFSourcePhysicalOperator<O> extends AbstractUnaryUDFPhysicalOperat
     // Constructor.
     // ---------------------------------------------------
 
-    public UDFSourcePhysicalOperator(final IOperatorEnvironment environment,
+    public UDFSourcePhysicalOperator(final IExecutionContext environment,
                                      final SourceFunction<O> function) {
 
         super(environment, null, function);

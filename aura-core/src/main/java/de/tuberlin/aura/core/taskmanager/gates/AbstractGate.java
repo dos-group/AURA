@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.taskmanager.gates;
 
-import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
 public abstract class AbstractGate {
 
@@ -8,7 +8,7 @@ public abstract class AbstractGate {
     // Fields.
     // ---------------------------------------------------
 
-    protected final ITaskDriver taskDriver;
+    protected final ITaskRuntime runtime;
 
     protected final int numChannels;
 
@@ -18,12 +18,12 @@ public abstract class AbstractGate {
     // Constructors.
     // ---------------------------------------------------
 
-    public AbstractGate(final ITaskDriver taskDriver, int gateIndex, int numChannels) {
+    public AbstractGate(final ITaskRuntime runtime, int gateIndex, int numChannels) {
         // sanity check.
-        if (taskDriver == null)
-            throw new IllegalArgumentException("driver == null");
+        if (runtime == null)
+            throw new IllegalArgumentException("runtime == null");
 
-        this.taskDriver = taskDriver;
+        this.runtime = runtime;
 
         this.numChannels = numChannels;
 

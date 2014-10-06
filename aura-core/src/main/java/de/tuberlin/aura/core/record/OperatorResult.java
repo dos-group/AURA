@@ -2,40 +2,33 @@ package de.tuberlin.aura.core.record;
 
 public class OperatorResult<T> {
 
+    public enum StreamMarker {
+
+        END_OF_STREAM_MARKER,
+
+        END_OF_GROUP_MARKER,
+
+        END_OF_ITERATION_MARKER,
+
+        START_OF_ITERATION_MARKER
+    }
+
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    final private T element;
+    public T element;
 
-    final public boolean isEndOfStream;
-
-    final public boolean isEndOfGroup;
+    public StreamMarker marker;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public OperatorResult(T result) {
-        this(result, false, false);
-    }
+    public OperatorResult(T element, StreamMarker marker) {
 
-    public OperatorResult(T element, boolean isEndOfGroup, boolean isEndOfData) {
         this.element = element;
-        this.isEndOfGroup = isEndOfGroup;
-        this.isEndOfStream = isEndOfData;
+
+        this.marker = marker;
     }
-
-    // ---------------------------------------------------
-    // Public Methods.
-    // ---------------------------------------------------
-
-    public static OperatorResult endOfStream() {
-        return new OperatorResult<>(null, false, true);
-    }
-
-    public static OperatorResult endOfGroup() {
-        return new OperatorResult<>(null, true, false);
-    }
-
 }

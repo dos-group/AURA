@@ -1,4 +1,4 @@
-package de.tuberlin.aura.core.dataflow.operators.descriptors;
+package de.tuberlin.aura.core.dataflow.api;
 
 import java.io.Serializable;
 import java.util.List;
@@ -73,7 +73,6 @@ public final class DataflowNodeProperties implements Serializable {
 
         MUTABLE_DATASET(InputArity.DYNAMIC),
 
-
         // ---------------------------------------------------
 
         LOOP_CONTROL_OPERATOR(InputArity.UNARY);
@@ -112,11 +111,11 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final String instanceName;
 
-    public final int localDOP;
-
     public final int globalDOP;
 
-    public final int[][] partitioningKeys;
+    public final int localDOP;
+
+    public final int[][] partitionKeyIndices;
 
     public final Partitioner.PartitioningStrategy strategy;
 
@@ -128,8 +127,6 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final String functionTypeName;
 
-    public final int[][] groupByKeyIndices;
-
     public final int[][] keyIndices1;
 
     public final int[][] keyIndices2;
@@ -138,36 +135,38 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final SortOrder sortOrder;
 
-    public final List<UUID> broadcastVars;
+    public final int[][] groupByKeyIndices;
 
     public final int[][] datasetKeyIndices;
+
+    public final List<UUID> broadcastVars;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
     public DataflowNodeProperties(final UUID operatorUID, final String instanceName) {
-        this(operatorUID, null, 0, null, null, 0, instanceName, null, null, null, null, null, null, null, null, null, null, null);
+        this(operatorUID, null, instanceName, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public DataflowNodeProperties(final UUID operatorUID,
                                   final DataflowNodeType type,
-                                  final int localDOP,
-                                  final int[][] partitioningKeys,
-                                  final Partitioner.PartitioningStrategy strategy,
-                                  final int globalDOP,
                                   final String instanceName,
+                                  final int globalDOP,
+                                  final int localDOP,
+                                  final int[][] partitionKeyIndices,
+                                  final Partitioner.PartitioningStrategy strategy,
                                   final TypeInformation input1Type,
                                   final TypeInformation input2Type,
                                   final TypeInformation outputType,
                                   final String functionTypeName,
-                                  final int[][] groupByKeyIndices,
                                   final int[][] keyIndices1,
                                   final int[][] keyIndices2,
                                   final int[][] sortKeyIndices,
                                   final SortOrder sortOrder,
-                                  final List<UUID> broadcastVars,
-                                  final int[][] datasetKeyIndices) {
+                                  final int[][] groupByKeyIndices,
+                                  final int[][] datasetKeyIndices,
+                                  final List<UUID> broadcastVars) {
         // sanity check.
         if (operatorUID == null)
             throw new IllegalArgumentException("operatorUID == null");
@@ -176,15 +175,15 @@ public final class DataflowNodeProperties implements Serializable {
 
         this.type = type;
 
-        this.localDOP = localDOP;
-
-        this.partitioningKeys = partitioningKeys;
-
-        this.strategy = strategy;
+        this.instanceName = instanceName;
 
         this.globalDOP = globalDOP;
 
-        this.instanceName = instanceName;
+        this.localDOP = localDOP;
+
+        this.partitionKeyIndices = partitionKeyIndices;
+
+        this.strategy = strategy;
 
         this.input1Type = input1Type;
 
@@ -194,8 +193,6 @@ public final class DataflowNodeProperties implements Serializable {
 
         this.functionTypeName = functionTypeName;
 
-        this.groupByKeyIndices = groupByKeyIndices;
-
         this.keyIndices1 = keyIndices1;
 
         this.keyIndices2 = keyIndices2;
@@ -204,8 +201,10 @@ public final class DataflowNodeProperties implements Serializable {
 
         this.sortOrder = sortOrder;
 
-        this.broadcastVars = broadcastVars;
+        this.groupByKeyIndices = groupByKeyIndices;
 
         this.datasetKeyIndices = datasetKeyIndices;
+
+        this.broadcastVars = broadcastVars;
     }
 }

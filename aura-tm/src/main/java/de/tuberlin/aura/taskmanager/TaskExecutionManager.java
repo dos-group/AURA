@@ -7,30 +7,16 @@ import de.tuberlin.aura.core.taskmanager.spi.ITaskManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
-import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 
 
 public final class TaskExecutionManager extends EventDispatcher implements ITaskExecutionManager {
-
-    // ---------------------------------------------------
-    // Execution Manager Events.
-    // ---------------------------------------------------
-
-    public static final class TaskExecutionEvent extends Event {
-
-        public static final String EXECUTION_MANAGER_EVENT_UNREGISTER_TASK = "EXECUTION_MANAGER_EVENT_UNREGISTER_TASK";
-
-        public TaskExecutionEvent(String type, Object payload) {
-            super(type, payload);
-        }
-    }
 
     // ---------------------------------------------------
     // Fields.
@@ -84,10 +70,10 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
     // Public Methods.
     // ---------------------------------------------------
 
-    public void scheduleTask(final ITaskDriver driver) {
+    public void scheduleTask(final ITaskRuntime runtime) {
         // sanity check.
-        if (driver == null)
-            throw new IllegalArgumentException("driver == null");
+        if (runtime == null)
+            throw new IllegalArgumentException("runtime == null");
 
         int tmpMin, tmpMinOld;
         tmpMinOld = executionUnit[0].getNumberOfEnqueuedTasks();
@@ -101,12 +87,12 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
             }
         }
 
-        executionUnit[selectedEU].enqueueTask(driver);
+        executionUnit[selectedEU].enqueueTask(runtime);
 
         LOG.info("EXECUTE TASK {}-{} [{}] ON EXECUTION UNIT ({}) ON MACHINE [{}]",
-                 driver.getNodeDescriptor().name,
-                 driver.getNodeDescriptor().taskIndex,
-                 driver.getNodeDescriptor().taskID,
+                 runtime.getNodeDescriptor().name,
+                 runtime.getNodeDescriptor().taskIndex,
+                 runtime.getNodeDescriptor().taskID,
                  executionUnit[selectedEU].getExecutionUnitID(),
                  machineDescriptor.uid);
     }
@@ -117,8 +103,8 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
             throw new IllegalArgumentException("taskID == null");
         for (int i = 0; i < numberOfExecutionUnits; ++i) {
             final ITaskExecutionUnit eu = executionUnit[i];
-            final ITaskDriver taskCtx = eu.getTaskDriver();
-            if (taskCtx != null && taskID.equals(taskCtx.getNodeDescriptor().taskID)) {
+            final ITaskRuntime runtime = eu.getRuntime();
+            if (runtime != null && taskID.equals(runtime.getNodeDescriptor().taskID)) {
                 return eu;
             }
         }

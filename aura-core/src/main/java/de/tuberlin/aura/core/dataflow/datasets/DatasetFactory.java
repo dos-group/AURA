@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.dataflow.datasets;
 
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 
 
 public final class DatasetFactory {
@@ -16,7 +16,7 @@ public final class DatasetFactory {
     // Public Methods.
     // ---------------------------------------------------
 
-    public static AbstractDataset<?> createDataset(final IOperatorEnvironment environment) {
+    public static AbstractDataset<?> createDataset(final IExecutionContext environment) {
         // sanity check.
         if (environment == null)
             throw new IllegalArgumentException("environment == null");

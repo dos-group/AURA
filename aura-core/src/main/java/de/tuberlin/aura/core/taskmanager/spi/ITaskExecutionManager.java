@@ -11,7 +11,7 @@ public interface ITaskExecutionManager extends IEventDispatcher {
     // Public Methods.
     // ---------------------------------------------------
 
-    public abstract void scheduleTask(final ITaskDriver taskDriver);
+    public abstract void scheduleTask(final ITaskRuntime taskDriver);
 
     public abstract ITaskExecutionUnit findExecutionUnitByTaskID(final UUID taskID);
 

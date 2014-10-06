@@ -1,4 +1,4 @@
-package de.tuberlin.aura.datasets;
+package de.tuberlin.aura.drivers;
 
 import java.util.*;
 import java.util.concurrent.BlockingQueue;
@@ -10,13 +10,13 @@ import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.dataflow.datasets.DatasetFactory;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
-import de.tuberlin.aura.core.dataflow.operators.impl.OperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
+import de.tuberlin.aura.core.dataflow.operators.impl.ExecutionContext;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.record.Partitioner;
-import de.tuberlin.aura.core.record.RowRecordReader;
-import de.tuberlin.aura.core.record.RowRecordWriter;
+import de.tuberlin.aura.core.record.RecordReader;
+import de.tuberlin.aura.core.record.RecordWriter;
 import de.tuberlin.aura.core.taskmanager.common.TaskStates;
 import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
@@ -30,42 +30,42 @@ public class DatasetDriver extends AbstractInvokeable {
     // Fields.
     // ---------------------------------------------------
 
-    private final Descriptors.DatasetNodeDescriptor datasetNodeDescriptor;
+    private final Descriptors.DatasetNodeDescriptor nodeDescriptor;
 
-    private final IOperatorEnvironment environment;
+    private final IExecutionContext context;
 
     private final AbstractDataset<Object> dataset;
 
-    private final BlockingQueue<List<Descriptors.AbstractNodeDescriptor>> requestingTopologyBinding;
+    private final BlockingQueue<List<Descriptors.AbstractNodeDescriptor>> bindingRequest;
 
-    private final Queue<Triple<UUID,Partitioner.PartitioningStrategy,int[][]>> requestingTopologyProperties;
+    private final Queue<Triple<UUID,Partitioner.PartitioningStrategy,int[][]>> requestProperties;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public DatasetDriver(final Descriptors.DatasetNodeDescriptor datasetNodeDescriptor,
+    public DatasetDriver(final Descriptors.DatasetNodeDescriptor nodeDescriptor,
                          final Descriptors.NodeBindingDescriptor bindingDescriptor) {
 
-        this.datasetNodeDescriptor = datasetNodeDescriptor;
+        this.nodeDescriptor = nodeDescriptor;
 
-        this.environment = new OperatorEnvironment(datasetNodeDescriptor);
+        this.context = new ExecutionContext(nodeDescriptor, bindingDescriptor);
 
-        this.dataset = (AbstractDataset<Object>)DatasetFactory.createDataset(environment);
+        this.dataset = (AbstractDataset<Object>)DatasetFactory.createDataset(context);
 
-        this.requestingTopologyBinding = new LinkedBlockingQueue<>();
+        this.bindingRequest = new LinkedBlockingQueue<>();
 
-        this.requestingTopologyProperties = new LinkedList<>();
+        this.requestProperties = new LinkedList<>();
 
         if (!bindingDescriptor.outputGateBindings.isEmpty()) {
 
-            requestingTopologyBinding.addAll(bindingDescriptor.outputGateBindings);
+            bindingRequest.addAll(bindingDescriptor.outputGateBindings);
 
-            requestingTopologyProperties.add(
+            requestProperties.add(
                     Triple.of(
-                            datasetNodeDescriptor.topologyID,
-                            datasetNodeDescriptor.properties.strategy,
-                            datasetNodeDescriptor.properties.partitioningKeys
+                            nodeDescriptor.topologyID,
+                            nodeDescriptor.properties.strategy,
+                            nodeDescriptor.properties.partitionKeyIndices
                     )
             );
         }
@@ -90,10 +90,10 @@ public class DatasetDriver extends AbstractInvokeable {
         // --------------------------- PRODUCE PHASE ---------------------------
 
         {
-            //if (driver.getBindingDescriptor().inputGateBindings.size() != 1)
+            //if (runtime.getBindingDescriptor().inputGateBindings.size() != 1)
             //    throw new IllegalStateException();
 
-            final IRecordReader reader = new RowRecordReader(driver, 0);
+            final IRecordReader reader = new RecordReader(runtime, 0);
 
             reader.begin();
 
@@ -115,11 +115,11 @@ public class DatasetDriver extends AbstractInvokeable {
 
         boolean initialDataflowOutputs = true;
 
-        if (driver.getBindingDescriptor().outputGateBindings.isEmpty()) {
+        if (runtime.getBindingDescriptor().outputGateBindings.isEmpty()) {
 
             final CountDownLatch awaitFinishTransition = new CountDownLatch(1);
 
-            driver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
+            runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
                     new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                         @Override
@@ -132,7 +132,7 @@ public class DatasetDriver extends AbstractInvokeable {
                     }
             );
 
-            driver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
+            runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
 
             try {
                 awaitFinishTransition.await();
@@ -140,11 +140,11 @@ public class DatasetDriver extends AbstractInvokeable {
                 // do nothing.
             }
 
-            driver.getBindingDescriptor().inputGateBindings.clear();
+            runtime.getBindingDescriptor().inputGateBindings.clear();
 
-            driver.getBindingDescriptor().outputGateBindings.clear();
+            runtime.getBindingDescriptor().outputGateBindings.clear();
 
-            driver.getTaskStateMachine().reset();
+            runtime.getTaskStateMachine().reset();
 
             initialDataflowOutputs = false;
         }
@@ -155,14 +155,14 @@ public class DatasetDriver extends AbstractInvokeable {
 
             try {
 
-                final List<Descriptors.AbstractNodeDescriptor> outputs = requestingTopologyBinding.take();
+                final List<Descriptors.AbstractNodeDescriptor> outputs = bindingRequest.take();
 
-                final Triple<UUID,Partitioner.PartitioningStrategy,int[][]> gateRequestProperties = requestingTopologyProperties.poll();
+                final Triple<UUID,Partitioner.PartitioningStrategy,int[][]> gateRequestProperties = requestProperties.poll();
 
                 //LOG.info("--------------> take");
 
 
-                driver.getNodeDescriptor().topologyID = gateRequestProperties.getLeft();
+                runtime.getNodeDescriptor().topologyID = gateRequestProperties.getLeft();
 
                 final Partitioner.PartitioningStrategy partitioningStrategy = gateRequestProperties.getMiddle();
 
@@ -173,7 +173,7 @@ public class DatasetDriver extends AbstractInvokeable {
 
                                 partitioningStrategy,
 
-                                datasetNodeDescriptor.properties.outputType,
+                                nodeDescriptor.properties.outputType,
 
                                 partitioningKey
                         );
@@ -181,26 +181,25 @@ public class DatasetDriver extends AbstractInvokeable {
 
                 if (!initialDataflowOutputs) {
 
-                    List<List<Descriptors.AbstractNodeDescriptor>> ob = new ArrayList<>();
+                    final List<List<Descriptors.AbstractNodeDescriptor>> ob = new ArrayList<>();
 
                     ob.add(outputs);
 
-                    driver.getBindingDescriptor().addOutputGateBinding(ob);
+                    runtime.getBindingDescriptor().addOutputGateBinding(ob);
 
-                    consumer.bind(driver.getBindingDescriptor().inputGateBindings, consumer.getAllocator());
+                    consumer.bind(runtime.getBindingDescriptor().inputGateBindings, consumer.getAllocator());
 
-                    producer.bind(driver.getBindingDescriptor().outputGateBindings, producer.getAllocator());
+                    producer.bind(runtime.getBindingDescriptor().outputGateBindings, producer.getAllocator());
 
                     final CountDownLatch awaitRunningTransition = new CountDownLatch(1);
 
-                    driver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
+                    runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
                             new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                                 @Override
                                 public void stateAction(TaskStates.TaskState previousState,
                                                         TaskStates.TaskTransition transition,
                                                         TaskStates.TaskState state) {
-
                                     awaitRunningTransition.countDown();
                                 }
                             }
@@ -209,17 +208,17 @@ public class DatasetDriver extends AbstractInvokeable {
                     try {
                         awaitRunningTransition.await();
                     } catch (InterruptedException e) {
-                        // do nothing.
                     }
                 }
 
 
-                final IRecordWriter writer = new RowRecordWriter(driver, datasetNodeDescriptor.properties.outputType, 0, partitioner);
+                final IRecordWriter writer = new RecordWriter(runtime, nodeDescriptor.properties.outputType, 0, partitioner);
 
                 writer.begin();
-                for (final Object object : dataset.getData()) {
+
+                for (final Object object : dataset.getData())
                     writer.writeObject(object);
-                }
+
                 writer.end();
 
 
@@ -227,7 +226,7 @@ public class DatasetDriver extends AbstractInvokeable {
 
                 final CountDownLatch awaitFinishTransition = new CountDownLatch(2);
 
-                driver.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
+                runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
                         new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
 
                             @Override
@@ -238,14 +237,14 @@ public class DatasetDriver extends AbstractInvokeable {
                             }
                         });
 
-                driver.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, new IEventHandler() {
+                runtime.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, new IEventHandler() {
                     @Override
                     public void handleEvent(Event event) {
                         awaitFinishTransition.countDown();
                     }
                 });
 
-                driver.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
+                runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
 
                 try {
                     awaitFinishTransition.await();
@@ -253,12 +252,11 @@ public class DatasetDriver extends AbstractInvokeable {
                     // do nothing.
                 }
 
-                driver.getBindingDescriptor().inputGateBindings.clear();
-                driver.getBindingDescriptor().outputGateBindings.clear();
-                driver.getTaskStateMachine().reset();
+                runtime.getBindingDescriptor().inputGateBindings.clear();
+                runtime.getBindingDescriptor().outputGateBindings.clear();
+                runtime.getTaskStateMachine().reset();
 
             } catch(Exception e) {
-                // do nothing.
             }
 
             initialDataflowOutputs = false;
@@ -267,7 +265,7 @@ public class DatasetDriver extends AbstractInvokeable {
 
     @Override
     public void close() throws Throwable {
-        if (!driver.getBindingDescriptor().outputGateBindings.isEmpty()) {
+        if (!runtime.getBindingDescriptor().outputGateBindings.isEmpty()) {
             throw new IllegalStateException();
         }
     }
@@ -289,13 +287,11 @@ public class DatasetDriver extends AbstractInvokeable {
         if(partitioningStrategy == null)
             throw new IllegalArgumentException("partitioningStrategy == null");
         if(partitioningKeys == null)
-            throw new IllegalArgumentException("partitioningKeys == null");
+            throw new IllegalArgumentException("partitionKeyIndices == null");
 
-        requestingTopologyProperties.add(Triple.of(topologyID, partitioningStrategy, partitioningKeys));
+        requestProperties.add(Triple.of(topologyID, partitioningStrategy, partitioningKeys));
 
-        requestingTopologyBinding.addAll(outputBinding);
-
-        //LOG.info("--------------> createOutputBinding");
+        bindingRequest.addAll(outputBinding);
     }
 
     public Collection<Object> getData() {

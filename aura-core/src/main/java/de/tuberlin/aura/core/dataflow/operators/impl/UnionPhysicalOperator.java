@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractBinaryPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 
 
@@ -18,7 +18,7 @@ public final class UnionPhysicalOperator<I> extends AbstractBinaryPhysicalOperat
     // Constructor.
     // ---------------------------------------------------
 
-    public UnionPhysicalOperator(final IOperatorEnvironment environment,
+    public UnionPhysicalOperator(final IExecutionContext environment,
                                  final IPhysicalOperator<I> inputOp1,
                                  final IPhysicalOperator<I> inputOp2) {
 

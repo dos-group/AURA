@@ -2,7 +2,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.ISinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
@@ -14,7 +14,7 @@ public class UDFSinkPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator
     // Constructor.
     // ---------------------------------------------------
 
-    public UDFSinkPhysicalOperator(final IOperatorEnvironment environment,
+    public UDFSinkPhysicalOperator(final IExecutionContext environment,
                                    final IPhysicalOperator<I> inputOp,
                                    final SinkFunction<I> function) {
 

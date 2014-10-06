@@ -7,6 +7,7 @@ import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
 import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -31,11 +32,10 @@ import de.tuberlin.aura.core.iosystem.RPCManager;
 import de.tuberlin.aura.core.memory.BufferMemoryManager;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
 import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
-import de.tuberlin.aura.core.taskmanager.spi.ITaskDriver;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskManager;
 import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
-import de.tuberlin.aura.datasets.DatasetDriver;
+import de.tuberlin.aura.drivers.DatasetDriver;
 
 
 public final class TaskManager implements ITaskManager {
@@ -58,7 +58,7 @@ public final class TaskManager implements ITaskManager {
 
     private final MachineDescriptor taskManagerMachine;
 
-    private final Map<UUID, ITaskDriver> deployedTasks;
+    private final Map<UUID, ITaskRuntime> deployedTasks;
 
     private final ITM2WMProtocol workloadManagerProtocol;
 
@@ -120,8 +120,8 @@ public final class TaskManager implements ITaskManager {
         // sanity check.
         if (deploymentDescriptor == null)
             throw new IllegalArgumentException("nodeDescriptor == null");
-        final ITaskDriver taskDriver = registerTask(deploymentDescriptor);
-        executionManager.scheduleTask(taskDriver);
+        final ITaskRuntime runtime = registerTask(deploymentDescriptor);
+        executionManager.scheduleTask(runtime);
     }
 
     @Override
@@ -140,14 +140,14 @@ public final class TaskManager implements ITaskManager {
         if (partitioningStrategy == null)
             throw new IllegalArgumentException("partitioningStrategy == null");
         if (partitioningKeys == null)
-            throw new IllegalArgumentException("partitioningKeys == null");
+            throw new IllegalArgumentException("partitionKeyIndices == null");
 
-        final ITaskDriver taskDriver = deployedTasks.get(taskID);
-        if (taskDriver == null)
-            throw new IllegalStateException("driver == null");
+        final ITaskRuntime runtime = deployedTasks.get(taskID);
+        if (runtime == null)
+            throw new IllegalStateException("runtime == null");
 
-        if (taskDriver.getInvokeable() instanceof DatasetDriver) {
-            final DatasetDriver ds = (DatasetDriver) taskDriver.getInvokeable();
+        if (runtime.getInvokeable() instanceof DatasetDriver) {
+            final DatasetDriver ds = (DatasetDriver) runtime.getInvokeable();
             ds.createOutputBinding(topologyID, outputBinding, partitioningStrategy, partitioningKeys);
         }
     }
@@ -159,11 +159,11 @@ public final class TaskManager implements ITaskManager {
         if (uid == null)
             throw new IllegalArgumentException("uid == null");
 
-        final ITaskDriver driver = deployedTasks.get(uid);
-        if (driver == null)
-            throw new IllegalStateException("driver == null");
+        final ITaskRuntime runtime = deployedTasks.get(uid);
+        if (runtime == null)
+            throw new IllegalStateException("runtime == null");
 
-        final DatasetDriver datasetDriver = (DatasetDriver)driver.getInvokeable();
+        final DatasetDriver datasetDriver = (DatasetDriver)runtime.getInvokeable();
         return (Collection<E>)datasetDriver.getData();
     }
 
@@ -181,11 +181,11 @@ public final class TaskManager implements ITaskManager {
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
-        final ITaskDriver driver = deployedTasks.get(taskID);
-        if (driver == null)
-            throw new IllegalStateException("TaskDriver is not found");
-        driver.shutdown();
-        driver.getTaskStateMachine().shutdown();
+        final ITaskRuntime runtime = deployedTasks.get(taskID);
+        if (runtime == null)
+            throw new IllegalStateException("RuntimeEnv is not found");
+        runtime.shutdown();
+        runtime.getTaskStateMachine().shutdown();
         //deployedTasks.remove(taskID);
     }
 
@@ -209,7 +209,7 @@ public final class TaskManager implements ITaskManager {
         }
     }
 
-    private ITaskDriver registerTask(final Descriptors.DeploymentDescriptor deploymentDescriptor) {
+    private ITaskRuntime registerTask(final Descriptors.DeploymentDescriptor deploymentDescriptor) {
         // Sanity check.
         if (deploymentDescriptor == null)
             throw new IllegalArgumentException("deploymentDescriptor == null");
@@ -217,9 +217,9 @@ public final class TaskManager implements ITaskManager {
         if (deployedTasks.containsKey(taskID))
             throw new IllegalStateException("Task is already deployed.");
         // Create an TaskDriver for the submitted task.
-        final ITaskDriver taskDriver = new TaskDriver(this, deploymentDescriptor);
-        deployedTasks.put(taskID, taskDriver);
-        return taskDriver;
+        final ITaskRuntime runtime = new TaskRuntime(this, deploymentDescriptor);
+        deployedTasks.put(taskID, runtime);
+        return runtime;
     }
 
     private void dispatchRemoteTaskTransition(final IOEvents.TaskControlIOEvent event) {
@@ -228,13 +228,14 @@ public final class TaskManager implements ITaskManager {
             throw new IllegalArgumentException("event == null");
         if (!(event.getPayload() instanceof StateMachine.FSMTransitionEvent))
             throw new IllegalArgumentException("event is not FSMTransitionEvent");
-        for (final ITaskDriver taskDriver : deployedTasks.values()) {
-            if (taskDriver.getNodeDescriptor().taskID.equals(event.getTaskID())) {
-                taskDriver.getTaskStateMachine().dispatchEvent((Event) event.getPayload());
+
+        for (final ITaskRuntime runtime : deployedTasks.values()) {
+            if (runtime.getNodeDescriptor().taskID.equals(event.getTaskID())) {
+                runtime.getTaskStateMachine().dispatchEvent((Event) event.getPayload());
             }
         }
         if (deployedTasks.isEmpty()) {
-            LOG.info("Task driver context for topology [" + event.getTopologyID() + "] is removed");
+            LOG.info("Task runtime context for topology [" + event.getTopologyID() + "] is removed");
         }
     }
 

@@ -7,7 +7,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import de.tuberlin.aura.operators.OperatorDriver;
+import de.tuberlin.aura.drivers.OperatorDriver;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.descriptors.Descriptors;
@@ -20,16 +20,16 @@ import de.tuberlin.aura.core.taskmanager.common.TaskStates.TaskTransition;
 import de.tuberlin.aura.core.taskmanager.spi.*;
 import de.tuberlin.aura.core.taskmanager.usercode.UserCode;
 import de.tuberlin.aura.core.taskmanager.usercode.UserCodeImplanter;
-import de.tuberlin.aura.datasets.DatasetDriver;
+import de.tuberlin.aura.drivers.DatasetDriver;
 
 
-public final class TaskDriver extends EventDispatcher implements ITaskDriver {
+public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    private static final Logger LOG = LoggerFactory.getLogger(TaskDriver.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TaskRuntime.class);
 
     private final ITaskManager taskManager;
 
@@ -41,9 +41,9 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
     private final StateMachine.FiniteStateMachine<TaskState, TaskTransition> taskFSM;
 
-    private final IDataProducer dataProducer;
+    private final IDataProducer producer;
 
-    private final IDataConsumer dataConsumer;
+    private final IDataConsumer consumer;
 
     private Class<? extends AbstractInvokeable> invokeableClazz;
 
@@ -53,7 +53,7 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskDriver(final ITaskManager taskManager, final Descriptors.DeploymentDescriptor deploymentDescriptor) {
+    public TaskRuntime(final ITaskManager taskManager, final Descriptors.DeploymentDescriptor deploymentDescriptor) {
         super(true, "TaskDriver-" + deploymentDescriptor.nodeDescriptor.name + "-" + deploymentDescriptor.nodeDescriptor.taskIndex
                 + "-EventDispatcher");
 
@@ -71,9 +71,9 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
 
         this.taskFSM.setName("FSM-" + nodeDescriptor.name + "-" + nodeDescriptor.taskIndex + "-EventDispatcher");
        
-        dataConsumer = new TaskDataConsumer(this);
+        this.consumer = new DataConsumer(this);
 
-        dataProducer = new TaskDataProducer(this);
+        this.producer = new DataProducer(this);
 
         this.queueManager =
                 QueueManager.newInstance(nodeDescriptor.taskID,
@@ -85,78 +85,76 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     // Public Methods.
     // ---------------------------------------------------
 
-    // ------------- Task Driver Lifecycle ---------------
-
     @Override
-    @SuppressWarnings("unchecked")
-    public void startupDriver(final IAllocator inputAllocator, final IAllocator outputAllocator) {
+    public void initialize(final IAllocator inputAllocator, final IAllocator outputAllocator) {
         // sanity check.
         if (inputAllocator == null)
             throw new IllegalArgumentException("inputAllocator == null");
         if (outputAllocator == null)
             throw new IllegalArgumentException("outputAllocator == null");
 
-        dataConsumer.bind(bindingDescriptor.inputGateBindings, inputAllocator);
+        consumer.bind(bindingDescriptor.inputGateBindings, inputAllocator);
 
-        dataProducer.bind(bindingDescriptor.outputGateBindings, outputAllocator);
+        producer.bind(bindingDescriptor.outputGateBindings, outputAllocator);
 
         // --------------------------------------
 
         final List<Class<?>> userClasses = new ArrayList<>();
 
         if (nodeDescriptor.userCodeList != null) {
-            for (final UserCode uc : nodeDescriptor.userCodeList) {
-                final Class<?> userClass = implantInvokeableCode(uc);
+            final UserCodeImplanter codeImplanter = new UserCodeImplanter(this.getClass().getClassLoader());
+            for (final UserCode userCode : nodeDescriptor.userCodeList) {
+                // Try to register the bytecode as a class in the JVM.
+                final Class<?> userClass = codeImplanter.implantUserCodeClass(userCode);
+                if (userClass == null)
+                    throw new IllegalArgumentException("userClass == null");
                 userClasses.add(userClass);
                 if (AbstractInvokeable.class.isAssignableFrom(userClass)) {
                     invokeableClazz = (Class<? extends AbstractInvokeable>) userClass;
                 }
             }
+            nodeDescriptor.setUserCodeClasses(userClasses);
         }
-
-        nodeDescriptor.setUserCodeClasses(userClasses);
 
         // --------------------------------------
 
         if (nodeDescriptor instanceof Descriptors.InvokeableNodeDescriptor) {
 
             if (invokeableClazz != null) {
-                invokeable = createInvokeable(invokeableClazz, this, dataProducer, dataConsumer, LOG);
-                if (invokeable == null)
-                    throw new IllegalStateException("invokeable == null");
+
+                try {
+                    invokeable = invokeableClazz.newInstance();
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
+
             } else {
                 throw new IllegalStateException();
             }
 
         } else if (nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
 
-            if (invokeableClazz != null)
-                throw new IllegalStateException();
-
-            invokeable = new OperatorDriver((Descriptors.OperatorNodeDescriptor) nodeDescriptor);
-            invokeable.setTaskDriver(this);
-            invokeable.setDataProducer(dataProducer);
-            invokeable.setDataConsumer(dataConsumer);
-            invokeable.setLogger(LOG);
+            invokeable = new OperatorDriver((Descriptors.OperatorNodeDescriptor) nodeDescriptor, bindingDescriptor);
 
             for (final Class<?> udfType : userClasses)
-                ((OperatorDriver)invokeable).getOperatorEnvironment().putUDFType(udfType.getName(), udfType);
+                ((OperatorDriver)invokeable).getExecutionContext().putUDFType(udfType.getName(), udfType);
 
         } else if (nodeDescriptor instanceof Descriptors.DatasetNodeDescriptor) {
 
             invokeable = new DatasetDriver((Descriptors.DatasetNodeDescriptor) nodeDescriptor, bindingDescriptor);
-            invokeable.setTaskDriver(this);
-            invokeable.setDataProducer(dataProducer);
-            invokeable.setDataConsumer(dataConsumer);
-            invokeable.setLogger(LOG);
 
         } else {
             throw new IllegalStateException();
         }
+
+        invokeable.setRuntime(this);
+        invokeable.setProducer(producer);
+        invokeable.setConsumer(consumer);
+        invokeable.setLogger(LOG);
     }
 
     @Override
-    public boolean executeDriver() {
+    public boolean execute() {
 
         try {
 
@@ -183,18 +181,17 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     }
 
     @Override
-    public void teardownDriver(boolean awaitExhaustion) {
+    public void shutdown(boolean awaitExhaustion) {
 
         if (!(nodeDescriptor instanceof Descriptors.DatasetNodeDescriptor)) {
             invokeable.stopInvokeable();
         }
 
-        dataProducer.shutdownProducer(awaitExhaustion);
-        dataConsumer.shutdownConsumer();
+        producer.shutdown(awaitExhaustion);
+        consumer.shutdown();
 
-        // Check for memory leaks in the input/output allocator.
-        dataConsumer.getAllocator().checkForMemoryLeaks();
-        dataProducer.getAllocator().checkForMemoryLeaks();
+        consumer.getAllocator().checkForMemoryLeaks();
+        producer.getAllocator().checkForMemoryLeaks();
 
         if (nodeDescriptor instanceof Descriptors.InvokeableNodeDescriptor
             || nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
@@ -245,13 +242,13 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     }
 
     @Override
-    public IDataProducer getDataProducer() {
-        return dataProducer;
+    public IDataProducer getProducer() {
+        return producer;
     }
 
     @Override
-    public IDataConsumer getDataConsumer() {
-        return dataConsumer;
+    public IDataConsumer getConsumer() {
+        return consumer;
     }
 
     @Override
@@ -272,34 +269,6 @@ public final class TaskDriver extends EventDispatcher implements ITaskDriver {
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------
-
-    private Class<?> implantInvokeableCode(final UserCode userCode) {
-        // Try to register the bytecode as a class in the JVM.
-        final UserCodeImplanter codeImplanter = new UserCodeImplanter(this.getClass().getClassLoader());
-        @SuppressWarnings("unchecked")
-        final Class<?> userCodeClazz = codeImplanter.implantUserCodeClass(userCode);
-        // sanity check.
-        if (userCodeClazz == null)
-            throw new IllegalArgumentException("userCodeClazz == null");
-        return userCodeClazz;
-    }
-
-    private AbstractInvokeable createInvokeable(final Class<? extends AbstractInvokeable> invokableClazz,
-                                                final ITaskDriver taskDriver,
-                                                final IDataProducer dataProducer,
-                                                final IDataConsumer dataConsumer,
-                                                final Logger LOG) {
-        try {
-            final AbstractInvokeable invokeable = invokableClazz.newInstance();
-            invokeable.setTaskDriver(taskDriver);
-            invokeable.setDataProducer(dataProducer);
-            invokeable.setDataConsumer(dataConsumer);
-            invokeable.setLogger(LOG);
-            return invokeable;
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
-    }
 
     private StateMachine.FiniteStateMachine<TaskState, TaskTransition> createTaskFSM() {
 

@@ -1,10 +1,11 @@
-package de.tuberlin.aura.core.dataflow.operators.descriptors;
+package de.tuberlin.aura.core.dataflow.api;
 
 import java.io.Serializable;
 
 import de.tuberlin.aura.core.common.utils.IVisitable;
 import de.tuberlin.aura.core.common.utils.IVisitor;
 
+@Deprecated
 public final class DataflowAPI {
 
     // Disallow instantiation.

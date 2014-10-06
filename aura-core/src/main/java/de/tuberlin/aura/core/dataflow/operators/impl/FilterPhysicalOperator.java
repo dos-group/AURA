@@ -3,7 +3,7 @@ package de.tuberlin.aura.core.dataflow.operators.impl;
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IFilterFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FilterFunction;
 
@@ -14,7 +14,7 @@ public class FilterPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator<
     // Constructor.
     // ---------------------------------------------------
 
-    public FilterPhysicalOperator(final IOperatorEnvironment environment,
+    public FilterPhysicalOperator(final IExecutionContext environment,
                                   final IPhysicalOperator<I> inputOp,
                                   final FilterFunction<I> function) {
 

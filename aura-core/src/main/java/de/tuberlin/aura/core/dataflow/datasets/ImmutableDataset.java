@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.dataflow.datasets;
 
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,7 +18,7 @@ public class ImmutableDataset<E> extends AbstractDataset<E> {
     // Constructor.
     // ---------------------------------------------------
 
-    public ImmutableDataset(final IOperatorEnvironment environment) {
+    public ImmutableDataset(final IExecutionContext environment) {
         super(environment);
 
         this.data = new ArrayList<>();

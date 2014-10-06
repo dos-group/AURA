@@ -14,11 +14,9 @@ public final class Partitioner {
 
         BROADCAST,              // TODO:
 
-        RANDOM_PARTITIONER,     // TODO:
-
         HASH_PARTITIONER,
 
-        RANGE_PARTITIONER,
+        RANGE_PARTITIONER,      // TODO:
 
         ROUND_ROBIN_PARTITIONER
     }
@@ -31,23 +29,14 @@ public final class Partitioner {
                 throw new IllegalArgumentException("strategy == null");
 
             switch(strategy) {
-
-                case BROADCAST: {
+                case BROADCAST:
                     return null;
-                }
-
-                case HASH_PARTITIONER: {
+                case HASH_PARTITIONER:
                     return new HashPartitioner(typeInfo, partitioningKeys);
-                }
-
-                case RANGE_PARTITIONER: {
+                case RANGE_PARTITIONER:
                     return new RangePartitioner();
-                }
-
-                case ROUND_ROBIN_PARTITIONER: {
+                case ROUND_ROBIN_PARTITIONER:
                     return new RoundRobinPartitioner();
-                }
-
                 default: {
                     throw new IllegalStateException("partitioner not supported");
                 }
@@ -57,16 +46,10 @@ public final class Partitioner {
 
     public static interface IPartitioner {
 
-        public abstract int partition(final RowRecordModel.Record record, final int receiver);
-
         public abstract int partition(final Object object, final int receiver);
     }
 
     private static abstract class AbstractPartitioner implements IPartitioner {
-
-        public int partition(final RowRecordModel.Record record, final int receiver) {
-            throw new NotImplementedException();
-        }
 
         public int partition(final Object object, final int receiver) {
             throw new NotImplementedException();
@@ -89,33 +72,15 @@ public final class Partitioner {
             this.partitioningKeys = partitioningKeys;
         }
 
-        /*public HashPartitioner(final RowRecordModel.IKeySelector keySelector) {
-            // sanity check.
-            if (keySelector == null)
-                throw new IllegalArgumentException("keySelector == null");
-
-            this.partitioningKeys = keySelector.key();
-        }*/
-
-        /*@Override
-        public int partition(final RowRecordModel.Record record, final int receiver) {
-            int result = 17;
-            for(final int fieldIndex : partitionFields)
-                result = 31 * result + record.get(fieldIndex).hashCode();
-            return (result & Integer.MAX_VALUE) % receiver;
-        }*/
-
         @Override
         public int partition(final Object object, final int receiver) {
             int result = 17;
-
             if (partitioningKeys != null) {
                 for (final int[] selectorChain : partitioningKeys)
                     result = 31 * result + typeInfo.selectField(selectorChain, object).hashCode();
             } else {
                 result = 31 * result + object.hashCode();
             }
-
             return (result & Integer.MAX_VALUE) % receiver;
         }
     }
@@ -128,10 +93,8 @@ public final class Partitioner {
         private int channelIndex = 0;
 
         @Override
-        public int partition(final RowRecordModel.Record record, final int receiver) {
-
+        public int partition(final Object object, final int receiver) {
             channelIndex = ++channelIndex % receiver;
-
             return channelIndex;
         }
     }

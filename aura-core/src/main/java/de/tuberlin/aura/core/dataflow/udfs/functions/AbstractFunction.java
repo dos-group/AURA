@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.dataflow.udfs.functions;
 
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IFunction;
 
 
@@ -10,7 +10,7 @@ public abstract class AbstractFunction implements IFunction {
     // Fields.
     // ---------------------------------------------------
 
-    private IOperatorEnvironment environment;
+    private IExecutionContext environment;
 
     // ---------------------------------------------------
     // Public Methods.
@@ -19,11 +19,11 @@ public abstract class AbstractFunction implements IFunction {
     public void create() {
     }
 
-    public IOperatorEnvironment getEnvironment() {
+    public IExecutionContext getEnvironment() {
         return environment;
     }
 
-    public void setEnvironment(final IOperatorEnvironment environment) {
+    public void setEnvironment(final IExecutionContext environment) {
         // sanity check.
         if (environment == null)
             throw new IllegalArgumentException("environment == null");

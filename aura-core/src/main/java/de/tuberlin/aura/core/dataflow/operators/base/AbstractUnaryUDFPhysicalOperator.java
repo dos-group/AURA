@@ -15,7 +15,7 @@ public abstract class AbstractUnaryUDFPhysicalOperator<I,O> extends AbstractUnar
     // Constructor.
     // ---------------------------------------------------
 
-    public AbstractUnaryUDFPhysicalOperator(final IOperatorEnvironment environment,
+    public AbstractUnaryUDFPhysicalOperator(final IExecutionContext environment,
                                             final IPhysicalOperator<I> inputOp,
                                             final IFunction function) {
 
@@ -31,7 +31,7 @@ public abstract class AbstractUnaryUDFPhysicalOperator<I,O> extends AbstractUnar
     @Override
     public void open() throws Throwable {
         super.open();
-        function.setEnvironment(getEnvironment());
+        function.setEnvironment(getContext());
         function.create();
     }
 

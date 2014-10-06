@@ -1,6 +1,6 @@
 package de.tuberlin.aura.core.dataflow.datasets;
 
-import de.tuberlin.aura.core.dataflow.operators.base.IOperatorEnvironment;
+import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 
 import java.util.Collection;
 
@@ -10,13 +10,13 @@ public abstract class AbstractDataset<E> {
     // Fields.
     // ---------------------------------------------------
 
-    final protected IOperatorEnvironment environment;
+    final protected IExecutionContext environment;
 
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public AbstractDataset(final IOperatorEnvironment environment) {
+    public AbstractDataset(final IExecutionContext environment) {
         // sanity check.
         if (environment == null)
             throw new IllegalArgumentException("environment == null");
