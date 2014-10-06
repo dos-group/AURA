@@ -12,10 +12,18 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
 public final class IterativeDataflowTest {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private static final Logger LOG = LoggerFactory.getLogger(IterativeDataflowTest.class);
 
     // Disallow Instantiation.
     public IterativeDataflowTest() {}
@@ -135,7 +143,20 @@ public final class IterativeDataflowTest {
         );
 
 
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
+        LocalClusterSimulator clusterSimulator = null;
+
+        IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
+        switch (simConfig.getString("simulator.mode")) {
+            case "LOCAL":
+                new LocalClusterSimulator(simConfig);
+                break;
+            case "cluster":
+                break;
+            default:
+                LOG.warn("'simulator mode' has unknown value. Fallback to LOCAL mode.");
+                new LocalClusterSimulator(simConfig);
+        }
+
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
@@ -151,7 +172,11 @@ public final class IterativeDataflowTest {
         ac.submitTopology(atb.build("JOB1"), null);
         ac.awaitSubmissionResult(1);
         ac.closeSession();
-        lcs.shutdown();
+
+        if (clusterSimulator != null) {
+            clusterSimulator.shutdown();
+        }
+
     }
 }
 

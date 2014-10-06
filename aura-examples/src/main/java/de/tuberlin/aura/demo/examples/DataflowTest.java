@@ -12,6 +12,8 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -20,6 +22,12 @@ public final class DataflowTest {
 
     // Disallow instantiation.
     private DataflowTest() {}
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private static final Logger LOG = LoggerFactory.getLogger(DataflowTest.class);
 
     // ---------------------------------------------------
     // UDFs.
@@ -57,16 +65,47 @@ public final class DataflowTest {
 
     public static void main(final String[] args) {
 
+        LocalClusterSimulator clusterSimulator = null;
+
+        IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
+        switch (simConfig.getString("simulator.mode")) {
+            case "LOCAL":
+                clusterSimulator = new LocalClusterSimulator(simConfig);
+                break;
+            case "cluster":
+                break;
+            default:
+                LOG.warn("'simulator mode' has unknown value. Fallback to LOCAL mode.");
+                clusterSimulator = new LocalClusterSimulator(simConfig);
+        }
+
+        int nodes = simConfig.getInt("simulator.tm.number");
+        int cores = simConfig.getInt("tm.execution.units.number");
+
+        int executionUnits = nodes * cores;
+
+        int dop = executionUnits / 7;
+
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(Integer.class),
                         new TypeInformation(String.class));
 
+        final TypeInformation join1TypeInfo =
+                new TypeInformation(Tuple2.class,
+                        source1TypeInfo,
+                        source1TypeInfo);
+
+        final TypeInformation join2TypeInfo =
+                new TypeInformation(Tuple2.class,
+                        join1TypeInfo,
+                        source1TypeInfo);
+
         final DataflowNodeProperties sourceA = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
                 "Source1",
-                1,
+                dop,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -83,11 +122,12 @@ public final class DataflowTest {
                 null
         );
 
-
         final DataflowNodeProperties sourceB = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                "Source2", 1, 1,
+                "Source2",
+                dop,
+                1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                 null,
@@ -108,7 +148,7 @@ public final class DataflowTest {
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
                 "Map1",
-                1,
+                dop,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -125,17 +165,11 @@ public final class DataflowTest {
                 null
         );
 
-
-        final TypeInformation join1TypeInfo =
-                new TypeInformation(Tuple2.class,
-                        source1TypeInfo,
-                        source1TypeInfo);
-
         final DataflowNodeProperties joinA = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.HASH_JOIN_OPERATOR,
                 "Join1",
-                1,
+                dop,
                 1,
                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._2") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -152,17 +186,11 @@ public final class DataflowTest {
                 null
         );
 
-
-        final TypeInformation join2TypeInfo =
-                new TypeInformation(Tuple2.class,
-                        join1TypeInfo,
-                        source1TypeInfo);
-
         final DataflowNodeProperties joinB = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.HASH_JOIN_OPERATOR,
                 "Join2",
-                1,
+                dop,
                 1,
                 new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._2") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -183,7 +211,9 @@ public final class DataflowTest {
         DataflowNodeProperties sink1 = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                "Sink1", 1, 1,
+                "Sink1",
+                dop,
+                1,
                 null,
                 null,
                 join2TypeInfo,
@@ -203,7 +233,7 @@ public final class DataflowTest {
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.UDF_SINK,
                 "Sink2",
-                1,
+                dop,
                 1,
                 null,
                 null,
@@ -220,7 +250,6 @@ public final class DataflowTest {
                 null
         );
 
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
@@ -250,6 +279,10 @@ public final class DataflowTest {
         ac.submitTopology(atb.build("JOB1"), null);
         ac.awaitSubmissionResult(1);
         ac.closeSession();
-        lcs.shutdown();
+
+        if (clusterSimulator != null) {
+            clusterSimulator.shutdown();
+        }
+
     }
 }

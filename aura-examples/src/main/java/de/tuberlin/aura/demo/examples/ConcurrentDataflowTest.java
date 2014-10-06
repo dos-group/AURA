@@ -2,13 +2,14 @@ package de.tuberlin.aura.demo.examples;
 
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.dataflow.api.DataflowAPI;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
-import de.tuberlin.aura.core.dataflow.generator.TopologyGenerator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
@@ -18,11 +19,16 @@ import de.tuberlin.aura.core.record.tuples.Tuple1;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
 
-
 public class ConcurrentDataflowTest {
 
     // Disallow instantiation.
     private ConcurrentDataflowTest() {}
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private static final Logger LOG = LoggerFactory.getLogger(ConcurrentDataflowTest.class);
 
     // ------------------------------------------------------------------------------------------------
     // Testing.
@@ -56,14 +62,36 @@ public class ConcurrentDataflowTest {
 
     public static void main(final String[] args) {
 
+        LocalClusterSimulator clusterSimulator = null;
+
+        IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
+        switch (simConfig.getString("simulator.mode")) {
+            case "LOCAL":
+                clusterSimulator = new LocalClusterSimulator(simConfig);
+                break;
+            case "cluster":
+                break;
+            default:
+                LOG.warn("'simulator mode' has unknown value. Fallback to LOCAL mode.");
+                clusterSimulator = new LocalClusterSimulator(simConfig);
+        }
+
+        int nodes = simConfig.getInt("simulator.tm.number");
+        int cores = simConfig.getInt("tm.execution.units.number");
+
+        int executionUnits = nodes * cores;
+
+        int dop = (executionUnits / 3) / 3;
+
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple1.class, new TypeInformation(Integer.class));
 
-        final DataflowAPI.DataflowNodeDescriptor source1 = new DataflowAPI.DataflowNodeDescriptor(
-                new DataflowNodeProperties(
+        final DataflowNodeProperties source1 = new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                        "Source1", 1, 1,
+                        "Source1",
+                        dop,
+                        1,
                         new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                         null,
@@ -72,19 +100,19 @@ public class ConcurrentDataflowTest {
                         Source1.class.getName(),
                         null, null, null, null, null,
                         null, null
-                )
-        );
+                );
 
         final TypeInformation map1TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(Integer.class),
                         new TypeInformation(String.class));
 
-        final DataflowAPI.DataflowNodeDescriptor map1 = new DataflowAPI.DataflowNodeDescriptor(
-                new DataflowNodeProperties(
+        final DataflowNodeProperties map1 = new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
-                        "Map1", 1, 1,
+                        "Map1",
+                        dop,
+                        1,
                         new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                         source1TypeInfo,
@@ -93,15 +121,14 @@ public class ConcurrentDataflowTest {
                         Map1.class.getName(),
                         null, null, null, null, null,
                         null, null
-                ),
-                source1
-        );
+                );
 
-        final DataflowAPI.DataflowNodeDescriptor sink1 = new DataflowAPI.DataflowNodeDescriptor(
-                new DataflowNodeProperties(
+        final DataflowNodeProperties sink1 = new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                        "Sink1", 1, 1,
+                        "Sink1",
+                        executionUnits / 3,
+                        1,
                         null,
                         null,
                         map1TypeInfo,
@@ -110,26 +137,34 @@ public class ConcurrentDataflowTest {
                         Sink1.class.getName(),
                         null, null, null, null, null,
                         null, null
-                ),
-                map1
-        );
+                );
 
-        // Local
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
-        final Topology.AuraTopology topology1 = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB1");
+        Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
+
+        atb.addNode(new Topology.OperatorNode(source1), Source1.class).
+            connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT).
+            addNode(new Topology.OperatorNode(map1), Map1.class).
+            connectTo("Sink1", Topology.Edge.TransferType.ALL_TO_ALL).
+            addNode(new Topology.OperatorNode(sink1), Sink1.class);
+
+        final Topology.AuraTopology topology1 = atb.build("JOB1");
         ac.submitTopology(topology1, null);
 
-        final Topology.AuraTopology topology2 = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB2");
+        final Topology.AuraTopology topology2 = atb.build("JOB2");
         ac.submitTopology(topology2, null);
 
-        final Topology.AuraTopology topology3 = new TopologyGenerator(ac.createTopologyBuilder()).generate(sink1).toTopology("JOB3");
+        final Topology.AuraTopology topology3 = atb.build("JOB3");
         ac.submitTopology(topology3, null);
 
         ac.awaitSubmissionResult(3);
 
         ac.closeSession();
-        lcs.shutdown();
+
+        if (clusterSimulator != null) {
+            clusterSimulator.shutdown();
+        }
+
     }
 }

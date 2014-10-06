@@ -1,11 +1,11 @@
 package de.tuberlin.aura.demo.examples;
 
+import java.util.*;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
-import de.tuberlin.aura.core.dataflow.generator.TopologyGenerator;
-import de.tuberlin.aura.core.dataflow.api.DataflowAPI;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
@@ -13,13 +13,19 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
-
-import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DistributedEnvironmentTest {
 
     // ---------------------------------------------------
-    // User Defined Functions.
+    // Fields.
+    // ---------------------------------------------------
+
+    private static final Logger LOG = LoggerFactory.getLogger(DistributedEnvironmentTest.class);
+
+    // ---------------------------------------------------
+    // User-defined Functions.
     // ---------------------------------------------------
 
     public static final class Source1 extends SourceFunction<Tuple2<String,Integer>> {
@@ -65,59 +71,74 @@ public class DistributedEnvironmentTest {
 
     public static void main(final String[] args) {
 
-        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
+        LocalClusterSimulator clusterSimulator = null;
+
+        IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
+        switch (simConfig.getString("simulator.mode")) {
+            case "LOCAL":
+                clusterSimulator = new LocalClusterSimulator(simConfig);
+                break;
+            case "cluster":
+                break;
+            default:
+                LOG.warn("'simulator mode' has unknown value. Fallback to LOCAL mode.");
+                clusterSimulator = new LocalClusterSimulator(simConfig);
+        }
+
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
+
+        int nodes = simConfig.getInt("simulator.tm.number");
+        int cores = simConfig.getInt("tm.execution.units.number");
+
+        int executionUnits = nodes * cores;
 
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(String.class),
                         new TypeInformation(Integer.class));
 
-        final DataflowAPI.DataflowNodeDescriptor source1 =
-                new DataflowAPI.DataflowNodeDescriptor(
-                        new DataflowNodeProperties(
-                                UUID.randomUUID(),
-                                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                                "Source1", 1, 1,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                null,
-                                null,
-                                source1TypeInfo,
-                                Source1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
-                        )
+        final DataflowNodeProperties source1 =
+                new DataflowNodeProperties(
+                        UUID.randomUUID(),
+                        DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
+                        "Source1",
+                        executionUnits / 3,
+                        1,
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
+                        Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                        null,
+                        null,
+                        source1TypeInfo,
+                        Source1.class.getName(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 );
 
-        final DataflowAPI.DataflowNodeDescriptor map1 =
-                new DataflowAPI.DataflowNodeDescriptor(
-                        new DataflowNodeProperties(
-                                UUID.randomUUID(),
-                                DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
-                                "Map1",
-                                1,
-                                1,
-                                new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
-                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                source1TypeInfo,
-                                null,
-                                source1TypeInfo,
-                                Map1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
-                        ),
-                        source1
+        final DataflowNodeProperties map1 =
+                new DataflowNodeProperties(
+                        UUID.randomUUID(),
+                        DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
+                        "Map1",
+                        executionUnits / 3,
+                        1,
+                        new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
+                        Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                        source1TypeInfo,
+                        null,
+                        source1TypeInfo,
+                        Map1.class.getName(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 );
 
         final UUID dataset1UID = UUID.randomUUID();
@@ -126,7 +147,7 @@ public class DistributedEnvironmentTest {
                 dataset1UID,
                 DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
                 "Dataset1",
-                1,
+                executionUnits / 3,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -143,13 +164,15 @@ public class DistributedEnvironmentTest {
                 null
         );
 
-        final DataflowAPI.DataflowNodeDescriptor dataset1 =
-                new DataflowAPI.DataflowNodeDescriptor(
-                        dataset1Properties,
-                        map1
-                );
+        Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
 
-        final Topology.AuraTopology topology1 = new TopologyGenerator(ac.createTopologyBuilder()).generate(dataset1).toTopology("JOB1");
+        atb.addNode(new Topology.OperatorNode(source1), Source1.class).
+                connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT).
+                addNode(new Topology.OperatorNode(map1), Map1.class).
+                connectTo("Dataset1", Topology.Edge.TransferType.ALL_TO_ALL).
+                addNode(new Topology.DatasetNode(dataset1Properties));
+
+        final Topology.AuraTopology topology1 = atb.build("JOB1");
         ac.submitTopology(topology1, null);
         ac.awaitSubmissionResult(1);
 
@@ -167,32 +190,26 @@ public class DistributedEnvironmentTest {
         final UUID broadcastDatasetID = UUID.randomUUID();
         ac.broadcastDataset(broadcastDatasetID, broadcastDataset);
 
-
-        final DataflowAPI.DataflowNodeDescriptor dataset1Ref =
-                new DataflowAPI.DataflowNodeDescriptor(dataset1Properties);
-
-        final DataflowAPI.DataflowNodeDescriptor map2 =
-                new DataflowAPI.DataflowNodeDescriptor(
-                        new DataflowNodeProperties(
-                                UUID.randomUUID(),
-                                DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
-                                "Map2", 1,
-                                1,
-                                new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
-                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                source1TypeInfo,
-                                null,
-                                source1TypeInfo,
-                                Map2.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                Arrays.asList(broadcastDatasetID)
-                        ),
-                        dataset1Ref
+        final DataflowNodeProperties map2 =
+                new DataflowNodeProperties(
+                        UUID.randomUUID(),
+                        DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
+                        "Map2",
+                        executionUnits / 3,
+                        1,
+                        new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
+                        Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                        source1TypeInfo,
+                        null,
+                        source1TypeInfo,
+                        Map2.class.getName(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        Arrays.asList(broadcastDatasetID)
                 );
 
         final UUID dataset2UID = UUID.randomUUID();
@@ -201,7 +218,7 @@ public class DistributedEnvironmentTest {
                 dataset2UID,
                 DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
                 "Dataset2",
-                1,
+                executionUnits / 3,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -218,13 +235,15 @@ public class DistributedEnvironmentTest {
                 null
         );
 
-        final DataflowAPI.DataflowNodeDescriptor dataset2 =
-                new DataflowAPI.DataflowNodeDescriptor(
-                        dataset2Properties,
-                        map2
-                );
+        Topology.AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
 
-        final Topology.AuraTopology topology2 = new TopologyGenerator(ac.createTopologyBuilder()).generate(dataset2).toTopology("JOB2");
+        atb2.addNode(new Topology.DatasetNode(dataset1Properties)).
+                connectTo("Map2", Topology.Edge.TransferType.POINT_TO_POINT).
+                addNode(new Topology.OperatorNode(map2), Map2.class).
+                connectTo("Dataset2", Topology.Edge.TransferType.POINT_TO_POINT).
+                addNode(new Topology.DatasetNode(dataset2Properties));
+
+        final Topology.AuraTopology topology2 = atb2.build("JOB2");
         ac.submitTopology(topology2, null);
         ac.awaitSubmissionResult(1);
 
@@ -233,6 +252,9 @@ public class DistributedEnvironmentTest {
             System.out.println(tuple);
 
         ac.closeSession();
-        lcs.shutdown();
+
+        if (clusterSimulator != null) {
+            clusterSimulator.shutdown();
+        }
     }
 }

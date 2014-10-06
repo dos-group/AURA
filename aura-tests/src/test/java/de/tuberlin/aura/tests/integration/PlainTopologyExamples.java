@@ -8,10 +8,7 @@ import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.topology.Topology;
 
-/**
- *
- */
-public class ExampleTopologies {
+public class PlainTopologyExamples {
 
     // --------------------------------------------------
     // 2 layered
