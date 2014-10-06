@@ -13,7 +13,6 @@ import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
 
-import java.util.ArrayList;
 import java.util.UUID;
 
 public final class IterativeDataflowTest {

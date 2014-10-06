@@ -28,8 +28,8 @@ public final class PhysicalOperatorFactory {
             throw new IllegalArgumentException("context == null");
 
         final Class<?> udfType = context.getUDFType(context.getProperties().functionTypeName);
-        final AbstractPhysicalOperator<Object> inputOp1 = inputs.get(0);
-        final AbstractPhysicalOperator<Object> inputOp2 = inputs.get(1);
+        final AbstractPhysicalOperator<Object> inputOp1 = inputs.size() >= 1 ? inputs.get(0) : null;
+        final AbstractPhysicalOperator<Object> inputOp2 = inputs.size() >= 2 ? inputs.get(1) : null;
 
         switch(context.getProperties().type) {
             case MAP_TUPLE_OPERATOR:
