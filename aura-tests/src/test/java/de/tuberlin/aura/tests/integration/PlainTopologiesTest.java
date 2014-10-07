@@ -1,24 +1,126 @@
 package de.tuberlin.aura.tests.integration;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
-import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
-import de.tuberlin.aura.core.topology.Topology;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-public class PlainTopologyExamples {
+import de.tuberlin.aura.client.api.AuraClient;
+import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.config.IConfigFactory;
+import de.tuberlin.aura.core.topology.Topology;
+import de.tuberlin.aura.tests.util.TestHelper;
+
+
+public final class PlainTopologiesTest {
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private static AuraClient auraClient;
+
+    private static int executionUnits;
 
     // --------------------------------------------------
-    // 2 layered
+    // Tests.
+    // --------------------------------------------------
+
+    @BeforeClass
+    public static void setup() {
+
+        IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
+
+        if (!IntegrationTestSuite.isRunning)
+            IntegrationTestSuite.setUpTestEnvironment();
+
+        auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
+
+        executionUnits = simConfig.getInt("simulator.tm.number") * simConfig.getInt("tm.execution.units.number");
+
+        if (executionUnits < 6) {
+            throw new IllegalStateException("PlainTopologiesTest requires at least 6 execution units.");
+        }
+
+    }
+
+    @Test
+    public void testMinimalPlainTopology() {
+        TestHelper.runTopology(auraClient, two_layer_point2point_small(auraClient, executionUnits));
+    }
+
+    @Test
+    public void testExtendedTopology() {
+        TestHelper.runTopology(auraClient, six_layer_all2all(auraClient, executionUnits));
+    }
+
+    @Test
+    public void testPlainTopologiesInParallel() {
+        List<Topology.AuraTopology> topologies = new ArrayList<>();
+        topologies.add(two_layer_point2point_small(auraClient, executionUnits / 2));
+        topologies.add(two_layer_point2point_small(auraClient, executionUnits / 2));
+        TestHelper.runTopologiesInParallel(auraClient, topologies);
+    }
+
+    @Test
+    public void testMultipleQueriesSequentially() {
+        List<Topology.AuraTopology> topologies = new ArrayList<>();
+
+        // 2 layered - all2all connection
+        topologies.add(two_layer_point2point_small(auraClient, executionUnits));
+
+        // 3 layered - point2point + point2point connection
+        topologies.add(three_layer_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all + point2point connection
+        topologies.add(three_layer_all2all_point2point(auraClient, executionUnits));
+
+        // 3 layered - point2point + all2all connection
+        topologies.add(three_layer_point2point_all2all(auraClient, executionUnits));
+
+        // 3 layered - all2all + all2all connection
+        topologies.add(three_layer_all2all_all2all(auraClient, executionUnits));
+
+        // 3 layered - point2point (join) point2point connection
+        topologies.add(three_layer_point2point_join_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) point2point connection
+        topologies.add(three_layer_all2all_join_point2point(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) all2all connection
+        topologies.add(three_layer_all2all_join_all2all(auraClient, executionUnits));
+
+        // 3 layered - all2all (join) all2all connection (small/large)
+        topologies.add(three_layer_all2all_join_all2all_sl(auraClient, executionUnits));
+
+        TestHelper.runTopologies(auraClient, topologies);
+    }
+
+    @AfterClass
+    public static void tearDown() {
+
+        if (!IntegrationTestSuite.isRunning) {
+            IntegrationTestSuite.tearDownTestEnvironment();
+        }
+
+        auraClient.closeSession();
+    }
+
+    // --------------------------------------------------
+    // Topologies - 2 layered
     // --------------------------------------------------
 
     public static Topology.AuraTopology two_layer_point2point_small(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source", executionUnits / 2, 1), SmallSource.class)
-           .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
+                .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
 
         return atb.build("Job: 2 layered - point2point connection (small)");
     }
@@ -26,121 +128,121 @@ public class PlainTopologyExamples {
     public static Topology.AuraTopology two_layer_point2point_large(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source", executionUnits / 2, 1), LargeSource.class)
-           .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
+                .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 2, 1), Sink.class);
 
         return atb.build("Job: 2 layered - point2point connection (large)");
     }
 
     // --------------------------------------------------
-    // 3 layered
+    // Topologies - 3 layered
     // --------------------------------------------------
 
     public static Topology.AuraTopology three_layer_point2point(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source", executionUnits / 3, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
-           .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+                .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
         return atb.build("Job: 3 layered - point2point connection");
     }
 
     public static Topology.AuraTopology three_layer_all2all_point2point(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source", executionUnits / 3, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
-           .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+                .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
         return atb.build("Job: 3 layered - all2all + point2point connection");
     }
 
     public static Topology.AuraTopology three_layer_point2point_all2all(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source", executionUnits / 3, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
-           .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+                .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
         return atb.build("Job: 3 layered - point2point + all2all connection");
     }
 
     public static Topology.AuraTopology three_layer_all2all_all2all(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source", executionUnits / 3, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
-           .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 3, 1), ForwardWithOneInput.class)
+                .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 3, 1), Sink.class);
         return atb.build("Job: 3 layered - all2all + all2all connection");
     }
 
     public static Topology.AuraTopology three_layer_point2point_join_point2point(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
-           .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), LargeSource.class)
+                .connectTo("Middle", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+                .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
         return atb.build("Job: 3 layered - point2point (join) point2point connection");
     }
 
     public static Topology.AuraTopology three_layer_all2all_join_point2point(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
-           .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), LargeSource.class)
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+                .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
         return atb.build("Job: 3 layered - all2all (join) point2point connection");
     }
 
     public static Topology.AuraTopology three_layer_all2all_join_all2all(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
-           .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), LargeSource.class)
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+                .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
         return atb.build("Job: 3 layered - all2all (join) all2all connection");
     }
 
     public static Topology.AuraTopology three_layer_all2all_join_all2all_sl(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Left", executionUnits / 4, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), SmallSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
-           .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 4, 1), SmallSource.class)
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 4, 1), ForwardWithTwoInputs.class)
+                .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 4, 1), Sink.class);
         return atb.build("Job: 3 layered - all2all (join) all2all connection (small/large)");
     }
 
     // --------------------------------------------------
-    // 6 layered
+    // Topologies - 6 layered
     // --------------------------------------------------
 
     public static Topology.AuraTopology six_layer_all2all(final AuraClient auraClient, int executionUnits) {
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Left", executionUnits / 6, 1), SmallSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 6, 1), LargeSource.class)
-           .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 6, 1), ForwardWithTwoInputs.class)
-           .connectTo("Middle2", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Middle", executionUnits / 6, 1), SmallSource.class)
-           .connectTo("Middle2", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle2", executionUnits / 6, 1), ForwardWithTwoInputs.class)
-           .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
-           .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 6, 1), Sink.class);
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Right", executionUnits / 6, 1), LargeSource.class)
+                .connectTo("Middle", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle", executionUnits / 6, 1), ForwardWithTwoInputs.class)
+                .connectTo("Middle2", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Source Middle", executionUnits / 6, 1), SmallSource.class)
+                .connectTo("Middle2", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Middle2", executionUnits / 6, 1), ForwardWithTwoInputs.class)
+                .connectTo("Sink", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.InvokeableNode(UUID.randomUUID(), "Sink", executionUnits / 6, 1), Sink.class);
 
         return atb.build("Job: 6 layered - all2all connection");
     }
