@@ -1,14 +1,14 @@
 package de.tuberlin.aura.core.dataflow.udfs.contracts;
 
-public interface IFoldFunction<I,M,O> {
+public interface IFoldFunction<I,O> {
 
     // ---------------------------------------------------
     // Public Methods.
     // ---------------------------------------------------
 
-    public abstract O initialValue();
+    public abstract O empty();
 
-    public abstract M map(final I in1);
+    public abstract O singleton(final I in);
 
-    public abstract O add(O currentValue, final M mRes);
+    public abstract O union(O currentValue, final O mRes);
 }

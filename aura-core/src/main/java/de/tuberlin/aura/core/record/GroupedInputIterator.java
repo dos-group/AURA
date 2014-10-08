@@ -6,7 +6,7 @@ import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class GroupedOperatorInputIterator<I> implements Iterator<I> {
+public class GroupedInputIterator<I> implements Iterator<I> {
 
     // ---------------------------------------------------
     // Fields.
@@ -20,7 +20,7 @@ public class GroupedOperatorInputIterator<I> implements Iterator<I> {
     // Constructors.
     // ---------------------------------------------------
 
-    public GroupedOperatorInputIterator(IPhysicalOperator<I> inputOperator) {
+    public GroupedInputIterator(IPhysicalOperator<I> inputOperator) {
         this.inputOperator = inputOperator;
 
         try {
@@ -65,6 +65,6 @@ public class GroupedOperatorInputIterator<I> implements Iterator<I> {
     }
 
     public boolean isGroupFinished() {
-        return next == GroupEndMarker.class;
+        return next instanceof GroupEndMarker;
     }
 }

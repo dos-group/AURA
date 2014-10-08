@@ -127,7 +127,7 @@ public class RecordWriter implements IRecordWriter {
 
         if (typeInformation.isGrouped()) {
 
-            if (object == GroupEndMarker.class) {
+            if (object instanceof GroupEndMarker) {
                 channelNeedsGroupEndMarkerBeforeNextWrite.put(groupChannelIndex, true);
                 groupChannelIndex = null;
             } else {
@@ -142,7 +142,7 @@ public class RecordWriter implements IRecordWriter {
                     if (channelNeedsGroupEndMarkerBeforeNextWrite.containsKey(channelIndex)
                             && channelNeedsGroupEndMarkerBeforeNextWrite.get(channelIndex)) {
 
-                        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), GroupEndMarker.class);
+                        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), new GroupEndMarker());
                         // ensure object is written to one buffer only
                         kryoOutputs.get(channelIndex).flush();
 

@@ -130,12 +130,13 @@ public final class OperatorDriver extends AbstractInvokeable {
     public void create() throws Throwable {
 
         if (runtime.getBindingDescriptor().outputGateBindings.size() > 0) {
-            final Partitioner.IPartitioner partitioner =
+
+            final Partitioner.IPartitioner partitioner = (nodeDescriptor.properties.strategy != null) ?
                     Partitioner.PartitionerFactory.createPartitioner(
                             nodeDescriptor.properties.strategy,
                             nodeDescriptor.properties.outputType,
                             nodeDescriptor.properties.partitionKeyIndices
-                    );
+                    ) : null;
 
             for (int i = 0; i <  runtime.getBindingDescriptor().outputGateBindings.size(); ++i) {
                 final RecordWriter reader = new RecordWriter(runtime, nodeDescriptor.properties.outputType, i, partitioner);
@@ -190,7 +191,7 @@ public final class OperatorDriver extends AbstractInvokeable {
 
                     if (operator.isOpen()) {
                         for (int gateIndex : operator.getOutputGates())
-                            writers.get(gateIndex).writeObject(GroupEndMarker.class);
+                            writers.get(gateIndex).writeObject(new GroupEndMarker());
                     }
                 }
             }

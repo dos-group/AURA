@@ -57,7 +57,7 @@ public final class PhysicalOperatorFactory {
             case SORT_OPERATOR:
                 return new SortPhysicalOperator<>(context, inputOp1);
             case FOLD_OPERATOR:
-                return new FoldPhysicalOperator(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object,Object>>) udfType));
+                return new FoldPhysicalOperator(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object>>) udfType));
             case REDUCE_OPERATOR:
                 break;
             case UDF_SOURCE:

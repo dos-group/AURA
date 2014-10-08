@@ -5,13 +5,13 @@ import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOpe
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FoldFunction;
-import de.tuberlin.aura.core.record.GroupedOperatorInputIterator;
+import de.tuberlin.aura.core.record.GroupedInputIterator;
 
 
 public class FoldPhysicalOperator<I,M,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
     public FoldPhysicalOperator(final IExecutionContext environment,
                                 final IPhysicalOperator<I> inputOp,
-                                final FoldFunction<I, M, O> function) {
+                                final FoldFunction<I, O> function) {
 
         super(environment, inputOp, function);
     }
@@ -34,17 +34,17 @@ public class FoldPhysicalOperator<I,M,O> extends AbstractUnaryUDFPhysicalOperato
             return null;
         }
 
-        GroupedOperatorInputIterator<I> inputIterator = new GroupedOperatorInputIterator<>(inputOp);
+        GroupedInputIterator<I> inputIterator = new GroupedInputIterator<>(inputOp);
 
-        FoldFunction<I,M,O> function = ((FoldFunction<I,M,O>) this.function);
+        FoldFunction<I,O> function = ((FoldFunction<I,O>) this.function);
 
-        O value = function.initialValue();
+        O value = function.empty();
 
         while (inputIterator.hasNext()) {
 
             I input = inputIterator.next();
 
-            value = function.add(value, function.map(input));
+            value = function.union(value, function.singleton(input));
         }
 
         if (inputIterator.isDrained()) {

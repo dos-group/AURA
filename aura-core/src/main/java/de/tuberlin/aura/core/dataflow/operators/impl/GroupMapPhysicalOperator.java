@@ -6,7 +6,7 @@ import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IGroupMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.GroupMapFunction;
-import de.tuberlin.aura.core.record.GroupedOperatorInputIterator;
+import de.tuberlin.aura.core.record.GroupedInputIterator;
 
 import java.util.*;
 
@@ -49,7 +49,7 @@ public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
 
         while (elementQueue.isEmpty()) {
 
-            GroupedOperatorInputIterator<I> it = new GroupedOperatorInputIterator<>(inputOp);
+            GroupedInputIterator<I> it = new GroupedInputIterator<>(inputOp);
 
             if (it.isDrained()) {
                 this.close();

@@ -80,7 +80,7 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
             }
 
             for (int i = 0; i < groupKeyIndices.length; i++) {
-                if (currentGroupKeys.get(i) != inputTypeInfo.selectField(groupKeyIndices[i], input)) {
+                if (!currentGroupKeys.get(i).equals(inputTypeInfo.selectField(groupKeyIndices[i], input))) {
                     // the group was finished with the previous element
                     firstElementOfNewGroup = input;
                     currentGroupKeys = null;
