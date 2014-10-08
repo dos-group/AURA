@@ -1,8 +1,14 @@
-package de.tuberlin.aura.core.filesystem;
+package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSourcePhysicalOperator;
+import de.tuberlin.aura.core.filesystem.FileInputSplit;
+import de.tuberlin.aura.core.filesystem.InputSplit;
+import de.tuberlin.aura.core.filesystem.InputSplitAssigner;
+import de.tuberlin.aura.core.filesystem.LocatableInputSplitAssigner;
 import de.tuberlin.aura.core.filesystem.in.CSVInputFormat;
 import de.tuberlin.aura.core.filesystem.in.InputFormat;
 import de.tuberlin.aura.core.topology.Topology;
+import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
@@ -14,11 +20,31 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class InputSplitManager implements Serializable {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    private final IWorkloadManager workloadManager;
+
     private Map<UUID, InputSplitAssigner> inputSplitMap;
 
-    public InputSplitManager() {
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
+    public InputSplitManager(final IWorkloadManager workloadManager) {
+        // sanity check.
+        if (workloadManager == null)
+            throw new IllegalArgumentException("workloadManager == null");
+
+        this.workloadManager = workloadManager;
+
         this.inputSplitMap = new ConcurrentHashMap<>();
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public void registerHDFSSource(final Topology.LogicalNode node) {
         if (node == null)
@@ -26,18 +52,15 @@ public class InputSplitManager implements Serializable {
         if (node.properties == null)
             throw new IllegalStateException("properties == null");
 
-        //final InputFormat inputFormat = (InputFormat) node.properties.config.get("INPUT_FORMAT");
+        final Path path = new Path((String)node.properties.config.get(HDFSSourcePhysicalOperator.HDFS_SOURCE_FILE_PATH));
+        final Class<?>[] fieldTypes = (Class<?>[]) node.properties.config.get(HDFSSourcePhysicalOperator.HDFS_SOURCE_INPUT_FIELD_TYPES);
 
-        final Path path = new Path((String)node.properties.config.get("HDFS_PATH"));
-        final Class<?>[] fieldTypes = (Class<?>[]) node.properties.config.get("FIELD_TYPES");
+        @SuppressWarnings("unchecked")
         final InputFormat inputFormat = new CSVInputFormat(path, fieldTypes);
 
         final Configuration conf = new Configuration();
-        conf.set("fs.defaultFS", "hdfs://localhost:9000/");
+        conf.set("fs.defaultFS", workloadManager.getConfig().getString("wm.io.hdfs.hdfs_url"));
         inputFormat.configure(conf);
-
-        if (inputFormat == null)
-            throw new IllegalStateException("inputFormat == null");
 
         final InputSplit[] inputSplits;
         try {
@@ -53,7 +76,6 @@ public class InputSplitManager implements Serializable {
     public synchronized InputSplit getInputSplitFromHDFSSource(final Topology.ExecutionNode exNode) {
         if (exNode == null)
             throw new IllegalArgumentException("exNode == null");
-
         final InputSplitAssigner inputSplitAssigner = inputSplitMap.get(exNode.logicalNode.uid);
         return inputSplitAssigner.getNextInputSplit(exNode);
     }

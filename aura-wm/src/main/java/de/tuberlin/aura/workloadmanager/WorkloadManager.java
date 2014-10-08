@@ -77,10 +77,6 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
 
     private final Map<UUID, Set<UUID>> registeredSessions;
 
-
-    //private final InputSplitAssigner inputSplitAssigner;
-
-
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -130,11 +126,9 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         rpcManager.registerRPCProtocol(this, ITM2WMProtocol.class);
 
         // Initialize InfrastructureManager.
-        this.infrastructureManager = new InfrastructureManager(zkServer, machineDescriptor);
+        this.infrastructureManager = new InfrastructureManager(this, zkServer, machineDescriptor);
         // Initialize InfrastructureManager.
         this.environmentManager = new DistributedEnvironment();
-
-        //inputSplitAssigner = new LocatableInputSplitAssigner()
     }
 
     // ---------------------------------------------------
@@ -255,6 +249,9 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     // ---------------------------------------------------
     // Public Getter Methods.
     // ---------------------------------------------------
+
+    @Override
+    public IConfig getConfig() { return this.config; }
 
     @Override
     public IIOManager getIOManager() {

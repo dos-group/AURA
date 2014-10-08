@@ -5,18 +5,14 @@ import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSourcePhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
-import java.io.IOException;
-import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -40,7 +36,7 @@ public class SimpleHDFSTest {
 
         @Override
         public void consume(final Tuple2<Integer, String> in) {
-            System.out.println(in);
+            /*System.out.println(in);*/
         }
     }
 
@@ -50,31 +46,20 @@ public class SimpleHDFSTest {
 
     public static void main(final String[] args) {
 
-        /*Configuration conf = new Configuration();
-        conf.set("fs.defaultFS", "hdfs://localhost:9000/");
-        try {
-            FileSystem fs = FileSystem.get(conf);
-            fs.open(new Path("/MOCK_DATA.csv"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
-
-
-
         final TypeInformation source1TypeInfo =
                 new TypeInformation(Tuple2.class,
                         new TypeInformation(Integer.class),
                         new TypeInformation(String.class));
 
         Map<String,Object> srcConfig = new HashMap<>();
-        srcConfig.put("HDFS_PATH", "/MOCK_DATA.csv");
-        srcConfig.put("FIELD_TYPES", new Class<?>[] {Integer.class, String.class});
+        srcConfig.put(HDFSSourcePhysicalOperator.HDFS_SOURCE_FILE_PATH, "/CSVData.csv");
+        srcConfig.put(HDFSSourcePhysicalOperator.HDFS_SOURCE_INPUT_FIELD_TYPES, new Class<?>[] {Integer.class, String.class});
 
         final DataflowNodeProperties source1 = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE,
                 "Source1",
-                1,
+                3,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,

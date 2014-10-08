@@ -123,7 +123,7 @@ public final class OperatorDriver extends AbstractInvokeable {
         this.context = new ExecutionContext(runtime, nodeDescriptor, bindingDescriptor);
 
         final Configuration conf = new Configuration();
-        conf.set("fs.defaultFS", getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_config"));
+        conf.set("fs.defaultFS", getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_url"));
 
         //conf.addResource(new Path(getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_config")));
 

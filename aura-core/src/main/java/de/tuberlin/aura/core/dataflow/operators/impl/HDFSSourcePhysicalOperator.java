@@ -11,10 +11,16 @@ import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
-import java.net.URI;
-
 
 public class HDFSSourcePhysicalOperator<O> extends AbstractUnaryPhysicalOperator<Object,O> {
+
+    // ---------------------------------------------------
+    // Constants.
+    // ---------------------------------------------------
+
+    public static final String HDFS_SOURCE_FILE_PATH = "HDFS_SOURCE_FILE_PATH";
+
+    public static final String HDFS_SOURCE_INPUT_FIELD_TYPES = "HDFS_SOURCE_INPUT_FIELD_TYPES";
 
     // ---------------------------------------------------
     // Fields.
@@ -42,23 +48,19 @@ public class HDFSSourcePhysicalOperator<O> extends AbstractUnaryPhysicalOperator
     public void open() throws Throwable {
         super.open();
 
-        //inputFormat = (InputFormat<AbstractTuple, FileInputSplit>) getContext().getProperties().config.get("INPUT_FORMAT");
-
-        final Path path = new Path((String)getContext().getProperties().config.get("HDFS_PATH"));
-
-        final Class<?>[] fieldTypes = (Class<?>[]) getContext().getProperties().config.get("FIELD_TYPES");
+        final Path path = new Path((String)getContext().getProperties().config.get(HDFS_SOURCE_FILE_PATH));
+        final Class<?>[] fieldTypes = (Class<?>[]) getContext().getProperties().config.get(HDFS_SOURCE_INPUT_FIELD_TYPES);
 
         inputFormat = new CSVInputFormat(path, fieldTypes);
-
         final Configuration conf = new Configuration();
-
-        conf.set("fs.defaultFS", "hdfs://localhost:9000/");
-
+        conf.set("fs.defaultFS", getContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_url"));
         inputFormat.configure(conf);
+
+        split = (FileInputSplit)getContext().getRuntime().getNextInputSplit();
 
         record = AbstractTuple.createTuple(((CSVInputFormat<AbstractTuple>)inputFormat).getFieldTypes().length);
 
-        split = (FileInputSplit)getContext().getRuntime().getNextInputSplit();
+        //System.out.println("HDFSSourcePhysicalOperator (" + getContext().getNodeDescriptor().taskIndex + ") -------------------------> " + split.getStart());
 
         inputFormat.open(split);
     }
@@ -66,13 +68,22 @@ public class HDFSSourcePhysicalOperator<O> extends AbstractUnaryPhysicalOperator
     @Override
     public O next() throws Throwable {
         inputFormat.nextRecord(record);
+        if (inputFormat.reachedEnd()) {
+            inputFormat.close();
+            split = (FileInputSplit)getContext().getRuntime().getNextInputSplit();
+
+            if (split == null)
+                return null;
+
+            inputFormat.open(split);
+            inputFormat.nextRecord(record);
+        }
         return (O) record;
     }
 
     @Override
     public void close() throws Throwable {
         super.close();
-
         inputFormat.close();
     }
 

@@ -2,11 +2,7 @@ package de.tuberlin.aura.core.filesystem.in;
 
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import de.tuberlin.aura.core.filesystem.FileInputSplit;
 import de.tuberlin.aura.core.filesystem.LocatableInputSplitAssigner;
@@ -289,7 +285,21 @@ public abstract class FileInputFormat<OT> implements InputFormat<OT, FileInputSp
 
                 // get the block locations and make sure they are in order with respect to their offset
                 final BlockLocation[] blocks = fs.getFileBlockLocations(file, 0, len);
-                Arrays.sort(blocks);
+
+                Arrays.sort(blocks, new Comparator<BlockLocation>() {
+
+                    @Override
+                    public int compare(BlockLocation o1, BlockLocation o2) {
+                        if (o1.getOffset() < o2.getOffset()) {
+                            return -1;
+                        } else {
+                            if (o1.getOffset() < o2.getOffset()) {
+                                return 1;
+                            } else
+                                return 0;
+                        }
+                    }
+                });
 
                 long bytesUnassigned = len;
                 long position = 0;
