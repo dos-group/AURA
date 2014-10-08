@@ -21,6 +21,7 @@ import de.tuberlin.aura.core.taskmanager.common.TaskStates;
 import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordWriter;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 import org.apache.commons.lang3.tuple.Triple;
 
 
@@ -44,12 +45,13 @@ public class DatasetDriver extends AbstractInvokeable {
     // Constructors.
     // ---------------------------------------------------
 
-    public DatasetDriver(final Descriptors.DatasetNodeDescriptor nodeDescriptor,
+    public DatasetDriver(final ITaskRuntime runtime,
+                         final Descriptors.DatasetNodeDescriptor nodeDescriptor,
                          final Descriptors.NodeBindingDescriptor bindingDescriptor) {
 
         this.nodeDescriptor = nodeDescriptor;
 
-        this.context = new ExecutionContext(nodeDescriptor, bindingDescriptor);
+        this.context = new ExecutionContext(runtime, nodeDescriptor, bindingDescriptor);
 
         this.dataset = (AbstractDataset<Object>)DatasetFactory.createDataset(context);
 

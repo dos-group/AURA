@@ -1,5 +1,6 @@
 package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +13,7 @@ import de.tuberlin.aura.core.topology.Topology.ExecutionNode;
 import de.tuberlin.aura.core.topology.Topology.LogicalNode;
 import de.tuberlin.aura.core.topology.Topology.TopologyBreadthFirstTraverser;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
+
 
 public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology> {
 
@@ -62,12 +64,14 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
             @Override
             public void visit(final LogicalNode element) {
 
-                for (final ExecutionNode en : element.getExecutionNodes()) {
+                if (element.properties.type == DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE) {
+                    infrastructureManager.registerHDFSSource(element);
+                }
 
+                for (final ExecutionNode en : element.getExecutionNodes()) {
                     if (!en.logicalNode.isAlreadyDeployed) {
                         en.getNodeDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
                     }
-
                     LOG.debug(en.getNodeDescriptor().getMachineDescriptor().address.toString()
                             + " -> " + en.getNodeDescriptor().name + "_"
                             + en.getNodeDescriptor().taskIndex);

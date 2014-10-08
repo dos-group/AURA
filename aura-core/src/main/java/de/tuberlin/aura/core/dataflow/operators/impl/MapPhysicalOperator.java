@@ -14,11 +14,11 @@ public final class MapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOper
     // Constructor.
     // ---------------------------------------------------
 
-    public MapPhysicalOperator(final IExecutionContext environment,
+    public MapPhysicalOperator(final IExecutionContext context,
                                final IPhysicalOperator<I> inputOp,
                                final MapFunction<I, O> function) {
 
-        super(environment, inputOp, function);
+        super(context, inputOp, function);
     }
 
     // ---------------------------------------------------

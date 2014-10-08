@@ -10,7 +10,7 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
     // Fields.
     // ---------------------------------------------------
 
-    private final IExecutionContext environment;
+    private final IExecutionContext context;
 
     private boolean isOperatorOpen = false;
 
@@ -20,16 +20,16 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
     // Constructor.
     // ---------------------------------------------------
 
-    public AbstractPhysicalOperator(final IExecutionContext environment) {
+    public AbstractPhysicalOperator(final IExecutionContext context) {
         // sanity check.
-        if (environment == null)
-            throw new IllegalArgumentException("environment == null");
+        if (context == null)
+            throw new IllegalArgumentException("context == null");
 
-        this.environment = environment;
+        this.context = context;
 
         this.outputGateIndices = new ArrayList<>();
 
-        for (int gateIndex = 0; gateIndex < environment.getBindingDescriptor().outputGateBindings.size(); ++gateIndex)
+        for (int gateIndex = 0; gateIndex < context.getBindingDescriptor().outputGateBindings.size(); ++gateIndex)
             outputGateIndices.add(gateIndex);
     }
 
@@ -54,7 +54,7 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
 
     @Override
     public IExecutionContext getContext() {
-        return environment;
+        return context;
     }
 
     @Override

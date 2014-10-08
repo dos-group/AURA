@@ -18,11 +18,11 @@ public final class UnionPhysicalOperator<I> extends AbstractBinaryPhysicalOperat
     // Constructor.
     // ---------------------------------------------------
 
-    public UnionPhysicalOperator(final IExecutionContext environment,
+    public UnionPhysicalOperator(final IExecutionContext context,
                                  final IPhysicalOperator<I> inputOp1,
                                  final IPhysicalOperator<I> inputOp2) {
 
-        super(environment, inputOp1, inputOp2);
+        super(context, inputOp1, inputOp2);
     }
 
     // ---------------------------------------------------

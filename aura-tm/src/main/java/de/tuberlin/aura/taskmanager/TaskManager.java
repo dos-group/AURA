@@ -46,6 +46,8 @@ public final class TaskManager implements ITaskManager {
 
     private static final Logger LOG = Logger.getLogger(TaskManager.class);
 
+    public final IConfig config;
+
     public final IIOManager ioManager;
 
     public final IRPCManager rpcManager;
@@ -70,6 +72,8 @@ public final class TaskManager implements ITaskManager {
         // Sanity check.
         if (config == null)
             throw new IllegalArgumentException("config == null");
+
+        this.config = config;
 
         this.deployedTasks = new ConcurrentHashMap<>();
 
@@ -189,6 +193,11 @@ public final class TaskManager implements ITaskManager {
         //deployedTasks.remove(taskID);
     }
 
+    @Override
+    public ITM2WMProtocol getWorkloadManagerProtocol() {
+        return workloadManagerProtocol;
+    }
+
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------
@@ -242,6 +251,11 @@ public final class TaskManager implements ITaskManager {
     // ---------------------------------------------------
     // Public Getters.
     // ---------------------------------------------------
+
+    @Override
+    public IConfig getConfig() {
+        return config;
+    }
 
     @Override
     public IIOManager getIOManager() {

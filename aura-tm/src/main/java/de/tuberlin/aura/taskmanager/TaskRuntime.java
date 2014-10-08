@@ -4,6 +4,9 @@ package de.tuberlin.aura.taskmanager;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.filesystem.InputSplit;
+import de.tuberlin.aura.taskmanager.hdfs.TaskInputSplitProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,12 +52,17 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
     private AbstractInvokeable invokeable;
 
+    private TaskInputSplitProvider inputSplitProvider;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public TaskRuntime(final ITaskManager taskManager, final Descriptors.DeploymentDescriptor deploymentDescriptor) {
-        super(true, "TaskDriver-" + deploymentDescriptor.nodeDescriptor.name + "-" + deploymentDescriptor.nodeDescriptor.taskIndex
+    public TaskRuntime(final ITaskManager taskManager,
+                       final Descriptors.DeploymentDescriptor deploymentDescriptor) {
+
+        super(true, "TaskDriver-" + deploymentDescriptor.nodeDescriptor.name
+                + "-" + deploymentDescriptor.nodeDescriptor.taskIndex
                 + "-EventDispatcher");
 
         // sanity check.
@@ -79,6 +87,8 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
                 QueueManager.newInstance(nodeDescriptor.taskID,
                         new BlockingSignalQueue.Factory<IOEvents.DataIOEvent>(),
                         new BlockingSignalQueue.Factory<IOEvents.DataIOEvent>());
+
+        inputSplitProvider = new TaskInputSplitProvider(deploymentDescriptor.nodeDescriptor, taskManager.getWorkloadManagerProtocol());
     }
 
     // ---------------------------------------------------
@@ -121,27 +131,25 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
         if (nodeDescriptor instanceof Descriptors.InvokeableNodeDescriptor) {
 
             if (invokeableClazz != null) {
-
                 try {
                     invokeable = invokeableClazz.newInstance();
                 } catch (Exception e) {
                     throw new IllegalStateException(e);
                 }
-
             } else {
                 throw new IllegalStateException();
             }
 
         } else if (nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
 
-            invokeable = new OperatorDriver((Descriptors.OperatorNodeDescriptor) nodeDescriptor, bindingDescriptor);
+            invokeable = new OperatorDriver(this, (Descriptors.OperatorNodeDescriptor) nodeDescriptor, bindingDescriptor);
 
             for (final Class<?> udfType : userClasses)
                 ((OperatorDriver)invokeable).getExecutionContext().putUDFType(udfType.getName(), udfType);
 
         } else if (nodeDescriptor instanceof Descriptors.DatasetNodeDescriptor) {
 
-            invokeable = new DatasetDriver((Descriptors.DatasetNodeDescriptor) nodeDescriptor, bindingDescriptor);
+            invokeable = new DatasetDriver(this, (Descriptors.DatasetNodeDescriptor) nodeDescriptor, bindingDescriptor);
 
         } else {
             throw new IllegalStateException();
@@ -215,6 +223,11 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
                 dstNodeDescriptor.taskID,
                 dstNodeDescriptor.getMachineDescriptor()
         );
+    }
+
+    @Override
+    public InputSplit getNextInputSplit() {
+        return inputSplitProvider.getNextInputSplit();
     }
 
     // ---------------------------------------------------

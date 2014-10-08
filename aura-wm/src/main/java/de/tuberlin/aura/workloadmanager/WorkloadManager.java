@@ -3,6 +3,7 @@ package de.tuberlin.aura.workloadmanager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.filesystem.InputSplit;
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
@@ -125,7 +126,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         rpcManager.registerRPCProtocol(this, ITM2WMProtocol.class);
 
         // Initialize InfrastructureManager.
-        this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machineDescriptor);
+        this.infrastructureManager = new InfrastructureManager(this, zkServer, machineDescriptor);
         // Initialize InfrastructureManager.
         this.environmentManager = new DistributedEnvironment();
     }
@@ -238,9 +239,19 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         return environmentManager.getBroadcastDataset(datasetID);
     }
 
+    @Override
+    public InputSplit requestNextInputSplit(final UUID topologyID, final UUID taskID, int sequenceNumber) {
+        final AuraTopology topology = this.registeredTopologies.get(topologyID).getTopology();
+        final Topology.ExecutionNode exNode = topology.executionNodeMap.get(taskID);
+        return infrastructureManager.getInputSplitFromHDFSSource(exNode);
+    }
+
     // ---------------------------------------------------
     // Public Getter Methods.
     // ---------------------------------------------------
+
+    @Override
+    public IConfig getConfig() { return this.config; }
 
     @Override
     public IIOManager getIOManager() {

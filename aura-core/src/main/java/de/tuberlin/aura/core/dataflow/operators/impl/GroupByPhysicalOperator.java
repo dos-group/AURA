@@ -24,8 +24,9 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
     // Constructor.
     // ---------------------------------------------------
 
-    public GroupByPhysicalOperator(IExecutionContext environment, IPhysicalOperator<I> inputOp) {
-        super(environment, inputOp);
+    public GroupByPhysicalOperator(final IExecutionContext context,
+                                   final IPhysicalOperator<I> inputOp) {
+        super(context, inputOp);
 
         this.inputTypeInfo = getContext().getProperties().input1Type;
     }

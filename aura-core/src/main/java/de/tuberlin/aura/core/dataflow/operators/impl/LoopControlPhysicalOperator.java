@@ -21,10 +21,10 @@ public class LoopControlPhysicalOperator<I> extends AbstractUnaryPhysicalOperato
     // Constructor.
     // ---------------------------------------------------
 
-    public LoopControlPhysicalOperator(final IExecutionContext environment,
+    public LoopControlPhysicalOperator(final IExecutionContext context,
                                        final IPhysicalOperator<I> inputOp) {
 
-        super(environment, inputOp);
+        super(context, inputOp);
 
         this.loopTerminated = false;
     }

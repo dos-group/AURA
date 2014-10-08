@@ -2,6 +2,7 @@ package de.tuberlin.aura.core.dataflow.api;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.record.Partitioner;
@@ -57,13 +58,13 @@ public final class DataflowNodeProperties implements Serializable {
 
         UDF_SOURCE(InputArity.NULLARY),
 
-        FILE_SOURCE(InputArity.NULLARY),
+        HDFS_SOURCE(InputArity.NULLARY),
 
         STREAM_SOURCE(InputArity.NULLARY),
 
         UDF_SINK(InputArity.UNARY),
 
-        FILE_SINK(InputArity.UNARY),
+        HDFS_SINK(InputArity.UNARY),
 
         STREAM_SINK(InputArity.UNARY),
 
@@ -141,12 +142,14 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final List<UUID> broadcastVars;
 
+    public final Map<String, Object> config;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
     public DataflowNodeProperties(final UUID operatorUID, final String instanceName) {
-        this(operatorUID, null, instanceName, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        this(operatorUID, null, instanceName, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public DataflowNodeProperties(final UUID operatorUID,
@@ -166,7 +169,8 @@ public final class DataflowNodeProperties implements Serializable {
                                   final SortOrder sortOrder,
                                   final int[][] groupByKeyIndices,
                                   final int[][] datasetKeyIndices,
-                                  final List<UUID> broadcastVars) {
+                                  final List<UUID> broadcastVars,
+                                  final Map<String, Object> config) {
         // sanity check.
         if (operatorUID == null)
             throw new IllegalArgumentException("operatorUID == null");
@@ -206,5 +210,7 @@ public final class DataflowNodeProperties implements Serializable {
         this.datasetKeyIndices = datasetKeyIndices;
 
         this.broadcastVars = broadcastVars;
+
+        this.config = config;
     }
 }

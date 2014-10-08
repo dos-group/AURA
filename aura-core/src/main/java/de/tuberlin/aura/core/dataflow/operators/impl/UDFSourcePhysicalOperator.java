@@ -18,10 +18,10 @@ public class UDFSourcePhysicalOperator<O> extends AbstractUnaryUDFPhysicalOperat
     // Constructor.
     // ---------------------------------------------------
 
-    public UDFSourcePhysicalOperator(final IExecutionContext environment,
+    public UDFSourcePhysicalOperator(final IExecutionContext context,
                                      final SourceFunction<O> function) {
 
-        super(environment, null, function);
+        super(context, null, function);
     }
 
     // ---------------------------------------------------

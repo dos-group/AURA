@@ -23,11 +23,11 @@ public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
     // Constructor.
     // ---------------------------------------------------
 
-    public FlatMapPhysicalOperator(final IExecutionContext environment,
+    public FlatMapPhysicalOperator(final IExecutionContext context,
                                    final IPhysicalOperator<I> inputOp,
                                    final FlatMapFunction<I,O> function) {
 
-        super(environment, inputOp, function);
+        super(context, inputOp, function);
     }
 
     // ---------------------------------------------------

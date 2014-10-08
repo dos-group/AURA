@@ -482,16 +482,18 @@ public class Topology {
 
         public boolean isAlreadyDeployed = false;
 
+        public final DataflowNodeProperties properties;
+
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
 
         public LogicalNode(final UUID uid, final String name) {
-            this(uid, name, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+            this(uid, name, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, null);
         }
 
         public LogicalNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
-            this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+            this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, null);
         }
 
         public LogicalNode(final UUID uid,
@@ -499,7 +501,8 @@ public class Topology {
                            int degreeOfParallelism,
                            int perWorkerParallelism,
                            final DataPersistenceType dataPersistenceType,
-                           final ExecutionType executionType) {
+                           final ExecutionType executionType,
+                           final DataflowNodeProperties properties) {
             // sanity check.
             if (uid == null)
                 throw new IllegalArgumentException("uid == null");
@@ -531,6 +534,8 @@ public class Topology {
             this.dataPersistenceType = dataPersistenceType;
 
             this.executionType = executionType;
+
+            this.properties = properties;
         }
 
         // ---------------------------------------------------
@@ -594,13 +599,8 @@ public class Topology {
      */
     public static final class DatasetNode extends LogicalNode {
 
-        public final DataflowNodeProperties properties;
-
         public DatasetNode(final DataflowNodeProperties properties) {
-
-            super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
-
-            this.properties = properties;
+            super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, properties);
         }
     }
 
@@ -609,13 +609,8 @@ public class Topology {
      */
     public static final class OperatorNode extends LogicalNode {
 
-        public final DataflowNodeProperties properties;
-
         public OperatorNode(final DataflowNodeProperties properties) {
-
-            super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
-
-            this.properties = properties;
+            super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, properties);
         }
     }
 
@@ -625,7 +620,7 @@ public class Topology {
     public static final class InvokeableNode extends LogicalNode {
 
         public InvokeableNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
-            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED);
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, null);
         }
     }
 
