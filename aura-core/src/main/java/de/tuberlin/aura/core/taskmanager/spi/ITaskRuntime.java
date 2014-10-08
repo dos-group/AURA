@@ -1,5 +1,6 @@
 package de.tuberlin.aura.core.taskmanager.spi;
 
+import de.tuberlin.aura.core.filesystem.InputSplit;
 import org.slf4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
@@ -16,6 +17,8 @@ public interface ITaskRuntime extends IEventDispatcher, ITaskRuntimeLifecycle {
     // Public Methods.
     // ---------------------------------------------------
 
+    public abstract ITaskManager getTaskManager();
+
     public abstract Descriptors.AbstractNodeDescriptor getNodeDescriptor();
 
     public abstract Descriptors.NodeBindingDescriptor getBindingDescriptor();
@@ -28,11 +31,11 @@ public interface ITaskRuntime extends IEventDispatcher, ITaskRuntimeLifecycle {
 
     public abstract IDataConsumer getConsumer();
 
-    public abstract ITaskManager getTaskManager();
-
     public abstract Logger getLogger();
 
     public abstract AbstractInvokeable getInvokeable();
 
     public abstract void connectDataChannel(final Descriptors.AbstractNodeDescriptor dstNodeDescriptor, final IAllocator allocator);
+
+    public abstract InputSplit getNextInputSplit();
 }

@@ -17,10 +17,10 @@ public class DistinctPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I
     // Constructor.
     // ---------------------------------------------------
 
-    public DistinctPhysicalOperator(final IExecutionContext environment,
-                                  final IPhysicalOperator<I> inputOp) {
+    public DistinctPhysicalOperator(final IExecutionContext context,
+                                    final IPhysicalOperator<I> inputOp) {
 
-        super(environment, inputOp);
+        super(context, inputOp);
 
         hashes = new HashMap<>();
     }

@@ -4,11 +4,13 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 
 public class ExecutionContext implements IExecutionContext {
@@ -16,6 +18,8 @@ public class ExecutionContext implements IExecutionContext {
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
+
+    private final ITaskRuntime runtime;
 
     private final Descriptors.AbstractNodeDescriptor nodeDescriptor;
 
@@ -25,17 +29,24 @@ public class ExecutionContext implements IExecutionContext {
 
     private final Map<UUID, Collection> datasets;
 
+    private final Map<String, Object> objectStore;
+
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public ExecutionContext(final Descriptors.AbstractNodeDescriptor nodeDescriptor,
+    public ExecutionContext(final ITaskRuntime runtime,
+                            final Descriptors.AbstractNodeDescriptor nodeDescriptor,
                             final Descriptors.NodeBindingDescriptor bindingDescriptor) {
         // sanity check.
+        if (runtime == null)
+            throw new IllegalArgumentException("runtime == null");
         if (nodeDescriptor == null)
             throw new IllegalArgumentException("nodeDescriptor == null");
         if (bindingDescriptor == null)
             throw new IllegalArgumentException("bindingDescriptor == null");
+
+        this.runtime = runtime;
 
         this.nodeDescriptor = nodeDescriptor;
 
@@ -44,6 +55,8 @@ public class ExecutionContext implements IExecutionContext {
         this.udfTypeMap = new HashMap<>();
 
         this.datasets = new HashMap<>();
+
+        this.objectStore = new HashMap<>();
     }
 
     // ---------------------------------------------------
@@ -77,6 +90,22 @@ public class ExecutionContext implements IExecutionContext {
     }
 
     @Override
+    public void put(final String name, final Object obj) {
+        if (name == null)
+            throw new IllegalArgumentException("name == null");
+        if (obj == null)
+            throw new IllegalArgumentException("obj == null");
+        objectStore.put(name, obj);
+    }
+
+    @Override
+    public Object get(String name) {
+        if (name == null)
+            throw new IllegalArgumentException("name == null");
+        return objectStore.get(name);
+    }
+
+    @Override
     public Class<?> getUDFType(final String udfTypeName) {
         return this.udfTypeMap.get(udfTypeName);
     }
@@ -94,5 +123,10 @@ public class ExecutionContext implements IExecutionContext {
     @Override
     public Descriptors.NodeBindingDescriptor getBindingDescriptor() {
         return bindingDescriptor;
+    }
+
+    @Override
+    public ITaskRuntime getRuntime() {
+        return runtime;
     }
 }

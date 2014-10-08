@@ -91,6 +91,7 @@ public class DistributedEnvironmentTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 null
                         )
                 );
@@ -115,6 +116,7 @@ public class DistributedEnvironmentTest {
                                 null,
                                 null,
                                 null,
+                                null,
                                 null
                         ),
                         source1
@@ -133,6 +135,7 @@ public class DistributedEnvironmentTest {
                 source1TypeInfo,
                 null,
                 source1TypeInfo,
+                null,
                 null,
                 null,
                 null,
@@ -190,7 +193,8 @@ public class DistributedEnvironmentTest {
                                 null,
                                 null,
                                 null,
-                                Arrays.asList(broadcastDatasetID)
+                                Arrays.asList(broadcastDatasetID),
+                                null
                         ),
                         dataset1Ref
                 );
@@ -208,6 +212,7 @@ public class DistributedEnvironmentTest {
                 source1TypeInfo,
                 null,
                 source1TypeInfo,
+                null,
                 null,
                 null,
                 null,

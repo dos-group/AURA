@@ -69,6 +69,7 @@ public final class IterativeDataflowTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -84,6 +85,7 @@ public final class IterativeDataflowTest {
                 source1TypeInfo,
                 null,
                 source1TypeInfo,
+                null,
                 null,
                 null,
                 null,
@@ -111,6 +113,7 @@ public final class IterativeDataflowTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -124,6 +127,7 @@ public final class IterativeDataflowTest {
                 source1TypeInfo,
                 null,
                 source1TypeInfo,
+                null,
                 null,
                 null,
                 null,

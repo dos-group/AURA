@@ -3,6 +3,7 @@ package de.tuberlin.aura.workloadmanager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.filesystem.InputSplit;
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
@@ -76,6 +77,10 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
 
     private final Map<UUID, Set<UUID>> registeredSessions;
 
+
+    //private final InputSplitAssigner inputSplitAssigner;
+
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -125,9 +130,11 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         rpcManager.registerRPCProtocol(this, ITM2WMProtocol.class);
 
         // Initialize InfrastructureManager.
-        this.infrastructureManager = InfrastructureManager.getInstance(zkServer, machineDescriptor);
+        this.infrastructureManager = new InfrastructureManager(zkServer, machineDescriptor);
         // Initialize InfrastructureManager.
         this.environmentManager = new DistributedEnvironment();
+
+        //inputSplitAssigner = new LocatableInputSplitAssigner()
     }
 
     // ---------------------------------------------------
@@ -236,6 +243,13 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     @Override
     public <E> Collection<E> getBroadcastDataset(final UUID datasetID) {
         return environmentManager.getBroadcastDataset(datasetID);
+    }
+
+    @Override
+    public InputSplit requestNextInputSplit(final UUID topologyID, final UUID taskID, int sequenceNumber) {
+        final AuraTopology topology = this.registeredTopologies.get(topologyID).getTopology();
+        final Topology.ExecutionNode exNode = topology.executionNodeMap.get(taskID);
+        return infrastructureManager.getInputSplitFromHDFSSource(exNode);
     }
 
     // ---------------------------------------------------

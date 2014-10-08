@@ -14,11 +14,11 @@ public class FilterPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator<
     // Constructor.
     // ---------------------------------------------------
 
-    public FilterPhysicalOperator(final IExecutionContext environment,
+    public FilterPhysicalOperator(final IExecutionContext context,
                                   final IPhysicalOperator<I> inputOp,
                                   final FilterFunction<I> function) {
 
-        super(environment, inputOp, function);
+        super(context, inputOp, function);
     }
 
     // ---------------------------------------------------

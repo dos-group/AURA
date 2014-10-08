@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.record.Partitioner;
+import org.apache.hadoop.mapred.InputSplit;
 
 public interface IWM2TMProtocol {
 

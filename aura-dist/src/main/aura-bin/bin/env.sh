@@ -55,7 +55,7 @@ readFromConfig() {
 
 ########################################################################################################################
 # DEFAULT CONFIG VALUES: These values will be used when nothing has been specified in conf/aura.conf
-# -or- the respective environment variables are not set.
+# -or- the respective context variables are not set.
 ########################################################################################################################
 
 

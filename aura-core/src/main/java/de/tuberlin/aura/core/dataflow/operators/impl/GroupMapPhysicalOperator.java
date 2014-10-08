@@ -25,11 +25,11 @@ public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
     // Constructor.
     // ---------------------------------------------------
 
-    public GroupMapPhysicalOperator(final IExecutionContext environment,
+    public GroupMapPhysicalOperator(final IExecutionContext context,
                                     final IPhysicalOperator<I> inputOp,
                                     final GroupMapFunction<I, O> function) {
 
-        super(environment, inputOp, function);
+        super(context, inputOp, function);
 
         elementQueue = new LinkedList<>();
     }

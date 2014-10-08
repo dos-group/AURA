@@ -60,18 +60,20 @@ public final class PhysicalOperatorFactory {
                 return new FoldPhysicalOperator(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object,Object>>) udfType));
             case REDUCE_OPERATOR:
                 break;
+            // ---------------------------------------------------
             case UDF_SOURCE:
                 return new UDFSourcePhysicalOperator(context, FunctionFactory.createSourceFunction((Class<SourceFunction<Object>>) udfType));
-            case FILE_SOURCE:
-                break;
-            case STREAM_SOURCE:
-                break;
             case UDF_SINK:
                 return new UDFSinkPhysicalOperator(context, inputOp1, FunctionFactory.createSinkFunction((Class<SinkFunction<Object>>) udfType));
-            case FILE_SINK:
+            case HDFS_SOURCE:
+                return new HDFSSourcePhysicalOperator<>(context);
+            case HDFS_SINK:
+                return new HDFSSinkPhysicalOperator<>(context, inputOp1);
+            case STREAM_SOURCE:
                 break;
             case STREAM_SINK:
                 break;
+            // ---------------------------------------------------
             case LOOP_CONTROL_OPERATOR:
                 return new LoopControlPhysicalOperator<>(context, inputOp1);
         }

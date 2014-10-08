@@ -14,11 +14,11 @@ public class UDFSinkPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator
     // Constructor.
     // ---------------------------------------------------
 
-    public UDFSinkPhysicalOperator(final IExecutionContext environment,
+    public UDFSinkPhysicalOperator(final IExecutionContext context,
                                    final IPhysicalOperator<I> inputOp,
                                    final SinkFunction<I> function) {
 
-        super(environment, inputOp, function);
+        super(context, inputOp, function);
     }
 
     // ---------------------------------------------------

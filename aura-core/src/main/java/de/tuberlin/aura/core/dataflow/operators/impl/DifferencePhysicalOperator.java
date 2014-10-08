@@ -21,11 +21,11 @@ public class DifferencePhysicalOperator<I> extends AbstractBinaryPhysicalOperato
     // Constructor.
     // ---------------------------------------------------
 
-    public DifferencePhysicalOperator(final IExecutionContext environment,
+    public DifferencePhysicalOperator(final IExecutionContext context,
                                  final IPhysicalOperator<I> inputOp1,
                                  final IPhysicalOperator<I> inputOp2) {
 
-        super(environment, inputOp1, inputOp2);
+        super(context, inputOp1, inputOp2);
 
         minusSideElements = new HashMap<>();
     }

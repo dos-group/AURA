@@ -46,10 +46,10 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
     // Constructor.
     // ---------------------------------------------------
 
-    public SortPhysicalOperator(final IExecutionContext environment,
+    public SortPhysicalOperator(final IExecutionContext context,
                                 final IPhysicalOperator<I> inputOp) {
 
-        super(environment, inputOp);
+        super(context, inputOp);
 
         this.inputType = getContext().getProperties().input1Type;
 

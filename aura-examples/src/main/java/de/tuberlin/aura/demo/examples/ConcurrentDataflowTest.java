@@ -70,8 +70,14 @@ public class ConcurrentDataflowTest {
                         null,
                         source1TypeInfo,
                         Source1.class.getName(),
-                        null, null, null, null, null,
-                        null, null
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 )
         );
 
@@ -91,8 +97,14 @@ public class ConcurrentDataflowTest {
                         null,
                         map1TypeInfo,
                         Map1.class.getName(),
-                        null, null, null, null, null,
-                        null, null
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 ),
                 source1
         );
@@ -108,8 +120,14 @@ public class ConcurrentDataflowTest {
                         null,
                         null,
                         Sink1.class.getName(),
-                        null, null, null, null, null,
-                        null, null
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 ),
                 map1
         );

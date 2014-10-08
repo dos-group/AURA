@@ -13,9 +13,9 @@ public abstract class AbstractUnaryPhysicalOperator<I,O> extends AbstractPhysica
     // Constructor.
     // ---------------------------------------------------
 
-    public AbstractUnaryPhysicalOperator(final IExecutionContext environment,
+    public AbstractUnaryPhysicalOperator(final IExecutionContext context,
                                          final IPhysicalOperator<I> inputOp) {
-        super(environment);
+        super(context);
         this.inputOp = inputOp;
     }
 }

@@ -176,7 +176,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Source1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         )
                 );
 
@@ -193,7 +194,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Map1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         source1
                 );
@@ -211,7 +213,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 FlatMap1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         map1
                 );
@@ -229,7 +232,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Filter1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         flatMap1
                 );
@@ -247,7 +251,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Fold1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         filter1
                 );
@@ -265,7 +270,8 @@ public final class TopologiesTest {
                                 null,
                                 Sink1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         fold1
                 );
@@ -293,7 +299,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Source1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         )
                 );
 
@@ -310,7 +317,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Source2.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         )
                 );
 
@@ -327,7 +335,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Source3.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         )
                 );
 
@@ -344,7 +353,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 null,
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         source2,
                         source3
@@ -368,7 +378,8 @@ public final class TopologiesTest {
                                 join1TypeInfo,
                                 null,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") }, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") }, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         source1,
                         difference1
@@ -388,7 +399,8 @@ public final class TopologiesTest {
                                 join1TypeInfo,
                                 null,
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         join1
                 );
@@ -406,7 +418,8 @@ public final class TopologiesTest {
                                 join1TypeInfo,
                                 null,
                                 null, null, new int[][] { join1TypeInfo.buildFieldSelectorChain("_2._2") }, DataflowNodeProperties.SortOrder.DESCENDING, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         distinct1
                 );
@@ -424,7 +437,8 @@ public final class TopologiesTest {
                                 null,
                                 JoinSink1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         sort1
                 );
@@ -452,7 +466,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Source4.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         )
                 );
 
@@ -470,7 +485,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 null,
                                 null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") }, DataflowNodeProperties.SortOrder.ASCENDING, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         source4
                 );
@@ -493,7 +509,8 @@ public final class TopologiesTest {
                                 groupBy1TypeInfo,
                                 null,
                                 null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                null, null
+                                null, null,
+                                null
                         ),
                         sort1
                 );
@@ -511,7 +528,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Fold1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         groupBy1
                 );
@@ -529,7 +547,8 @@ public final class TopologiesTest {
                                 null,
                                 Sink1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         fold1
                 );
@@ -557,7 +576,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Source4.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         )
                 );
 
@@ -575,7 +595,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 null,
                                 null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") }, DataflowNodeProperties.SortOrder.ASCENDING, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         source4
                 );
@@ -598,7 +619,8 @@ public final class TopologiesTest {
                                 groupBy1TypeInfo,
                                 null,
                                 null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                null, null
+                                null, null,
+                                null
                         ),
                         sort1
                 );
@@ -616,7 +638,8 @@ public final class TopologiesTest {
                                 groupBy1TypeInfo,
                                 GroupMap1.class.getName(),
                                 null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                                null, null
+                                null, null,
+                                null
                         ),
                         groupBy1
                 );
@@ -634,7 +657,8 @@ public final class TopologiesTest {
                                 source1TypeInfo,
                                 Fold1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         mapGroup1
                 );
@@ -652,7 +676,8 @@ public final class TopologiesTest {
                                 null,
                                 Sink1.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null,
+                                null
                         ),
                         fold1
                 );

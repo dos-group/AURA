@@ -80,6 +80,7 @@ public final class DataflowTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -94,6 +95,7 @@ public final class DataflowTest {
                 null,
                 source1TypeInfo,
                 Source1.class.getName(),
+                null,
                 null,
                 null,
                 null,
@@ -116,6 +118,7 @@ public final class DataflowTest {
                 null,
                 source1TypeInfo,
                 Map1.class.getName(),
+                null,
                 null,
                 null,
                 null,
@@ -149,6 +152,7 @@ public final class DataflowTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -176,6 +180,7 @@ public final class DataflowTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -183,13 +188,16 @@ public final class DataflowTest {
         DataflowNodeProperties sink1 = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                "Sink1", 1, 1,
+                "Sink1",
+                1,
+                1,
                 null,
                 null,
                 join2TypeInfo,
                 null,
                 null,
                 Sink1.class.getName(),
+                null,
                 null,
                 null,
                 null,
@@ -211,6 +219,7 @@ public final class DataflowTest {
                 null,
                 null,
                 Sink1.class.getName(),
+                null,
                 null,
                 null,
                 null,

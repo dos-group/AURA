@@ -125,6 +125,10 @@ public final class TopologyController extends EventDispatcher implements ITopolo
         return topologyFSM;
     }
 
+    public AuraTopology getTopology() {
+        return topology;
+    }
+
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------

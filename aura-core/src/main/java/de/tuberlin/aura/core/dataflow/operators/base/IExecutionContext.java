@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
 
 public interface IExecutionContext extends Serializable {
@@ -23,4 +24,10 @@ public interface IExecutionContext extends Serializable {
     public abstract <E> void putDataset(final UUID uid, final Collection<E> dataset);
 
     public abstract <E> Collection<E> getDataset(final UUID uid);
+
+    public abstract ITaskRuntime getRuntime();
+
+    public abstract void put(final String name, final Object obj);
+
+    public abstract Object get(final String name);
 }

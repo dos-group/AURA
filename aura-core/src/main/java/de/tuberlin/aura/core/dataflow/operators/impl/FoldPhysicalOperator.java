@@ -9,11 +9,11 @@ import de.tuberlin.aura.core.record.GroupedOperatorInputIterator;
 
 
 public class FoldPhysicalOperator<I,M,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
-    public FoldPhysicalOperator(final IExecutionContext environment,
+    public FoldPhysicalOperator(final IExecutionContext context,
                                 final IPhysicalOperator<I> inputOp,
                                 final FoldFunction<I, M, O> function) {
 
-        super(environment, inputOp, function);
+        super(context, inputOp, function);
     }
 
 

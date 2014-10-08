@@ -31,11 +31,11 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
     // Constructor.
     // ---------------------------------------------------
 
-    public HashJoinPhysicalOperator(final IExecutionContext environment,
+    public HashJoinPhysicalOperator(final IExecutionContext context,
                                     final IPhysicalOperator<I1> inputOp1,
                                     final IPhysicalOperator<I2> inputOp2) {
 
-        super(environment, inputOp1, inputOp2);
+        super(context, inputOp1, inputOp2);
 
         this.input1TypeInfo = getContext().getProperties().input1Type;
 

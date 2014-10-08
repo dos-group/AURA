@@ -2,6 +2,7 @@ package de.tuberlin.aura.drivers;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
@@ -15,10 +16,9 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RecordReader;
 import de.tuberlin.aura.core.record.RecordWriter;
 import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
-import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
-import de.tuberlin.aura.core.taskmanager.spi.IDataConsumer;
-import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
-import de.tuberlin.aura.core.taskmanager.spi.IRecordWriter;
+import de.tuberlin.aura.core.taskmanager.spi.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 
 public final class OperatorDriver extends AbstractInvokeable {
@@ -110,7 +110,8 @@ public final class OperatorDriver extends AbstractInvokeable {
     // Constructors.
     // ---------------------------------------------------
 
-    public OperatorDriver(final Descriptors.OperatorNodeDescriptor nodeDescriptor,
+    public OperatorDriver(final ITaskRuntime runtime,
+                          final Descriptors.OperatorNodeDescriptor nodeDescriptor,
                           final Descriptors.NodeBindingDescriptor bindingDescriptor) {
 
         this.nodeDescriptor = nodeDescriptor;
@@ -119,7 +120,20 @@ public final class OperatorDriver extends AbstractInvokeable {
 
         this.gateReaders = new ArrayList<>();
 
-        this.context = new ExecutionContext(nodeDescriptor, bindingDescriptor);
+        this.context = new ExecutionContext(runtime, nodeDescriptor, bindingDescriptor);
+
+        final Configuration conf = new Configuration();
+        conf.set("fs.defaultFS", getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_config"));
+
+        //conf.addResource(new Path(getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_config")));
+
+        context.put("hdfs_config", conf);
+
+        if (nodeDescriptor.properties.config != null) {
+            // TODO: check for overrides...
+            for (final Map.Entry<String,Object> entry : nodeDescriptor.properties.config.entrySet())
+                context.put(entry.getKey(), entry.getValue());
+        }
     }
 
     // ---------------------------------------------------

@@ -1,8 +1,11 @@
 package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
-import net.jcip.annotations.NotThreadSafe;
+import de.tuberlin.aura.core.filesystem.InputSplit;
+import de.tuberlin.aura.core.topology.Topology;
+import de.tuberlin.aura.core.filesystem.InputSplitManager;
 
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -15,7 +18,7 @@ import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 
 
-public class InfrastructureManager extends EventDispatcher implements IInfrastructureManager {
+public final class InfrastructureManager extends EventDispatcher implements IInfrastructureManager {
 
     // ---------------------------------------------------
     // Fields.
@@ -23,28 +26,30 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
 
     private static final Logger LOG = LoggerFactory.getLogger(InfrastructureManager.class);
 
-    private static InfrastructureManager INSTANCE;
-
-    private ZookeeperClient zookeeperClient;
+    private final ZookeeperClient zookeeperClient;
 
     private final Map<UUID, MachineDescriptor> nodeMap;
 
     private int machineIdx;
 
-    private final Object taskManagerMonitor = new Object();
+    private final Object monitor;
+
+    private final InputSplitManager inputSplitManager;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    private InfrastructureManager(final String zkServer, final MachineDescriptor wmMachine) {
+    public InfrastructureManager(final String zkServer, final MachineDescriptor wmMachine) {
         super();
         // sanity check.
         ZookeeperClient.checkConnectionString(zkServer);
         if (wmMachine == null)
             throw new IllegalArgumentException("wmMachine == null");
 
-        this.nodeMap = new HashMap<>();
+        this.monitor = new Object();
+
+        this.nodeMap = new ConcurrentHashMap<>();
 
         try {
             zookeeperClient = new ZookeeperClient(zkServer);
@@ -54,9 +59,8 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
             // Get all available nodes.
             final ZookeeperTaskManagerWatcher watcher = new ZookeeperTaskManagerWatcher();
 
-            synchronized (taskManagerMonitor) {
+            synchronized (monitor) {
                 final List<String> nodes = zookeeperClient.getChildrenForPathAndWatch(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, watcher);
-
                 for (final String node : nodes) {
                     final MachineDescriptor descriptor;
                     try {
@@ -70,19 +74,15 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+
+        this.inputSplitManager = new InputSplitManager();
     }
 
     // ---------------------------------------------------
     // Public Methods.
     // ---------------------------------------------------
 
-    public static InfrastructureManager getInstance(final String zkServers, final MachineDescriptor wmMachine) {
-        if (INSTANCE == null) {
-            INSTANCE = new InfrastructureManager(zkServers, wmMachine);
-        }
-        return INSTANCE;
-    }
-
+    @Override
     public synchronized MachineDescriptor getNextMachine() {
         final List<MachineDescriptor> workerMachines = new ArrayList<>(nodeMap.values());
         final MachineDescriptor md = workerMachines.get(machineIdx);
@@ -90,6 +90,17 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
         return md;
     }
 
+    @Override
+    public synchronized InputSplit getInputSplitFromHDFSSource(final Topology.ExecutionNode executionNode) {
+        return inputSplitManager.getInputSplitFromHDFSSource(executionNode);
+    }
+
+    @Override
+    public void registerHDFSSource(final Topology.LogicalNode node) {
+        inputSplitManager.registerHDFSSource(node);
+    }
+
+    @Override
     public synchronized int getNumberOfMachine() {
         return nodeMap.values().size();
     }
@@ -105,11 +116,12 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
             LOG.debug("Received event - state: {} - type: {}", event.getState().toString(), event.getType().toString());
 
             try {
-                synchronized (taskManagerMonitor) {
+                synchronized (monitor) {
                     final List<String> nodeList = zookeeperClient.getChildrenForPath(ZookeeperClient.ZOOKEEPER_TASKMANAGERS);
 
                     // Find out whether a node was created or deleted.
                     if (nodeMap.values().size() < nodeList.size()) {
+
                         // A node has been added.
                         MachineDescriptor newMachine = null;
                         for (final String node : nodeList) {
@@ -118,7 +130,6 @@ public class InfrastructureManager extends EventDispatcher implements IInfrastru
                                 newMachine = (MachineDescriptor) zookeeperClient.read(event.getPath() + "/" + node);
                                 nodeMap.put(machineID, newMachine);
                             }
-
                         }
 
                         dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_ADDED, newMachine));
