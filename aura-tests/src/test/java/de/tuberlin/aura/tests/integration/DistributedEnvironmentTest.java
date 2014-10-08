@@ -2,6 +2,7 @@ package de.tuberlin.aura.tests.integration;
 
 import java.util.*;
 
+import de.tuberlin.aura.tests.util.TestHelper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -67,8 +68,8 @@ public final class DistributedEnvironmentTest {
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
         final Topology.AuraTopology topology1 = atb.build("JOB1");
-        auraClient.submitTopology(topology1, null);
-        auraClient.awaitSubmissionResult(1);
+
+        TestHelper.runTopology(auraClient, topology1);
 
     }
 
@@ -94,8 +95,8 @@ public final class DistributedEnvironmentTest {
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
         final Topology.AuraTopology topology1 = atb.build("JOB1");
-        auraClient.submitTopology(topology1, null);
-        auraClient.awaitSubmissionResult(1);
+
+        TestHelper.runTopology(auraClient, topology1);
 
         final Collection<Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>>> collection1 = auraClient.getDataset(dataset1UID);
 //        for (Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>> tuple : collection1)
@@ -125,8 +126,8 @@ public final class DistributedEnvironmentTest {
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
         final Topology.AuraTopology topology1 = atb.build("JOB1");
-        auraClient.submitTopology(topology1, null);
-        auraClient.awaitSubmissionResult(1);
+
+        TestHelper.runTopology(auraClient, topology1);
 
         Collection<Tuple2<String,Integer>> broadcastDataset = new ArrayList<>();
         broadcastDataset.add(new Tuple2<>("A", 0));
@@ -151,8 +152,8 @@ public final class DistributedEnvironmentTest {
                 addNode(new Topology.DatasetNode(dataset2Properties));
 
         final Topology.AuraTopology topology2 = atb2.build("JOB2");
-        auraClient.submitTopology(topology2, null);
-        auraClient.awaitSubmissionResult(1);
+
+        TestHelper.runTopology(auraClient, topology2);
 
     }
 
