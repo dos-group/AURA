@@ -64,7 +64,6 @@ public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
             }
         }
 
-        // FIXME: groupmap should be able to return/write all returned tuples at once (through a Collector)
         return elementQueue.poll();
     }
 

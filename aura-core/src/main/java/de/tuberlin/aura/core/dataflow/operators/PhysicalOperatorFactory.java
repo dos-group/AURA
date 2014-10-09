@@ -102,7 +102,7 @@ public final class PhysicalOperatorFactory {
 
             final Class<?> udfType = context.getUDFType(p.functionTypeName);
 
-            switch (context.getProperties().type) {
+            switch (p.type) {
                 case MAP_TUPLE_OPERATOR: {
                     inputOp1 = new MapPhysicalOperator(context, inputOp1, FunctionFactory.createMapFunction((Class<MapFunction<Object, Object>>) udfType));
                     inputOp1.setOperatorNum(operatorNum);

@@ -53,38 +53,6 @@ public class CompactificationTest {
     }
 
 
-    public static final class GroupMap1 extends GroupMapFunction<Tuple2<String,Integer>, Tuple2<String,Integer>> {
-
-        @Override
-        public void map(Iterator<Tuple2<String,Integer>> in, Collection<Tuple2<String,Integer>> output) {
-
-            Integer count = 0;
-
-            while (in.hasNext()) {
-                Tuple2<String,Integer> t = in.next();
-                output.add(new Tuple2<>(t._1, t._2 + count++));
-            }
-        }
-    }
-
-    public static final class Fold1 extends FoldFunction<Tuple2<String,Integer>,Tuple2<String,Integer>> {
-
-        @Override
-        public Tuple2<String,Integer> empty() {
-            return new Tuple2<>("RESULT", 0);
-        }
-
-        @Override
-        public Tuple2<String, Integer> singleton(Tuple2<String, Integer> in) {
-            return new Tuple2<>(in._1, 1);
-        }
-
-        @Override
-        public Tuple2<String,Integer> union(Tuple2<String,Integer> currentValue, Tuple2<String, Integer> in) {
-            return new Tuple2<>("RESULT", currentValue._2 + in._2);
-        }
-    }
-
     public static final class Sink1 extends SinkFunction<Tuple2<String,Integer>> {
 
         @Override
@@ -217,122 +185,6 @@ public class CompactificationTest {
                 null
         );
 
-        // ---------------------------------------------------
-
-        /*DataflowNodeProperties sort1 =  new DataflowNodeProperties(
-                UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
-                "Sort1",
-                1,
-                1,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                source1TypeInfo,
-                null,
-                source1TypeInfo,
-                null,
-                null,
-                null,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                DataflowNodeProperties.SortOrder.ASCENDING, null,
-                null,
-                null,
-                null
-        );
-
-        final TypeInformation groupBy1TypeInfo =
-                new TypeInformation(Tuple2.class, true,
-                        new TypeInformation(String.class),
-                        new TypeInformation(Integer.class));
-
-        DataflowNodeProperties groupBy1 = new DataflowNodeProperties(
-                UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
-                "GroupBy1",
-                1,
-                1,
-                null,
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                source1TypeInfo,
-                null,
-                groupBy1TypeInfo,
-                null,
-                null,
-                null,
-                null,
-                null,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                null,
-                null,
-                null
-        );
-
-        DataflowNodeProperties mapGroup1 = new DataflowNodeProperties(
-                UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.MAP_GROUP_OPERATOR,
-                "MapGroup1",
-                1,
-                1,
-                null,
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                groupBy1TypeInfo,
-                null,
-                groupBy1TypeInfo,
-                GroupMap1.class.getName(),
-                null,
-                null,
-                null,
-                null,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                null,
-                null,
-                null
-        );
-
-        DataflowNodeProperties fold1 = new DataflowNodeProperties(
-                UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
-                "Fold1",
-                1,
-                1,
-                new int[][] {source1TypeInfo.buildFieldSelectorChain("_2")},
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                groupBy1TypeInfo,
-                null,
-                source1TypeInfo,
-                Fold1.class.getName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
-
-        DataflowNodeProperties sink1 = new DataflowNodeProperties(
-                UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                "Sink1",
-                1,
-                1,
-                null,
-                null,
-                source1TypeInfo,
-                null,
-                null,
-                Sink1.class.getName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );*/
-
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
@@ -344,35 +196,6 @@ public class CompactificationTest {
                 .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
                 .addNode(new Topology.OperatorNode(sink1), Sink1.class);
 
-
-        /*Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
-        atb.addNode(new Topology.OperatorNode(source1), Source1.class)
-                .connectTo("Sort1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(Arrays.asList(sort1, groupBy1, mapGroup1)), GroupMap1.class)
-                .connectTo("Fold1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(fold1), Fold1.class)
-                .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(sink1), Sink1.class);*/
-
-
-        //       .connectTo("GroupBy1", Topology.Edge.TransferType.POINT_TO_POINT)
-        //       .addNode(new Topology.OperatorNode(groupBy1))
-        //       .connectTo("MapGroup1", Topology.Edge.TransferType.POINT_TO_POINT)
-        //       .addNode(new Topology.OperatorNode(mapGroup1), GroupMap1.class)
-
-
-        /*Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
-        atb.addNode(new Topology.OperatorNode(source1), Source1.class)
-                .connectTo("Sort1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(sort1))
-                .connectTo("GroupBy1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(groupBy1))
-                .connectTo("MapGroup1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(mapGroup1), GroupMap1.class)
-                .connectTo("Fold1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(fold1), Fold1.class)
-                .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(sink1), Sink1.class);*/
 
         ac.submitTopology(atb.build("JOB1"), null);
 
