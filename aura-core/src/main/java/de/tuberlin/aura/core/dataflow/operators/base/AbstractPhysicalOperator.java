@@ -16,6 +16,8 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
 
     private List<Integer> outputGateIndices;
 
+    private int operatorNum = 0;
+
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
@@ -70,5 +72,15 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
     @Override
     public List<Integer> getOutputGates() {
         return outputGateIndices;
+    }
+
+    @Override
+    public void setOperatorNum(final int operatorNum) {
+        this.operatorNum = operatorNum;
+    }
+
+    @Override
+    public int getOperatorNum() {
+        return operatorNum;
     }
 }

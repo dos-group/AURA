@@ -13,6 +13,8 @@ public interface IExecutionContext extends Serializable {
 
     public abstract DataflowNodeProperties getProperties();
 
+    public abstract DataflowNodeProperties getProperties(int operatorNum);
+
     public abstract Descriptors.AbstractNodeDescriptor getNodeDescriptor();
 
     public abstract Descriptors.NodeBindingDescriptor getBindingDescriptor();

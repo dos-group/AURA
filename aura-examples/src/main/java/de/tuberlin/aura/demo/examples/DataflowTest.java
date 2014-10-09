@@ -240,9 +240,9 @@ public final class DataflowTest {
            .addNode(new Topology.OperatorNode(sourceB), Source1.class)
            .connectTo("Join2", Topology.Edge.TransferType.POINT_TO_POINT)
            .and().connectTo("Join1", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.OperatorNode(joinA), new ArrayList<Class<?>>())
+           .addNode(new Topology.OperatorNode(joinA))
            .connectTo("Join2", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.OperatorNode(joinB), new ArrayList<Class<?>>())
+           .addNode(new Topology.OperatorNode(joinB))
            .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
            .addNode(new Topology.OperatorNode(sink1), Sink1.class);
 

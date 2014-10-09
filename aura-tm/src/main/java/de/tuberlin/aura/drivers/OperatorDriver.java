@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.dataflow.operators.PhysicalOperatorFactory;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractPhysicalOperator;
@@ -18,7 +19,6 @@ import de.tuberlin.aura.core.record.RecordWriter;
 import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
 import de.tuberlin.aura.core.taskmanager.spi.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 
 
 public final class OperatorDriver extends AbstractInvokeable {
@@ -124,15 +124,14 @@ public final class OperatorDriver extends AbstractInvokeable {
 
         final Configuration conf = new Configuration();
         conf.set("fs.defaultFS", getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_url"));
-
-        //conf.addResource(new Path(getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_config")));
-
         context.put("hdfs_config", conf);
 
-        if (nodeDescriptor.properties.config != null) {
-            // TODO: check for overrides...
-            for (final Map.Entry<String,Object> entry : nodeDescriptor.properties.config.entrySet())
-                context.put(entry.getKey(), entry.getValue());
+        for (final DataflowNodeProperties properties : nodeDescriptor.propertiesList) {
+            if (properties.config != null) {
+                // TODO: check for overrides...
+                for (final Map.Entry<String, Object> entry : properties.config.entrySet())
+                    context.put(entry.getKey(), entry.getValue());
+            }
         }
     }
 
@@ -144,15 +143,18 @@ public final class OperatorDriver extends AbstractInvokeable {
     public void create() throws Throwable {
 
         if (runtime.getBindingDescriptor().outputGateBindings.size() > 0) {
+
+            int lastOperatorNum = nodeDescriptor.propertiesList.size() - 1;
+
             final Partitioner.IPartitioner partitioner =
                     Partitioner.PartitionerFactory.createPartitioner(
-                            nodeDescriptor.properties.strategy,
-                            nodeDescriptor.properties.outputType,
-                            nodeDescriptor.properties.partitionKeyIndices
+                            nodeDescriptor.propertiesList.get(lastOperatorNum).strategy,
+                            nodeDescriptor.propertiesList.get(lastOperatorNum).outputType,
+                            nodeDescriptor.propertiesList.get(lastOperatorNum).partitionKeyIndices
                     );
 
             for (int i = 0; i <  runtime.getBindingDescriptor().outputGateBindings.size(); ++i) {
-                final RecordWriter reader = new RecordWriter(runtime, nodeDescriptor.properties.outputType, i, partitioner);
+                final RecordWriter reader = new RecordWriter(runtime, nodeDescriptor.propertiesList.get(lastOperatorNum).outputType, i, partitioner);
                 writers.add(reader);
             }
         }
@@ -162,7 +164,7 @@ public final class OperatorDriver extends AbstractInvokeable {
             gateReaders.add(new GateReaderOperator(context, recordReader, consumer, i));
         }
 
-        operator = PhysicalOperatorFactory.createPhysicalOperator(context, gateReaders);
+        operator = PhysicalOperatorFactory.createPhysicalOperatorPlan(context, gateReaders);
     }
 
     @Override
@@ -171,9 +173,11 @@ public final class OperatorDriver extends AbstractInvokeable {
         for (final IRecordWriter writer : writers)
             writer.begin();
 
-        if (nodeDescriptor.properties.broadcastVars != null) {
-            for(final UUID datasetID : nodeDescriptor.properties.broadcastVars)
-                context.putDataset(datasetID, runtime.getTaskManager().getBroadcastDataset(datasetID));
+        for (final DataflowNodeProperties properties : nodeDescriptor.propertiesList) {
+            if (properties.broadcastVars != null) {
+                for (final UUID datasetID : properties.broadcastVars)
+                    context.putDataset(datasetID, runtime.getTaskManager().getBroadcastDataset(datasetID));
+            }
         }
 
         operator.open();
@@ -182,8 +186,8 @@ public final class OperatorDriver extends AbstractInvokeable {
     @Override
     public void run() throws Throwable {
 
-        if (nodeDescriptor.properties.outputType != null &&
-                nodeDescriptor.properties.outputType.isGrouped()) {
+        if (nodeDescriptor.propertiesList.get(0).outputType != null &&
+                nodeDescriptor.propertiesList.get(0).outputType.isGrouped()) {
 
             // groups: null as return value = end of a group
             //              operator closed = end of data

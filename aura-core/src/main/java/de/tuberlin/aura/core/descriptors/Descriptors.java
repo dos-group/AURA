@@ -3,6 +3,7 @@ package de.tuberlin.aura.core.descriptors;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -286,11 +287,11 @@ public final class Descriptors {
 
         public final List<UserCode> userCodeList;
 
-        public final DataflowNodeProperties properties;
-
         private MachineDescriptor machine;
 
         private List<Class<?>> userCodeClasses;
+
+        public final List<DataflowNodeProperties> propertiesList;
 
         // ---------------------------------------------------
         // Constructors.
@@ -302,6 +303,16 @@ public final class Descriptors {
                                       final String name,
                                       final List<UserCode> userCodeList,
                                       final DataflowNodeProperties properties) {
+
+            this(topologyID, taskID, taskIndex, name, userCodeList, Arrays.asList(properties));
+        }
+
+        public AbstractNodeDescriptor(final UUID topologyID,
+                                      final UUID taskID,
+                                      final int taskIndex,
+                                      final String name,
+                                      final List<UserCode> userCodeList,
+                                      final List<DataflowNodeProperties> propertiesList) {
             // sanity check.
             if (topologyID == null)
                 throw new IllegalArgumentException("topologyID == null");
@@ -326,7 +337,7 @@ public final class Descriptors {
 
             this.userCodeClasses = null;
 
-            this.properties = properties;
+            this.propertiesList = propertiesList;
         }
 
         // ---------------------------------------------------
@@ -437,6 +448,16 @@ public final class Descriptors {
 
             super(topologyID, taskID, taskIndex, name, userCodeList, properties);
         }
+
+        public OperatorNodeDescriptor(final UUID topologyID,
+                                      final UUID taskID,
+                                      final int taskIndex,
+                                      final String name,
+                                      final List<UserCode> userCodeList,
+                                      final List<DataflowNodeProperties> propertiesList) {
+
+            super(topologyID, taskID, taskIndex, name, userCodeList, propertiesList);
+        }
     }
 
     /**
@@ -455,7 +476,7 @@ public final class Descriptors {
         // ---------------------------------------------------
 
         public InvokeableNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
-            super(topologyID, taskID, taskIndex, name, userCodeList, null);
+            super(topologyID, taskID, taskIndex, name, userCodeList, (DataflowNodeProperties)null);
         }
     }
 

@@ -5,6 +5,7 @@ import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSinkPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSourcePhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
@@ -100,9 +101,13 @@ public class SimpleHDFSTest {
                 null
         );
 
+
+        Map<String,Object> snkConfig = new HashMap<>();
+        srcConfig.put(HDFSSinkPhysicalOperator.HDFS_SINK_FILE_PATH, "/RESULT.csv");
+
         DataflowNodeProperties sink1 = new DataflowNodeProperties(
                 UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                DataflowNodeProperties.DataflowNodeType.HDFS_SINK,
                 "Sink1",
                 1,
                 1,
@@ -119,7 +124,7 @@ public class SimpleHDFSTest {
                 null,
                 null,
                 null,
-                null
+                snkConfig
         );
 
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));

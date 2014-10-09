@@ -51,7 +51,7 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
         super(context, inputOp);
 
-        this.inputType = getContext().getProperties().input1Type;
+        this.inputType = getContext().getProperties(getOperatorNum()).input1Type;
 
         this.priorityQueue = new PriorityQueue<>(10, new SortComparator<I>());
     }

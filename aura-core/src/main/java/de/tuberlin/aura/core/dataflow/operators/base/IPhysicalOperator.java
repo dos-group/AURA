@@ -21,4 +21,8 @@ public interface IPhysicalOperator<O> extends Serializable, IVisitable<IPhysical
     public abstract void setOutputGates(final List<Integer> gateIndices);
 
     public abstract List<Integer> getOutputGates();
+
+    public abstract void setOperatorNum(final int operatorNum);
+
+    public abstract int getOperatorNum();
 }
