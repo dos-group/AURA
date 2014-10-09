@@ -97,10 +97,37 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
                  machineDescriptor.uid);
     }
 
-    public ITaskExecutionUnit findExecutionUnitByTaskID(final UUID taskID) {
+    public ITaskExecutionUnit getExecutionUnitByTaskID(final UUID taskID) {
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
+
+        ITaskExecutionUnit executionUnitForTask = findExecutionUnitByTaskID(taskID);
+
+        // FIXME: Tasks are deployed simultaneously without any synchronization yet expect to be able to connect
+        // their output channels to other tasks that might still be set up. as a temporary workaround we give tasks
+        // some time to set up. a better solution would be to not poll inside the receiving deserialization handler
+        // but to have the receiver answer that the dst task is not available and have the sender attempt to build
+        // the channel multiple times. the problem seems to occur mostly when query plans are deployed that aren't
+        // trees but instead contain tasks with more than one output edge.
+
+        for (int i = 0; executionUnitForTask == null && i < 20; i++) {
+            try {
+                Thread.sleep(50);
+                executionUnitForTask = this.findExecutionUnitByTaskID(taskID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (executionUnitForTask == null) {
+            throw new IllegalStateException("Could not find execution unit for input edge");
+        }
+
+        return executionUnitForTask;
+    }
+
+    private ITaskExecutionUnit findExecutionUnitByTaskID(UUID taskID) {
         for (int i = 0; i < numberOfExecutionUnits; ++i) {
             final ITaskExecutionUnit eu = executionUnit[i];
             final ITaskRuntime runtime = eu.getRuntime();

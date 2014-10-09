@@ -240,10 +240,12 @@ public final class SerializationHandler {
 
         private void bindAllocator(UUID src, UUID dst) {
             final ITaskExecutionManager tem = executionManager;
-            final ITaskExecutionUnit executionUnit = tem.findExecutionUnitByTaskID(dst);
+
+            ITaskExecutionUnit executionUnit = tem.getExecutionUnitByTaskID(dst);
             final ITaskRuntime taskDriver = executionUnit.getRuntime();
             final IDataConsumer dataConsumer = taskDriver.getConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
+
             IAllocator allocatorGroup = executionUnit.getInputAllocator();
 
             // -------------------- STUPID HOT FIX --------------------
@@ -422,7 +424,7 @@ public final class SerializationHandler {
 
         private void bindAllocator(UUID src, UUID dst) {
             final ITaskExecutionManager tem = executionManager;
-            final ITaskExecutionUnit executionUnit = tem.findExecutionUnitByTaskID(dst);
+            final ITaskExecutionUnit executionUnit = tem.getExecutionUnitByTaskID(dst);
             final ITaskRuntime taskDriver = executionUnit.getRuntime();
             final IDataConsumer dataConsumer = taskDriver.getConsumer();
             final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
