@@ -191,7 +191,8 @@ public final class DistributedEnvironmentTest {
                 null,
                 null,
                 null,
-                Arrays.asList(broadcastDatasetID)
+                Arrays.asList(broadcastDatasetID),
+                null
         );
     }
 
@@ -211,6 +212,7 @@ public final class DistributedEnvironmentTest {
                 null,
                 source1TypeInfo,
                 Source1.class.getName(),
+                null,
                 null,
                 null,
                 null,
@@ -243,6 +245,7 @@ public final class DistributedEnvironmentTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -269,6 +272,7 @@ public final class DistributedEnvironmentTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -288,6 +292,7 @@ public final class DistributedEnvironmentTest {
                 source1TypeInfo,
                 null,
                 source1TypeInfo,
+                null,
                 null,
                 null,
                 null,

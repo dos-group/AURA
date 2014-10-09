@@ -482,18 +482,21 @@ public class Topology {
 
         public boolean isAlreadyDeployed = false;
 
-        public final DataflowNodeProperties properties;
+        //public final DataflowNodeProperties properties;
+
+        public final List<DataflowNodeProperties> propertiesList;
+
 
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
 
         public LogicalNode(final UUID uid, final String name) {
-            this(uid, name, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, null);
+            this(uid, name, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, (DataflowNodeProperties)null);
         }
 
         public LogicalNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
-            this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, null);
+            this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, (DataflowNodeProperties)null);
         }
 
         public LogicalNode(final UUID uid,
@@ -503,6 +506,17 @@ public class Topology {
                            final DataPersistenceType dataPersistenceType,
                            final ExecutionType executionType,
                            final DataflowNodeProperties properties) {
+            this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, Arrays.asList(properties));
+        }
+
+
+        public LogicalNode(final UUID uid,
+                           final String name,
+                           int degreeOfParallelism,
+                           int perWorkerParallelism,
+                           final DataPersistenceType dataPersistenceType,
+                           final ExecutionType executionType,
+                           final List<DataflowNodeProperties> propertiesList) {
             // sanity check.
             if (uid == null)
                 throw new IllegalArgumentException("uid == null");
@@ -535,7 +549,7 @@ public class Topology {
 
             this.executionType = executionType;
 
-            this.properties = properties;
+            this.propertiesList = propertiesList;
         }
 
         // ---------------------------------------------------
@@ -609,6 +623,16 @@ public class Topology {
      */
     public static final class OperatorNode extends LogicalNode {
 
+        public OperatorNode(final List<DataflowNodeProperties> propertyList) {
+            super(propertyList.get(0).operatorUID,
+                  propertyList.get(0).instanceName,
+                  propertyList.get(0).globalDOP,
+                  propertyList.get(0).localDOP,
+                  DataPersistenceType.EPHEMERAL,
+                  ExecutionType.PIPELINED,
+                  propertyList);
+        }
+
         public OperatorNode(final DataflowNodeProperties properties) {
             super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, properties);
         }
@@ -620,7 +644,7 @@ public class Topology {
     public static final class InvokeableNode extends LogicalNode {
 
         public InvokeableNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
-            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, null);
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, (DataflowNodeProperties)null);
         }
     }
 

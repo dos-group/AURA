@@ -66,8 +66,8 @@ public class DatasetDriver extends AbstractInvokeable {
             requestProperties.add(
                     Triple.of(
                             nodeDescriptor.topologyID,
-                            nodeDescriptor.properties.strategy,
-                            nodeDescriptor.properties.partitionKeyIndices
+                            nodeDescriptor.propertiesList.get(0).strategy,
+                            nodeDescriptor.propertiesList.get(0).partitionKeyIndices
                     )
             );
         }
@@ -175,7 +175,7 @@ public class DatasetDriver extends AbstractInvokeable {
 
                                 partitioningStrategy,
 
-                                nodeDescriptor.properties.outputType,
+                                nodeDescriptor.propertiesList.get(0).outputType,
 
                                 partitioningKey
                         );
@@ -214,7 +214,7 @@ public class DatasetDriver extends AbstractInvokeable {
                 }
 
 
-                final IRecordWriter writer = new RecordWriter(runtime, nodeDescriptor.properties.outputType, 0, partitioner);
+                final IRecordWriter writer = new RecordWriter(runtime, nodeDescriptor.propertiesList.get(0).outputType, 0, partitioner);
 
                 writer.begin();
 

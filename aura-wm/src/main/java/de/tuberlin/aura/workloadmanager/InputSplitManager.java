@@ -49,11 +49,11 @@ public class InputSplitManager implements Serializable {
     public void registerHDFSSource(final Topology.LogicalNode node) {
         if (node == null)
             throw new IllegalArgumentException("node == null");
-        if (node.properties == null)
+        if (node.propertiesList.get(0) == null)
             throw new IllegalStateException("properties == null");
 
-        final Path path = new Path((String)node.properties.config.get(HDFSSourcePhysicalOperator.HDFS_SOURCE_FILE_PATH));
-        final Class<?>[] fieldTypes = (Class<?>[]) node.properties.config.get(HDFSSourcePhysicalOperator.HDFS_SOURCE_INPUT_FIELD_TYPES);
+        final Path path = new Path((String)node.propertiesList.get(0).config.get(HDFSSourcePhysicalOperator.HDFS_SOURCE_FILE_PATH));
+        final Class<?>[] fieldTypes = (Class<?>[]) node.propertiesList.get(0).config.get(HDFSSourcePhysicalOperator.HDFS_SOURCE_INPUT_FIELD_TYPES);
 
         @SuppressWarnings("unchecked")
         final InputFormat inputFormat = new CSVInputFormat(path, fieldTypes);
@@ -64,7 +64,7 @@ public class InputSplitManager implements Serializable {
 
         final InputSplit[] inputSplits;
         try {
-            inputSplits = inputFormat.createInputSplits(node.properties.globalDOP);
+            inputSplits = inputFormat.createInputSplits(node.propertiesList.get(0).globalDOP);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }

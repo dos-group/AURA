@@ -69,7 +69,7 @@ public final class DataflowTest {
                         source1TypeInfo,
                         Job1Source.class.getName(),
                         null, null, null, null, null,
-                        null, null
+                        null, null, null
                     )
                 );
 
@@ -86,7 +86,7 @@ public final class DataflowTest {
                         source1TypeInfo,
                         Job1Map.class.getName(),
                         null, null, null, null, null,
-                        null, null
+                        null, null, null
                     )
                 );
 
@@ -103,7 +103,7 @@ public final class DataflowTest {
                         source1TypeInfo,
                         Job1FlatMap.class.getName(),
                         null, null, null, null, null,
-                        null, null
+                        null, null, null
                     )
                 );
 
@@ -120,7 +120,7 @@ public final class DataflowTest {
                         source1TypeInfo,
                         Job1Filter.class.getName(),
                         null, null, null, null, null,
-                        null, null
+                        null, null, null
                     )
                 );
 
@@ -137,7 +137,7 @@ public final class DataflowTest {
                         null,
                         Job1Sink.class.getName(),
                         null, null, null, null, null,
-                        null, null
+                        null, null, null
                     )
                 );
 
@@ -188,7 +188,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 null,
-                                null
+                                null, null
                         ));
 
         Topology.OperatorNode source2Node =
@@ -211,7 +211,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 null,
-                                null
+                                null, null
                         ));
 
         Topology.OperatorNode mapNode =
@@ -234,7 +234,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 null,
-                                null
+                                null, null
                         ));
 
         Topology.OperatorNode join1Node =
@@ -257,7 +257,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 null,
-                                null
+                                null, null
                         ));
 
         Topology.OperatorNode join2Node =
@@ -280,7 +280,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 null,
-                                null
+                                null, null
                         ));
 
         Topology.OperatorNode sinkNode =
@@ -303,7 +303,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 null,
-                                null
+                                null, null
                         ));
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
@@ -346,7 +346,7 @@ public final class DataflowTest {
                                 source1TypeInfo,
                                 Job3Source.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null, null
                         )
                 );
 
@@ -364,7 +364,7 @@ public final class DataflowTest {
                                 null,
                                 null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 DataflowNodeProperties.SortOrder.ASCENDING, null,
-                                null, null
+                                null, null, null
                         )
                 );
 
@@ -381,7 +381,7 @@ public final class DataflowTest {
                                 groupBy1TypeInfo,
                                 null,
                                 null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                                null, null
+                                null, null, null
                         )
                 );
 
@@ -398,7 +398,7 @@ public final class DataflowTest {
                                 source1TypeInfo,
                                 Job3Fold.class.getName(),
                                 null, null, null, null, null,
-                                null, null
+                                null, null, null
                         )
                 );
 
@@ -417,7 +417,7 @@ public final class DataflowTest {
                                 null, null,
                                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                                 DataflowNodeProperties.SortOrder.ASCENDING,
-                                null, null, null
+                                null, null, null, null
                         )
                 );
 
@@ -434,7 +434,7 @@ public final class DataflowTest {
                                 groupBy1TypeInfo,
                                 null,
                                 null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                                null, null
+                                null, null, null
                         )
                 );
 
@@ -450,8 +450,8 @@ public final class DataflowTest {
                                 null,
                                 source1TypeInfo,
                                 Job3Fold.class.getName(),
-                                null, null, null, null, null,
-                                null, null
+                                null, null, null, null,
+                                null, null, null, null
                         )
                 );
 
@@ -467,8 +467,8 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 Job3Sink.class.getName(),
-                                null, null, null, null, null,
-                                null, null
+                                null, null, null, null,
+                                null, null, null, null
                         )
                 );
 

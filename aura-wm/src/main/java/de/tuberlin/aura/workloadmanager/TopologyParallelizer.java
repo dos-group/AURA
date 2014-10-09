@@ -122,7 +122,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                 index,
                                 element.name,
                                 userCodeList,
-                                ((OperatorNode)element).properties
+                                ((OperatorNode)element).propertiesList
                         );
 
                     else if (element instanceof DatasetNode) {
@@ -132,7 +132,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                 taskID,
                                 index,
                                 element.name,
-                                ((DatasetNode) element).properties
+                                ((DatasetNode) element).propertiesList.get(0)
                         );
 
                         if (!environmentManager.existsDataset(element.uid)) {
