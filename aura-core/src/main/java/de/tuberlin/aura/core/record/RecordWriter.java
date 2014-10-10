@@ -6,7 +6,6 @@ import com.esotericsoftware.kryo.io.UnsafeOutput;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.BufferStream;
 import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordWriter;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
@@ -125,9 +124,11 @@ public class RecordWriter implements IRecordWriter {
 
         // handle groups in writeRecord as well (even though partitioner.partition record is not implemented yet..)
 
+        // FIXME: cleanup this logic..
+
         if (typeInformation.isGrouped()) {
 
-            if (object instanceof GroupEndMarker) {
+            if (object instanceof RowRecordModel.RECORD_CLASS_GROUP_END) {
                 channelNeedsGroupEndMarkerBeforeNextWrite.put(groupChannelIndex, true);
                 groupChannelIndex = null;
             } else {
@@ -142,7 +143,7 @@ public class RecordWriter implements IRecordWriter {
                     if (channelNeedsGroupEndMarkerBeforeNextWrite.containsKey(channelIndex)
                             && channelNeedsGroupEndMarkerBeforeNextWrite.get(channelIndex)) {
 
-                        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), new GroupEndMarker());
+                        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), new RowRecordModel.RECORD_CLASS_GROUP_END());
                         // ensure object is written to one buffer only
                         kryoOutputs.get(channelIndex).flush();
 

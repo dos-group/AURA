@@ -6,11 +6,15 @@ import java.util.List;
 import java.util.Map;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractBinaryPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
+import de.tuberlin.aura.core.record.OperatorResult;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 /**
  *
@@ -21,9 +25,9 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
     // Fields.
     // ---------------------------------------------------
 
-    private final TypeInformation input1TypeInfo;
+    private TypeInformation input2TypeInfo;
 
-    private final TypeInformation input2TypeInfo;
+    private int[][] key2Indices;
 
     private final Map<List<Object>,I1> buildSide;
 
@@ -37,16 +41,8 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
 
         super(context, inputOp1, inputOp2);
 
-        this.input1TypeInfo = getContext().getProperties().input1Type;
-
-        this.input2TypeInfo = getContext().getProperties().input2Type;
-
         this.buildSide = new HashMap<>();
 
-        // sanity check.
-        if (getContext().getProperties().keyIndices1.length != getContext().getProperties().keyIndices1.length)
-            throw new IllegalStateException("joinKeyIndices1.length != joinKeyIndices2.length");
-        // TODO: check types!
     }
 
     // ---------------------------------------------------
@@ -57,22 +53,36 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
     public void open() throws Throwable {
         super.open();
 
-        I1 in1 = null;
+        DataflowNodeProperties properties = getContext().getProperties(getOperatorNum());
 
-        // Construct build-side. Consume from <code>input1<code> all
-        // tuples and store them in a simple HashMap.
+        int[][] key1Indices = properties.keyIndices1;
+
+        TypeInformation input1TypeInfo = properties.input1Type;
+
+        key2Indices = properties.keyIndices2;
+
+        input2TypeInfo = properties.input2Type;
+
+        // sanity check.
+        if (key1Indices.length != key2Indices.length)
+            throw new IllegalStateException("joinKeyIndices1.length != joinKeyIndices2.length");
+        // TODO: check types!
+
+        OperatorResult<I1> in1 = null;
+
+        // Construct build-side
         inputOp1.open();
 
         in1 = inputOp1.next();
 
-        while (in1 != null) {
-            final List<Object> key1 = new ArrayList<>(getContext().getProperties().keyIndices1.length);
+        while (in1.marker != StreamMarker.END_OF_STREAM_MARKER) {
+            final List<Object> key1 = new ArrayList<>(key1Indices.length);
 
-            for (final int[] selectorChain : getContext().getProperties().keyIndices1) {
-                key1.add(input1TypeInfo.selectField(selectorChain, in1));
+            for (final int[] selectorChain : key1Indices) {
+                key1.add(input1TypeInfo.selectField(selectorChain, in1.element));
             }
 
-            buildSide.put(key1, in1);
+            buildSide.put(key1, in1.element);
 
             in1 = inputOp1.next();
         }
@@ -83,27 +93,29 @@ public final class HashJoinPhysicalOperator<I1,I2> extends AbstractBinaryPhysica
     }
 
     @Override
-    public Tuple2<I1,I2> next() throws Throwable {
+    public OperatorResult<Tuple2<I1,I2>> next() throws Throwable {
 
         I1 in1 = null;
-        I2 in2 = null;
+        OperatorResult<I2> in2 = null;
 
         while (in1 == null) {
+
             in2 = inputOp2.next();
-            if (in2 != null) {
-                final List<Object> key2 = new ArrayList<>(getContext().getProperties().keyIndices2.length);
 
-                for (final int[] selectorChain : getContext().getProperties().keyIndices2) {
-                    key2.add(input1TypeInfo.selectField(selectorChain, in2));
-                }
-
-                in1 = buildSide.get(key2);
-            } else {
-                return null;
+            if (in2.marker == StreamMarker.END_OF_STREAM_MARKER) {
+                return new OperatorResult<>(null, StreamMarker.END_OF_STREAM_MARKER);
             }
+
+            final List<Object> key2 = new ArrayList<>(key2Indices.length);
+
+            for (final int[] selectorChain : key2Indices) {
+                key2.add(input2TypeInfo.selectField(selectorChain, in2.element));
+            }
+
+            in1 = buildSide.get(key2);
         }
 
-        return new Tuple2<>(in1, in2);
+        return new OperatorResult<>(new Tuple2<>(in1, in2.element));
     }
 
     @Override

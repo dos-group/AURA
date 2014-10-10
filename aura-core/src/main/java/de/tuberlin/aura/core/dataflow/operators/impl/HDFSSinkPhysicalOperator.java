@@ -6,12 +6,13 @@ import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.filesystem.out.CSVOutputFormat;
 import de.tuberlin.aura.core.filesystem.out.OutputFormat;
+import de.tuberlin.aura.core.record.OperatorResult;
 import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 
-public class HDFSSinkPhysicalOperator <I> extends AbstractUnaryPhysicalOperator<I,Object> {
+public class HDFSSinkPhysicalOperator <I> extends AbstractUnaryPhysicalOperator<I,I> {
 
     // ---------------------------------------------------
     // Constants.
@@ -52,16 +53,20 @@ public class HDFSSinkPhysicalOperator <I> extends AbstractUnaryPhysicalOperator<
         this.outputFormat.configure(conf);
 
         this.outputFormat.open(getContext().getNodeDescriptor().taskIndex, getContext().getProperties().globalDOP);
+
+        this.inputOp.open();
     }
 
     @Override
-    public Object next() throws Throwable {
+    public OperatorResult<I> next() throws Throwable {
 
-        final I tuple = inputOp.next();
+        final OperatorResult<I> input = inputOp.next();
 
-        outputFormat.writeRecord((AbstractTuple)tuple);
+        if (input != null) {
+            outputFormat.writeRecord((AbstractTuple)input.element);
+        }
 
-        return tuple;
+        return input;
     }
 
     @Override

@@ -4,6 +4,9 @@ import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractBinaryPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
+import de.tuberlin.aura.core.record.OperatorResult;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 
 public final class UnionPhysicalOperator<I> extends AbstractBinaryPhysicalOperator<I,I,I> {
@@ -12,7 +15,7 @@ public final class UnionPhysicalOperator<I> extends AbstractBinaryPhysicalOperat
     // Fields.
     // ---------------------------------------------------
 
-    private boolean selectedInput;
+    private boolean input1Selected;
 
     // ---------------------------------------------------
     // Constructor.
@@ -37,28 +40,30 @@ public final class UnionPhysicalOperator<I> extends AbstractBinaryPhysicalOperat
     }
 
     @Override
-    public I next() throws Throwable {
+    public OperatorResult<I> next() throws Throwable {
 
-        I in = null;
+        OperatorResult<I> in = input1Selected ? inputOp1.next() : inputOp2.next();
 
-        if (selectedInput)
-            in = inputOp1.next();
-        else
-            in = inputOp2.next();
+        while (in.marker == StreamMarker.END_OF_STREAM_MARKER) {
 
-        if (in == null) {
-
-            if (selectedInput) {
+            if (input1Selected) {
                 inputOp1.close();
             } else {
                 inputOp2.close();
             }
 
-            selectedInput = !selectedInput;
+            if (!inputOp1.isOpen() && !inputOp2.isOpen()) {
+                return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
+            }
+
+            input1Selected = !input1Selected;
+
+            in = input1Selected ? inputOp1.next() : inputOp2.next();
         }
 
-        if (inputOp1.isOpen() && inputOp2.isOpen())
-            selectedInput = !selectedInput;
+        if (inputOp1.isOpen() && inputOp2.isOpen()) {
+            input1Selected = !input1Selected;
+        }
 
         return in;
     }

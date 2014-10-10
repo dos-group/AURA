@@ -1,12 +1,14 @@
 package de.tuberlin.aura.core.record;
 
-import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
-import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class GroupedInputIterator<I> implements Iterator<I> {
+
+import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
+
+public class OperatorInputIterator<I> implements Iterator<I> {
 
     // ---------------------------------------------------
     // Fields.
@@ -14,13 +16,13 @@ public class GroupedInputIterator<I> implements Iterator<I> {
 
     private final IPhysicalOperator<I> inputOperator;
 
-    private I next;
+    private OperatorResult<I> next;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public GroupedInputIterator(IPhysicalOperator<I> inputOperator) {
+    public OperatorInputIterator(IPhysicalOperator<I> inputOperator) {
         this.inputOperator = inputOperator;
 
         try {
@@ -30,6 +32,10 @@ public class GroupedInputIterator<I> implements Iterator<I> {
         }
     }
 
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
     @Override
     public I next() {
         try {
@@ -38,11 +44,11 @@ public class GroupedInputIterator<I> implements Iterator<I> {
                 throw new NoSuchElementException();
             }
 
-            I result = next;
+            OperatorResult<I> result = next;
 
             next = inputOperator.next();
 
-            return result;
+            return result.element;
 
         } catch (Throwable e) {
             e.printStackTrace();
@@ -51,20 +57,21 @@ public class GroupedInputIterator<I> implements Iterator<I> {
     }
 
     @Override
+    public boolean hasNext() {
+        return !endOfGroup() &&
+                !endOfStream();
+    }
+
+    @Override
     public void remove() {
         throw new UnsupportedOperationException();
     }
 
-    @Override
-    public boolean hasNext() {
-        return !isDrained() && !isGroupFinished();
+    public boolean endOfGroup() {
+        return next.marker == StreamMarker.END_OF_GROUP_MARKER;
     }
 
-    public boolean isDrained() {
-        return next == null;
-    }
-
-    public boolean isGroupFinished() {
-        return next instanceof GroupEndMarker;
+    public boolean endOfStream() {
+        return next.marker == StreamMarker.END_OF_STREAM_MARKER;
     }
 }

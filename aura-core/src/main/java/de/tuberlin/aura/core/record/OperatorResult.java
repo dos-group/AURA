@@ -25,10 +25,37 @@ public class OperatorResult<T> {
     // Constructors.
     // ---------------------------------------------------
 
+    public OperatorResult() {
+
+        this(null, null);
+    }
+
+    public OperatorResult(T element) {
+
+        this(element, null);
+    }
+
+    public OperatorResult(StreamMarker marker) {
+
+        this(null, marker);
+    }
+
     public OperatorResult(T element, StreamMarker marker) {
 
         this.element = element;
 
         this.marker = marker;
     }
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
+
+    public void set(T element, StreamMarker marker) {
+
+        this.element = element;
+
+        this.marker = marker;
+    }
+
 }

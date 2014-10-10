@@ -6,9 +6,12 @@ import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.ISinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
+import de.tuberlin.aura.core.record.OperatorResult;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 
-public class UDFSinkPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator<I,Object> {
+public class UDFSinkPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator<I,I> {
 
     // ---------------------------------------------------
     // Constructor.
@@ -32,10 +35,13 @@ public class UDFSinkPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator
     }
 
     @Override
-    public Object next() throws Throwable {
-        final I input = inputOp.next();
-        if (input != null)
-            ((ISinkFunction<I>)function).consume(input);
+    public OperatorResult<I> next() throws Throwable {
+        final OperatorResult<I> input = inputOp.next();
+
+        if (input.marker != StreamMarker.END_OF_STREAM_MARKER) {
+            ((ISinkFunction<I>)function).consume(input.element);
+        }
+
         return input;
     }
 

@@ -36,7 +36,7 @@ public final class PhysicalOperatorFactory {
             case MAP_TUPLE_OPERATOR:
                 return new MapPhysicalOperator(context, inputOp1, FunctionFactory.createMapFunction((Class<MapFunction<Object,Object>>) udfType));
             case MAP_GROUP_OPERATOR:
-                return new GroupMapPhysicalOperator(context, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object,Object>>) udfType));
+                return new MapGroupPhysicalOperator(context, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object,Object>>) udfType));
             case FLAT_MAP_TUPLE_OPERATOR:
                 return new FlatMapPhysicalOperator(context, inputOp1, FunctionFactory.createFlatMapFunction((Class<FlatMapFunction<Object,Object>>) udfType));
             case FLAT_MAP_GROUP_OPERATOR:
@@ -109,7 +109,7 @@ public final class PhysicalOperatorFactory {
                     break;
                 }
                 case MAP_GROUP_OPERATOR: {
-                    inputOp1 = new GroupMapPhysicalOperator(context, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object, Object>>) udfType));
+                    inputOp1 = new MapGroupPhysicalOperator(context, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object, Object>>) udfType));
                     inputOp1.setOperatorNum(operatorNum);
                     break;
                 }

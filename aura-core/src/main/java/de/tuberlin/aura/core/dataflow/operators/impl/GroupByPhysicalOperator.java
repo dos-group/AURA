@@ -4,6 +4,8 @@ import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
+import de.tuberlin.aura.core.record.OperatorResult;
+import de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 import de.tuberlin.aura.core.record.TypeInformation;
 
 import java.util.ArrayList;
@@ -14,11 +16,14 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
     // Fields.
     // ---------------------------------------------------
 
-    private final TypeInformation inputTypeInfo;
+    private TypeInformation inputTypeInfo;
 
-    private I firstElementOfNewGroup;
+    private int[][] groupKeyIndices;
+
+    private OperatorResult<I> firstElementOfNewGroup;
 
     private ArrayList<Object> currentGroupKeys;
+
 
     // ---------------------------------------------------
     // Constructor.
@@ -26,9 +31,8 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
 
     public GroupByPhysicalOperator(final IExecutionContext context,
                                    final IPhysicalOperator<I> inputOp) {
-        super(context, inputOp);
 
-        this.inputTypeInfo = getContext().getProperties().input1Type;
+        super(context, inputOp);
     }
 
     // ---------------------------------------------------
@@ -37,55 +41,51 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
 
     @Override
     public void open() throws Throwable {
+
         super.open();
 
         inputOp.open();
+
+        inputTypeInfo = getContext().getProperties(this.getOperatorNum()).input1Type;
+
+        groupKeyIndices = getContext().getProperties(this.getOperatorNum()).groupByKeyIndices;
     }
 
     @Override
-    public I next() throws Throwable {
+    public OperatorResult<I> next() throws Throwable {
 
-        int[][] groupKeyIndices = getContext().getProperties().groupByKeyIndices;
+        OperatorResult<I> input;
 
-        I input;
+        if (currentGroupKeys == null) { // start of a new group
 
-        // start of a new group
-        if (currentGroupKeys == null) {
+            input = (firstElementOfNewGroup == null) ? inputOp.next() : firstElementOfNewGroup;
 
-            if (firstElementOfNewGroup == null) { // very first group
-                input = inputOp.next();
-
-                if (input == null) { // empty stream
-                    this.close();
-                    return null;
-                }
-            } else {
-                input = firstElementOfNewGroup;
+            if (input.marker == StreamMarker.END_OF_STREAM_MARKER) {
+                return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
             }
 
             currentGroupKeys = new ArrayList<>(groupKeyIndices.length);
-            for (int i = 0; i < groupKeyIndices.length; i++) {
-                currentGroupKeys.add(i, inputTypeInfo.selectField(groupKeyIndices[i], input));
-            }
 
-            firstElementOfNewGroup = null;
+            for (int i = 0; i < groupKeyIndices.length; i++) {
+                currentGroupKeys.add(i, inputTypeInfo.selectField(groupKeyIndices[i], input.element));
+            }
 
             return input;
 
         } else { // (potential) continuation of a group
             input = inputOp.next();
 
-            if (input == null) { // finished stream
-                this.close();
-                return null;
+            if (input.marker == StreamMarker.END_OF_STREAM_MARKER) {
+                return input;
             }
 
             for (int i = 0; i < groupKeyIndices.length; i++) {
-                if (!currentGroupKeys.get(i).equals(inputTypeInfo.selectField(groupKeyIndices[i], input))) {
+                if (!currentGroupKeys.get(i).equals(inputTypeInfo.selectField(groupKeyIndices[i], input.element))) {
                     // the group was finished with the previous element
                     firstElementOfNewGroup = input;
                     currentGroupKeys = null;
-                    return null; // indicate that a group is finished
+
+                    return new OperatorResult<>(StreamMarker.END_OF_GROUP_MARKER);
                 }
             }
 
@@ -95,8 +95,8 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
 
     @Override
     public void close() throws Throwable {
-        inputOp.close();
         super.close();
+        inputOp.close();
     }
 
     @Override

@@ -5,6 +5,7 @@ import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
+import de.tuberlin.aura.core.record.OperatorResult;
 
 import java.util.Arrays;
 
@@ -40,7 +41,7 @@ public class LoopControlPhysicalOperator<I> extends AbstractUnaryPhysicalOperato
     }
 
     @Override
-    public I next() throws Throwable {
+    public OperatorResult<I> next() throws Throwable {
 
         if (loopTerminated) {
 

@@ -6,6 +6,9 @@ import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
+import de.tuberlin.aura.core.record.OperatorResult;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 
 public final class MapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
@@ -32,12 +35,15 @@ public final class MapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOper
     }
 
     @Override
-    public O next() throws Throwable {
-        final I input = inputOp.next();
-        if (input != null)
-            return ((IMapFunction<I,O>)function).map(input);
-        else
-            return null;
+    public OperatorResult<O> next() throws Throwable {
+
+        final OperatorResult<I> input = inputOp.next();
+
+        if (input.marker != StreamMarker.END_OF_STREAM_MARKER) {
+            return new OperatorResult<>(((IMapFunction<I,O>)function).map(input.element));
+        } else {
+            return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
+        }
     }
 
     @Override
