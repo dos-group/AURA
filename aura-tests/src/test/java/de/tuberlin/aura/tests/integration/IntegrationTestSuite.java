@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({PlainTopologiesTest.class, DataflowTest.class, ParallelDataflowTest.class, DistributedEnvironmentTest.class, })
+@Suite.SuiteClasses({PlainTopologiesTest.class, DataflowTest.class, ParallelDataflowTest.class, DistributedEnvironmentTest.class})
 public class IntegrationTestSuite {
 
     // ---------------------------------------------------
