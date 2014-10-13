@@ -164,11 +164,11 @@ public final class IterativeDataflowTest {
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
-        atb.addNode(new Topology.OperatorNode(source1), Source1.class)
+        atb.addNode(new Topology.OperatorNode(source1))
                 .connectTo("Dataset1", Topology.Edge.TransferType.POINT_TO_POINT)
                 .addNode(new Topology.DatasetNode(dataset1))
                 .connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(map), Map1.class)
+                .addNode(new Topology.OperatorNode(map))
                 .connectTo("LoopControl1", Topology.Edge.TransferType.POINT_TO_POINT)
                 .addNode(new Topology.OperatorNode(loopControl))
                 .connectTo("Dataset1", Topology.Edge.TransferType.POINT_TO_POINT);

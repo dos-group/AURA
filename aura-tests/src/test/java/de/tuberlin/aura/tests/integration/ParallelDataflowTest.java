@@ -112,11 +112,11 @@ public final class ParallelDataflowTest {
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
-        atb.addNode(new Topology.OperatorNode(source1), Source1.class).
+        atb.addNode(new Topology.OperatorNode(source1)).
                 connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(new Topology.OperatorNode(map1), Map1.class).
+                addNode(new Topology.OperatorNode(map1)).
                 connectTo("Sink1", Topology.Edge.TransferType.ALL_TO_ALL).
-                addNode(new Topology.OperatorNode(sink1), Sink1.class);
+                addNode(new Topology.OperatorNode(sink1));
 
         // submitting concurrently from different threads sometimes yields
         // an error locally: DataConsumer.getInputGateIndexFromTaskID --> NullPointerException

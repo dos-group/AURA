@@ -167,8 +167,6 @@ public class Topology {
 
         private final Map<String, List<UserCode>> userCodeMap;
 
-        private final Map<String, List<Class<?>>> userCodeClazzMap;
-
         private final Map<UUID, LogicalNode> uidNodeMap;
 
         private boolean isBuilt = false;
@@ -200,8 +198,6 @@ public class Topology {
 
             this.userCodeMap = new HashMap<>();
 
-            this.userCodeClazzMap = new HashMap<>();
-
             this.uidNodeMap = new HashMap<>();
         }
 
@@ -210,19 +206,9 @@ public class Topology {
         // ---------------------------------------------------
 
         public NodeConnector addNode(final LogicalNode node) {
-            return addNode(node, new ArrayList<Class<?>>());
-        }
-
-        public NodeConnector addNode(final LogicalNode node, Class<?>... userCodeClasses) {
-            return addNode(node, Arrays.asList(userCodeClasses));
-        }
-
-        public NodeConnector addNode(final LogicalNode node, final List<Class<?>> userCodeClasses) {
             // sanity check.
             if (node == null)
                 throw new IllegalArgumentException("node == null");
-            if (userCodeClasses == null)
-                throw new IllegalArgumentException("userCodeClasses == null");
             if (nodeMap.containsKey(node.name))
                 throw new IllegalStateException("node already exists");
 
@@ -230,7 +216,6 @@ public class Topology {
             sourceMap.put(node.name, node);
             sinkMap.put(node.name, node);
             uidNodeMap.put(node.uid, node);
-            userCodeClazzMap.put(node.name, userCodeClasses);
             return nodeConnector.currentSource(node);
         }
 
@@ -276,7 +261,19 @@ public class Topology {
 
                 for (final LogicalNode n : nodeMap.values()) {
                     if (n instanceof InvokeableNode || n instanceof LogicalNode) {
-                        final List<Class<?>> userCodeClazzList = userCodeClazzMap.get(n.name);
+
+                        final List<Class<?>> userCodeClazzList = new ArrayList<>();
+
+                        for (DataflowNodeProperties nodeProperties : n.propertiesList) {
+                            try {
+                                if (nodeProperties.functionTypeName != null) {
+                                    userCodeClazzList.add(Class.forName(nodeProperties.functionTypeName));
+                                }
+                            } catch (ClassNotFoundException e) {
+                                throw new IllegalStateException("UDF type not found.");
+                            }
+                        }
+
                         final List<UserCode> userCodeList = new ArrayList<>();
                         for (final Class<?> userCodeClazz : userCodeClazzList) {
                             if (userCodeClazz != null && !AbstractTuple.class.isAssignableFrom(userCodeClazz)) { // TODO: shit hack...
@@ -643,8 +640,12 @@ public class Topology {
      */
     public static final class InvokeableNode extends LogicalNode {
 
-        public InvokeableNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
-            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, (DataflowNodeProperties)null);
+        public InvokeableNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism, String udfTypeName) {
+
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED,
+                    new DataflowNodeProperties(uid, null, name, degreeOfParallelism, perWorkerParallelism, null,
+                            null, null, null, null, udfTypeName, null, null, null, null, null, null, null, null));
+
         }
     }
 

@@ -61,9 +61,9 @@ public final class DistributedEnvironmentTest {
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
-        atb.addNode(new Topology.OperatorNode(source1), Source1.class).
+        atb.addNode(new Topology.OperatorNode(source1)).
                 connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(new Topology.OperatorNode(map1), Map1.class).
+                addNode(new Topology.OperatorNode(map1)).
                 connectTo("Dataset1", Topology.Edge.TransferType.ALL_TO_ALL).
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
@@ -88,9 +88,9 @@ public final class DistributedEnvironmentTest {
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
-        atb.addNode(new Topology.OperatorNode(source1), Source1.class).
+        atb.addNode(new Topology.OperatorNode(source1)).
                 connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(new Topology.OperatorNode(map1), Map1.class).
+                addNode(new Topology.OperatorNode(map1)).
                 connectTo("Dataset1", Topology.Edge.TransferType.ALL_TO_ALL).
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
@@ -119,9 +119,9 @@ public final class DistributedEnvironmentTest {
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
-        atb.addNode(new Topology.OperatorNode(source1), Source1.class).
+        atb.addNode(new Topology.OperatorNode(source1)).
                 connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(new Topology.OperatorNode(map1), Map1.class).
+                addNode(new Topology.OperatorNode(map1)).
                 connectTo("Dataset1", Topology.Edge.TransferType.ALL_TO_ALL).
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
@@ -147,7 +147,7 @@ public final class DistributedEnvironmentTest {
 
         atb2.addNode(new Topology.DatasetNode(dataset1Properties)).
                 connectTo("Map2", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(new Topology.OperatorNode(map2), Map2.class).
+                addNode(new Topology.OperatorNode(map2)).
                 connectTo("Dataset2", Topology.Edge.TransferType.POINT_TO_POINT).
                 addNode(new Topology.DatasetNode(dataset2Properties));
 

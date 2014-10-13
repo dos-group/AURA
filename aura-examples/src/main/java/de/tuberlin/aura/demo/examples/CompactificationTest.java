@@ -190,11 +190,11 @@ public class CompactificationTest {
 
 
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
-        atb.addNode(new Topology.OperatorNode(source1), Source1.class)
+        atb.addNode(new Topology.OperatorNode(source1))
                 .connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(Arrays.asList(map1, map2, map3)), Map1.class, Map2.class, Map3.class)
+                .addNode(new Topology.OperatorNode(Arrays.asList(map1, map2, map3)))
                 .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(sink1), Sink1.class);
+                .addNode(new Topology.OperatorNode(sink1));
 
 
         ac.submitTopology(atb.build("JOB1"), null);

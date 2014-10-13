@@ -143,15 +143,15 @@ public final class DataflowTest {
                 );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
-        atb.addNode(sourceNode, Job1Source.class).
+        atb.addNode(sourceNode).
             connectTo("Map", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(mapNode, Job1Map.class).
+            addNode(mapNode).
             connectTo("FlatMap", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(flatMapNode, Job1FlatMap.class).
+            addNode(flatMapNode).
             connectTo("Filter", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(filterNode, Job1Filter.class).
+            addNode(filterNode).
             connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(sinkNode, Job1Sink.class);
+            addNode(sinkNode);
 
         final Topology.AuraTopology topology1 = atb.build("JOB1-Maps");
 
@@ -308,18 +308,18 @@ public final class DataflowTest {
                         ));
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
-        atb.addNode(source1Node, Job2Source.class)
+        atb.addNode(source1Node)
             .connectTo("Map", Topology.Edge.TransferType.POINT_TO_POINT)
-            .addNode(mapNode, Job2Map.class)
+            .addNode(mapNode)
             .connectTo("Join1", Topology.Edge.TransferType.POINT_TO_POINT)
-            .addNode(source2Node, Job2Source.class)
+            .addNode(source2Node)
             .connectTo("Join2", Topology.Edge.TransferType.POINT_TO_POINT)
             .and().connectTo("Join1", Topology.Edge.TransferType.POINT_TO_POINT)
-            .addNode(join1Node, new ArrayList<Class<?>>())
+            .addNode(join1Node)
             .connectTo("Join2", Topology.Edge.TransferType.POINT_TO_POINT)
-            .addNode(join2Node, new ArrayList<Class<?>>())
+            .addNode(join2Node)
             .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
-            .addNode(sinkNode, Job2Sink.class);
+            .addNode(sinkNode);
 
         final Topology.AuraTopology topology = atb.build("JOB2-Joins");
 
@@ -427,15 +427,15 @@ public final class DataflowTest {
                 );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
-        atb.addNode(source1Node, Job3Source1.class).
+        atb.addNode(source1Node).
             connectTo("Union", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(source2Node, Job3Source2.class).
+            addNode(source2Node).
             connectTo("Union", Topology.Edge.TransferType.POINT_TO_POINT).
             addNode(unionNode).
             connectTo("Distinct", Topology.Edge.TransferType.ALL_TO_ALL).
             addNode(distinctNode).
             connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(sinkNode, Job3Sink.class);
+            addNode(sinkNode);
 
         final Topology.AuraTopology topology1 = atb.build("JOB3-DistinctUnion");
 
@@ -524,13 +524,13 @@ public final class DataflowTest {
                 );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
-        atb.addNode(source1Node, Job4Source1.class).
+        atb.addNode(source1Node).
                 connectTo("Difference", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(source2Node, Job4Source2.class).
+                addNode(source2Node).
                 connectTo("Difference", Topology.Edge.TransferType.POINT_TO_POINT).
                 addNode(differenceNode).
                 connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(sinkNode, Job4Sink.class);
+                addNode(sinkNode);
 
         final Topology.AuraTopology topology1 = atb.build("JOB4-Difference");
 
@@ -600,11 +600,11 @@ public final class DataflowTest {
                 );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
-        atb.addNode(sourceNode, Job5Source.class).
+        atb.addNode(sourceNode).
                 connectTo("Fold", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(foldNode, Job5Fold.class).
+                addNode(foldNode).
                 connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(sinkNode, Job5Sink.class);
+                addNode(sinkNode);
 
         final Topology.AuraTopology topology1 = atb.build("JOB5-GlobalFold");
 
@@ -755,13 +755,13 @@ public final class DataflowTest {
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
-        atb.addNode(sourceNode, Job6Source.class).
+        atb.addNode(sourceNode).
                 connectTo("Sort1", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(chainedSortGroupFold1Node, Job6Fold.class).
+                addNode(chainedSortGroupFold1Node).
                 connectTo("Sort2", Topology.Edge.TransferType.ALL_TO_ALL).
-                addNode(chainedSortGroupFold2Node, Job6Fold.class).
+                addNode(chainedSortGroupFold2Node).
                 connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(sinkNode, Job6Sink.class);
+                addNode(sinkNode);
 
         final Topology.AuraTopology topology = atb.build("JOB5-ChainedGroupFolding");
 

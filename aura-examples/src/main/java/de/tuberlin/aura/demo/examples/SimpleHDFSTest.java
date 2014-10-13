@@ -133,9 +133,9 @@ public class SimpleHDFSTest {
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
         atb.addNode(new Topology.OperatorNode(source1))
                 .connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(map), Map1.class)
+                .addNode(new Topology.OperatorNode(map))
                 .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(sink1), Sink1.class);
+                .addNode(new Topology.OperatorNode(sink1));
 
         ac.submitTopology(atb.build("JOB1"), null);
         ac.awaitSubmissionResult(1);
