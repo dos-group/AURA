@@ -62,7 +62,7 @@ public class HDFSSinkPhysicalOperator <I> extends AbstractUnaryPhysicalOperator<
 
         final OperatorResult<I> input = inputOp.next();
 
-        if (input != null) {
+        if (input.marker != OperatorResult.StreamMarker.END_OF_STREAM_MARKER) {
             outputFormat.writeRecord((AbstractTuple)input.element);
         }
 
