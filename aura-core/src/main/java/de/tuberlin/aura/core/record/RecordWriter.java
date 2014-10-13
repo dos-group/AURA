@@ -11,9 +11,7 @@ import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class RecordWriter implements IRecordWriter {
 
@@ -29,13 +27,7 @@ public class RecordWriter implements IRecordWriter {
 
     private final List<Descriptors.AbstractNodeDescriptor> outputBinding;
 
-    private final TypeInformation typeInformation;
-
     private final int channelCount;
-
-    private Integer groupChannelIndex;
-
-    private Map<Integer,Boolean> channelNeedsGroupEndMarkerBeforeNextWrite;
 
     // block end marker
     public static byte[] BLOCK_END;
@@ -60,8 +52,6 @@ public class RecordWriter implements IRecordWriter {
         if (typeInformation == null)
             throw new IllegalArgumentException("typeInformation == null");
 
-        this.typeInformation = typeInformation;
-
         this.partitioner = partitioner;
 
         final int bufferSize = driver.getProducer().getAllocator().getBufferSize();
@@ -71,10 +61,6 @@ public class RecordWriter implements IRecordWriter {
         this.kryoOutputs = new ArrayList<>();
 
         this.outputBinding = driver.getBindingDescriptor().outputGateBindings.get(gateIndex); // 1
-
-        this.groupChannelIndex = null;
-
-        this.channelNeedsGroupEndMarkerBeforeNextWrite = new HashMap<>();
 
         this.channelCount = (partitioner != null) ? outputBinding.size() : 1;
 
@@ -122,54 +108,23 @@ public class RecordWriter implements IRecordWriter {
         if (object == null)
             throw new IllegalArgumentException("object == null");
 
-        // handle groups in writeRecord as well (even though partitioner.partition record is not implemented yet..)
+        if (object instanceof RowRecordModel.RECORD_CLASS_GROUP_END) {
 
-        // FIXME: cleanup this logic..
+            // group markers are currently not transferred across node boundaries. instead groups are expected to be
+            // reduced to (partial) aggregates within tasks. reasoning: the group markers are not handled correctly by
+            // the (round-robin) absorber when multiple channels have to be absorbed (e.g. after shuffling or when
+            // connected tasks have different DOPs) or when regrouping is necessary after shuffling. at the same time,
+            // when nothing is shuffled but tasks with same DOP are connected point-to-point, we don't see any benefit
+            // in just doing the grouping in a different task.
 
-        if (typeInformation.isGrouped()) {
-
-            if (object instanceof RowRecordModel.RECORD_CLASS_GROUP_END) {
-                channelNeedsGroupEndMarkerBeforeNextWrite.put(groupChannelIndex, true);
-                groupChannelIndex = null;
-            } else {
-
-                Integer channelIndex;
-                if (groupChannelIndex == null) {
-                    if (partitioner != null) {
-                        channelIndex = partitioner.partition(object, outputBinding.size());
-                    } else {
-                        channelIndex = 0;
-                    }
-                    if (channelNeedsGroupEndMarkerBeforeNextWrite.containsKey(channelIndex)
-                            && channelNeedsGroupEndMarkerBeforeNextWrite.get(channelIndex)) {
-
-                        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), new RowRecordModel.RECORD_CLASS_GROUP_END());
-                        // ensure object is written to one buffer only
-                        kryoOutputs.get(channelIndex).flush();
-
-                        channelNeedsGroupEndMarkerBeforeNextWrite.put(channelIndex, false);
-                    }
-                } else {
-                    channelIndex = groupChannelIndex;
-                }
-
-                kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
-                groupChannelIndex = channelIndex;
-                // ensure object is written to one buffer only
-                kryoOutputs.get(groupChannelIndex).flush();
-            }
-        } else {
-
-            Integer channelIndex;
-            if (partitioner != null)
-                channelIndex = partitioner.partition(object, outputBinding.size());
-            else
-                channelIndex = 0;
-
-            kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
-            // ensure object is written to one buffer only
-            kryoOutputs.get(channelIndex).flush();
+            throw new IllegalStateException("Groups have to be folded within tasks");
         }
+
+        Integer channelIndex = (partitioner != null) ? partitioner.partition(object, outputBinding.size()) : 0;
+
+        kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
+        // flush Kryo's internal buffer to the actual channel buffer to ensure object is written to one buffer only
+        kryoOutputs.get(channelIndex).flush();
     }
 
     public void end() {
