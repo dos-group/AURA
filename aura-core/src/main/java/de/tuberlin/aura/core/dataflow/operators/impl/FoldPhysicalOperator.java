@@ -76,6 +76,7 @@ public class FoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<
     @Override
     public void close() throws Throwable {
         super.close();
+        inputOp.close();
     }
 
     @Override

@@ -73,6 +73,8 @@ public class HDFSSinkPhysicalOperator <I> extends AbstractUnaryPhysicalOperator<
     public void close() throws Throwable {
         super.close();
 
+        this.inputOp.close();
+
         this.outputFormat.close();
     }
 
