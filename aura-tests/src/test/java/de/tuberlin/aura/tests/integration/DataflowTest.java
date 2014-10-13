@@ -2,6 +2,7 @@ package de.tuberlin.aura.tests.integration;
 
 import java.util.*;
 
+import de.tuberlin.aura.core.record.tuples.Tuple3;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -19,7 +20,7 @@ import de.tuberlin.aura.tests.util.TestHelper;
 
 public final class DataflowTest {
 
-    // TODO: tests for Group Map, Fold on all elements
+    // TODO: a test for the Group Map
 
     // ---------------------------------------------------
     // Fields.
@@ -345,7 +346,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Job5Source1.class.getName(),
+                                Job3Source1.class.getName(),
                                 null, null, null, null, null,
                                 null, null, null
                         )
@@ -364,7 +365,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Job5Source2.class.getName(),
+                                Job3Source2.class.getName(),
                                 null, null, null, null, null,
                                 null, null, null
                         )
@@ -419,22 +420,22 @@ public final class DataflowTest {
                                 source1TypeInfo,
                                 null,
                                 null,
-                                Job5Sink.class.getName(),
+                                Job3Sink.class.getName(),
                                 null, null, null, null, null,
                                 null, null, null
                         )
                 );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
-        atb.addNode(source1Node, Job5Source1.class).
+        atb.addNode(source1Node, Job3Source1.class).
             connectTo("Union", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(source2Node, Job5Source2.class).
+            addNode(source2Node, Job3Source2.class).
             connectTo("Union", Topology.Edge.TransferType.POINT_TO_POINT).
             addNode(unionNode).
             connectTo("Distinct", Topology.Edge.TransferType.ALL_TO_ALL).
             addNode(distinctNode).
             connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(sinkNode, Job5Sink.class);
+            addNode(sinkNode, Job3Sink.class);
 
         final Topology.AuraTopology topology1 = atb.build("JOB3-DistinctUnion");
 
@@ -461,7 +462,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Job6Source1.class.getName(),
+                                Job4Source1.class.getName(),
                                 null, null, null, null, null,
                                 null, null, null
                         )
@@ -480,7 +481,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Job6Source2.class.getName(),
+                                Job4Source2.class.getName(),
                                 null, null, null, null, null,
                                 null, null, null
                         )
@@ -516,20 +517,20 @@ public final class DataflowTest {
                                 source1TypeInfo,
                                 null,
                                 null,
-                                Job6Sink.class.getName(),
+                                Job4Sink.class.getName(),
                                 null, null, null, null, null,
                                 null, null, null
                         )
                 );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
-        atb.addNode(source1Node, Job6Source1.class).
+        atb.addNode(source1Node, Job4Source1.class).
                 connectTo("Difference", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(source2Node, Job6Source2.class).
+                addNode(source2Node, Job4Source2.class).
                 connectTo("Difference", Topology.Edge.TransferType.POINT_TO_POINT).
                 addNode(differenceNode).
                 connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(sinkNode, Job6Sink.class);
+                addNode(sinkNode, Job4Sink.class);
 
         final Topology.AuraTopology topology1 = atb.build("JOB4-Difference");
 
@@ -537,7 +538,81 @@ public final class DataflowTest {
     }
 
     @Test
-    public void testJob5ChainedFoldWithShufflingDataflow() {
+    public void testJob5GlobalFold() {
+
+        int dop = executionUnits / 3;
+
+        final TypeInformation source1TypeInfo = source1TypeInfo();
+
+        Topology.OperatorNode sourceNode =
+                new Topology.OperatorNode(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
+                                "Source",
+                                dop,
+                                1,
+                                null,
+                                null,
+                                null,
+                                null,
+                                source1TypeInfo,
+                                Job5Source.class.getName(),
+                                null, null, null, null, null,
+                                null, null, null
+                        )
+                );
+
+        Topology.OperatorNode foldNode =
+                new Topology.OperatorNode(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
+                                "Fold",
+                                dop,
+                                1,
+                                null,
+                                null,
+                                source1TypeInfo,
+                                null,
+                                source1TypeInfo,
+                                Job5Fold.class.getName(),
+                                null, null, null, null, null,
+                                null, null, null
+                        )
+                );
+
+        Topology.OperatorNode sinkNode =
+                new Topology.OperatorNode(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                                "Sink", dop, 1,
+                                null,
+                                null,
+                                source1TypeInfo,
+                                null,
+                                null,
+                                Job5Sink.class.getName(),
+                                null, null, null, null, null,
+                                null, null, null
+                        )
+                );
+
+        Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
+        atb.addNode(sourceNode, Job5Source.class).
+                connectTo("Fold", Topology.Edge.TransferType.POINT_TO_POINT).
+                addNode(foldNode, Job5Fold.class).
+                connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
+                addNode(sinkNode, Job5Sink.class);
+
+        final Topology.AuraTopology topology1 = atb.build("JOB5-GlobalFold");
+
+        TestHelper.runTopology(auraClient, topology1);
+    }
+
+    @Test
+    public void testJob6ChainedFoldWithShufflingDataflow() {
 
         int dop = executionUnits / 4;
 
@@ -555,7 +630,7 @@ public final class DataflowTest {
                                 null,
                                 null,
                                 source1TypeInfo,
-                                Job4Source.class.getName(),
+                                Job6Source.class.getName(),
                                 null, null, null, null, null,
                                 null, null, null
                         )
@@ -602,7 +677,7 @@ public final class DataflowTest {
                         groupBy1TypeInfo,
                         null,
                         source1TypeInfo,
-                        Job4Fold.class.getName(),
+                        Job6Fold.class.getName(),
                         null, null, null, null, null,
                         null, null, null
                 );
@@ -652,7 +727,7 @@ public final class DataflowTest {
                         groupBy1TypeInfo,
                         null,
                         source1TypeInfo,
-                        Job4Fold.class.getName(),
+                        Job6Fold.class.getName(),
                         null, null, null, null, null,
                         null, null, null
                 );
@@ -672,7 +747,7 @@ public final class DataflowTest {
                                 source1TypeInfo,
                                 null,
                                 null,
-                                Job4Sink.class.getName(),
+                                Job6Sink.class.getName(),
                                 null, null, null, null,
                                 null, null, null, null
                         )
@@ -680,13 +755,13 @@ public final class DataflowTest {
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
-        atb.addNode(sourceNode, Job4Source.class).
+        atb.addNode(sourceNode, Job6Source.class).
                 connectTo("Sort1", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(chainedSortGroupFold1Node, Job4Fold.class, Job4Sink.class).
+                addNode(chainedSortGroupFold1Node, Job6Fold.class).
                 connectTo("Sort2", Topology.Edge.TransferType.ALL_TO_ALL).
-                addNode(chainedSortGroupFold2Node, Job4Fold.class, Job4Sink.class).
+                addNode(chainedSortGroupFold2Node, Job6Fold.class).
                 connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(sinkNode, Job4Sink.class);
+                addNode(sinkNode, Job6Sink.class);
 
         final Topology.AuraTopology topology = atb.build("JOB5-ChainedGroupFolding");
 
@@ -801,46 +876,23 @@ public final class DataflowTest {
         }
     }
 
-    public static final class Job3Source extends SourceFunction<Tuple2<String,Integer>> {
+    public static final class Job3Source1 extends SourceFunction<Tuple2<String,Integer>> {
 
-        int count = 100000;
+        int count = 1200000;
 
         @Override
-        public Tuple2<String,Integer> produce() {
-
-            --count;
-
-            if (count >= 75000) {
-                return new Tuple2<>("First_Group", 1);
-            } else if (count >= 50000) {
-                return new Tuple2<>("Second_Group", 1);
-            } else if (count >= 25000) {
-                return new Tuple2<>("Third_Group", 1);
-            } else if (count >= 0) {
-                return new Tuple2<>("Last_Group", 1);
-            } else {
-                return null;
-            }
+        public  Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("SOURCE1", 1) : null;
         }
     }
 
-    public static final class Job3Fold extends FoldFunction<Tuple2<String,Integer>,Tuple2<String,Integer>> {
+    public static final class Job3Source2 extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 1200000;
 
         @Override
-        public Tuple2<String,Integer> empty() {
-            return new Tuple2<>("", 0);
-        }
-
-        @Override
-        public Tuple2<String, Integer> singleton(Tuple2<String, Integer> in) {
-            return in;
-        }
-
-        @Override
-        public Tuple2<String,Integer> union(Tuple2<String, Integer> currentValue, Tuple2<String, Integer> in) {
-            currentValue._1 = in._1; // group key
-            currentValue._2 = currentValue._2 + in._2;
-            return currentValue;
+        public  Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("SOURCE2", 2) : null;
         }
     }
 
@@ -852,7 +904,73 @@ public final class DataflowTest {
         }
     }
 
-    public static final class Job4Source extends SourceFunction<Tuple2<String,Integer>> {
+    public static final class Job4Source1 extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 12000;
+
+        @Override
+        public  Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("Bam Bam Bam..", count) : null;
+        }
+    }
+
+    public static final class Job4Source2 extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 11975;
+
+        @Override
+        public  Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple2<>("Bam Bam Bam..", count) : null;
+        }
+    }
+
+    public static final class Job4Sink extends SinkFunction<Tuple2<String,Integer>> {
+
+        @Override
+        public void consume(final Tuple2<String,Integer> in) {
+//            System.out.println(in);
+        }
+    }
+
+    public static final class Job5Source extends SourceFunction<Tuple3<String,Integer,Integer>> {
+
+        int count = 10000;
+
+        @Override
+        public  Tuple3<String,Integer,Integer> produce() {
+            return (--count >= 0 ) ?  new Tuple3<>(String.valueOf(count), count, 1) : null;
+        }
+    }
+
+    public static final class Job5Fold extends FoldFunction<Tuple3<String,Integer,Integer>,Tuple2<String,Integer>> {
+
+
+        @Override
+        public Tuple2<String, Integer> empty() {
+            return new Tuple2<>("RESULT", 0);
+        }
+
+        @Override
+        public Tuple2<String, Integer> singleton(Tuple3<String, Integer, Integer> element) {
+            return new Tuple2<>(element._1, element._3);
+        }
+
+        @Override
+        public Tuple2<String, Integer> union(Tuple2<String, Integer> result, Tuple2<String, Integer> element) {
+            result._2 = result._2 + element._2;
+            return result;
+        }
+    }
+
+    public static final class Job5Sink extends SinkFunction<Tuple2<String,Integer>> {
+
+        @Override
+        public void consume(final Tuple2<String,Integer> in) {
+//            System.out.println(in);
+        }
+    }
+
+    public static final class Job6Source extends SourceFunction<Tuple2<String,Integer>> {
 
         int count = 100000;
 
@@ -875,7 +993,7 @@ public final class DataflowTest {
         }
     }
 
-    public static final class Job4Fold extends FoldFunction<Tuple2<String,Integer>,Tuple2<String,Integer>> {
+    public static final class Job6Fold extends FoldFunction<Tuple2<String,Integer>,Tuple2<String,Integer>> {
 
         @Override
         public Tuple2<String,Integer> empty() {
@@ -883,72 +1001,15 @@ public final class DataflowTest {
         }
 
         @Override
-        public Tuple2<String, Integer> singleton(Tuple2<String, Integer> in) {
-            return in;
+        public Tuple2<String, Integer> singleton(Tuple2<String, Integer> element) {
+            return element;
         }
 
         @Override
-        public Tuple2<String,Integer> union(Tuple2<String, Integer> currentValue, Tuple2<String, Integer> in) {
-            currentValue._1 = in._1; // group key
-            currentValue._2 = currentValue._2 + in._2;
-            return currentValue;
-        }
-    }
-
-    public static final class Job4Sink extends SinkFunction<Tuple2<String,Integer>> {
-
-        @Override
-        public void consume(final Tuple2<String,Integer> in) {
-//            System.out.println(in);
-        }
-    }
-
-
-    public static final class Job5Source1 extends SourceFunction<Tuple2<String,Integer>> {
-
-        int count = 1200000;
-
-        @Override
-        public  Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("SOURCE1", 1) : null;
-        }
-    }
-
-    public static final class Job5Source2 extends SourceFunction<Tuple2<String,Integer>> {
-
-        int count = 1200000;
-
-        @Override
-        public  Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("SOURCE2", 2) : null;
-        }
-    }
-
-    public static final class Job5Sink extends SinkFunction<Tuple2<String,Integer>> {
-
-        @Override
-        public void consume(final Tuple2<String,Integer> in) {
-//            System.out.println(in);
-        }
-    }
-
-    public static final class Job6Source1 extends SourceFunction<Tuple2<String,Integer>> {
-
-        int count = 12000;
-
-        @Override
-        public  Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("Bam Bam Bam..", count) : null;
-        }
-    }
-
-    public static final class Job6Source2 extends SourceFunction<Tuple2<String,Integer>> {
-
-        int count = 11975;
-
-        @Override
-        public  Tuple2<String,Integer> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>("Bam Bam Bam..", count) : null;
+        public Tuple2<String,Integer> union(Tuple2<String, Integer> result, Tuple2<String, Integer> element) {
+            result._1 = element._1; // group key
+            result._2 = result._2 + element._2;
+            return result;
         }
     }
 

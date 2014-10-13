@@ -8,7 +8,7 @@ public interface IFoldFunction<I,O> {
 
     public abstract O empty();
 
-    public abstract O singleton(final I in);
+    public abstract O singleton(final I element);
 
-    public abstract O union(O currentValue, final O mRes);
+    public abstract O union(O result, final O element);
 }
