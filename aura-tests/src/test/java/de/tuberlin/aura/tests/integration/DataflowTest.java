@@ -161,7 +161,7 @@ public final class DataflowTest {
     @Test
     public void testJob2JoinDataflow() {
 
-        int dop = executionUnits / 7;
+        int dop = executionUnits / 5;
 
         final TypeInformation source1TypeInfo = source1TypeInfo();
 
@@ -215,29 +215,6 @@ public final class DataflowTest {
                                 null, null
                         ));
 
-        Topology.OperatorNode mapNode =
-                new Topology.OperatorNode(
-                        new DataflowNodeProperties(
-                                UUID.randomUUID(),
-                                DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
-                                "Map",
-                                dop,
-                                1,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                source1TypeInfo,
-                                null,
-                                source1TypeInfo,
-                                Job2Map.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null, null
-                        ));
-
         Topology.OperatorNode join1Node =
                 new Topology.OperatorNode(
                         new DataflowNodeProperties(
@@ -269,14 +246,14 @@ public final class DataflowTest {
                                 "Join2",
                                 dop,
                                 1,
-                                new int[][] { join2TypeInfo.buildFieldSelectorChain("_1._2") },
-                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                join1TypeInfo,
+                                null,
+                                null,
                                 source1TypeInfo,
+                                join1TypeInfo,
                                 join2TypeInfo,
                                 null,
-                                new int[][] { join1TypeInfo.buildFieldSelectorChain("_1") },
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
+                                new int[][] { join1TypeInfo.buildFieldSelectorChain("_1._2") },
                                 null,
                                 null,
                                 null,
@@ -309,14 +286,12 @@ public final class DataflowTest {
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
         atb.addNode(source1Node)
-            .connectTo("Map", Topology.Edge.TransferType.POINT_TO_POINT)
-            .addNode(mapNode)
-            .connectTo("Join1", Topology.Edge.TransferType.POINT_TO_POINT)
+            .connectTo("Join1", Topology.Edge.TransferType.ALL_TO_ALL)
             .addNode(source2Node)
-            .connectTo("Join2", Topology.Edge.TransferType.POINT_TO_POINT)
-            .and().connectTo("Join1", Topology.Edge.TransferType.POINT_TO_POINT)
+            .connectTo("Join1", Topology.Edge.TransferType.ALL_TO_ALL)
+            .and().connectTo("Join2", Topology.Edge.TransferType.ALL_TO_ALL)
             .addNode(join1Node)
-            .connectTo("Join2", Topology.Edge.TransferType.POINT_TO_POINT)
+            .connectTo("Join2", Topology.Edge.TransferType.ALL_TO_ALL)
             .addNode(join2Node)
             .connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT)
             .addNode(sinkNode);
