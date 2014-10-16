@@ -14,7 +14,6 @@ import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import de.tuberlin.aura.core.taskmanager.common.TaskStates.TaskState;
 import de.tuberlin.aura.core.taskmanager.usercode.UserCode;
 import de.tuberlin.aura.core.taskmanager.usercode.UserCodeExtractor;
-import de.tuberlin.aura.core.topology.Topology.AuraTopology.DeploymentType;
 
 public class Topology {
 
@@ -29,17 +28,6 @@ public class Topology {
     public static final class AuraTopology implements java.io.Serializable {
 
         private static final long serialVersionUID = -1L;
-
-        // ---------------------------------------------------
-        // Aura Topology Properties.
-        // ---------------------------------------------------
-
-        public static enum DeploymentType {
-
-            LAZY,
-
-            EAGER
-        }
 
         // ---------------------------------------------------
         // Fields.
@@ -63,7 +51,7 @@ public class Topology {
 
         public final Map<UUID, LogicalNode> uidNodeMap;
 
-        public final DeploymentType deploymentType;
+        public final boolean isReExecutable;
 
         public Map<UUID, ExecutionNode> executionNodeMap;
 
@@ -80,7 +68,7 @@ public class Topology {
                             final Map<Pair<String, String>, Edge> edges,
                             final Map<String, List<UserCode>> userCodeMap,
                             final Map<UUID, LogicalNode> uidNodeMap,
-                            final DeploymentType deploymentType) {
+                            final boolean isReExecutable) {
 
             // sanity check.
             if (machineID == null)
@@ -101,8 +89,6 @@ public class Topology {
                 throw new IllegalArgumentException("userCodeMap == null");
             if (uidNodeMap == null)
                 throw new IllegalArgumentException("uidNodeMap == null");
-            if (deploymentType == null)
-                throw new IllegalArgumentException("deploymentType == null");
 
             this.machineID = machineID;
 
@@ -122,7 +108,7 @@ public class Topology {
 
             this.uidNodeMap = uidNodeMap;
 
-            this.deploymentType = deploymentType;
+            this.isReExecutable = isReExecutable;
 
             this.executionNodeMap = null;
         }
@@ -234,13 +220,10 @@ public class Topology {
             return nodeConnector.currentSource(node);
         }
 
-        public AuraTopology build(final String name,
-                                  final DeploymentType deploymentType) {
+        public AuraTopology build(final String name, final boolean isReExecutable) {
             // sanity check.
             if (name == null)
                 throw new IllegalArgumentException("name == null");
-            if (deploymentType == null)
-                throw new IllegalArgumentException("deploymentType == null");
 
             if (!isBuilt) {
 
@@ -303,7 +286,7 @@ public class Topology {
                                     edges,
                                     userCodeMap,
                                     uidNodeMap,
-                                    deploymentType);
+                                    isReExecutable);
         }
 
         private boolean validateBackCouplingEdge(final Set<LogicalNode> visitedNodes, final LogicalNode currentNode, final LogicalNode destNode) {
@@ -326,7 +309,7 @@ public class Topology {
         }
 
         public AuraTopology build(final String name) {
-            return build(name, DeploymentType.EAGER);
+            return build(name, false);
         }
 
         // ---------------------------------------------------
@@ -481,8 +464,6 @@ public class Topology {
         private final Map<UUID, ExecutionNode> executionNodes;
 
         public boolean isAlreadyDeployed = false;
-
-        //public final DataflowNodeProperties properties;
 
         public final List<DataflowNodeProperties> propertiesList;
 

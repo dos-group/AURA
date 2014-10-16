@@ -7,6 +7,7 @@ import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
+import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
@@ -24,13 +25,17 @@ public final class IterativeDataflowTest {
     // UDFs.
     // ---------------------------------------------------
 
+    public static final int COUNT = 5;
+
     public static final class Source1 extends SourceFunction<Tuple2<Integer, String>> {
 
-        int count = 1000;
+        int count = COUNT;
 
         @Override
         public Tuple2<Integer, String> produce() {
-            return (--count >= 0 ) ?  new Tuple2<>(count, "String" + count) : null;
+            Tuple2<Integer, String> res = (--count >= 0 ) ?  new Tuple2<>(count, "String" + count) : null;
+            if (count < 0) count = COUNT;
+            return res;
         }
     }
 
@@ -39,6 +44,14 @@ public final class IterativeDataflowTest {
         @Override
         public Tuple2<Integer,String> map(final Tuple2<Integer, String> in) {
             return in;
+        }
+    }
+
+    public static final class Sink1 extends SinkFunction<Tuple2<String,Integer>> {
+
+        @Override
+        public void consume(final Tuple2<String,Integer> in) {
+            System.out.println(in);
         }
     }
 
@@ -56,7 +69,9 @@ public final class IterativeDataflowTest {
         final DataflowNodeProperties source1 = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                "Source1", 1, 1,
+                "Source1",
+                3,
+                1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                 null,
@@ -73,34 +88,12 @@ public final class IterativeDataflowTest {
                 null
         );
 
-
-        final UUID dataset1UID = UUID.randomUUID();
-
-        final DataflowNodeProperties dataset1 = new DataflowNodeProperties(
-                dataset1UID,
-                DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
-                "Dataset1", 1, 1,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                source1TypeInfo,
-                null,
-                source1TypeInfo,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
-
-
-        final DataflowNodeProperties map = new DataflowNodeProperties(
+        final DataflowNodeProperties map1 = new DataflowNodeProperties(
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
-                "Map1", 1, 1,
+                "Map1",
+                3,
+                1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                 source1TypeInfo,
@@ -117,17 +110,18 @@ public final class IterativeDataflowTest {
                 null
         );
 
-
-        final DataflowNodeProperties loopControl = new DataflowNodeProperties(
+        DataflowNodeProperties sink1 = new DataflowNodeProperties(
                 UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.LOOP_CONTROL_OPERATOR,
-                "LoopControl1", 1, 1,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                source1TypeInfo,
+                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                "Sink1",
+                3,
+                1,
+                null,
                 null,
                 source1TypeInfo,
                 null,
+                null,
+                Sink1.class.getName(),
                 null,
                 null,
                 null,
@@ -138,22 +132,27 @@ public final class IterativeDataflowTest {
                 null
         );
 
-
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
         atb.addNode(new Topology.OperatorNode(source1), Source1.class)
-                .connectTo("Dataset1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.DatasetNode(dataset1))
-                .connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(map), Map1.class)
-                .connectTo("LoopControl1", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.OperatorNode(loopControl))
-                .connectTo("Dataset1", Topology.Edge.TransferType.POINT_TO_POINT);
+                .connectTo("Map1", Topology.Edge.TransferType.ALL_TO_ALL)
+                .addNode(new Topology.OperatorNode(map1), Map1.class)
+                .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
+                .addNode(new Topology.OperatorNode(sink1), Sink1.class);
 
-        ac.submitTopology(atb.build("JOB1"), null);
+        final Topology.AuraTopology topology = atb.build("ITERATIVE_JOB1", true);
+
+        ac.submitTopology(topology, null);
+
+        for (int i = 0; i < 5; ++i) {
+            ac.waitForIterationEnd(topology.topologyID);
+            ac.reExecute(topology.topologyID, i < 5 - 1);
+        }
+
         ac.awaitSubmissionResult(1);
+
         ac.closeSession();
         lcs.shutdown();
     }

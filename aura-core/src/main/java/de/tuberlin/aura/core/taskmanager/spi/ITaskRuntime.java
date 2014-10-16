@@ -38,4 +38,6 @@ public interface ITaskRuntime extends IEventDispatcher, ITaskRuntimeLifecycle {
     public abstract void connectDataChannel(final Descriptors.AbstractNodeDescriptor dstNodeDescriptor, final IAllocator allocator);
 
     public abstract InputSplit getNextInputSplit();
+
+    public abstract boolean doNextIteration();
 }

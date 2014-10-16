@@ -16,8 +16,6 @@ public interface IDataConsumer {
 
     public abstract IOEvents.TransferBufferEvent absorb(int gateIndex) throws InterruptedException;
 
-    public abstract IOEvents.TransferBufferEvent absorb(int gateIndex, int channelIndex) throws InterruptedException;
-
     public abstract void shutdown();
 
     public abstract void openGate(int gateIndex);

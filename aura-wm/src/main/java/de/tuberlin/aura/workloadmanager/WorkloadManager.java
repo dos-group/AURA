@@ -3,12 +3,14 @@ package de.tuberlin.aura.workloadmanager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.filesystem.InputSplit;
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
 import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
 import de.tuberlin.aura.core.topology.Topology;
+import de.tuberlin.aura.core.topology.TopologyStates;
 import de.tuberlin.aura.workloadmanager.spi.IDistributedEnvironment;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
@@ -63,15 +65,15 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
 
     private final IConfig config;
 
-    public final MachineDescriptor machineDescriptor;
+    private final MachineDescriptor machineDescriptor;
 
-    public final IIOManager ioManager;
+    private final IIOManager ioManager;
 
-    public final IRPCManager rpcManager;
+    private final IRPCManager rpcManager;
 
-    public final IInfrastructureManager infrastructureManager;
+    private final IInfrastructureManager infrastructureManager;
 
-    public final IDistributedEnvironment environmentManager;
+    private final IDistributedEnvironment environmentManager;
 
     private final Map<UUID, TopologyController> registeredTopologies;
 
@@ -116,6 +118,15 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
             public void handleEvent(Event e) {
                 final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
                 registeredTopologies.get(event.getTopologyID()).getTopologyFSMDispatcher().dispatchEvent((Event) event.getPayload());
+            }
+        });
+        // Register EventHandler for Client iteration evaluation.
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_CLIENT_ITERATION_EVALUATION, new IEventHandler() {
+
+            @Override
+            public void handleEvent(Event e) {
+                final IOEvents.ClientControlIOEvent event = (IOEvents.ClientControlIOEvent) e;
+                registeredTopologies.get(event.getTopologyID()).dispatchEvent(e);
             }
         });
 
@@ -234,6 +245,8 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         environmentManager.addBroadcastDataset(datasetID, dataset);
     }
 
+    // ---------------------------------------------------
+
     @Override
     public <E> Collection<E> getBroadcastDataset(final UUID datasetID) {
         return environmentManager.getBroadcastDataset(datasetID);
@@ -244,6 +257,12 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         final AuraTopology topology = this.registeredTopologies.get(topologyID).getTopology();
         final Topology.ExecutionNode exNode = topology.executionNodeMap.get(taskID);
         return infrastructureManager.getInputSplitFromHDFSSource(exNode);
+    }
+
+    @Override
+    public void doNextIteration(final UUID topologyID, final UUID taskID) {
+        final TopologyController tc = this.registeredTopologies.get(topologyID);
+        tc.evaluateIteration(taskID);
     }
 
     // ---------------------------------------------------

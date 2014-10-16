@@ -15,4 +15,6 @@ public interface ITM2WMProtocol {
     public abstract <E> Collection<E> getBroadcastDataset(final UUID datasetID);
 
     public abstract InputSplit requestNextInputSplit(final UUID topologyID, final UUID taskID, final int sequenceNumber);
+
+    public abstract void doNextIteration(final UUID topologyID, final UUID taskID);
 }

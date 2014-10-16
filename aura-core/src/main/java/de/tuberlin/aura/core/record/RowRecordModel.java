@@ -287,6 +287,10 @@ public final class RowRecordModel {
         public final int marker = -2;
     }
 
+    public static final class RECORD_CLASS_ITERATION_END {
+        public final int marker = -3;
+    }
+
     public static final Class<?> RECORD_TYPE_STREAM_END = RECORD_CLASS_STREAM_END.class;
 
     public static final Class<?> RECORD_TYPE_BLOCK_END = RECORD_CLASS_BLOCK_END.class;

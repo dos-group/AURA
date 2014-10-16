@@ -70,6 +70,14 @@ public final class IOEvents {
         public static final String CONTROL_EVENT_REMOTE_TASK_TRANSITION = "CONTROL_EVENT_REMOTE_TASK_TRANSITION";
 
         public static final String CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE = "CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE";
+
+        // -----------------------------
+
+        public static final String CONTROL_EVENT_EXECUTE_NEXT_ITERATION = "CONTROL_EVENT_EXECUTE_NEXT_ITERATION";
+
+        public static final String CONTROL_EVENT_ITERATION_CYCLE_END = "CONTROL_EVENT_ITERATION_CYCLE_END";
+
+        public static final String CONTROL_EVENT_CLIENT_ITERATION_EVALUATION = "CONTROL_EVENT_CLIENT_ITERATION_EVALUATION";
     }
 
     /**
@@ -248,6 +256,32 @@ public final class IOEvents {
                                         .append(" dstMachineID = " + dstMachineID)
                                         .append(" }")
                                         .toString();
+        }
+    }
+
+    /**
+     *
+     */
+    public static class ClientControlIOEvent extends ControlIOEvent {
+
+        private static final long serialVersionUID = -1L;
+
+        private UUID topologyID;
+
+        public ClientControlIOEvent(final String type) {
+            super(type);
+        }
+
+        public void setTopologyID(final UUID topologyID) {
+            // sanity check.
+            if (topologyID == null)
+                throw new IllegalArgumentException("topologyID == null");
+
+            this.topologyID = topologyID;
+        }
+
+        public UUID getTopologyID() {
+            return this.topologyID;
         }
     }
 

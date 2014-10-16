@@ -3,8 +3,10 @@ package de.tuberlin.aura.taskmanager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
-import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.common.eventsystem.Event;
+import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.filesystem.InputSplit;
 import de.tuberlin.aura.taskmanager.hdfs.TaskInputSplitProvider;
 import org.slf4j.Logger;
@@ -54,6 +56,12 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
     private TaskInputSplitProvider inputSplitProvider;
 
+    private boolean doNextIteration = false;
+
+    private boolean invokeableInitialization = true;
+
+    private CountDownLatch nextIterationSignal = new CountDownLatch(1);
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -89,6 +97,17 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
                         new BlockingSignalQueue.Factory<IOEvents.DataIOEvent>());
 
         inputSplitProvider = new TaskInputSplitProvider(deploymentDescriptor.nodeDescriptor, taskManager.getWorkloadManagerProtocol());
+
+        // ---------------------------------------------------
+
+        addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_EXECUTE_NEXT_ITERATION, new IEventHandler() {
+
+            @Override
+            public void handleEvent(Event event) {
+                doNextIteration = (boolean)event.getPayload();
+                nextIterationSignal.countDown();
+            }
+        });
     }
 
     // ---------------------------------------------------
@@ -166,7 +185,10 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
         try {
 
-            invokeable.create();
+            if (invokeableInitialization) {
+                invokeable.create();
+                invokeableInitialization = false;
+            }
 
             invokeable.open();
 
@@ -174,7 +196,25 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
             invokeable.close();
 
-            invokeable.release();
+            if (nodeDescriptor.isReExecutable) {
+
+                taskManager.getWorkloadManagerProtocol().doNextIteration(nodeDescriptor.topologyID, nodeDescriptor.taskID);
+
+                try {
+                    nextIterationSignal.await();
+                } catch (InterruptedException e) {
+                    LOG.info(e.getMessage());
+                }
+
+                if (!doNextIteration) {
+                    invokeable.release();
+                } else
+                    nextIterationSignal = new CountDownLatch(1);
+
+            } else {
+
+                invokeable.release();
+            }
 
         } catch (final Throwable t) {
 
@@ -200,12 +240,6 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
         consumer.getAllocator().checkForMemoryLeaks();
         producer.getAllocator().checkForMemoryLeaks();
-
-        if (nodeDescriptor instanceof Descriptors.InvokeableNodeDescriptor
-            || nodeDescriptor instanceof Descriptors.OperatorNodeDescriptor) {
-            // TODO: Wait until all gates are closed? -> invokeable.close() emits all DATA_EVENT_SOURCE_EXHAUSTED events
-            taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FINISH));
-        }
     }
 
     // ---------------------------------------------------
@@ -279,6 +313,11 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
         return invokeable;
     }
 
+    @Override
+    public boolean doNextIteration() {
+        return doNextIteration;
+    }
+
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------
@@ -303,6 +342,7 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
                         .and().addTransition(TaskTransition.TASK_TRANSITION_CANCEL, TaskState.TASK_STATE_CANCELED)
                         .and().addTransition(TaskTransition.TASK_TRANSITION_FAIL, TaskState.TASK_STATE_FAILURE)
                         .and().addTransition(TaskTransition.TASK_TRANSITION_SUSPEND, TaskState.TASK_STATE_PAUSED)
+                        .and().addTransition(TaskTransition.TASK_TRANSITION_NEXT_ITERATION, TaskState.TASK_STATE_READY)
                         .defineState(TaskState.TASK_STATE_FINISHED)
                         .noTransition()
                         .defineState(TaskState.TASK_STATE_CANCELED)

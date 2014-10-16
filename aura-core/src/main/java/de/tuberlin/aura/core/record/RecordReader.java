@@ -9,6 +9,7 @@ import de.tuberlin.aura.core.memory.MemoryView;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,24 +22,34 @@ public class RecordReader implements IRecordReader {
 
     private boolean isFinished = false;
 
-    private final Kryo kryo;
+    private Kryo kryo;
 
-    private final Input kryoInput;
+    private Input kryoInput;
 
-    private final BufferStream.ContinuousByteInputStream inputStream;
+    private BufferStream.ContinuousByteInputStream inputStream;
 
     private List<InputBufferAccessor> inputBufferAccessors;
+
+    private final ITaskRuntime runtime;
+
+    private final int gateIndex;
+
+    private int channelCount;
 
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
-    public RecordReader(final ITaskRuntime driver, final int gateIndex) {
+    public RecordReader(final ITaskRuntime runtime, final int gateIndex) {
         // sanity check.
-        if (driver == null)
+        if (runtime == null)
             throw new IllegalArgumentException("runtime == null");
 
-        final int bufferSize = driver.getProducer().getAllocator().getBufferSize();
+        this.runtime = runtime;
+
+        this.gateIndex = gateIndex;
+
+        final int bufferSize = runtime.getProducer().getAllocator().getBufferSize();
 
         this.kryo = new Kryo(null);
 
@@ -51,7 +62,7 @@ public class RecordReader implements IRecordReader {
             @Override
             public MemoryView get() {
                 try {
-                    final IOEvents.TransferBufferEvent event =  driver.getConsumer().absorb(gateIndex);
+                    final IOEvents.TransferBufferEvent event = runtime.getConsumer().absorb(gateIndex);
                     if (event == null) {
                         isFinished = true;
                         return null;
@@ -85,11 +96,14 @@ public class RecordReader implements IRecordReader {
     }
 
     public void begin() {
+        channelCount = runtime.getBindingDescriptor().inputGateBindings.get(gateIndex).size();
     }
 
     public Object readObject() {
         Object object = kryo.readClassAndObject(kryoInput);
+
         if (object != null && object.getClass() == RowRecordModel.RECORD_CLASS_BLOCK_END.class) {
+
             inputStream.nextBuf();
             // stream is exhausted
             if (isFinished) {
@@ -101,10 +115,33 @@ public class RecordReader implements IRecordReader {
             return readObject();
         }
 
+        if (object != null && object.getClass() == RowRecordModel.RECORD_CLASS_ITERATION_END.class) {
+            --channelCount;
+
+            if (channelCount == 0) {
+                kryoInput.setLimit(0);
+                kryoInput.rewind();
+                return null;
+            }
+
+            inputStream.nextBuf();
+            kryoInput.setLimit(0);
+            kryoInput.rewind();
+            return readObject();
+        }
+
         return object;
     }
 
-    public void end() {}
+    public void end() {
+        try {
+            inputStream.flush();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+        kryoInput.setLimit(0);
+        kryoInput.rewind();
+    }
 
     public boolean finished() {
         return isFinished;

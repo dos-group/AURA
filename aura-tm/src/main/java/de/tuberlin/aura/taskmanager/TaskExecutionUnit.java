@@ -5,6 +5,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import de.tuberlin.aura.core.descriptors.Descriptors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,18 +138,21 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
             while (isExecutionUnitRunning.get()) {
 
-                try {
-                    runtime = taskQueue.take();
-                    LOG.info("Execution Unit {} prepares execution of taskmanager {}",
-                            TaskExecutionUnit.this.executionUnitID,
-                            runtime.getNodeDescriptor().taskID);
-                } catch (InterruptedException e) {
-                    throw new IllegalStateException(e);
+                if (runtime == null || (runtime != null && !runtime.doNextIteration())) {
+
+                    try {
+                        runtime = taskQueue.take();
+                        LOG.info("Execution Unit {} prepares execution of taskmanager {}",
+                                TaskExecutionUnit.this.executionUnitID,
+                                runtime.getNodeDescriptor().taskID);
+                    } catch (InterruptedException e) {
+                        throw new IllegalStateException(e);
+                    }
+
+                    executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + runtime.getNodeDescriptor().name);
                 }
 
                 final CountDownLatch executeLatch = new CountDownLatch(1);
-
-                executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + runtime.getNodeDescriptor().name);
 
                 runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
                         new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
@@ -161,7 +165,9 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             }
                         });
 
-                runtime.initialize(inputAllocator, outputAllocator);
+                if (!runtime.doNextIteration()) {
+                    runtime.initialize(inputAllocator, outputAllocator);
+                }
 
                 try {
                     executeLatch.await();
@@ -170,15 +176,30 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                 }
 
                 boolean success = runtime.execute();
-                runtime.shutdown(success);
-                executionManager.getTaskManager().uninstallTask(runtime.getNodeDescriptor().taskID);
 
-                // This is necessary to indicate that this execution unit is free via the
-                // getNumberOfEnqueuedTasks()-method. This isn't thread safe in any way!
-                runtime = null;
+                if (runtime.getNodeDescriptor() instanceof Descriptors.InvokeableNodeDescriptor
+                        || runtime.getNodeDescriptor() instanceof Descriptors.OperatorNodeDescriptor) {
+
+                    if (runtime.doNextIteration()) {
+
+                        runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_NEXT_ITERATION));
+
+                    } else {
+
+                        runtime.shutdown(success);
+
+                        runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
+
+                        executionManager.getTaskManager().uninstallTask(runtime.getNodeDescriptor().taskID);
+
+                        // This is necessary to indicate that this execution unit is free via the
+                        // getNumberOfEnqueuedTasks()-method. This isn't thread safe in any way!
+                        runtime = null;
+
+                        LOG.debug("Terminate thread of execution unit {}", TaskExecutionUnit.this.executionUnitID);
+                    }
+                }
             }
-
-            LOG.debug("Terminate thread of execution unit {}", TaskExecutionUnit.this.executionUnitID);
         }
     }
 }
