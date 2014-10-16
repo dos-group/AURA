@@ -2,6 +2,8 @@ package de.tuberlin.aura.core.record;
 
 import com.esotericsoftware.reflectasm.FieldAccess;
 import de.tuberlin.aura.core.common.utils.ArrayUtils;
+import de.tuberlin.aura.core.record.tuples.Tuple2;
+
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -66,6 +68,7 @@ public final class TypeInformation implements Serializable {
 
         TypeInformation ti = this;
         Object obj = target;
+
         for (final int fieldIndex : selectorChain) {
             FieldAccess fa = RowRecordModel.RecordTypeBuilder.getFieldAccessor(ti.type);
             obj = fa.get(obj, fieldIndex);

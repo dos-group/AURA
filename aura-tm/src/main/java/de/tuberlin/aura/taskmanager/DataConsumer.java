@@ -254,7 +254,25 @@ public final class DataConsumer implements IDataConsumer {
     }
 
     public int getInputGateIndexFromTaskID(final UUID taskID) {
-        return taskIDToGateIndex.get(taskID);
+
+        // see DataConsumer.getExecutionUnitByTaskID(..) for the reasoning behind this polling..
+
+        Integer gateIndex = taskIDToGateIndex.get(taskID);
+
+        for (int i=0; i < 20 && gateIndex == null; i++) {
+            try {
+                Thread.sleep(50);
+                gateIndex = taskIDToGateIndex.get(taskID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (gateIndex == null) {
+            throw new IllegalStateException("Could not find gate for task");
+        }
+
+        return gateIndex;
     }
 
     public boolean isExhausted() {

@@ -1,19 +1,19 @@
 package de.tuberlin.aura.core.dataflow.operators.impl;
 
+import java.util.*;
+
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IGroupMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.GroupMapFunction;
-import de.tuberlin.aura.core.record.GroupedOperatorInputIterator;
+import de.tuberlin.aura.core.record.OperatorInputIterator;
+import de.tuberlin.aura.core.record.OperatorResult;
 
-import java.util.*;
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
-/**
- *
- */
-public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
+public class MapGroupPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
 
     // ---------------------------------------------------
     // Fields.
@@ -25,7 +25,7 @@ public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
     // Constructor.
     // ---------------------------------------------------
 
-    public GroupMapPhysicalOperator(final IExecutionContext context,
+    public MapGroupPhysicalOperator(final IExecutionContext context,
                                     final IPhysicalOperator<I> inputOp,
                                     final GroupMapFunction<I, O> function) {
 
@@ -45,27 +45,30 @@ public class GroupMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
     }
 
     @Override
-    public O next() throws Throwable {
+    public OperatorResult<O> next() throws Throwable {
 
         while (elementQueue.isEmpty()) {
 
-            GroupedOperatorInputIterator<I> it = new GroupedOperatorInputIterator<>(inputOp);
+            OperatorInputIterator<I> it = new OperatorInputIterator<>(inputOp);
 
-            if (it.isDrained()) {
-                this.close();
-                return null;
+            if (it.endOfStream()) {
+                return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
             }
 
             ((IGroupMapFunction<I, O>) function).map(it, elementQueue);
 
-            if (!it.isDrained()) {
-                // add null as the group is finished
+            if (it.endOfGroup()) {
                 elementQueue.add(null);
             }
         }
 
-        // FIXME: groupmap should be able to return/write all returned tuples at once (through a Collector)
-        return elementQueue.poll();
+        OperatorResult<O> result = new OperatorResult<>(elementQueue.poll());
+
+        if (result.element == null) {
+            return new OperatorResult<>(StreamMarker.END_OF_GROUP_MARKER);
+        }
+
+        return result;
     }
 
     @Override

@@ -160,8 +160,6 @@ public abstract class DelimitedInputFormat<OT> extends FileInputFormat<OT> {
     @Override
     public void configure(Configuration parameters) {
         super.configure(parameters);
-        setDelimiter(",");
-
         /*String delimString = parameters.getString(RECORD_DELIMITER, null);
         if (delimString != null) {
             String charsetName = parameters.getString(RECORD_DELIMITER_ENCODING, null);

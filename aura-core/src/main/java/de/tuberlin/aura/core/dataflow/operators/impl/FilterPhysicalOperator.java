@@ -6,6 +6,9 @@ import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IFilterFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FilterFunction;
+import de.tuberlin.aura.core.record.OperatorResult;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 
 public class FilterPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator<I,I> {
@@ -32,16 +35,17 @@ public class FilterPhysicalOperator<I> extends AbstractUnaryUDFPhysicalOperator<
     }
 
     @Override
-    public I next() throws Throwable {
-        I input = inputOp.next();
+    public OperatorResult<I> next() throws Throwable {
 
-        while (input != null && !((IFilterFunction<I>)function).filter(input)) {
+        OperatorResult<I> input = inputOp.next();
+
+        while (input.marker != StreamMarker.END_OF_STREAM_MARKER &&
+                !((IFilterFunction<I>)function).filter(input.element)) {
+
             input = inputOp.next();
         }
 
         return input;
-
-        // TODO: should not return each tuple separately, but ALEX: "return an iterator"
     }
 
     @Override

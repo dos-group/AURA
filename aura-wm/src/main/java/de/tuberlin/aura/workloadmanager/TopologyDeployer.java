@@ -91,8 +91,8 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                                     en.getNodeDescriptor().taskID,
                                     topology.topologyID,
                                     en.getNodeBindingDescriptor().outputGateBindings,
-                                    datasetNodeDescriptor.properties.strategy,
-                                    datasetNodeDescriptor.properties.partitionKeyIndices
+                                    datasetNodeDescriptor.propertiesList.get(0).strategy,
+                                    datasetNodeDescriptor.propertiesList.get(0).partitionKeyIndices
                              );
 
                         } else {

@@ -5,8 +5,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import de.tuberlin.aura.core.filesystem.InputSplit;
 import de.tuberlin.aura.core.topology.Topology;
-import de.tuberlin.aura.core.filesystem.InputSplitManager;
 
+import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
@@ -40,10 +40,13 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
     // Constructors.
     // ---------------------------------------------------
 
-    public InfrastructureManager(final String zkServer, final MachineDescriptor wmMachine) {
+    public InfrastructureManager(final IWorkloadManager workloadManager, final String zookeeper, final MachineDescriptor wmMachine) {
         super();
         // sanity check.
-        ZookeeperClient.checkConnectionString(zkServer);
+        ZookeeperClient.checkConnectionString(zookeeper);
+
+        if (workloadManager == null)
+            throw new IllegalArgumentException("workloadManager == null");
         if (wmMachine == null)
             throw new IllegalArgumentException("wmMachine == null");
 
@@ -52,7 +55,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
         this.nodeMap = new ConcurrentHashMap<>();
 
         try {
-            zookeeperClient = new ZookeeperClient(zkServer);
+            zookeeperClient = new ZookeeperClient(zookeeper);
             zookeeperClient.initDirectories();
             zookeeperClient.store(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER, wmMachine);
 
@@ -75,7 +78,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
             throw new IllegalStateException(e);
         }
 
-        this.inputSplitManager = new InputSplitManager();
+        this.inputSplitManager = new InputSplitManager(workloadManager);
     }
 
     // ---------------------------------------------------

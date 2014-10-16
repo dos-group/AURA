@@ -36,7 +36,7 @@ public class TestHelper {
         auraClient.ioManager.removeEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, finishedHandler);
     }
 
-    public static void runTopologiesConcurrently(final AuraClient auraClient, final List<Topology.AuraTopology> topologies) {
+    public static void runTopologiesInParallel(final AuraClient auraClient, final List<Topology.AuraTopology> topologies) {
         TopologyFinishedHandler handler = new TopologyFinishedHandler();
 
         auraClient.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, handler);

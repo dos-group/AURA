@@ -1,6 +1,8 @@
 package de.tuberlin.aura.core.dataflow.operators.base;
 
 
+import de.tuberlin.aura.core.record.OperatorResult;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,6 +17,8 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
     private boolean isOperatorOpen = false;
 
     private List<Integer> outputGateIndices;
+
+    private int operatorNum = 0;
 
     // ---------------------------------------------------
     // Constructor.
@@ -43,7 +47,7 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
     }
 
     @Override
-    public O next() throws Throwable {
+    public OperatorResult<O> next() throws Throwable {
         return null;
     }
 
@@ -70,5 +74,15 @@ public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O
     @Override
     public List<Integer> getOutputGates() {
         return outputGateIndices;
+    }
+
+    @Override
+    public void setOperatorNum(final int operatorNum) {
+        this.operatorNum = operatorNum;
+    }
+
+    @Override
+    public int getOperatorNum() {
+        return operatorNum;
     }
 }

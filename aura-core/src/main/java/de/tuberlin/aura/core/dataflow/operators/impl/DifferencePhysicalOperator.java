@@ -7,6 +7,9 @@ import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractBinaryPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
+import de.tuberlin.aura.core.record.OperatorResult;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 
 public class DifferencePhysicalOperator<I> extends AbstractBinaryPhysicalOperator<I,I,I> {
@@ -40,10 +43,10 @@ public class DifferencePhysicalOperator<I> extends AbstractBinaryPhysicalOperato
 
         inputOp2.open();
 
-        I in2 = inputOp2.next();
+        OperatorResult<I> in2 = inputOp2.next();
 
-        while (in2 != null) {
-            minusSideElements.put(in2, true);
+        while (in2.marker != StreamMarker.END_OF_STREAM_MARKER) {
+            minusSideElements.put(in2.element, true);
             in2 = inputOp2.next();
         }
 
@@ -52,12 +55,14 @@ public class DifferencePhysicalOperator<I> extends AbstractBinaryPhysicalOperato
     }
 
     @Override
-    public I next() throws Throwable {
+    public OperatorResult<I> next() throws Throwable {
         super.next();
 
-        I in1 = inputOp1.next();
+        OperatorResult<I> in1 = inputOp1.next();
 
-        while (in1 != null && minusSideElements.containsKey(in1)) {
+        while (in1.marker != StreamMarker.END_OF_STREAM_MARKER &&
+                minusSideElements.containsKey(in1.element)) {
+
             in1 = inputOp1.next();
         }
 

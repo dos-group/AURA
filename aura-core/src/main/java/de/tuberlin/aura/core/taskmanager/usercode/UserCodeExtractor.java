@@ -123,6 +123,9 @@ public final class UserCodeExtractor {
             topLevelClazzName = enclosingClazz.getSimpleName();
             enclosingClazz = enclosingClazz.getEnclosingClass();
         }
+        if (topLevelClazzName == null) {
+            topLevelClazzName = clazz.getSimpleName();
+        }
 
         final StringTokenizer tokenizer = new StringTokenizer(clazz.getCanonicalName(), ".");
         final StringBuilder pathBuilder = new StringBuilder();

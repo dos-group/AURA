@@ -4,9 +4,12 @@ import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
+import de.tuberlin.aura.core.record.OperatorResult;
 
 import java.util.Map;
 import java.util.HashMap;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 
 public class DistinctPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,I> {
@@ -36,14 +39,17 @@ public class DistinctPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I
     }
 
     @Override
-    public I next() throws Throwable {
-        I input = inputOp.next();
+    public OperatorResult<I> next() throws Throwable {
 
-        while (hashes.containsKey(input) && input != null) {
+        OperatorResult<I> input = inputOp.next();
+
+        while (input.marker != StreamMarker.END_OF_STREAM_MARKER &&
+                hashes.containsKey(input.element)) {
+
             input = inputOp.next();
         }
 
-        hashes.put(input, true);
+        hashes.put(input.element, true);
 
         return input;
     }

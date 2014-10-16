@@ -112,7 +112,12 @@ public class ExecutionContext implements IExecutionContext {
 
     @Override
     public DataflowNodeProperties getProperties() {
-        return nodeDescriptor.properties;
+        return nodeDescriptor.propertiesList.get(0);
+    }
+
+    @Override
+    public DataflowNodeProperties getProperties(int operatorNum) {
+        return nodeDescriptor.propertiesList.get(operatorNum);
     }
 
     @Override

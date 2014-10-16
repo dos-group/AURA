@@ -80,7 +80,7 @@ public final class FunctionFactory {
         }
     }
 
-    public static <I,M,O> FoldFunction<I,M,O> createFoldFunction(Class<FoldFunction<I,M,O>> functionType) {
+    public static <I,O> FoldFunction<I,O> createFoldFunction(Class<FoldFunction<I,O>> functionType) {
         // sanity check.
         if (functionType == null)
             throw new IllegalArgumentException("functionType == null");

@@ -6,19 +6,18 @@ import java.util.Map;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
+import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.dataflow.operators.PhysicalOperatorFactory;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.impl.ExecutionContext;
-import de.tuberlin.aura.core.record.Partitioner;
-import de.tuberlin.aura.core.record.RecordReader;
-import de.tuberlin.aura.core.record.RecordWriter;
-import de.tuberlin.aura.core.record.typeinfo.GroupEndMarker;
+import de.tuberlin.aura.core.record.*;
 import de.tuberlin.aura.core.taskmanager.spi.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 
 public final class OperatorDriver extends AbstractInvokeable {
@@ -49,7 +48,9 @@ public final class OperatorDriver extends AbstractInvokeable {
                                   final IRecordReader reader,
                                   final IDataConsumer consumer,
                                   final int gateIndex) {
+
             super(environment);
+
             // sanity check.
             if (reader == null)
                 throw new IllegalArgumentException("reader == null");
@@ -75,8 +76,11 @@ public final class OperatorDriver extends AbstractInvokeable {
         }
 
         @Override
-        public Object next() throws Throwable {
-            return reader.readObject();
+        public OperatorResult<Object> next() throws Throwable {
+
+            Object input = reader.readObject();
+
+            return new OperatorResult<>(input, this.markerForGateInput(input));
         }
 
         @Override
@@ -89,6 +93,17 @@ public final class OperatorDriver extends AbstractInvokeable {
         @Override
         public void accept(IVisitor<IPhysicalOperator> visitor) {
             throw new UnsupportedOperationException();
+        }
+
+        private StreamMarker markerForGateInput(Object input) {
+
+            if (input == null) {
+                return StreamMarker.END_OF_STREAM_MARKER;
+            } else if (input instanceof RowRecordModel.RECORD_CLASS_GROUP_END) {
+                return StreamMarker.END_OF_GROUP_MARKER;
+            } else {
+                return null;
+            }
         }
     }
 
@@ -123,16 +138,15 @@ public final class OperatorDriver extends AbstractInvokeable {
         this.context = new ExecutionContext(runtime, nodeDescriptor, bindingDescriptor);
 
         final Configuration conf = new Configuration();
-        conf.set("fs.defaultFS", getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_config"));
-
-        //conf.addResource(new Path(getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_config")));
-
+        conf.set("fs.defaultFS", getExecutionContext().getRuntime().getTaskManager().getConfig().getString("tm.io.hdfs.hdfs_url"));
         context.put("hdfs_config", conf);
 
-        if (nodeDescriptor.properties.config != null) {
-            // TODO: check for overrides...
-            for (final Map.Entry<String,Object> entry : nodeDescriptor.properties.config.entrySet())
-                context.put(entry.getKey(), entry.getValue());
+        for (final DataflowNodeProperties properties : nodeDescriptor.propertiesList) {
+            if (properties.config != null) {
+                // TODO: check for overrides...
+                for (final Map.Entry<String, Object> entry : properties.config.entrySet())
+                    context.put(entry.getKey(), entry.getValue());
+            }
         }
     }
 
@@ -144,15 +158,17 @@ public final class OperatorDriver extends AbstractInvokeable {
     public void create() throws Throwable {
 
         if (runtime.getBindingDescriptor().outputGateBindings.size() > 0) {
-            final Partitioner.IPartitioner partitioner =
+            int lastOperatorNum = nodeDescriptor.propertiesList.size() - 1;
+
+            final Partitioner.IPartitioner partitioner = (nodeDescriptor.propertiesList.get(lastOperatorNum).strategy != null) ?
                     Partitioner.PartitionerFactory.createPartitioner(
-                            nodeDescriptor.properties.strategy,
-                            nodeDescriptor.properties.outputType,
-                            nodeDescriptor.properties.partitionKeyIndices
-                    );
+                            nodeDescriptor.propertiesList.get(lastOperatorNum).strategy,
+                            nodeDescriptor.propertiesList.get(lastOperatorNum).outputType,
+                            nodeDescriptor.propertiesList.get(lastOperatorNum).partitionKeyIndices
+                    ) : null;
 
             for (int i = 0; i <  runtime.getBindingDescriptor().outputGateBindings.size(); ++i) {
-                final RecordWriter reader = new RecordWriter(runtime, nodeDescriptor.properties.outputType, i, partitioner);
+                final RecordWriter reader = new RecordWriter(runtime, nodeDescriptor.propertiesList.get(lastOperatorNum).outputType, i, partitioner);
                 writers.add(reader);
             }
         }
@@ -162,7 +178,7 @@ public final class OperatorDriver extends AbstractInvokeable {
             gateReaders.add(new GateReaderOperator(context, recordReader, consumer, i));
         }
 
-        operator = PhysicalOperatorFactory.createPhysicalOperator(context, gateReaders);
+        operator = PhysicalOperatorFactory.createPhysicalOperatorPlan(context, gateReaders);
     }
 
     @Override
@@ -171,9 +187,11 @@ public final class OperatorDriver extends AbstractInvokeable {
         for (final IRecordWriter writer : writers)
             writer.begin();
 
-        if (nodeDescriptor.properties.broadcastVars != null) {
-            for(final UUID datasetID : nodeDescriptor.properties.broadcastVars)
-                context.putDataset(datasetID, runtime.getTaskManager().getBroadcastDataset(datasetID));
+        for (final DataflowNodeProperties properties : nodeDescriptor.propertiesList) {
+            if (properties.broadcastVars != null) {
+                for (final UUID datasetID : properties.broadcastVars)
+                    context.putDataset(datasetID, runtime.getTaskManager().getBroadcastDataset(datasetID));
+            }
         }
 
         operator.open();
@@ -182,47 +200,20 @@ public final class OperatorDriver extends AbstractInvokeable {
     @Override
     public void run() throws Throwable {
 
-        if (nodeDescriptor.properties.outputType != null &&
-                nodeDescriptor.properties.outputType.isGrouped()) {
+        OperatorResult<?> input = operator.next();
 
-            // groups: null as return value = end of a group
-            //              operator closed = end of data
+        while (input.marker != StreamMarker.END_OF_STREAM_MARKER) {
 
-            // -> as this is currently only handled here in the OperatorDriver, this will be a problem as soon as
-            // multiple ops are executed within the same execution unit (e.g. after compactification)
+            Object element = (input.marker == StreamMarker.END_OF_GROUP_MARKER) ?
+                    new RowRecordModel.RECORD_CLASS_GROUP_END() : input.element;
 
-            while (operator.isOpen()) {
-
-                Object object = operator.next();
-
-                if (object != null) {
-
-                    for (int gateIndex : operator.getOutputGates())
-                        writers.get(gateIndex).writeObject(object);
-
-                } else {
-
-                    if (operator.isOpen()) {
-                        for (int gateIndex : operator.getOutputGates())
-                            writers.get(gateIndex).writeObject(GroupEndMarker.class);
-                    }
-                }
+            for (int gateIndex : operator.getOutputGates()) {
+                writers.get(gateIndex).writeObject(element);
             }
 
-        } else {
-
-            // elements: null = end of data
-
-            Object object = operator.next();
-
-            while (object != null) {
-
-                for (int gateIndex : operator.getOutputGates())
-                    writers.get(gateIndex).writeObject(object);
-
-                object = operator.next();
-            }
+            input = operator.next();
         }
+
     }
 
     @Override

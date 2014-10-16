@@ -9,6 +9,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -366,7 +367,7 @@ public final class IOManager extends EventDispatcher implements IIOManager {
                 public void initChannel(SocketChannel ch) throws Exception {
                     ch.pipeline().addFirst(new ObjectEncoder());
                     ch.pipeline().addFirst(new ControlIOChannelHandler());
-                    ch.pipeline().addFirst(new ObjectDecoder(ClassResolvers.cacheDisabled(getClass().getClassLoader())));
+                    ch.pipeline().addFirst(new ObjectDecoder(Integer.MAX_VALUE, ClassResolvers.cacheDisabled(getClass().getClassLoader())));
                 }
             });
 

@@ -6,9 +6,12 @@ import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IFlatMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FlatMapFunction;
+import de.tuberlin.aura.core.record.OperatorResult;
 
 import java.util.Queue;
 import java.util.LinkedList;
+
+import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 
 public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<I,O> {
@@ -28,6 +31,7 @@ public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
                                    final FlatMapFunction<I,O> function) {
 
         super(context, inputOp, function);
+
     }
 
     // ---------------------------------------------------
@@ -43,23 +47,21 @@ public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
     }
 
     @Override
-    public O next() throws Throwable {
-
-        I input;
-
-        // FIXME: flatmap should be able to return/write all returned tuples at once, maybe also through a Collector
+    public OperatorResult<O> next() throws Throwable {
 
         while (elementQueue.isEmpty()) {
-            input = inputOp.next();
+            OperatorResult<I> input = inputOp.next();
 
-            if (input != null) {
-                ((IFlatMapFunction<I,O>)function).flatMap(input, elementQueue);
+            if (input.marker != StreamMarker.END_OF_STREAM_MARKER) {
+                ((IFlatMapFunction<I,O>)function).flatMap(input.element, elementQueue);
             } else {
-                return null;
+                return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
             }
+
         }
 
-        return elementQueue.poll();
+        return new OperatorResult<>(elementQueue.poll());
+
     }
 
     @Override
