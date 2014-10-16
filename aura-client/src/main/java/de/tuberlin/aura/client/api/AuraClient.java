@@ -49,6 +49,8 @@ public final class AuraClient {
 
     public final UUID clientSessionID;
 
+    public final MachineDescriptor wmMachine;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -70,10 +72,9 @@ public final class AuraClient {
         this.codeExtractor.addStandardDependency("io/netty");
         this.codeExtractor.addStandardDependency("de/tuberlin/aura/core");
 
-        final MachineDescriptor wmMachineDescriptor;
         try {
             ZookeeperClient client = new ZookeeperClient(zkServer);
-            wmMachineDescriptor = (MachineDescriptor) client.read(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER);
+            wmMachine = (MachineDescriptor) client.read(ZookeeperClient.ZOOKEEPER_WORKLOADMANAGER);
             client.close();
         } catch (Exception e) {
             throw new IllegalStateException(e);
@@ -82,9 +83,10 @@ public final class AuraClient {
         ioHandler = new IORedispatcher();
         ioManager.addEventListener(ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, ioHandler);
         ioManager.addEventListener(ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE, ioHandler);
-        ioManager.connectMessageChannelBlocking(wmMachineDescriptor);
+        ioManager.addEventListener(ControlEventType.CONTROL_EVENT_ITERATION_CYCLE_END, ioHandler);
+        ioManager.connectMessageChannelBlocking(wmMachine);
 
-        clientProtocol = rpcManager.getRPCProtocolProxy(IClientWMProtocol.class, wmMachineDescriptor);
+        clientProtocol = rpcManager.getRPCProtocolProxy(IClientWMProtocol.class, wmMachine);
 
         this.registeredTopologyMonitors = new HashMap<>();
         // create examples session.
@@ -102,22 +104,61 @@ public final class AuraClient {
         return new AuraTopologyBuilder(ioManager.getMachineDescriptor().uid, codeExtractor);
     }
 
-
     public void submitTopology(final AuraTopology topology, final EventHandler handler) {
         // sanity check.
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
-        if (handler != null) {
+        if (handler != null)
             registeredTopologyMonitors.put(topology.topologyID, handler);
-        }
+
         clientProtocol.submitTopology(clientSessionID, topology);
+    }
+
+    public void waitForIterationEnd(final UUID topologyID) {
+        // sanity check.
+        if (topologyID == null)
+            throw new IllegalArgumentException("topologyID == null");
+
+        final CountDownLatch awaitIterationEnd = new CountDownLatch(1);
+
+        final IEventHandler iterationEndHandler = new IEventHandler() {
+            @Override
+            public void handleEvent(Event e) {
+                final IOEvents.ClientControlIOEvent event = (IOEvents.ClientControlIOEvent)e;
+                if (event.getTopologyID().equals(topologyID))
+                    awaitIterationEnd.countDown();
+            }
+        };
+
+        ioManager.addEventListener(ControlEventType.CONTROL_EVENT_ITERATION_CYCLE_END, iterationEndHandler);
+
+        try {
+            awaitIterationEnd.await();
+        } catch (InterruptedException e) {
+            LOG.error(e.getMessage());
+        }
+
+        ioManager.removeEventListener(ControlEventType.CONTROL_EVENT_ITERATION_CYCLE_END, iterationEndHandler);
+    }
+
+    public void reExecute(final UUID topologyID, final boolean reExecute) {
+        // sanity check.
+        if (topologyID == null)
+            throw new IllegalArgumentException("topologyID == null");
+
+        final IOEvents.ClientControlIOEvent clientEvaluationEvent =
+                new IOEvents.ClientControlIOEvent(ControlEventType.CONTROL_EVENT_CLIENT_ITERATION_EVALUATION);
+
+        clientEvaluationEvent.setTopologyID(topologyID);
+        clientEvaluationEvent.setPayload(reExecute);
+
+        ioManager.sendEvent(wmMachine, clientEvaluationEvent);
     }
 
     public void closeSession() {
         clientProtocol.closeSession(clientSessionID);
     }
-
 
     public void awaitSubmissionResult(final int numTopologies) {
 

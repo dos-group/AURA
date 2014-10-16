@@ -44,6 +44,8 @@ public final class TaskStates {
 
         TASK_TRANSITION_RUN,
 
+        TASK_TRANSITION_NEXT_ITERATION,
+
         TASK_TRANSITION_SUSPEND,
 
         TASK_TRANSITION_RESUME,

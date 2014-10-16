@@ -17,4 +17,6 @@ public interface IRecordWriter {
     public abstract void end();
 
     public abstract void setPartitioner(final Partitioner.IPartitioner partitioner);
+
+    public abstract void flush();
 }

@@ -10,6 +10,7 @@ import de.tuberlin.aura.core.taskmanager.spi.IRecordWriter;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,10 +28,16 @@ public class RecordWriter implements IRecordWriter {
 
     private final List<Descriptors.AbstractNodeDescriptor> outputBinding;
 
+    private final List<BufferStream.ContinuousByteOutputStream> outputStreams;
+
+    private final TypeInformation typeInformation;
+
     private final int channelCount;
 
     // block end marker
     public static byte[] BLOCK_END;
+
+    public static byte[] ITERATION_END;
 
     static {
         Kryo tmpKryo = new Kryo(null);
@@ -39,6 +46,13 @@ public class RecordWriter implements IRecordWriter {
         tmpKryo.writeClassAndObject(output, new RowRecordModel.RECORD_CLASS_BLOCK_END());
         output.flush();
         BLOCK_END = baos.toByteArray();
+
+        tmpKryo = new Kryo(null);
+        baos = new ByteArrayOutputStream(1000);
+        output = new UnsafeOutput(baos);
+        tmpKryo.writeClassAndObject(output, new RowRecordModel.RECORD_CLASS_ITERATION_END());
+        output.flush();
+        ITERATION_END = baos.toByteArray();
     }
 
     // ---------------------------------------------------
@@ -60,13 +74,17 @@ public class RecordWriter implements IRecordWriter {
 
         this.kryoOutputs = new ArrayList<>();
 
+        this.outputStreams = new ArrayList<>();
+
         this.outputBinding = driver.getBindingDescriptor().outputGateBindings.get(gateIndex); // 1
 
         this.channelCount = (partitioner != null) ? outputBinding.size() : 1;
 
         for (int i = 0; i < channelCount; ++i) {
+
             final int index = i;
             final BufferStream.ContinuousByteOutputStream os = new BufferStream.ContinuousByteOutputStream();
+            outputStreams.add(os);
             final Output kryoOutput = new UnsafeOutput(os, bufferSize);
             kryoOutputs.add(kryoOutput);
 
@@ -142,5 +160,15 @@ public class RecordWriter implements IRecordWriter {
             throw new IllegalArgumentException("partitioner == null");
 
         this.partitioner = partitioner;
+    }
+
+    @Override
+    public void flush() {
+        try {
+            for (BufferStream.ContinuousByteOutputStream stream : outputStreams)
+                stream.close();
+        } catch(IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

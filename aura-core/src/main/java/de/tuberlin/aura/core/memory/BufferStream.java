@@ -74,7 +74,6 @@ public final class BufferStream {
             count += 1;
 
             if (count >= buf.size) {
-
                 nextBuf();
             }
         }
@@ -97,46 +96,6 @@ public final class BufferStream {
 
             System.arraycopy(b, off, buf.memory, count, len);
             count += len;
-
-            // if (count + len > buf.size) {
-
-            // int copiedLen = 0;
-            //
-            // int originalLen = len;
-            //
-            // while (!(originalLen == copiedLen)) {
-            //
-            // final int avail = buf.size - (count - buf.baseOffset);
-            //
-            // if (originalLen - copiedLen > avail)
-            // len = avail;
-            // else
-            // len = originalLen - copiedLen;
-            //
-            // System.arraycopy(b, off, buf.memory, count, len);
-            //
-            // off += len;
-            //
-            // copiedLen += len;
-            //
-            // if (!(originalLen == copiedLen)) {
-            // nextBuf();
-            // }
-            // }
-            //
-            // count += len;
-
-            // return;
-
-            /*
-             * } else {
-             * 
-             * System.arraycopy(b, off, buf.memory, count, len);
-             * 
-             * count += len;
-             * 
-             * if (count >= buf.size) { nextBuf(); } }
-             */
         }
 
         public synchronized void writeTo(OutputStream out) throws IOException {
@@ -169,13 +128,23 @@ public final class BufferStream {
         }
 
         public void close() throws IOException {
-            System.arraycopy(RecordWriter.BLOCK_END, 0, buf.memory, count, RecordWriter.BLOCK_END.length);
-            flush();
+            if (buf != null) {
+                System.arraycopy(RecordWriter.ITERATION_END, 0, buf.memory, count, RecordWriter.ITERATION_END.length);
+                flush();
+            } else {
+                // If no buffer has been sent, allocate a
+                // new buffer and set iteration end marker.
+                nextBuf();
+                close();
+            }
         }
 
         public void flush() throws IOException {
-            if (buf != null && bufferOutput != null)
+            if (buf != null && bufferOutput != null) {
                 bufferOutput.put(buf);
+                buf = null;
+                count = 0;
+            }
         }
 
         // ---------------------------------------------------
@@ -183,16 +152,10 @@ public final class BufferStream {
         // ---------------------------------------------------
 
         private void nextBuf() {
-
-            if (buf != null && bufferOutput != null)
+            if (buf != null && bufferOutput != null) {
                 bufferOutput.put(buf);
-
-            buf = bufferInput.get();
-
-            if (buf == null) {
-                System.out.println("STOP");
             }
-
+            buf = bufferInput.get();
             count = buf.baseOffset;
         }
     }
@@ -249,15 +212,10 @@ public final class BufferStream {
         }
 
         public synchronized int read() {
-
             if ((pos - buf.baseOffset) < count) {
-
                 return (buf.memory[pos++] & 0xff);
-
             } else {
-
                 nextBuf();
-
                 return (buf.memory[pos++] & 0xff);
             }
         }
@@ -376,22 +334,18 @@ public final class BufferStream {
             mark = pos;
         }
 
-        public synchronized void reset() {
-            pos = mark;
+        public void flush() throws IOException {
+            if (buf != null && bufferOutput != null) {
+                bufferOutput.put(buf);
+            }
+            this.buf = null;
+            this.pos = 0;
+            this.count = 0;
         }
 
         public void close() throws IOException {
             flush();
         }
-
-        public void flush() throws IOException {
-            if (buf != null && bufferOutput != null)
-                bufferOutput.put(buf);
-        }
-
-        // ---------------------------------------------------
-        // Private Methods.
-        // ---------------------------------------------------
 
         public int nextBuf() {
 

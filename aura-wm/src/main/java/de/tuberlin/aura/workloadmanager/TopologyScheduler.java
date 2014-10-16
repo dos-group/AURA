@@ -80,7 +80,7 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
             @Override
             public void visit(final LogicalNode element) {
 
-                if (element.propertiesList != null && element.propertiesList.get(0) != null && element.propertiesList.get(0).type == DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE) {
+                if (element.propertiesList.get(0).type == DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE) {
                     infrastructureManager.registerHDFSSource(element);
                 }
 

@@ -94,6 +94,7 @@ public final class TaskManager implements ITaskManager {
         this.ioManager.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_OPEN, ioHandler);
         this.ioManager.addEventListener(DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, ioHandler);
         this.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION, ioHandler);
+        this.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_EXECUTE_NEXT_ITERATION, ioHandler);
 
         // Initialize Zookeeper.
         final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
@@ -360,6 +361,11 @@ public final class TaskManager implements ITaskManager {
         @Handle(event = IOEvents.TaskControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_TRANSITION)
         private void handleTaskStateTransitionEvent(final IOEvents.TaskControlIOEvent event) {
             dispatchRemoteTaskTransition(event);
+        }
+
+        @Handle(event = IOEvents.TaskControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_EXECUTE_NEXT_ITERATION)
+        private void handleNextIterationEvent(final IOEvents.TaskControlIOEvent event) {
+            deployedTasks.get(event.getTaskID()).dispatchEvent(event);
         }
     }
 }

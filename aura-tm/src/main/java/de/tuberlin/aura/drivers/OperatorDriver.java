@@ -16,6 +16,7 @@ import de.tuberlin.aura.core.dataflow.operators.impl.ExecutionContext;
 import de.tuberlin.aura.core.record.*;
 import de.tuberlin.aura.core.taskmanager.spi.*;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
@@ -72,7 +73,6 @@ public final class OperatorDriver extends AbstractInvokeable {
         public void open() throws Throwable {
             super.open();
             consumer.openGate(gateIndex);
-            reader.begin();
         }
 
         @Override
@@ -86,7 +86,6 @@ public final class OperatorDriver extends AbstractInvokeable {
         @Override
         public void close() throws Throwable {
             super.close();
-            reader.end();
             consumer.closeGate(gateIndex);
         }
 
@@ -117,6 +116,8 @@ public final class OperatorDriver extends AbstractInvokeable {
 
     private final List<IRecordWriter> writers;
 
+    private final List<IRecordReader> readers;
+
     private final List<AbstractPhysicalOperator<Object>> gateReaders;
 
     private final IExecutionContext context;
@@ -132,6 +133,8 @@ public final class OperatorDriver extends AbstractInvokeable {
         this.nodeDescriptor = nodeDescriptor;
 
         this.writers = new ArrayList<>();
+
+        this.readers = new ArrayList<>();
 
         this.gateReaders = new ArrayList<>();
 
@@ -158,34 +161,34 @@ public final class OperatorDriver extends AbstractInvokeable {
     public void create() throws Throwable {
 
         if (runtime.getBindingDescriptor().outputGateBindings.size() > 0) {
+
             int lastOperatorNum = nodeDescriptor.propertiesList.size() - 1;
 
-            final Partitioner.IPartitioner partitioner = (nodeDescriptor.propertiesList.get(lastOperatorNum).strategy != null) ?
+            final Partitioner.IPartitioner partitioner =
                     Partitioner.PartitionerFactory.createPartitioner(
                             nodeDescriptor.propertiesList.get(lastOperatorNum).strategy,
                             nodeDescriptor.propertiesList.get(lastOperatorNum).outputType,
                             nodeDescriptor.propertiesList.get(lastOperatorNum).partitionKeyIndices
-                    ) : null;
+                    );
 
             for (int i = 0; i <  runtime.getBindingDescriptor().outputGateBindings.size(); ++i) {
-                final RecordWriter reader = new RecordWriter(runtime, nodeDescriptor.propertiesList.get(lastOperatorNum).outputType, i, partitioner);
-                writers.add(reader);
+                final RecordWriter writer = new RecordWriter(runtime, nodeDescriptor.propertiesList.get(lastOperatorNum).outputType, i, partitioner);
+                writers.add(writer);
             }
         }
 
         for (int i = 0; i <  runtime.getBindingDescriptor().inputGateBindings.size(); ++i) {
-            final IRecordReader recordReader = new RecordReader(runtime, i);
-            gateReaders.add(new GateReaderOperator(context, recordReader, consumer, i));
+            final IRecordReader reader = new RecordReader(runtime, i);
+            readers.add(reader);
+            gateReaders.add(new GateReaderOperator(context, reader, consumer, i));
         }
 
         operator = PhysicalOperatorFactory.createPhysicalOperatorPlan(context, gateReaders);
-    }
-
-    @Override
-    public void open() throws Throwable {
 
         for (final IRecordWriter writer : writers)
             writer.begin();
+
+
 
         for (final DataflowNodeProperties properties : nodeDescriptor.propertiesList) {
             if (properties.broadcastVars != null) {
@@ -195,6 +198,16 @@ public final class OperatorDriver extends AbstractInvokeable {
         }
 
         operator.open();
+    }
+
+    @Override
+    public void open() throws Throwable {
+
+        for (final IRecordReader reader : readers)
+            reader.begin();
+
+        for (final IRecordWriter writer : writers)
+            writer.begin();
     }
 
     @Override
@@ -213,22 +226,27 @@ public final class OperatorDriver extends AbstractInvokeable {
 
             input = operator.next();
         }
-
     }
 
     @Override
     public void close() throws Throwable {
-        operator.close();
+
+        for (final IRecordReader reader : readers)
+            reader.end();
 
         for (final IRecordWriter writer : writers)
             writer.end();
-
-        for (int i = 0; i <  runtime.getBindingDescriptor().outputGateBindings.size(); ++i)
-            producer.done(i);
     }
 
     @Override
     public void release() throws Throwable {
+
+        for (int i = 0; i <  runtime.getBindingDescriptor().outputGateBindings.size(); ++i)
+            producer.done(i);
+
+        //Thread.sleep(1000);
+
+        //operator.close();
     }
 
     public IExecutionContext getExecutionContext() {

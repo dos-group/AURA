@@ -1,9 +1,11 @@
 package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 import de.tuberlin.aura.core.common.utils.DeepCopy;
 import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.topology.TopologyStates;
 import de.tuberlin.aura.workloadmanager.spi.ITopologyController;
 import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
 import org.apache.log4j.Logger;
@@ -119,6 +121,17 @@ public final class TopologyController extends EventDispatcher implements ITopolo
                 }
             }
         });
+
+        prepareForNextIteration();
+
+        this.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_CLIENT_ITERATION_EVALUATION, new IEventHandler() {
+
+            @Override
+            public void handleEvent(Event event) {
+                doNextIteration = (boolean)event.getPayload();
+                awaitClientEvaluation.countDown();
+            }
+        });
     }
 
     public IEventDispatcher getTopologyFSMDispatcher() {
@@ -128,6 +141,68 @@ public final class TopologyController extends EventDispatcher implements ITopolo
     public AuraTopology getTopology() {
         return topology;
     }
+
+    // ---------------------------------------------------
+
+    private Set<UUID> iterationNodeSet =  new HashSet<>();
+
+    private CountDownLatch awaitClientEvaluation = new CountDownLatch(1);
+
+    boolean doNextIteration = false;
+
+    public void prepareForNextIteration() {
+        for (final Topology.ExecutionNode en : topology.executionNodeMap.values()) {
+            iterationNodeSet.add(en.getNodeDescriptor().taskID);
+        }
+    }
+
+    public synchronized void evaluateIteration(final UUID taskID) {
+
+        if (!iterationNodeSet.remove(taskID))
+            throw new IllegalStateException();
+
+        if (iterationNodeSet.isEmpty()) {
+
+            final IOEvents.ClientControlIOEvent iterationCycleEndEvent =
+                    new IOEvents.ClientControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_ITERATION_CYCLE_END);
+            iterationCycleEndEvent.setTopologyID(topology.topologyID);
+            workloadManager.getIOManager().sendEvent(topology.machineID, iterationCycleEndEvent);
+
+            awaitClientEvaluation = new CountDownLatch(1);
+
+            try {
+                awaitClientEvaluation.await();
+            } catch (InterruptedException e) {
+                LOG.error(e.getMessage());
+            }
+
+            if (doNextIteration) {
+                prepareForNextIteration();
+                topologyFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TopologyStates.TopologyTransition.TOPOLOGY_TRANSITION_NEXT_ITERATION));
+            }
+
+            Topology.TopologyBreadthFirstTraverser.traverseBackwards(topology, new IVisitor<Topology.LogicalNode>() {
+
+                @Override
+                public void visit(final Topology.LogicalNode element) {
+
+                    for (final Topology.ExecutionNode en : element.getExecutionNodes()) {
+
+                        final IOEvents.TaskControlIOEvent nextIterationEvent =
+                                new IOEvents.TaskControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_EXECUTE_NEXT_ITERATION);
+
+                        nextIterationEvent.setPayload(doNextIteration);
+                        nextIterationEvent.setTaskID(en.getNodeDescriptor().taskID);
+                        nextIterationEvent.setTopologyID(en.getNodeDescriptor().topologyID);
+
+                        workloadManager.getIOManager().sendEvent(en.getNodeDescriptor().getMachineDescriptor(), nextIterationEvent);
+                    }
+                }
+            });
+        }
+    }
+
+    // ---------------------------------------------------
 
     // ---------------------------------------------------
     // Private Methods.
@@ -222,7 +297,10 @@ public final class TopologyController extends EventDispatcher implements ITopolo
 
                     @Override
                     public boolean eval(StateMachine.FSMTransitionEvent<? extends Enum<?>> event) {
-                        return (++numOfTasksToBeReady) == topology.executionNodeMap.size();
+                        boolean isReady = (++numOfTasksToBeReady) == topology.executionNodeMap.size();
+                        if (isReady)
+                            numOfTasksToBeReady = 0;
+                        return isReady;
                     }
                 };
 
@@ -284,6 +362,9 @@ public final class TopologyController extends EventDispatcher implements ITopolo
                         .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_FAIL,
                                 TopologyState.TOPOLOGY_STATE_FAILURE,
                                 failureTransitionConstraint)
+                        .and()
+                        .addTransition(TopologyTransition.TOPOLOGY_TRANSITION_NEXT_ITERATION,
+                                TopologyState.TOPOLOGY_STATE_DEPLOYED)
                         .defineState(TopologyState.TOPOLOGY_STATE_FINISHED)
                         .noTransition()
                         .defineState(TopologyState.TOPOLOGY_STATE_CANCELED)

@@ -293,6 +293,8 @@ public final class Descriptors {
 
         public final List<DataflowNodeProperties> propertiesList;
 
+        public final boolean isReExecutable;
+
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
@@ -302,9 +304,10 @@ public final class Descriptors {
                                       final int taskIndex,
                                       final String name,
                                       final List<UserCode> userCodeList,
-                                      final DataflowNodeProperties properties) {
+                                      final DataflowNodeProperties properties,
+                                      final boolean isReExecutable) {
 
-            this(topologyID, taskID, taskIndex, name, userCodeList, Arrays.asList(properties));
+            this(topologyID, taskID, taskIndex, name, userCodeList, Arrays.asList(properties), isReExecutable);
         }
 
         public AbstractNodeDescriptor(final UUID topologyID,
@@ -312,7 +315,8 @@ public final class Descriptors {
                                       final int taskIndex,
                                       final String name,
                                       final List<UserCode> userCodeList,
-                                      final List<DataflowNodeProperties> propertiesList) {
+                                      final List<DataflowNodeProperties> propertiesList,
+                                      final boolean isReExecutable) {
             // sanity check.
             if (topologyID == null)
                 throw new IllegalArgumentException("topologyID == null");
@@ -322,8 +326,6 @@ public final class Descriptors {
                 throw new IllegalArgumentException("taskIndex < 0");
             if (name == null)
                 throw new IllegalArgumentException("name == null");
-            //if (userCodeList == null)
-            //    throw new IllegalArgumentException("userCodeList == null");
 
             this.topologyID = topologyID;
 
@@ -338,6 +340,8 @@ public final class Descriptors {
             this.userCodeClasses = null;
 
             this.propertiesList = propertiesList;
+
+            this.isReExecutable = isReExecutable;
         }
 
         // ---------------------------------------------------
@@ -418,9 +422,10 @@ public final class Descriptors {
                                      final UUID taskID,
                                      final int taskIndex,
                                      final String name,
-                                     final DataflowNodeProperties properties) {
+                                     final DataflowNodeProperties properties,
+                                     final boolean isReExecutable) {
 
-            super(topologyID, taskID, taskIndex, name, null, properties);
+            super(topologyID, taskID, taskIndex, name, null, properties, isReExecutable);
         }
     }
 
@@ -444,9 +449,10 @@ public final class Descriptors {
                                       final int taskIndex,
                                       final String name,
                                       final List<UserCode> userCodeList,
-                                      final DataflowNodeProperties properties) {
+                                      final DataflowNodeProperties properties,
+                                      final boolean isReExecutable) {
 
-            super(topologyID, taskID, taskIndex, name, userCodeList, properties);
+            super(topologyID, taskID, taskIndex, name, userCodeList, properties, isReExecutable);
         }
 
         public OperatorNodeDescriptor(final UUID topologyID,
@@ -454,9 +460,10 @@ public final class Descriptors {
                                       final int taskIndex,
                                       final String name,
                                       final List<UserCode> userCodeList,
-                                      final List<DataflowNodeProperties> propertiesList) {
+                                      final List<DataflowNodeProperties> propertiesList,
+                                      final boolean isReExecutable) {
 
-            super(topologyID, taskID, taskIndex, name, userCodeList, propertiesList);
+            super(topologyID, taskID, taskIndex, name, userCodeList, propertiesList, isReExecutable);
         }
     }
 
@@ -475,8 +482,14 @@ public final class Descriptors {
         // Constructors.
         // ---------------------------------------------------
 
-        public InvokeableNodeDescriptor(final UUID topologyID, final UUID taskID, final int taskIndex, final String name, final List<UserCode> userCodeList) {
-            super(topologyID, taskID, taskIndex, name, userCodeList, (DataflowNodeProperties)null);
+        public InvokeableNodeDescriptor(final UUID topologyID,
+                                        final UUID taskID,
+                                        final int taskIndex,
+                                        final String name,
+                                        final List<UserCode> userCodeList,
+                                        final boolean isReExecutable) {
+
+            super(topologyID, taskID, taskIndex, name, userCodeList, (DataflowNodeProperties)null, isReExecutable);
         }
     }
 

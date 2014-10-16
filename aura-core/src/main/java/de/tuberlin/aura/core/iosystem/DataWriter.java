@@ -94,7 +94,9 @@ public class DataWriter {
 
         // gate semantics
 
-        private final ResettableCountDownLatch waitForGateOpen;
+        //private final ResettableCountDownLatch waitForGateOpen;
+        private CountDownLatch waitForGateOpen;
+
 
         private AtomicBoolean isGateOpen = new AtomicBoolean(false);
 
@@ -107,7 +109,8 @@ public class DataWriter {
             this.srcID = srcTaskID;
             this.dstID = dstTaskID;
             this.maxConnectionRetries = config.getInt("connection.retry.max");
-            this.waitForGateOpen = new ResettableCountDownLatch(1);
+            //this.waitForGateOpen = new ResettableCountDownLatch(1);
+            this.waitForGateOpen = new CountDownLatch(1);
 
             Bootstrap bootstrap = connectionType.bootStrap(eventLoopGroup);
             bootstrap.handler(connectionType.getPipeline(this));
@@ -243,7 +246,8 @@ public class DataWriter {
                     case IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE:
                         LOG.debug("RECEIVED GATE CLOSE EVENT");
 
-                        waitForGateOpen.reset();
+                        //waitForGateOpen.reset();
+                        waitForGateOpen = new CountDownLatch(1);
                         isGateOpen.set(false);
 
                         gateEvent.setChannel(ctx.channel());

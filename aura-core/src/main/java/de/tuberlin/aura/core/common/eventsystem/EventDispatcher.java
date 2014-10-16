@@ -1,9 +1,6 @@
 package de.tuberlin.aura.core.common.eventsystem;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -14,21 +11,13 @@ import org.slf4j.LoggerFactory;
 
 import de.tuberlin.aura.core.iosystem.IOEvents;
 
-/**
- * The EventDispatcher is responsible for adding and removing listeners and for dispatching event to
- * this listeners.
- * 
- * @author Tobias Herb
- */
+
 public class EventDispatcher implements IEventDispatcher {
 
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    /**
-     * Logger.
-     */
     private static final Logger LOG = LoggerFactory.getLogger(EventDispatcher.class);
 
     private final Map<String, List<IEventHandler>> listenerMap;
@@ -47,23 +36,14 @@ public class EventDispatcher implements IEventDispatcher {
     // Constructors.
     // ---------------------------------------------------
 
-    /**
-     *
-     */
     public EventDispatcher() {
         this(false, null);
     }
 
-    /**
-     *
-     */
     public EventDispatcher(boolean useDispatchThread) {
         this(useDispatchThread, null);
     }
 
-    /**
-     * @param useDispatchThread
-     */
     public EventDispatcher(boolean useDispatchThread, String name) {
 
         this.listenerMap = new ConcurrentHashMap<>();
@@ -86,8 +66,12 @@ public class EventDispatcher implements IEventDispatcher {
                             final Event event = eventQueue.take();
                             LOG.trace("Process event {} - events left in queue: {}", event.type, eventQueue.size());
 
+
+                            //if (event.type.equals("CONTROL_EVENT_CLIENT_ITERATION_EVALUATION"))
+                            //    System.out.println();
+
                             // Stop dispatching thread, if a poison pill was received.
-                            if (event.type != IOEvents.InternalEventType.POISON_PILL_TERMINATION) {
+                            if (!event.type.equals(IOEvents.InternalEventType.POISON_PILL_TERMINATION)) {
                                 if (!dispatch(event)) {
                                     if (event.sticky) {
                                         LOG.debug("Add sticky event {}", event);
@@ -122,12 +106,6 @@ public class EventDispatcher implements IEventDispatcher {
     // Public Methods.
     // ---------------------------------------------------
 
-    /**
-     * Add a listener for a specific event.
-     * 
-     * @param type The event type.
-     * @param listener The handler for this event.
-     */
     @Override
     public synchronized void addEventListener(final String type, final IEventHandler listener) {
         // sanity check.
@@ -138,7 +116,7 @@ public class EventDispatcher implements IEventDispatcher {
 
         List<IEventHandler> listeners = listenerMap.get(type);
         if (listeners == null) {
-            listeners = new LinkedList<>();
+            listeners = Collections.synchronizedList(new LinkedList<IEventHandler>());
             listenerMap.put(type, listeners);
         }
 
@@ -146,10 +124,6 @@ public class EventDispatcher implements IEventDispatcher {
         checkStickyEvents(type, listener);
     }
 
-    /**
-     * @param types
-     * @param listener
-     */
     @Override
     public synchronized void addEventListener(final String[] types, final IEventHandler listener) {
         // sanity check.
@@ -184,12 +158,6 @@ public class EventDispatcher implements IEventDispatcher {
         }
     }
 
-    /**
-     * Remove a listener for a specific event.
-     * 
-     * @param type The event type.
-     * @param listener The handler for this event.
-     */
     @Override
     public synchronized boolean removeEventListener(final String type, final IEventHandler listener) {
         // sanity check.
@@ -211,9 +179,6 @@ public class EventDispatcher implements IEventDispatcher {
         }
     }
 
-    /**
-     *
-     */
     @Override
     public synchronized void removeAllEventListener() {
         for (final List<IEventHandler> listeners : listenerMap.values()) {
@@ -222,26 +187,21 @@ public class EventDispatcher implements IEventDispatcher {
         listenerMap.clear();
     }
 
-    /**
-     * Dispatch a event.
-     * 
-     * @param event The event to dispatch.
-     */
     @Override
-    public /*synchronized*/ void dispatchEvent(final Event event) {
+    public void dispatchEvent(final Event event) {
         // sanity check.
         if (event == null)
             throw new IllegalArgumentException("event == null");
 
         if (useDispatchThread) {
-            eventQueue.add(event);
+            eventQueue.offer(event);
 
             // Use this place for debugging if you not know where
             // in the code the event gets dispatched.
 
-            // if(event.type.equals("CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE")) {
-            // LOG.info("");
-            // }
+            //if(event.type.equals("CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE")) {
+            //LOG.info("");
+            //}
 
         } else {
             if (!dispatch(event)) {
@@ -253,12 +213,6 @@ public class EventDispatcher implements IEventDispatcher {
         }
     }
 
-    /**
-     * Checks if listeners are installed for that event type.
-     * 
-     * @param type The event type.
-     * @return True if a listener is installed, else false.
-     */
     @Override
     public boolean hasEventListener(final String type) {
         // sanity check.
@@ -268,9 +222,6 @@ public class EventDispatcher implements IEventDispatcher {
         return listenerMap.get(type) != null;
     }
 
-    /**
-     * TODO: Can be remove -> see shutdown method
-     */
     @Deprecated
     public void shutdownEventQueue() {
         isRunning.set(false);
@@ -294,10 +245,6 @@ public class EventDispatcher implements IEventDispatcher {
         }
     }
 
-    /**
-     *
-     * @return
-     */
     @Override
     public void joinDispatcherThread() {
         if (useDispatchThread) {
@@ -313,13 +260,11 @@ public class EventDispatcher implements IEventDispatcher {
     // Private Methods.
     // ---------------------------------------------------
 
-    /**
-     * @param event
-     */
-    private synchronized boolean dispatch(final Event event) {
-        final List<IEventHandler> listeners = listenerMap.get(event.type);
+    private boolean dispatch(final Event event) {
+        List<IEventHandler> listeners = listenerMap.get(event.type);
         if (listeners != null) {
-            for (final IEventHandler el : listeners) {
+            List<IEventHandler> l = new ArrayList(listeners);
+            for (final IEventHandler el : l) {
                 try {
                     el.handleEvent(event);
                 } catch (Throwable t) {
@@ -334,7 +279,6 @@ public class EventDispatcher implements IEventDispatcher {
                 IOEvents.DataIOEvent e2 = (IOEvents.DataIOEvent) event;
                 LOG.debug("type {} from {} to {}", e2.type, e2.srcTaskID, e2.dstTaskID);
             }
-
             // Event wasn't processed by any event handler.
             return false;
         }

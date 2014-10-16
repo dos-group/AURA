@@ -227,6 +227,7 @@ public final class DataProducer implements IDataProducer {
         @Handle(event = IOEvents.DataIOEvent.class, type = IOEvents.DataEventType.DATA_EVENT_OUTPUT_CHANNEL_CONNECTED)
         private void handleTaskOutputDataChannelConnect(final IOEvents.DataIOEvent event) {
             try {
+
                 int gateIndex = taskIDToGateIndex.get(event.dstTaskID);
                 int channelIndex = taskIDToChannelIndex.get(event.dstTaskID);
 

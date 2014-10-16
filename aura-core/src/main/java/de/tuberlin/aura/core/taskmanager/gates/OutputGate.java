@@ -28,12 +28,16 @@ public final class OutputGate extends AbstractGate {
 
     private final IDataProducer producer;
 
+    private final ITaskRuntime runtime;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
     public OutputGate(final ITaskRuntime runtime, int gateIndex, final IDataProducer producer) {
         super(runtime, gateIndex, runtime.getBindingDescriptor().outputGateBindings.get(gateIndex).size());
+
+        this.runtime = runtime;
 
         this.producer = producer;
 
