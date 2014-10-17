@@ -89,8 +89,6 @@ public class Topology {
                 throw new IllegalArgumentException("userCodeMap == null");
             if (uidNodeMap == null)
                 throw new IllegalArgumentException("uidNodeMap == null");
-            if (deploymentType == null)
-                throw new IllegalArgumentException("deploymentType == null");
 
             this.machineID = machineID;
 
@@ -617,13 +615,14 @@ public class Topology {
         }
     }
 
-    /**
-     *
-     */
     public static final class InvokeableNode extends LogicalNode {
 
-        public InvokeableNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism) {
-            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, (DataflowNodeProperties)null);
+        public InvokeableNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism, String udfTypeName) {
+
+            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED,
+                    new DataflowNodeProperties(uid, null, name, degreeOfParallelism, perWorkerParallelism, null,
+                            null, null, null, null, udfTypeName, null, null, null, null, null, null, null, null));
+
         }
     }
 

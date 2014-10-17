@@ -43,13 +43,11 @@ public class ZookeeperClient {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZookeeperClient.class);
 
-
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
     private CuratorFramework curator;
-
 
     // ---------------------------------------------------
     // Constructor.
@@ -59,7 +57,6 @@ public class ZookeeperClient {
         curator = CuratorFrameworkFactory.newClient(zkServer, 60000, 60000, new ExponentialBackoffRetry(1000, 3));
         curator.start();
     }
-
 
     // ---------------------------------------------------
     // Public Methods.

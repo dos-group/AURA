@@ -30,8 +30,6 @@ public class RecordWriter implements IRecordWriter {
 
     private final List<BufferStream.ContinuousByteOutputStream> outputStreams;
 
-    private final TypeInformation typeInformation;
-
     private final int channelCount;
 
     // block end marker

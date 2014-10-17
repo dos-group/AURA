@@ -233,18 +233,18 @@ public final class DataflowTest {
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
-        atb.addNode(new Topology.OperatorNode(sourceA), Source1.class)
+        atb.addNode(new Topology.OperatorNode(sourceA))
            .connectTo("Map1", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.OperatorNode(map), Map1.class)
+           .addNode(new Topology.OperatorNode(map))
            .connectTo("Join1", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.OperatorNode(sourceB), Source1.class)
+           .addNode(new Topology.OperatorNode(sourceB))
            .connectTo("Join2", Topology.Edge.TransferType.POINT_TO_POINT)
            .and().connectTo("Join1", Topology.Edge.TransferType.POINT_TO_POINT)
            .addNode(new Topology.OperatorNode(joinA))
            .connectTo("Join2", Topology.Edge.TransferType.POINT_TO_POINT)
            .addNode(new Topology.OperatorNode(joinB))
            .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
-           .addNode(new Topology.OperatorNode(sink1), Sink1.class);
+           .addNode(new Topology.OperatorNode(sink1));
 
         /*Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
         atb.addNode(new Topology.OperatorNode(sourceA), Source1.class)

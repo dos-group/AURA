@@ -13,4 +13,6 @@ public interface IInfrastructureManager {
     public abstract InputSplit getInputSplitFromHDFSSource(final Topology.ExecutionNode executionNode);
 
     public abstract void registerHDFSSource(final Topology.LogicalNode node);
+
+    //public abstract void shutdown();
 }
