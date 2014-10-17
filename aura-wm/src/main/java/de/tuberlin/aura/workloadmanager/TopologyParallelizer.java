@@ -80,7 +80,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
             // skip this sanity check when the configuration isn't available
         }
 
-        // First pass, create taskmanager api
+        // First pass, create task manager api
         final Map<UUID, ExecutionNode> executionNodeMap = new HashMap<>();
 
         TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<LogicalNode>() {

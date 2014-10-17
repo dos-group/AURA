@@ -10,18 +10,18 @@ public abstract class AbstractDataset<E> {
     // Fields.
     // ---------------------------------------------------
 
-    final protected IExecutionContext environment;
+    final protected IExecutionContext context;
 
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public AbstractDataset(final IExecutionContext environment) {
+    public AbstractDataset(final IExecutionContext context) {
         // sanity check.
-        if (environment == null)
-            throw new IllegalArgumentException("environment == null");
+        if (context == null)
+            throw new IllegalArgumentException("context == null");
 
-        this.environment = environment;
+        this.context = context;
     }
 
     // ---------------------------------------------------

@@ -40,4 +40,6 @@ public interface ITaskRuntime extends IEventDispatcher, ITaskRuntimeLifecycle {
     public abstract InputSplit getNextInputSplit();
 
     public abstract boolean doNextIteration();
+
+    public abstract void shutdownRuntime();
 }

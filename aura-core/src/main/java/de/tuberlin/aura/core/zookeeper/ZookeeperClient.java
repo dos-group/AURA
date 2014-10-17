@@ -27,13 +27,15 @@ public class ZookeeperClient {
     // Constants.
     // ---------------------------------------------------
 
-    public static final String EVENT_TYPE_NODE_ADDED = "node_added";
+    public static final String EVENT_TYPE_NODE_ADDED = "EVENT_TYPE_NODE_ADDED";
 
-    public static final String EVENT_TYPE_NODE_REMOVED = "node_removed";
+    public static final String EVENT_TYPE_NODE_REMOVED = "EVENT_TYPE_NODE_REMOVED";
 
-    public static final String EVENT_TYPE_CONNECTION_ESTABLISHED = "connection_established";
+    public static final String EVENT_TYPE_CONNECTION_ESTABLISHED = "EVENT_TYPE_CONNECTION_ESTABLISHED";
 
-    public static final String EVENT_TYPE_CONNECTION_EXPIRED = "connection_expired";
+    public static final String EVENT_TYPE_CONNECTION_EXPIRED = "EVENT_TYPE_CONNECTION_EXPIRED";
+
+    // ---------------------------------------------------
 
     public static final String ZOOKEEPER_ROOT = "/aura";
 
@@ -41,20 +43,24 @@ public class ZookeeperClient {
 
     public static final String ZOOKEEPER_WORKLOADMANAGER = ZOOKEEPER_ROOT + "/workloadmanager";
 
-    private static final Logger LOG = LoggerFactory.getLogger(ZookeeperClient.class);
-
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
-    private CuratorFramework curator;
+    private static final Logger LOG = LoggerFactory.getLogger(ZookeeperClient.class);
+
+    private final CuratorFramework curator;
 
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
 
-    public ZookeeperClient(String zkServer) {
-        curator = CuratorFrameworkFactory.newClient(zkServer, 60000, 60000, new ExponentialBackoffRetry(1000, 3));
+    public ZookeeperClient(final String zookeeperServer) {
+        // sanity check.
+        if (zookeeperServer == null)
+            throw new IllegalArgumentException("zookeeperServer == null");
+
+        curator = CuratorFrameworkFactory.newClient(zookeeperServer, 60000, 60000, new ExponentialBackoffRetry(1000, 3));
         curator.start();
     }
 

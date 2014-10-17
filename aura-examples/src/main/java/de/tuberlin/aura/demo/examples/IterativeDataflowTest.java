@@ -85,6 +85,7 @@ public final class IterativeDataflowTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -107,6 +108,7 @@ public final class IterativeDataflowTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -122,6 +124,7 @@ public final class IterativeDataflowTest {
                 null,
                 null,
                 Sink1.class.getName(),
+                null,
                 null,
                 null,
                 null,

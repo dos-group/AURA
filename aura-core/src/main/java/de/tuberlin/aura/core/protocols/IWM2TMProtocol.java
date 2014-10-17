@@ -25,4 +25,6 @@ public interface IWM2TMProtocol {
     public abstract <E> Collection<E> getDataset(final UUID uid);
 
     public abstract <E> Collection<E> getBroadcastDataset(final UUID datasetID);
+
+    public abstract void assignDataset(final UUID dstDatasetTaskID, final UUID srcDatasetTaskID);
 }

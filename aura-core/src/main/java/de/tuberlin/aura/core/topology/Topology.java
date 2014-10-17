@@ -621,7 +621,7 @@ public class Topology {
 
             super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED,
                     new DataflowNodeProperties(uid, null, name, degreeOfParallelism, perWorkerParallelism, null,
-                            null, null, null, null, udfTypeName, null, null, null, null, null, null, null, null));
+                            null, null, null, null, udfTypeName, null, null, null, null, null, null, null, null, null));
 
         }
     }

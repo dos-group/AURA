@@ -186,7 +186,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
                     } else {
 
-                        runtime.shutdown(success);
+                        runtime.release(success);
 
                         runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
 

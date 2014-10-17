@@ -157,6 +157,6 @@ public final class LocalClusterSimulator {
             pe.destroy();
         }
         this.zookeeperCNXNFactory.closeAll();
-//        System.exit(0);
+        System.exit(0);
     }
 }

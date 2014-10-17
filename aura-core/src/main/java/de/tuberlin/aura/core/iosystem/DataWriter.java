@@ -182,7 +182,7 @@ public class DataWriter {
         public void shutdown(boolean awaitExhaustion) {
 
             try {
-                // wait for the receivers acknowledge before shutdown
+                // wait for the receivers acknowledge before shutdownEventDispatcher
                 if (awaitExhaustion) {
                     while (!waitForExhaustedAcknowledge.await(config.getDuration("connection.exhaustion.timeout", TimeUnit.SECONDS), TimeUnit.SECONDS)) {
                         LOG.warn("Latch reached timelimit " + outboundQueue.size() + " " + channel + "(" + channel.getClass() + ")");

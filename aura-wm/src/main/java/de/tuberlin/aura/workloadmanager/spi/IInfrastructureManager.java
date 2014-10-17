@@ -14,5 +14,5 @@ public interface IInfrastructureManager {
 
     public abstract void registerHDFSSource(final Topology.LogicalNode node);
 
-    public abstract void shutdown();
+    public abstract void shutdownInfrastructureManager();
 }

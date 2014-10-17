@@ -163,7 +163,6 @@ public class DatasetDriver extends AbstractInvokeable {
 
                 //LOG.info("--------------> take");
 
-
                 runtime.getNodeDescriptor().topologyID = gateRequestProperties.getLeft();
 
                 final Partitioner.PartitioningStrategy partitioningStrategy = gateRequestProperties.getMiddle();
@@ -222,6 +221,9 @@ public class DatasetDriver extends AbstractInvokeable {
                     writer.writeObject(object);
 
                 writer.end();
+
+
+
 
 
                 producer.done(0);
@@ -298,5 +300,9 @@ public class DatasetDriver extends AbstractInvokeable {
 
     public Collection<Object> getData() {
         return dataset.getData();
+    }
+
+    public AbstractDataset<Object> getDataset() {
+        return dataset;
     }
 }

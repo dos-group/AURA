@@ -94,6 +94,7 @@ public class CompactificationTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -109,6 +110,7 @@ public class CompactificationTest {
                 null,
                 source1TypeInfo,
                 Map1.class.getName(),
+                null,
                 null,
                 null,
                 null,
@@ -138,6 +140,7 @@ public class CompactificationTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -160,6 +163,7 @@ public class CompactificationTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -175,6 +179,7 @@ public class CompactificationTest {
                 null,
                 null,
                 Sink1.class.getName(),
+                null,
                 null,
                 null,
                 null,

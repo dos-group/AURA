@@ -23,14 +23,14 @@ public class MutableDataset<E> extends AbstractDataset<E> {
     // Constructor.
     // ---------------------------------------------------
 
-    public MutableDataset(final IExecutionContext environment) {
-        super(environment);
+    public MutableDataset(final IExecutionContext context) {
+        super(context);
 
         this.data = new HashMap<>();
 
-        this.typeInfo = environment.getProperties().input1Type;
+        this.typeInfo = context.getProperties().input1Type;
 
-        this.datasetKeyIndices = environment.getProperties().datasetKeyIndices;
+        this.datasetKeyIndices = context.getProperties().datasetKeyIndices;
     }
 
     // ---------------------------------------------------

@@ -26,7 +26,7 @@ public abstract class AbstractFunction implements IFunction {
     public void setEnvironment(final IExecutionContext environment) {
         // sanity check.
         if (environment == null)
-            throw new IllegalArgumentException("environment == null");
+            throw new IllegalArgumentException("context == null");
 
         this.environment = environment;
     }

@@ -81,7 +81,7 @@ public final class TopologyController extends EventDispatcher implements ITopolo
 
         assemblyPipeline.addPhase(new TopologyParallelizer(workloadManager.getEnvironmentManager(), config));
 
-        assemblyPipeline.addPhase(new TopologyScheduler(workloadManager.getInfrastructureManager()));
+        assemblyPipeline.addPhase(new TopologyScheduler(workloadManager.getInfrastructureManager(), workloadManager.getEnvironmentManager()));
 
         assemblyPipeline.addPhase(new TopologyDeployer(workloadManager.getRPCManager()));
 
@@ -115,7 +115,7 @@ public final class TopologyController extends EventDispatcher implements ITopolo
                     //((WorkloadManager)workloadManager).unregisterTopology(topology.topologyID);
                     //TopologyController.this.removeAllEventListener();
                     // Shutdown the event dispatcher threads used by this executingTopology controller
-                    //shutdown();
+                    //shutdownEventDispatcher();
                     topologyFSM.joinDispatcherThread();
                     finalStateCnt = 0;
                 }
@@ -134,7 +134,12 @@ public final class TopologyController extends EventDispatcher implements ITopolo
         });
     }
 
-    public IEventDispatcher getTopologyFSMDispatcher() {
+    public void shutdownTopologyController() {
+        shutdownEventDispatcher();
+        topologyFSM.shutdownEventDispatcher();
+    }
+
+    public StateMachine.FiniteStateMachine<TopologyState, TopologyTransition> getTopologyFSM() {
         return topologyFSM;
     }
 
@@ -442,7 +447,7 @@ public final class TopologyController extends EventDispatcher implements ITopolo
                 event.setPayload(TopologyController.this.topology.name);
                 workloadManager.getIOManager().sendEvent(topology.machineID, event);
                 // Shutdown the event dispatcher threads used by this executingTopology controller
-                TopologyController.this.topologyFSM.shutdown();
+                TopologyController.this.topologyFSM.shutdownEventDispatcher();
             }
         });
 

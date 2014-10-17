@@ -18,8 +18,8 @@ public class ImmutableDataset<E> extends AbstractDataset<E> {
     // Constructor.
     // ---------------------------------------------------
 
-    public ImmutableDataset(final IExecutionContext environment) {
-        super(environment);
+    public ImmutableDataset(final IExecutionContext context) {
+        super(context);
 
         this.data = new ArrayList<>();
     }

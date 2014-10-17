@@ -56,6 +56,8 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
     private TaskInputSplitProvider inputSplitProvider;
 
+    // ---------------------------------------------------
+
     private boolean doNextIteration = false;
 
     private boolean invokeableInitialization = true;
@@ -229,7 +231,7 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
     }
 
     @Override
-    public void shutdown(boolean awaitExhaustion) {
+    public void release(boolean awaitExhaustion) {
 
         if (!(nodeDescriptor instanceof Descriptors.DatasetNodeDescriptor)) {
             invokeable.stopInvokeable();
@@ -262,6 +264,13 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
     @Override
     public InputSplit getNextInputSplit() {
         return inputSplitProvider.getNextInputSplit();
+    }
+
+
+    @Override
+    public void shutdownRuntime() {
+        shutdownEventDispatcher();
+        taskFSM.shutdownEventDispatcher();
     }
 
     // ---------------------------------------------------

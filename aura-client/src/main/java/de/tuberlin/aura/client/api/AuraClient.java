@@ -205,6 +205,16 @@ public final class AuraClient {
         clientProtocol.broadcastDataset(datasetID, dataset);
     }
 
+    public void assignDataset(final UUID dstDatasetID, final UUID srcDatasetID) {
+        // sanity check.
+        if (dstDatasetID == null)
+            throw new IllegalArgumentException("dstDatasetID == null");
+        if (srcDatasetID == null)
+            throw new IllegalArgumentException("srcDatasetID == null");
+
+        clientProtocol.assignDataset(dstDatasetID, srcDatasetID);
+    }
+
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------

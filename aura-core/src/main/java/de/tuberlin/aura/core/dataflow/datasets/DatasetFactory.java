@@ -16,17 +16,20 @@ public final class DatasetFactory {
     // Public Methods.
     // ---------------------------------------------------
 
-    public static AbstractDataset<?> createDataset(final IExecutionContext environment) {
+    public static AbstractDataset<?> createDataset(final IExecutionContext context) {
         // sanity check.
-        if (environment == null)
-            throw new IllegalArgumentException("environment == null");
+        if (context == null)
+            throw new IllegalArgumentException("context == null");
 
-        switch(environment.getProperties().type) {
+        switch(context.getProperties().type) {
             case MUTABLE_DATASET:
-                return new MutableDataset<>(environment);
+                return new MutableDataset<>(context);
             case IMMUTABLE_DATASET:
-                return new ImmutableDataset<>(environment);
+                return new ImmutableDataset<>(context);
+            case DATASET_REFERENCE:
+                return new DatasetRef<>(context);
         }
-        throw new IllegalStateException("'" + environment.getProperties().type + "' is not defined.");
+
+        throw new IllegalStateException("'" + context.getProperties().type + "' is not defined.");
     }
 }

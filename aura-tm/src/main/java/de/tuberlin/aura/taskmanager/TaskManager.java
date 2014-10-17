@@ -3,6 +3,8 @@ package de.tuberlin.aura.taskmanager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
+import de.tuberlin.aura.core.dataflow.datasets.DatasetRef;
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
@@ -154,7 +156,8 @@ public final class TaskManager implements ITaskManager {
         if (runtime.getInvokeable() instanceof DatasetDriver) {
             final DatasetDriver ds = (DatasetDriver) runtime.getInvokeable();
             ds.createOutputBinding(topologyID, outputBinding, partitioningStrategy, partitioningKeys);
-        }
+        } else
+            throw new IllegalStateException();
     }
 
     @Override
@@ -186,12 +189,41 @@ public final class TaskManager implements ITaskManager {
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
+
         final ITaskRuntime runtime = deployedTasks.get(taskID);
         if (runtime == null)
             throw new IllegalStateException("RuntimeEnv is not found");
-        runtime.shutdown();
-        runtime.getTaskStateMachine().shutdown();
+
+        runtime.shutdownRuntime();
         //deployedTasks.remove(taskID);
+    }
+
+    @Override
+    public void assignDataset(final UUID dstDatasetTaskID, final UUID srcDatasetTaskID) {
+        // sanity check.
+        if (dstDatasetTaskID == null)
+            throw new IllegalArgumentException("dstDatasetTaskID == null");
+        if (srcDatasetTaskID == null)
+            throw new IllegalArgumentException("srcDatasetTaskID == null");
+
+        final ITaskRuntime dstDatasetRuntime = deployedTasks.get(dstDatasetTaskID);
+        if (dstDatasetRuntime == null)
+            throw new IllegalStateException("dstDatasetRuntime not found");
+
+        final ITaskRuntime srcDatasetRuntime = deployedTasks.get(srcDatasetTaskID);
+        if (srcDatasetRuntime == null)
+            throw new IllegalStateException("srcDatasetRuntime not found");
+
+        final AbstractDataset<Object> srcDataset = ((DatasetDriver)srcDatasetRuntime.getInvokeable()).getDataset();
+        final AbstractDataset<Object> dstDataset = ((DatasetDriver)dstDatasetRuntime.getInvokeable()).getDataset();
+
+        if (dstDataset instanceof DatasetRef) {
+
+            final DatasetRef<Object> dstDatasetRef = (DatasetRef)dstDataset;
+            dstDatasetRef.assignDataset(srcDataset);
+
+        } else
+            throw new IllegalStateException("dst dataset is not a dataset reference");
     }
 
     @Override

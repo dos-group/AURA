@@ -234,12 +234,10 @@ public class EventDispatcher implements IEventDispatcher {
     }
 
     @Override
-    public void shutdown() {
+    public void shutdownEventDispatcher() {
         if (useDispatchThread) {
             LOG.trace("Shutdown event dispatcher");
-
             isRunning.set(false);
-
             // Feed the poison pill to the event dispatcher thread to terminate it.
             eventQueue.add(new Event(IOEvents.InternalEventType.POISON_PILL_TERMINATION));
         }

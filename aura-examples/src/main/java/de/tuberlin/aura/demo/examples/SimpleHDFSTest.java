@@ -75,7 +75,8 @@ public class SimpleHDFSTest {
                 null,
                 null,
                 null,
-                srcConfig
+                srcConfig,
+                null
         );
 
 
@@ -91,6 +92,7 @@ public class SimpleHDFSTest {
                 null,
                 source1TypeInfo,
                 Map1.class.getName(),
+                null,
                 null,
                 null,
                 null,
@@ -124,7 +126,8 @@ public class SimpleHDFSTest {
                 null,
                 null,
                 null,
-                snkConfig
+                snkConfig,
+                null
         );
 
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));

@@ -2,15 +2,15 @@ package de.tuberlin.aura.workloadmanager;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.filesystem.InputSplit;
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
 import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
 import de.tuberlin.aura.core.topology.Topology;
-import de.tuberlin.aura.core.topology.TopologyStates;
 import de.tuberlin.aura.workloadmanager.spi.IDistributedEnvironment;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
@@ -65,8 +65,6 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
 
     private final IConfig config;
 
-    private final MachineDescriptor machineDescriptor;
-
     private final IIOManager ioManager;
 
     private final IRPCManager rpcManager;
@@ -75,9 +73,13 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
 
     private final IDistributedEnvironment environmentManager;
 
+    private final MachineDescriptor machineDescriptor;
+
     private final Map<UUID, TopologyController> registeredTopologies;
 
     private final Map<UUID, Set<UUID>> registeredSessions;
+
+    private final ExecutorService executor;
 
     // ---------------------------------------------------
     // Constructors.
@@ -93,6 +95,8 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         this.registeredTopologies = new ConcurrentHashMap<>();
 
         this.registeredSessions = new ConcurrentHashMap<>();
+
+        this.executor = Executors.newFixedThreadPool(2);
 
         final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
         ZookeeperClient.checkConnectionString(zkServer);
@@ -117,7 +121,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
             @Override
             public void handleEvent(Event e) {
                 final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
-                registeredTopologies.get(event.getTopologyID()).getTopologyFSMDispatcher().dispatchEvent((Event) event.getPayload());
+                registeredTopologies.get(event.getTopologyID()).getTopologyFSM().dispatchEvent((Event) event.getPayload());
             }
         });
         // Register EventHandler for Client iteration evaluation.
@@ -140,6 +144,13 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         this.infrastructureManager = new InfrastructureManager(this, zkServer, machineDescriptor);
         // Initialize InfrastructureManager.
         this.environmentManager = new DistributedEnvironment();
+
+        /*Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                infrastructureManager.shutdownInfrastructureManager();
+            }
+        });*/
     }
 
     // ---------------------------------------------------
@@ -147,7 +158,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     // ---------------------------------------------------
 
     @Override
-    public void openSession(final UUID sessionID) {
+    public synchronized void openSession(final UUID sessionID) {
         // Sanity check.
         if (sessionID == null)
             throw new IllegalArgumentException("sessionID == null");
@@ -162,58 +173,62 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     @Override
     public synchronized void submitTopology(final UUID sessionID, final AuraTopology topology) {
         // Sanity check.
-        if (topology == null)
-            throw new IllegalArgumentException("topology == null");
-        if (registeredTopologies.containsKey(topology.topologyID))
-            throw new IllegalStateException("topology already submitted");
-
-        LOG.info("TOPOLOGY '" + topology.name + "' SUBMITTED");
-        registerTopology(sessionID, topology).assembleTopology();
-    }
-
-    @Override
-    public void closeSession(final UUID sessionID) {
-        // Sanity check.
-        /*if (sessionID == null)
-            throw new IllegalArgumentException("sessionID == null");
-        if (!registeredSessions.containsKey(sessionID))
-            throw new IllegalStateException("session with this ID [" + sessionID.toString() + "] does not exist");
-
-        final Set<UUID> assignedTopologies = registeredSessions.get(sessionID);
-        for (final UUID topologyID : assignedTopologies) {
-            final TopologyController topologyController = registeredTopologies.get(topologyID);
-            //topologyController.cancelTopology(); // TODO: Not implemented yet!
-            //unregisterTopology(topologyID);
-        }*/
-
-        LOG.info("CLOSED SESSION [" + sessionID + "]");
-    }
-
-    public TopologyController registerTopology(final UUID sessionID, final AuraTopology topology) {
-        // Sanity check.
         if (sessionID == null)
             throw new IllegalArgumentException("sessionID == null");
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
-        // TODO: sessionID not further used at the moment.
+        final Set<UUID> runningTopologies = registeredSessions.get(sessionID);
 
-        final TopologyController topologyController = new TopologyController(this, topology.topologyID, topology, this.config);
-        registeredTopologies.put(topology.topologyID, topologyController);
-        return topologyController;
+        if (runningTopologies != null) {
+
+            if (runningTopologies.contains(topology.topologyID) || registeredTopologies.containsKey(topology.topologyID))
+                throw new IllegalStateException("topology " + topology.topologyID + "  already running");
+
+            final TopologyController topologyController = new TopologyController(this, topology.topologyID, topology, this.config);
+            runningTopologies.add(topology.topologyID);
+            registeredTopologies.put(topology.topologyID, topologyController);
+
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    topologyController.assembleTopology();
+                }
+            });
+
+        } else {
+            throw new IllegalStateException("unknown session id " + sessionID);
+        }
+        LOG.info("TOPOLOGY '" + topology.name + "' SUBMITTED");
     }
 
-    public void unregisterTopology(final UUID topologyID) {
+    @Override
+    public synchronized void closeSession(final UUID sessionID) {
         // Sanity check.
-        if (topologyID == null)
-            throw new IllegalArgumentException("topologyID == null");
-        if (registeredTopologies.remove(topologyID) == null)
-            throw new IllegalStateException("topologyID not found");
+        if (sessionID == null)
+            throw new IllegalArgumentException("sessionID == null");
 
-        for (final Set<UUID> assignedTopologies : registeredSessions.values()) {
-            if (assignedTopologies.contains(topologyID))
-                assignedTopologies.remove(topologyID);
+        final Set<UUID> assignedTopologies = registeredSessions.remove(sessionID);
+
+        if (assignedTopologies == null)
+            throw new IllegalStateException("session with id " + sessionID.toString() + " does not exist");
+
+        for (final UUID topologyID : assignedTopologies) {
+            final TopologyController topologyController = registeredTopologies.remove(topologyID);
+
+            if (!topologyController.getTopologyFSM().isInFinalState()) {
+                throw new IllegalArgumentException("topology " + topologyID + " is not in final state");
+                //topologyController.cancelTopology(); // TODO: Not implemented yet!
+            }
+
+            executor.submit(new Runnable() {
+                @Override
+                public void run() {
+                    topologyController.shutdownTopologyController();
+                }
+            });
         }
+        LOG.info("CLOSED SESSION [" + sessionID + "]");
     }
 
     @Override
@@ -243,6 +258,35 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
             throw new IllegalArgumentException("dataset == null");
 
         environmentManager.addBroadcastDataset(datasetID, dataset);
+    }
+
+    @Override
+    public void assignDataset(final UUID dstDatasetID, final UUID srcDatasetID) {
+        // sanity check.
+        if (dstDatasetID == null)
+            throw new IllegalArgumentException("dstDatasetID == null");
+        if (srcDatasetID == null)
+            throw new IllegalArgumentException("srcDatasetID == null");
+
+        final Topology.DatasetNode dstDataset = environmentManager.getDataset(dstDatasetID);
+        final Topology.DatasetNode srcDataset = environmentManager.getDataset(srcDatasetID);
+
+        if (srcDataset.getExecutionNodes().size() != dstDataset.getExecutionNodes().size())
+            throw new IllegalStateException("different DOP of src and dst datasets");
+
+        for (int i = 0; i < dstDataset.getExecutionNodes().size(); ++i) {
+
+            Topology.ExecutionNode dstDatasetEN = dstDataset.getExecutionNodes().get(i);
+            Topology.ExecutionNode srcDatasetEN = srcDataset.getExecutionNodes().get(i);
+
+            if (!dstDatasetEN.getNodeDescriptor().getMachineDescriptor().address.equals(srcDatasetEN.getNodeDescriptor().getMachineDescriptor().address))
+                throw new IllegalStateException("dataset partition is not co-located");
+
+            final IWM2TMProtocol tmProtocol =
+                       rpcManager.getRPCProtocolProxy(IWM2TMProtocol.class, dstDatasetEN.getNodeDescriptor().getMachineDescriptor());
+
+            tmProtocol.assignDataset(dstDatasetEN.getNodeDescriptor().taskID, srcDatasetEN.getNodeDescriptor().taskID);
+        }
     }
 
     // ---------------------------------------------------

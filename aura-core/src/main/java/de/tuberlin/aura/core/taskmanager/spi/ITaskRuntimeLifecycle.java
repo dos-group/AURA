@@ -12,5 +12,5 @@ public interface ITaskRuntimeLifecycle {
 
     public abstract boolean execute();
 
-    public abstract void shutdown(boolean awaitExhaustion);
+    public abstract void release(boolean awaitExhaustion);
 }

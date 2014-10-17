@@ -74,6 +74,8 @@ public final class DataflowNodeProperties implements Serializable {
 
         MUTABLE_DATASET(InputArity.DYNAMIC),
 
+        DATASET_REFERENCE(InputArity.DYNAMIC),
+
         // ---------------------------------------------------
 
         LOOP_CONTROL_OPERATOR(InputArity.UNARY);
@@ -144,12 +146,14 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final Map<String, Object> config;
 
+    public final UUID coLocatedDatasetID;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
     public DataflowNodeProperties(final UUID operatorUID, final String instanceName) {
-        this(operatorUID, null, instanceName, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        this(operatorUID, null, instanceName, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public DataflowNodeProperties(final UUID operatorUID,
@@ -170,7 +174,8 @@ public final class DataflowNodeProperties implements Serializable {
                                   final int[][] groupByKeyIndices,
                                   final int[][] datasetKeyIndices,
                                   final List<UUID> broadcastVars,
-                                  final Map<String, Object> config) {
+                                  final Map<String, Object> config,
+                                  final UUID coLocatedDatasetID) {
         // sanity check.
         if (operatorUID == null)
             throw new IllegalArgumentException("operatorUID == null");
@@ -212,5 +217,7 @@ public final class DataflowNodeProperties implements Serializable {
         this.broadcastVars = broadcastVars;
 
         this.config = config;
+
+        this.coLocatedDatasetID = coLocatedDatasetID;
     }
 }

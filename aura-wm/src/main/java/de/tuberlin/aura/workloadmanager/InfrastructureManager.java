@@ -104,6 +104,13 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
     }
 
     @Override
+    public void shutdownInfrastructureManager() {
+        zookeeperClient.close();
+        shutdownEventDispatcher();
+        LOG.info("shutdownEventDispatcher infrastructure manager");
+    }
+
+    @Override
     public synchronized int getNumberOfMachine() {
         return nodeMap.values().size();
     }
