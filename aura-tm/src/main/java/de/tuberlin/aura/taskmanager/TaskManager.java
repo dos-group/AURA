@@ -181,6 +181,14 @@ public final class TaskManager implements ITaskManager {
     }
 
     @Override
+    public void eraseDataset(UUID taskID) {
+        // sanity check.
+        if (taskID == null)
+            throw new IllegalArgumentException("taskID == null");
+        getTaskExecutionManager().getExecutionUnitByTaskID(taskID).getExecutorThread().interrupt();
+    }
+
+    @Override
     public void uninstallTask(final UUID taskID) {
         // sanity check.
         if (taskID == null)

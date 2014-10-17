@@ -153,7 +153,9 @@ public class DatasetDriver extends AbstractInvokeable {
 
         // --------------------------- CONSUME PHASE ---------------------------
 
-        while (true) {
+        boolean isRunning = true;
+
+        while (isRunning) {
 
             try {
 
@@ -258,7 +260,9 @@ public class DatasetDriver extends AbstractInvokeable {
                 runtime.getBindingDescriptor().outputGateBindings.clear();
                 runtime.getTaskStateMachine().reset();
 
-            } catch(Exception e) {
+            } catch(InterruptedException e) {
+                LOG.info("Dataset interrupted.");
+                isRunning = false;
             }
 
             initialDataflowOutputs = false;

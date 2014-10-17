@@ -235,6 +235,20 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     }
 
     @Override
+    public void eraseDataset(final UUID datasetID) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
+
+        final Topology.DatasetNode dataset = environmentManager.getDataset(datasetID);
+        for (final Topology.ExecutionNode en : dataset.getExecutionNodes()) {
+            final IWM2TMProtocol tmProtocol =
+                    rpcManager.getRPCProtocolProxy(IWM2TMProtocol.class, en.getNodeDescriptor().getMachineDescriptor());
+            tmProtocol.eraseDataset(en.getNodeDescriptor().taskID);
+        }
+    }
+
+    @Override
     public <E> Collection<E> getBroadcastDataset(final UUID datasetID) {
         return environmentManager.getBroadcastDataset(datasetID);
     }

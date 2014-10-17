@@ -25,4 +25,6 @@ public interface ITaskExecutionUnit {
     public abstract IAllocator getInputAllocator();
 
     public abstract IAllocator getOutputAllocator();
+
+    public Thread getExecutorThread();
 }

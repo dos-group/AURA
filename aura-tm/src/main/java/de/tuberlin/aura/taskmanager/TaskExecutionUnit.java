@@ -73,7 +73,11 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         this.isExecutionUnitRunning = new AtomicBoolean(false);
     }
 
-    // ---------------------------------------------------
+    public Thread getExecutorThread() {
+        return executorThread;
+    }
+
+// ---------------------------------------------------
     // Public Methods.
     // ---------------------------------------------------
 

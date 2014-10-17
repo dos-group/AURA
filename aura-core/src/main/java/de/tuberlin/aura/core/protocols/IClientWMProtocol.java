@@ -20,4 +20,6 @@ public interface IClientWMProtocol {
     public abstract <E> Collection<E> getDataset(final UUID uid);
 
     public abstract <E> void broadcastDataset(final UUID datasetID, final Collection<E> dataset);
+
+    public abstract void eraseDataset(final UUID datasetID);
 }

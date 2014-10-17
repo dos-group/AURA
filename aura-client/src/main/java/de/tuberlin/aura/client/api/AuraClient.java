@@ -164,6 +164,13 @@ public final class AuraClient {
         clientProtocol.broadcastDataset(datasetID, dataset);
     }
 
+    public void eraseDataset(final UUID datasetID) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
+        clientProtocol.eraseDataset(datasetID);
+    }
+
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
