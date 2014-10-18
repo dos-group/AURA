@@ -19,6 +19,7 @@
             <useProjectArtifact>false</useProjectArtifact>
             <useProjectAttachments>false</useProjectAttachments>
             <useTransitiveFiltering>true</useTransitiveFiltering>
+            <fileMode>0644</fileMode>
 
             <excludes>
                 <exclude>de.tuberlin.aura:aura-examples</exclude>
@@ -32,6 +33,7 @@
             <useProjectArtifact>false</useProjectArtifact>
             <useProjectAttachments>false</useProjectAttachments>
             <useTransitiveFiltering>true</useTransitiveFiltering>
+            <fileMode>0644</fileMode>
 
             <includes>
                 <include>de.tuberlin.aura:aura-clients:**</include>

@@ -24,9 +24,9 @@ bin=`cd "$bin"; pwd`
 
 if [ "$EXECUTIONMODE" = "local" ]; then
     AURA_WM_HEAP=`expr $AURA_WM_HEAP + $AURA_TM_HEAP`
-    AURA_WM_MODE="local"
+    AURA_WM_MODE="LOCAL"
 else
-    AURA_WM_MODE="distributed"
+    AURA_WM_MODE="DISTRIBUTED"
 fi
 
 JVM_ARGS="$JVM_ARGS -Xms"$AURA_WM_HEAP"m -Xmx"$AURA_WM_HEAP"m"
