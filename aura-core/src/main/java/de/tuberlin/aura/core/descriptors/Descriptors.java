@@ -36,6 +36,8 @@ public final class Descriptors {
 
         public final InetAddress address;
 
+        public final String hostName;
+
         // TODO: redundant...
         public final InetSocketAddress dataAddress;
 
@@ -47,11 +49,11 @@ public final class Descriptors {
         // Constructors.
         // ---------------------------------------------------
 
-        public MachineDescriptor(InetAddress address, int dataPort, int controlPort, HardwareDescriptor hardware) {
-            this(UUID.randomUUID(), address, dataPort, controlPort, hardware);
+        public MachineDescriptor(InetAddress address, String hostName, int dataPort, int controlPort, HardwareDescriptor hardware) {
+            this(UUID.randomUUID(), address, hostName, dataPort, controlPort, hardware);
         }
 
-        public MachineDescriptor(UUID uid, InetAddress address, int dataPort, int controlPort, HardwareDescriptor hardware) {
+        public MachineDescriptor(UUID uid, InetAddress address, String hostName, int dataPort, int controlPort, HardwareDescriptor hardware) {
             // sanity check.
             if (uid == null)
                 throw new IllegalArgumentException("uid == null");
@@ -67,6 +69,8 @@ public final class Descriptors {
             this.uid = uid;
 
             this.address = address;
+
+            this.hostName= hostName;
 
             this.dataPort = dataPort;
 

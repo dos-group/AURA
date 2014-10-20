@@ -6,11 +6,12 @@ import de.tuberlin.aura.core.topology.Topology;
 
 public interface IInfrastructureManager {
 
-    public abstract int getNumberOfMachine();
+    public abstract int getNumberOfMachines();
 
-    public abstract Descriptors.MachineDescriptor getNextMachine();
+    public abstract Descriptors.MachineDescriptor getNextMachineForTask(Topology.LogicalNode node);
 
-    public abstract InputSplit getInputSplitFromHDFSSource(final Topology.ExecutionNode executionNode);
+    public abstract InputSplit getNextInputSplitForHDFSSource(final Topology.ExecutionNode executionNode);
 
     public abstract void registerHDFSSource(final Topology.LogicalNode node);
+
 }

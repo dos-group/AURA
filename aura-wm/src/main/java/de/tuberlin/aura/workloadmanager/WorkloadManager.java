@@ -257,7 +257,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     public InputSplit requestNextInputSplit(final UUID topologyID, final UUID taskID, int sequenceNumber) {
         final AuraTopology topology = this.registeredTopologies.get(topologyID).getTopology();
         final Topology.ExecutionNode exNode = topology.executionNodeMap.get(taskID);
-        return infrastructureManager.getInputSplitFromHDFSSource(exNode);
+        return infrastructureManager.getNextInputSplitForHDFSSource(exNode);
     }
 
     // ---------------------------------------------------
