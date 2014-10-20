@@ -56,8 +56,8 @@ public final class PlainTopologiesTest {
     }
 
     @Test
-    public void testExtendedTopology() {
-        TestHelper.runTopology(auraClient, six_layer_all2all(auraClient, executionUnits));
+    public void testPlainAllToAllTopology() {
+        TestHelper.runTopology(auraClient, three_layer_all2all_all2all(auraClient, executionUnits));
     }
 
     @Test
@@ -69,7 +69,12 @@ public final class PlainTopologiesTest {
     }
 
     @Test
-    public void testMultipleQueriesSequentially() {
+    public void testExtendedPlainTopology() {
+        TestHelper.runTopology(auraClient, six_layer_all2all(auraClient, executionUnits));
+    }
+
+    @Test
+    public void testMultiplePlainTopologiesSequentially() {
         List<Topology.AuraTopology> topologies = new ArrayList<>();
 
         // 2 layered - all2all connection
@@ -80,9 +85,6 @@ public final class PlainTopologiesTest {
 
         // 3 layered - all2all + point2point connection
         topologies.add(three_layer_all2all_point2point(auraClient, executionUnits));
-
-        // 3 layered - point2point + all2all connection
-        topologies.add(three_layer_point2point_all2all(auraClient, executionUnits));
 
         // 3 layered - all2all + all2all connection
         topologies.add(three_layer_all2all_all2all(auraClient, executionUnits));

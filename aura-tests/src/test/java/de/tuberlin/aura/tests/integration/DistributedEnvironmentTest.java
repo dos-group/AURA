@@ -47,7 +47,7 @@ public final class DistributedEnvironmentTest {
     }
 
     @Test
-    public void testDataSetAsSink() {
+    public void testDataSetSink() {
 
         int dop = executionUnits / 3;
 
@@ -57,7 +57,7 @@ public final class DistributedEnvironmentTest {
 
         final UUID dataset1UID = UUID.randomUUID();
 
-        final DataflowNodeProperties dataset1Properties = dataset1NodeProperties(dataset1UID);
+        final DataflowNodeProperties dataset1Properties = dataset1NodeProperties(dataset1UID, dop);
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
@@ -84,7 +84,7 @@ public final class DistributedEnvironmentTest {
 
         final UUID dataset1UID = UUID.randomUUID();
 
-        final DataflowNodeProperties dataset1Properties = dataset1NodeProperties(dataset1UID);
+        final DataflowNodeProperties dataset1Properties = dataset1NodeProperties(dataset1UID, dop);
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
@@ -99,13 +99,15 @@ public final class DistributedEnvironmentTest {
         TestHelper.runTopology(auraClient, topology1);
 
         final Collection<Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>>> collection1 = auraClient.getDataset(dataset1UID);
-//        for (Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>> tuple : collection1)
-//            System.out.println(tuple);
+
+        for (Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>> tuple : collection1) {
+            System.out.println(tuple);
+        }
 
     }
 
     @Test
-    public void testDataSetAsSinkAndSource() {
+    public void testGeneratedDataSetAsSourceForFollowingDataflow() {
 
         int dop = executionUnits / 3;
 
@@ -115,7 +117,7 @@ public final class DistributedEnvironmentTest {
 
         final UUID dataset1UID = UUID.randomUUID();
 
-        final DataflowNodeProperties dataset1Properties = dataset1NodeProperties(dataset1UID);
+        final DataflowNodeProperties dataset1Properties = dataset1NodeProperties(dataset1UID, dop);
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
 
@@ -137,11 +139,11 @@ public final class DistributedEnvironmentTest {
         final UUID broadcastDatasetID = UUID.randomUUID();
         auraClient.broadcastDataset(broadcastDatasetID, broadcastDataset);
 
-        final DataflowNodeProperties map2 = map2NodeProperties(dop, broadcastDatasetID);
+        final DataflowNodeProperties map2 = map2NodeProperties(broadcastDatasetID, dop);
 
         final UUID dataset2UID = UUID.randomUUID();
 
-        final DataflowNodeProperties dataset2Properties = dataset2NodeProperties(dataset2UID);
+        final DataflowNodeProperties dataset2Properties = dataset2NodeProperties(dataset2UID, dop);
 
         Topology.AuraTopologyBuilder atb2 = auraClient.createTopologyBuilder();
 
@@ -154,7 +156,6 @@ public final class DistributedEnvironmentTest {
         final Topology.AuraTopology topology2 = atb2.build("JOB2");
 
         TestHelper.runTopology(auraClient, topology2);
-
     }
 
     @AfterClass
@@ -167,34 +168,19 @@ public final class DistributedEnvironmentTest {
         auraClient.closeSession();
     }
 
+    // ---------------------------------------------------
+    // Types.
+    // ---------------------------------------------------
 
-
-    private DataflowNodeProperties map2NodeProperties(int dop, UUID broadcastDatasetID) {
-
-        TypeInformation source1TypeInfo = source1TypeInfo();
-
-        return new DataflowNodeProperties(
-                UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
-                "Map2",
-                dop,
-                1,
-                new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                source1TypeInfo,
-                null,
-                source1TypeInfo,
-                Map2.class.getName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                Arrays.asList(broadcastDatasetID),
-                null
-        );
+    private TypeInformation source1TypeInfo() {
+        return new TypeInformation(Tuple2.class,
+                new TypeInformation(String.class),
+                new TypeInformation(Integer.class));
     }
+
+    // ---------------------------------------------------
+    // Dataflow Nodes.
+    // ---------------------------------------------------
 
     private DataflowNodeProperties source1NodeProperties(int dop) {
 
@@ -206,8 +192,8 @@ public final class DistributedEnvironmentTest {
                 "Source1",
                 dop,
                 1,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                null,
+                null,
                 null,
                 null,
                 source1TypeInfo,
@@ -250,34 +236,7 @@ public final class DistributedEnvironmentTest {
         );
     }
 
-    private DataflowNodeProperties dataset2NodeProperties(UUID dataset2UID) {
-
-        TypeInformation source1TypeInfo = source1TypeInfo();
-
-        return new DataflowNodeProperties(
-                dataset2UID,
-                DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
-                "Dataset2",
-                1, // executionUnits / 3,
-                1,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                source1TypeInfo,
-                null,
-                source1TypeInfo,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
-    }
-
-    private DataflowNodeProperties dataset1NodeProperties(UUID dataset1UID) {
+    private DataflowNodeProperties dataset1NodeProperties(UUID dataset1UID, int dop) {
 
         TypeInformation source1TypeInfo = source1TypeInfo();
 
@@ -285,9 +244,9 @@ public final class DistributedEnvironmentTest {
                 dataset1UID,
                 DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
                 "Dataset1",
-                1, // dop,
+                dop,
                 1,
-                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                 source1TypeInfo,
                 null,
@@ -304,10 +263,58 @@ public final class DistributedEnvironmentTest {
         );
     }
 
-    private TypeInformation source1TypeInfo() {
-        return new TypeInformation(Tuple2.class,
-                new TypeInformation(String.class),
-                new TypeInformation(Integer.class));
+    private DataflowNodeProperties map2NodeProperties(UUID broadcastDatasetID, int dop) {
+
+        TypeInformation source1TypeInfo = source1TypeInfo();
+
+        return new DataflowNodeProperties(
+                UUID.randomUUID(),
+                DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
+                "Map2",
+                dop,
+                1,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
+                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                source1TypeInfo,
+                null,
+                source1TypeInfo,
+                Map2.class.getName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Arrays.asList(broadcastDatasetID),
+                null
+        );
+    }
+
+    private DataflowNodeProperties dataset2NodeProperties(UUID dataset2UID, int dop) {
+
+        TypeInformation source1TypeInfo = source1TypeInfo();
+
+        return new DataflowNodeProperties(
+                dataset2UID,
+                DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
+                "Dataset2",
+                dop,
+                1,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_2") },
+                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                source1TypeInfo,
+                null,
+                source1TypeInfo,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
     }
 
     // ---------------------------------------------------

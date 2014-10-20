@@ -3,17 +3,25 @@ package de.tuberlin.aura.tests.util;
 import java.util.Collections;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.common.eventsystem.EventHandler;
 import de.tuberlin.aura.core.iosystem.IOEvents;
 import de.tuberlin.aura.core.topology.Topology;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class TestHelper {
 
+    // ---------------------------------------------------
+    // Constants.
+    // ---------------------------------------------------
+
     private static final Logger LOG = LoggerFactory.getLogger(TestHelper.class);
+
+    // ---------------------------------------------------
+    // Public Methods.
+    // ---------------------------------------------------
 
     public static void runTopology(AuraClient auraClient, Topology.AuraTopology topology) {
         List<Topology.AuraTopology> topologies = Collections.singletonList(topology);
@@ -56,6 +64,10 @@ public class TestHelper {
         auraClient.awaitSubmissionResult(topologies.size());
         auraClient.ioManager.removeEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, handler);
     }
+
+    // ---------------------------------------------------
+    // Inner Classes.
+    // ---------------------------------------------------
 
     private static class SubmissionHandler extends EventHandler {
 

@@ -432,8 +432,8 @@ public final class DataflowTest {
                                 "Source1",
                                 dop,
                                 1,
-                                null,
-                                null,
+                                null, // new int[][] {source1TypeInfo.buildFieldSelectorChain("_1"), source1TypeInfo.buildFieldSelectorChain("_2")},
+                                null, // Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                                 null,
                                 null,
                                 source1TypeInfo,
@@ -738,7 +738,7 @@ public final class DataflowTest {
                 connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
                 addNode(sinkNode);
 
-        final Topology.AuraTopology topology = atb.build("JOB5-ChainedGroupFolding");
+        final Topology.AuraTopology topology = atb.build("JOB6-ChainedGroupFolding");
 
         TestHelper.runTopology(auraClient, topology);
     }
