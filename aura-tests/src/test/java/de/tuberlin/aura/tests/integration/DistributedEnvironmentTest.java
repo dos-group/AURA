@@ -71,6 +71,7 @@ public final class DistributedEnvironmentTest {
 
         TestHelper.runTopology(auraClient, topology1);
 
+        auraClient.eraseDataset(dataset1UID);
     }
 
     @Test
@@ -100,8 +101,10 @@ public final class DistributedEnvironmentTest {
 
         final Collection<Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>>> collection1 = auraClient.getDataset(dataset1UID);
 
+        auraClient.eraseDataset(dataset1UID);
+
         for (Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>> tuple : collection1) {
-            System.out.println(tuple);
+//            System.out.println(tuple);
         }
 
     }
@@ -156,6 +159,9 @@ public final class DistributedEnvironmentTest {
         final Topology.AuraTopology topology2 = atb2.build("JOB2");
 
         TestHelper.runTopology(auraClient, topology2);
+
+        auraClient.eraseDataset(dataset1UID);
+        auraClient.eraseDataset(dataset2UID);
     }
 
     @AfterClass
