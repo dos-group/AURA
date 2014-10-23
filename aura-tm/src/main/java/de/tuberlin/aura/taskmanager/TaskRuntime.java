@@ -8,6 +8,7 @@ import java.util.concurrent.CountDownLatch;
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.filesystem.InputSplit;
+import de.tuberlin.aura.drivers.DatasetDriver2;
 import de.tuberlin.aura.taskmanager.hdfs.TaskInputSplitProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,7 +171,7 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
         } else if (nodeDescriptor instanceof Descriptors.DatasetNodeDescriptor) {
 
-            invokeable = new DatasetDriver(this, (Descriptors.DatasetNodeDescriptor) nodeDescriptor, bindingDescriptor);
+            invokeable = new DatasetDriver2(this, (Descriptors.DatasetNodeDescriptor) nodeDescriptor, bindingDescriptor);
 
         } else {
             throw new IllegalStateException();
@@ -186,6 +187,10 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
     public boolean execute() {
 
         try {
+
+            //if (nodeDescriptor.name.equals("Dataset1")) {
+            //    System.out.println();
+            //}
 
             if (invokeableInitialization) {
                 invokeable.create();
@@ -221,8 +226,6 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
         } catch (final Throwable t) {
 
             LOG.error(t.getLocalizedMessage(), t);
-
-            taskFSM.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskTransition.TASK_TRANSITION_FAIL));
 
             return false;
         }

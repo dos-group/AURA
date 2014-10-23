@@ -6,6 +6,17 @@ import java.util.Collection;
 
 public abstract class AbstractDataset<E> {
 
+    public enum DatasetType {
+
+        UNKNOWN,
+
+        DATASET_INTERMEDIATE_RESULT,
+
+        DATASET_ITERATION_HEAD_STATE,
+
+        DATASET_ITERATION_TAIL_STATE
+    }
+
     // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
@@ -31,4 +42,8 @@ public abstract class AbstractDataset<E> {
     public abstract void add(final E element);
 
     public abstract Collection<E> getData();
+
+    public abstract void clear();
+
+    public abstract void setData(final Collection<E> data);
 }

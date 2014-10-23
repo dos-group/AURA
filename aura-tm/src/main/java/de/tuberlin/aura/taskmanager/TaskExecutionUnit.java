@@ -5,7 +5,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.drivers.DatasetDriver2;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +42,10 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
     private final IAllocator outputAllocator;
 
     private ITaskRuntime runtime;
+
+    private boolean isExecutingDataset = false;
+
+    private boolean isDatasetInitialized = false;
 
     // ---------------------------------------------------
     // Constructors.
@@ -140,16 +146,23 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
                 if (runtime == null || (runtime != null && !runtime.doNextIteration())) {
 
-                    try {
-                        runtime = taskQueue.take();
-                        LOG.info("Execution Unit {} prepares execution of taskmanager {}",
-                                TaskExecutionUnit.this.executionUnitID,
-                                runtime.getNodeDescriptor().taskID);
-                    } catch (InterruptedException e) {
-                        throw new IllegalStateException(e);
-                    }
+                    if (!isExecutingDataset) {
 
-                    executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + runtime.getNodeDescriptor().name);
+                        try {
+                            runtime = taskQueue.take();
+                            LOG.info("Execution Unit {} prepares execution of taskmanager {}",
+                                    TaskExecutionUnit.this.executionUnitID,
+                                    runtime.getNodeDescriptor().taskID);
+                        } catch (InterruptedException e) {
+                            throw new IllegalStateException(e);
+                        }
+
+                        executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + runtime.getNodeDescriptor().name);
+
+                        if (runtime.getNodeDescriptor() instanceof Descriptors.DatasetNodeDescriptor) {
+                            isExecutingDataset = true;
+                        }
+                    }
                 }
 
                 final CountDownLatch executeLatch = new CountDownLatch(1);
@@ -165,14 +178,21 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             }
                         });
 
-                if (!runtime.doNextIteration()) {
+                if (!runtime.doNextIteration() && !isDatasetInitialized) {
                     runtime.initialize(inputAllocator, outputAllocator);
                 }
 
-                try {
-                    executeLatch.await();
-                } catch (InterruptedException e) {
-                    LOG.error(e.getLocalizedMessage(), e);
+                if (!isDatasetInitialized) {
+
+                    try {
+                        executeLatch.await();
+                    } catch (InterruptedException e) {
+                        LOG.error(e.getLocalizedMessage(), e);
+                    }
+                }
+
+                if (isExecutingDataset) {
+                    isDatasetInitialized = true;
                 }
 
                 boolean success = runtime.execute();
@@ -188,15 +208,40 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
                         runtime.release(success);
 
-                        runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
+                        if (success)
+                            runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
+                        else
+                            runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FAIL));
 
                         executionManager.getTaskManager().uninstallTask(runtime.getNodeDescriptor().taskID);
 
                         // This is necessary to indicate that this execution unit is free via the
                         // getNumberOfEnqueuedTasks()-method. This isn't thread safe in any way!
                         runtime = null;
+                    }
 
-                        LOG.debug("Terminate thread of execution unit {}", TaskExecutionUnit.this.executionUnitID);
+                } else if (runtime.getNodeDescriptor() instanceof Descriptors.DatasetNodeDescriptor) {
+
+                    if (runtime.doNextIteration()) {
+
+                        // ----------------------------------------------
+
+                        if (((DatasetDriver2)runtime.getInvokeable()).type == AbstractDataset.DatasetType.DATASET_ITERATION_HEAD_STATE)
+                            ((DatasetDriver2)runtime.getInvokeable()).state = DatasetDriver2.DatasetState.DATASET_ITERATION_STATE;
+
+                        else if (((DatasetDriver2)runtime.getInvokeable()).type == AbstractDataset.DatasetType.DATASET_ITERATION_TAIL_STATE)
+                            ((DatasetDriver2)runtime.getInvokeable()).state = DatasetDriver2.DatasetState.DATASET_EMPTY;
+
+                        // ----------------------------------------------
+
+                        runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_NEXT_ITERATION));
+
+                    } else {
+
+                        if (success)
+                            runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
+                        else
+                            runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FAIL));
                     }
                 }
             }

@@ -25,7 +25,10 @@ import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 import org.apache.commons.lang3.tuple.Triple;
 
 
-public class DatasetDriver extends AbstractInvokeable {
+public class DatasetDriver {}
+
+
+/*extends AbstractInvokeable {
 
     // ---------------------------------------------------
     // Fields.
@@ -153,7 +156,9 @@ public class DatasetDriver extends AbstractInvokeable {
 
         // --------------------------- CONSUME PHASE ---------------------------
 
-        while (true) {
+        boolean isRunning = true;
+
+        while (isRunning) {
 
             try {
 
@@ -162,6 +167,7 @@ public class DatasetDriver extends AbstractInvokeable {
                 final Triple<UUID,Partitioner.PartitioningStrategy,int[][]> gateRequestProperties = requestProperties.poll();
 
                 //LOG.info("--------------> take");
+
 
                 runtime.getNodeDescriptor().topologyID = gateRequestProperties.getLeft();
 
@@ -223,9 +229,6 @@ public class DatasetDriver extends AbstractInvokeable {
                 writer.end();
 
 
-
-
-
                 producer.done(0);
 
                 final CountDownLatch awaitFinishTransition = new CountDownLatch(2);
@@ -260,7 +263,9 @@ public class DatasetDriver extends AbstractInvokeable {
                 runtime.getBindingDescriptor().outputGateBindings.clear();
                 runtime.getTaskStateMachine().reset();
 
-            } catch(Exception e) {
+            } catch(InterruptedException e) {
+                LOG.info("Dataset interrupted.");
+                isRunning = false;
             }
 
             initialDataflowOutputs = false;
@@ -282,7 +287,8 @@ public class DatasetDriver extends AbstractInvokeable {
     public void createOutputBinding(final UUID topologyID,
                                     final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding,
                                     final Partitioner.PartitioningStrategy partitioningStrategy,
-                                    final int[][] partitioningKeys) {
+                                    final int[][] partitioningKeys,
+                                    final boolean isReExecutable) {
         // sanity check.
         if(topologyID == null)
             throw new IllegalArgumentException("topologyID == null");
@@ -306,3 +312,4 @@ public class DatasetDriver extends AbstractInvokeable {
         return dataset;
     }
 }
+*/

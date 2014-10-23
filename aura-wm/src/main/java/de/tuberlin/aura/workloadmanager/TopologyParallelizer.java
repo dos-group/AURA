@@ -8,6 +8,7 @@ import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.common.utils.PipelineAssembler.AssemblyPhase;
 import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
@@ -91,7 +92,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                 if (element.isAlreadyDeployed) {
 
                     for(final ExecutionNode en : element.getExecutionNodes()) {
-                        // Reset the taskmanager state.
+                        // Reset the task manager state.
                         en.setState(TaskStates.TaskState.TASK_STATE_CREATED);
                         executionNodeMap.put(en.getNodeDescriptor().taskID, en);
                     }
@@ -123,7 +124,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                 index,
                                 element.name,
                                 userCodeList,
-                                ((OperatorNode)element).propertiesList,
+                                element.propertiesList,
                                 topology.isReExecutable
                         );
 
@@ -134,12 +135,12 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                                 taskID,
                                 index,
                                 element.name,
-                                ((DatasetNode) element).propertiesList.get(0),
-                                topology.isReExecutable
+                                element.propertiesList.get(0),
+                                topology.isReExecutable,
+                                ((DatasetNode) element).datasetType
                         );
 
                         if (!environmentManager.existsDataset(element.uid)) {
-
                             environmentManager.addDataset((DatasetNode)element);
                         }
 

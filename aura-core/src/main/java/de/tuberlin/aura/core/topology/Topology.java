@@ -6,6 +6,7 @@ import java.util.*;
 import de.tuberlin.aura.core.common.utils.IVisitable;
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
@@ -450,10 +451,6 @@ public class Topology {
 
         public final int perWorkerParallelism;
 
-        public final DataPersistenceType dataPersistenceType;
-
-        public final ExecutionType executionType;
-
         public final List<LogicalNode> inputs;
 
         public final List<LogicalNode> outputs;
@@ -469,21 +466,19 @@ public class Topology {
         // ---------------------------------------------------
 
         public LogicalNode(final UUID uid, final String name) {
-            this(uid, name, 1, 1, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, (DataflowNodeProperties)null);
+            this(uid, name, 1, 1, (DataflowNodeProperties)null);
         }
 
         public LogicalNode(final UUID uid, final String name, int degreeOfParallelism, int perWorkerParallelism) {
-            this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, (DataflowNodeProperties)null);
+            this(uid, name, degreeOfParallelism, perWorkerParallelism, (DataflowNodeProperties)null);
         }
 
         public LogicalNode(final UUID uid,
                            final String name,
                            int degreeOfParallelism,
                            int perWorkerParallelism,
-                           final DataPersistenceType dataPersistenceType,
-                           final ExecutionType executionType,
                            final DataflowNodeProperties properties) {
-            this(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, Arrays.asList(properties));
+            this(uid, name, degreeOfParallelism, perWorkerParallelism, Arrays.asList(properties));
         }
 
 
@@ -491,8 +486,6 @@ public class Topology {
                            final String name,
                            int degreeOfParallelism,
                            int perWorkerParallelism,
-                           final DataPersistenceType dataPersistenceType,
-                           final ExecutionType executionType,
                            final List<DataflowNodeProperties> propertiesList) {
             // sanity check.
             if (uid == null)
@@ -503,10 +496,6 @@ public class Topology {
                 throw new IllegalArgumentException("degreeOfParallelism < 1");
             if (perWorkerParallelism < 1)
                 throw new IllegalArgumentException("perWorkerParallelism < 1");
-            if (dataPersistenceType == null)
-                throw new IllegalArgumentException("dataPersistenceType == null");
-            if (executionType == null)
-                throw new IllegalArgumentException("executionType == null");
 
             this.uid = uid;
 
@@ -521,10 +510,6 @@ public class Topology {
             this.outputs = new ArrayList<>();
 
             this.executionNodes = new HashMap<>();
-
-            this.dataPersistenceType = dataPersistenceType;
-
-            this.executionType = executionType;
 
             this.propertiesList = propertiesList;
         }
@@ -590,8 +575,27 @@ public class Topology {
      */
     public static final class DatasetNode extends LogicalNode {
 
+        public final AbstractDataset.DatasetType datasetType;
+
         public DatasetNode(final DataflowNodeProperties properties) {
-            super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, properties);
+            super(properties.operatorUID,
+                    properties.instanceName,
+                    properties.globalDOP,
+                    properties.localDOP,
+                    properties
+            );
+
+            this.datasetType = AbstractDataset.DatasetType.UNKNOWN;
+        }
+
+        public DatasetNode(final DataflowNodeProperties properties, final AbstractDataset.DatasetType datasetType) {
+            super(properties.operatorUID,
+                    properties.instanceName,
+                    properties.globalDOP,
+                    properties.localDOP,
+                    properties);
+
+            this.datasetType = datasetType;
         }
     }
 
@@ -602,16 +606,18 @@ public class Topology {
 
         public OperatorNode(final List<DataflowNodeProperties> propertyList) {
             super(propertyList.get(0).operatorUID,
-                  propertyList.get(0).instanceName,
-                  propertyList.get(0).globalDOP,
-                  propertyList.get(0).localDOP,
-                  DataPersistenceType.EPHEMERAL,
-                  ExecutionType.PIPELINED,
-                  propertyList);
+                    propertyList.get(0).instanceName,
+                    propertyList.get(0).globalDOP,
+                    propertyList.get(0).localDOP,
+                    propertyList);
         }
 
         public OperatorNode(final DataflowNodeProperties properties) {
-            super(properties.operatorUID, properties.instanceName, properties.globalDOP, properties.localDOP, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED, properties);
+            super(properties.operatorUID,
+                    properties.instanceName,
+                    properties.globalDOP,
+                    properties.localDOP,
+                    properties);
         }
     }
 
@@ -619,10 +625,33 @@ public class Topology {
 
         public InvokeableNode(final UUID uid, final String name, final int degreeOfParallelism, final int perWorkerParallelism, String udfTypeName) {
 
-            super(uid, name, degreeOfParallelism, perWorkerParallelism, DataPersistenceType.EPHEMERAL, ExecutionType.PIPELINED,
-                    new DataflowNodeProperties(uid, null, name, degreeOfParallelism, perWorkerParallelism, null,
-                            null, null, null, null, udfTypeName, null, null, null, null, null, null, null, null, null));
-
+            super(uid,
+                    name,
+                    degreeOfParallelism,
+                    perWorkerParallelism,
+                    new DataflowNodeProperties(
+                            uid,
+                            null,
+                            name,
+                            degreeOfParallelism,
+                            perWorkerParallelism,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            udfTypeName,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null
+                    )
+            );
         }
     }
 

@@ -76,16 +76,13 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
                         && element.propertiesList.get(0).coLocatedDatasetID != null) {
 
                     final UUID coLocatedDatasetID = element.propertiesList.get(0).coLocatedDatasetID;
+                    final LogicalNode coLocatedDataset = environment.getDataset(coLocatedDatasetID);
 
-                    final LogicalNode primaryDataset = environment.getDataset(coLocatedDatasetID);
-
-                    if (primaryDataset == null)
+                    if (coLocatedDataset == null)
                         throw new IllegalStateException("primary dataset not found");
 
-                    for (int i = 0; i <  primaryDataset.getExecutionNodes().size(); ++i) {
-
-                        final ExecutionNode primaryEN = primaryDataset.getExecutionNodes().get(i);
-
+                    for (int i = 0; i <  coLocatedDataset.getExecutionNodes().size(); ++i) {
+                        final ExecutionNode primaryEN = coLocatedDataset.getExecutionNodes().get(i);
                         element.getExecutionNodes().get(i).getNodeDescriptor().setMachineDescriptor(primaryEN.getNodeDescriptor().getMachineDescriptor());
                     }
 

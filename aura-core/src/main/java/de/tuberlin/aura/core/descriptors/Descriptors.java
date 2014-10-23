@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.taskmanager.usercode.UserCode;
 import de.tuberlin.aura.core.topology.Topology.LogicalNode;
 
@@ -293,7 +294,7 @@ public final class Descriptors {
 
         public final List<DataflowNodeProperties> propertiesList;
 
-        public final boolean isReExecutable;
+        public boolean isReExecutable;
 
         // ---------------------------------------------------
         // Constructors.
@@ -414,6 +415,8 @@ public final class Descriptors {
 
         private static final long serialVersionUID = -1L;
 
+        public AbstractDataset.DatasetType datasetType;
+
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
@@ -423,9 +426,12 @@ public final class Descriptors {
                                      final int taskIndex,
                                      final String name,
                                      final DataflowNodeProperties properties,
-                                     final boolean isReExecutable) {
+                                     final boolean isReExecutable,
+                                     final AbstractDataset.DatasetType datasetType) {
 
             super(topologyID, taskID, taskIndex, name, null, properties, isReExecutable);
+
+            this.datasetType = datasetType;
         }
     }
 
@@ -588,36 +594,21 @@ public final class Descriptors {
 
         public final NodeBindingDescriptor nodeBindingDescriptor;
 
-        public final LogicalNode.DataPersistenceType dataPersistenceType;
-
-        public final LogicalNode.ExecutionType executionType;
-
         // ---------------------------------------------------
         // Constructors.
         // ---------------------------------------------------
 
         public DeploymentDescriptor(final AbstractNodeDescriptor nodeDescriptor,
-                                    final NodeBindingDescriptor nodeBindingDescriptor,
-                                    final LogicalNode.DataPersistenceType dataPersistenceType,
-                                    final LogicalNode.ExecutionType executionType) {
-
+                                    final NodeBindingDescriptor nodeBindingDescriptor) {
             // sanity check.
             if (nodeDescriptor == null)
                 throw new IllegalArgumentException("nodeDescriptor == null");
             if (nodeBindingDescriptor == null)
                 throw new IllegalArgumentException("nodeBindingDescriptor == null");
-            if (dataPersistenceType == null)
-                throw new IllegalArgumentException("dataPersistenceType == null");
-            if (executionType == null)
-                throw new IllegalArgumentException("executionType == null");
 
             this.nodeDescriptor = nodeDescriptor;
 
             this.nodeBindingDescriptor = nodeBindingDescriptor;
-
-            this.dataPersistenceType = dataPersistenceType;
-
-            this.executionType = executionType;
         }
 
         // ---------------------------------------------------

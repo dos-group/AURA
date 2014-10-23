@@ -5,6 +5,7 @@ import java.util.concurrent.CountDownLatch;
 
 import de.tuberlin.aura.core.common.utils.DeepCopy;
 import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.topology.TopologyStates;
 import de.tuberlin.aura.workloadmanager.spi.ITopologyController;
 import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
@@ -12,7 +13,6 @@ import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.eventsystem.Event;
 import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
-import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
 import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.IVisitor;
@@ -227,6 +227,9 @@ public final class TopologyController extends EventDispatcher implements ITopolo
 
                     for (final Topology.ExecutionNode en : node.getExecutionNodes()) { // TODO: We have to change this!
                         en.getNodeDescriptor().topologyID = topology.topologyID;
+
+                        if (en.getNodeDescriptor() instanceof Descriptors.DatasetNodeDescriptor && element instanceof Topology.DatasetNode)
+                            ((Descriptors.DatasetNodeDescriptor)en.getNodeDescriptor()).datasetType = ((Topology.DatasetNode)element).datasetType;
                     }
 
                     node.isAlreadyDeployed = true;

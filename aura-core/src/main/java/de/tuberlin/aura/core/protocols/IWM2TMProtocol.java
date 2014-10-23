@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.record.Partitioner;
 import org.apache.hadoop.mapred.InputSplit;
@@ -20,7 +21,9 @@ public interface IWM2TMProtocol {
                                           final UUID topologyID,
                                           final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding,
                                           final Partitioner.PartitioningStrategy partitioningStrategy,
-                                          final int[][] partitioningKeys);
+                                          final int[][] partitioningKeys,
+                                          final boolean isReExecutable,
+                                          final AbstractDataset.DatasetType datasetType);
 
     public abstract <E> Collection<E> getDataset(final UUID uid);
 

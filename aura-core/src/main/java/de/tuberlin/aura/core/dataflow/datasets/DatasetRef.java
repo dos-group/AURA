@@ -45,11 +45,21 @@ public class DatasetRef<E> extends AbstractDataset<E> {
         return internalDataset.getData();
     }
 
+    @Override
+    public void clear() {
+        internalDataset.clear();
+    }
+
+    @Override
+    public void setData(final Collection<E> data) {
+        internalDataset.setData(data);
+    }
+
     public void assignDataset(final AbstractDataset<E> internalDataset) {
         // sanity check.
         if (internalDataset == null)
             throw new IllegalArgumentException("internalDataset == null");
 
-        this.internalDataset = internalDataset;
+        this.internalDataset.setData(internalDataset.getData());
     }
 }

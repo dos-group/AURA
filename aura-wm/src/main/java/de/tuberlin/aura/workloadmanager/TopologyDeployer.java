@@ -1,6 +1,8 @@
 package de.tuberlin.aura.workloadmanager;
 
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
+import de.tuberlin.aura.core.topology.Topology;
 import org.apache.log4j.Logger;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
@@ -72,14 +74,10 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                         final DeploymentDescriptor tdd =
                                 new Descriptors.DeploymentDescriptor(
                                         en.getNodeDescriptor(),
-                                        en.getNodeBindingDescriptor(),
-                                        en.logicalNode.dataPersistenceType,
-                                        en.logicalNode.executionType
+                                        en.getNodeBindingDescriptor()
                                 );
 
                         tmProtocol.installTask(tdd);
-
-                        LOG.debug("TASK DEPLOYMENT DESCRIPTOR [" + en.getNodeDescriptor().name + "]: " + tdd.toString());
 
                     } else {
 
@@ -92,7 +90,9 @@ public class TopologyDeployer extends AssemblyPhase<AuraTopology, AuraTopology> 
                                     topology.topologyID,
                                     en.getNodeBindingDescriptor().outputGateBindings,
                                     datasetNodeDescriptor.propertiesList.get(0).strategy,
-                                    datasetNodeDescriptor.propertiesList.get(0).partitionKeyIndices
+                                    datasetNodeDescriptor.propertiesList.get(0).partitionKeyIndices,
+                                    topology.isReExecutable,
+                                    ((Descriptors.DatasetNodeDescriptor)en.getNodeDescriptor()).datasetType
                              );
 
                         } else {

@@ -6,6 +6,7 @@ import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
@@ -88,7 +89,6 @@ public final class IterativeDataflowTest2 {
                 null,
                 null
         );
-
 
         final UUID dataset1UID = UUID.randomUUID();
 
@@ -205,18 +205,19 @@ public final class IterativeDataflowTest2 {
         // ---------------------------------------------------
 
         final Topology.AuraTopologyBuilder atb2 = ac.createTopologyBuilder();
-        atb2.addNode(new Topology.DatasetNode(dataset1))
+        atb2.addNode(new Topology.DatasetNode(dataset1, AbstractDataset.DatasetType.DATASET_ITERATION_HEAD_STATE))
                 .connectTo("Map1", Topology.Edge.TransferType.ALL_TO_ALL)
                 .addNode(new Topology.OperatorNode(map1))
                 .connectTo("Dataset2", Topology.Edge.TransferType.POINT_TO_POINT)
-                .addNode(new Topology.DatasetNode(dataset2));
+                .addNode(new Topology.DatasetNode(dataset2, AbstractDataset.DatasetType.DATASET_ITERATION_TAIL_STATE));
 
         final Topology.AuraTopology topology2 = atb2.build("JOB2", true);
         ac.submitTopology(topology2, null);
 
-        final int ITERATION_COUNT = 2;
+        final int ITERATION_COUNT = 5;
 
         for (int i = 0; i < ITERATION_COUNT; ++i) {
+
             ac.waitForIterationEnd(topology2.topologyID);
             ac.assignDataset(dataset1UID, dataset2UID);
             ac.reExecute(topology2.topologyID, i < ITERATION_COUNT - 1);
@@ -227,14 +228,14 @@ public final class IterativeDataflowTest2 {
 
         // ---------------------------------------------------
 
-        /*final Topology.AuraTopologyBuilder atb3 = ac.createTopologyBuilder();
+        final Topology.AuraTopologyBuilder atb3 = ac.createTopologyBuilder();
         atb3.addNode(new Topology.DatasetNode(dataset1))
                 .connectTo("Sink1", Topology.Edge.TransferType.POINT_TO_POINT)
                 .addNode(new Topology.OperatorNode(sink1));
 
         final Topology.AuraTopology topology3 = atb3.build("JOB3");
         ac.submitTopology(topology3, null);
-        ac.awaitSubmissionResult(1);*/
+        ac.awaitSubmissionResult(1);
 
         // ---------------------------------------------------
 

@@ -47,6 +47,21 @@ public class MutableDataset<E> extends AbstractDataset<E> {
         data.put(keyFields, element);
     }
 
+    @Override
+    public void clear() {
+        data.clear();
+    }
+
+    @Override
+    public void setData(Collection<E> data) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Collection<E> getData() {
+        return data.values();
+    }
+
     public void update(final E element) {
         final Object[] keyFields = new Object[datasetKeyIndices.length];
         int fieldIndex = 0;
@@ -54,10 +69,5 @@ public class MutableDataset<E> extends AbstractDataset<E> {
             keyFields[fieldIndex++] = typeInfo.selectField(selectorChain, element);
         }
         data.put(keyFields, element);
-    }
-
-    @Override
-    public Collection<E> getData() {
-        return data.values();
     }
 }

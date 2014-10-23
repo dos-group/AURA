@@ -10,6 +10,7 @@ import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
+import de.tuberlin.aura.drivers.DatasetDriver2;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.type.FileArgumentType;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
@@ -136,7 +137,9 @@ public final class TaskManager implements ITaskManager {
                                  final UUID topologyID,
                                  final List<List<Descriptors.AbstractNodeDescriptor>> outputBinding,
                                  final Partitioner.PartitioningStrategy partitioningStrategy,
-                                 final int[][] partitioningKeys) {
+                                 final int[][] partitioningKeys,
+                                 final boolean isReExecutable,
+                                 final AbstractDataset.DatasetType datasetType) {
         // sanity check.
         if (taskID == null)
             throw new IllegalArgumentException("taskID == null");
@@ -148,14 +151,16 @@ public final class TaskManager implements ITaskManager {
             throw new IllegalArgumentException("partitioningStrategy == null");
         if (partitioningKeys == null)
             throw new IllegalArgumentException("partitionKeyIndices == null");
+        if (datasetType == null)
+            throw new IllegalArgumentException("datasetType == null");
 
         final ITaskRuntime runtime = deployedTasks.get(taskID);
         if (runtime == null)
             throw new IllegalStateException("runtime == null");
 
-        if (runtime.getInvokeable() instanceof DatasetDriver) {
-            final DatasetDriver ds = (DatasetDriver) runtime.getInvokeable();
-            ds.createOutputBinding(topologyID, outputBinding, partitioningStrategy, partitioningKeys);
+        if (runtime.getInvokeable() instanceof DatasetDriver2) {
+            final DatasetDriver2 ds = (DatasetDriver2) runtime.getInvokeable();
+            ds.createOutputBinding(topologyID, outputBinding, partitioningStrategy, partitioningKeys, isReExecutable, datasetType);
         } else
             throw new IllegalStateException();
     }
@@ -171,7 +176,7 @@ public final class TaskManager implements ITaskManager {
         if (runtime == null)
             throw new IllegalStateException("runtime == null");
 
-        final DatasetDriver datasetDriver = (DatasetDriver)runtime.getInvokeable();
+        final DatasetDriver2 datasetDriver = (DatasetDriver2)runtime.getInvokeable();
         return (Collection<E>)datasetDriver.getData();
     }
 
@@ -214,8 +219,8 @@ public final class TaskManager implements ITaskManager {
         if (srcDatasetRuntime == null)
             throw new IllegalStateException("srcDatasetRuntime not found");
 
-        final AbstractDataset<Object> srcDataset = ((DatasetDriver)srcDatasetRuntime.getInvokeable()).getDataset();
-        final AbstractDataset<Object> dstDataset = ((DatasetDriver)dstDatasetRuntime.getInvokeable()).getDataset();
+        final AbstractDataset<Object> srcDataset = ((DatasetDriver2)srcDatasetRuntime.getInvokeable()).getDataset();
+        final AbstractDataset<Object> dstDataset = ((DatasetDriver2)dstDatasetRuntime.getInvokeable()).getDataset();
 
         if (dstDataset instanceof DatasetRef) {
 

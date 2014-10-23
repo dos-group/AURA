@@ -42,6 +42,11 @@ public class ImmutableDataset<E> extends AbstractDataset<E> {
         return data;
     }
 
+    @Override
+    public void clear() {
+        data.clear();
+    }
+
     public void setData(final Collection<E> data) {
         // sanity check.
         if (data == null)
