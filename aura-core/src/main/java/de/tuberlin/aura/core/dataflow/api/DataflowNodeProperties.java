@@ -54,6 +54,8 @@ public final class DataflowNodeProperties implements Serializable {
 
         FOLD_OPERATOR(InputArity.UNARY),
 
+        HASH_FOLD_OPERATOR(InputArity.UNARY),
+
         REDUCE_OPERATOR(InputArity.UNARY),
 
         UDF_SOURCE(InputArity.NULLARY),

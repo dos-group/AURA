@@ -743,6 +743,94 @@ public final class DataflowTest {
         TestHelper.runTopology(auraClient, topology);
     }
 
+    @Test
+    public void testJob7HashBasedFoldWithShufflingDataflow() {
+
+        int dop = executionUnits / 4;
+
+        final TypeInformation source1TypeInfo = source1TypeInfo();
+
+        Topology.OperatorNode sourceNode =
+                new Topology.OperatorNode(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
+                                "Source", dop, 1,
+                                null,
+                                null,
+                                null,
+                                null,
+                                source1TypeInfo,
+                                Job7Source.class.getName(),
+                                null, null, null, null, null,
+                                null, null, null
+                        )
+                );
+
+        Topology.OperatorNode fold1Node = new Topology.OperatorNode(
+                new DataflowNodeProperties(
+                        UUID.randomUUID(),
+                        DataflowNodeProperties.DataflowNodeType.HASH_FOLD_OPERATOR,
+                        "Fold1", dop, 1,
+                        new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
+                        Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                        source1TypeInfo,
+                        null,
+                        source1TypeInfo,
+                        Job7Fold.class.getName(),
+                        null, null, null, null,
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                        null, null, null
+                ));
+
+        Topology.OperatorNode fold2Node = new Topology.OperatorNode(
+                new DataflowNodeProperties(
+                        UUID.randomUUID(),
+                        DataflowNodeProperties.DataflowNodeType.HASH_FOLD_OPERATOR,
+                        "Fold2", dop, 1,
+                        null,
+                        null,
+                        source1TypeInfo,
+                        null,
+                        source1TypeInfo,
+                        Job7Fold.class.getName(),
+                        null, null, null, null,
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                        null, null, null
+                ));
+
+        Topology.OperatorNode sinkNode =
+                new Topology.OperatorNode(
+                        new DataflowNodeProperties(
+                                UUID.randomUUID(),
+                                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                                "Sink", 1, 1,
+                                null,
+                                null,
+                                source1TypeInfo,
+                                null,
+                                null,
+                                Job7Sink.class.getName(),
+                                null, null, null, null,
+                                null, null, null, null
+                        )
+                );
+
+        Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
+
+        atb.addNode(sourceNode).
+                connectTo("Fold1", Topology.Edge.TransferType.POINT_TO_POINT).
+                addNode(fold1Node).
+                connectTo("Fold2", Topology.Edge.TransferType.ALL_TO_ALL).
+                addNode(fold2Node).
+                connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
+                addNode(sinkNode);
+
+        final Topology.AuraTopology topology = atb.build("JOB7-HashBasedFold");
+
+        TestHelper.runTopology(auraClient, topology);
+    }
+
     @AfterClass
     public static void tearDown() {
 
@@ -832,14 +920,6 @@ public final class DataflowTest {
         @Override
         public Tuple2<Integer, String> produce() {
             return (--count >= 0 ) ?  new Tuple2<>(count, "String" + count) : null;
-        }
-    }
-
-    public static final class Job2Map extends MapFunction<Tuple2<Integer, String>, Tuple2<Integer,String>> {
-
-        @Override
-        public Tuple2<Integer,String> map(final Tuple2<Integer, String> in) {
-            return in;
         }
     }
 
@@ -989,6 +1069,59 @@ public final class DataflowTest {
     }
 
     public static final class Job6Sink extends SinkFunction<Tuple2<String,Integer>> {
+
+        @Override
+        public void consume(final Tuple2<String,Integer> in) {
+//            System.out.println(in);
+        }
+    }
+
+    public static final class Job7Source extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 10000;
+
+        @Override
+        public Tuple2<String,Integer> produce() {
+
+            --count;
+
+            if (count >= 8000) {
+                return new Tuple2<>("One", 1);
+            } else if (count >= 6000) {
+                return new Tuple2<>("Two", 1);
+            } else if (count >= 4000) {
+                return new Tuple2<>("Three", 1);
+            } else if (count >= 2000) {
+                return new Tuple2<>("Four", 1);
+            } else if (count >= 0) {
+                return new Tuple2<>("Five", 1);
+            } else {
+                return null;
+            }
+        }
+    }
+
+    public static final class Job7Fold extends FoldFunction<Tuple2<String,Integer>,Tuple2<String,Integer>> {
+
+        @Override
+        public Tuple2<String,Integer> empty() {
+            return new Tuple2<>("", 0);
+        }
+
+        @Override
+        public Tuple2<String, Integer> singleton(Tuple2<String, Integer> element) {
+            return element;
+        }
+
+        @Override
+        public Tuple2<String,Integer> union(Tuple2<String, Integer> result, Tuple2<String, Integer> element) {
+            result._1 = element._1; // group key
+            result._2 = result._2 + element._2;
+            return result;
+        }
+    }
+
+    public static final class Job7Sink extends SinkFunction<Tuple2<String,Integer>> {
 
         @Override
         public void consume(final Tuple2<String,Integer> in) {
