@@ -130,7 +130,7 @@ public class DatasetDriver {}
                         @Override
                         public void stateAction(TaskStates.TaskState previousState,
                                                 TaskStates.TaskTransition transition,
-                                                TaskStates.TaskState state) {
+                                                TaskStates.TaskState internalState) {
 
                             awaitFinishTransition.countDown();
                         }
@@ -206,7 +206,7 @@ public class DatasetDriver {}
                                 @Override
                                 public void stateAction(TaskStates.TaskState previousState,
                                                         TaskStates.TaskTransition transition,
-                                                        TaskStates.TaskState state) {
+                                                        TaskStates.TaskState internalState) {
                                     awaitRunningTransition.countDown();
                                 }
                             }
@@ -239,7 +239,7 @@ public class DatasetDriver {}
                             @Override
                             public void stateAction(TaskStates.TaskState previousState,
                                                     TaskStates.TaskTransition transition,
-                                                    TaskStates.TaskState state) {
+                                                    TaskStates.TaskState internalState) {
                                 awaitFinishTransition.countDown();
                             }
                         });

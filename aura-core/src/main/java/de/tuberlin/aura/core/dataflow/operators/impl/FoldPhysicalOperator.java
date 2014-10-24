@@ -66,7 +66,7 @@ public class FoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<
         }
 
         if (input.marker == StreamMarker.END_OF_STREAM_MARKER) {
-            // finished last group
+            // finished last group (which, in case the input wasn't grouped, is the single result for the entire stream)
             this.isDrained = true;
         }
 

@@ -105,7 +105,7 @@ public class SimpleHDFSTest {
 
 
         Map<String,Object> snkConfig = new HashMap<>();
-        srcConfig.put(HDFSSinkPhysicalOperator.HDFS_SINK_FILE_PATH, "/RESULT.csv");
+        snkConfig.put(HDFSSinkPhysicalOperator.HDFS_SINK_FILE_PATH, "/RESULT.csv");
 
         DataflowNodeProperties sink1 = new DataflowNodeProperties(
                 UUID.randomUUID(),

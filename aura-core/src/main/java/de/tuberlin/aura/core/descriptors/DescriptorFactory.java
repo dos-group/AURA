@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.descriptors;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import de.tuberlin.aura.core.common.utils.InetHelper;
 import de.tuberlin.aura.core.config.IConfig;
@@ -18,8 +19,20 @@ public final class DescriptorFactory {
 
     public static MachineDescriptor createMachineDescriptor(IConfig config) {
 
-        // Get the IP address of this node.
         InetAddress address = InetHelper.getIPAddress();
+
+        String hostName;
+
+        try {
+            hostName = address.getLocalHost().getHostName();
+
+//            String hostName3 = address.getHostName();
+//            String hostName2 = address.getCanonicalHostName();
+
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            throw new IllegalStateException("Could not resolve hostName", e);
+        }
 
         // Get information about the hardware of this machine.
         int dataPort = config.getInt("io.tcp.port");
@@ -37,6 +50,6 @@ public final class DescriptorFactory {
         // Construct a new hardware descriptor
         HardwareDescriptor hardware = new HardwareDescriptor(cpuCores, memoryMax, new HDDDescriptor(diskSize));
         // Construct a new machine descriptor
-        return new MachineDescriptor(address, dataPort, controlPort, hardware);
+        return new MachineDescriptor(address, hostName, dataPort, controlPort, hardware);
     }
 }

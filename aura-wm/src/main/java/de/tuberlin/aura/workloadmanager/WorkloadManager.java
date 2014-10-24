@@ -106,7 +106,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         // Initialize IOManager.
         this.ioManager = new IOManager(this.machineDescriptor, null, config.getConfig("wm.io"));
 
-        // Register EventHandler (acts as an Dispatcher) for TaskManager state updates.
+        // Register EventHandler (acts as an Dispatcher) for TaskManager internalState updates.
         ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_REMOTE_TASK_STATE_UPDATE, new IEventHandler() {
 
             @Override
@@ -144,13 +144,6 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         this.infrastructureManager = new InfrastructureManager(this, zkServer, machineDescriptor);
         // Initialize InfrastructureManager.
         this.environmentManager = new DistributedEnvironment();
-
-        /*Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                infrastructureManager.shutdownInfrastructureManager();
-            }
-        });*/
     }
 
     // ---------------------------------------------------
@@ -217,7 +210,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
             final TopologyController topologyController = registeredTopologies.remove(topologyID);
 
             if (!topologyController.getTopologyFSM().isInFinalState()) {
-                throw new IllegalArgumentException("topology " + topologyID + " is not in final state");
+                throw new IllegalArgumentException("topology " + topologyID + " is not in final internalState");
                 //topologyController.cancelTopology(); // TODO: Not implemented yet!
             }
 
@@ -261,6 +254,20 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     }
 
     @Override
+    public void eraseDataset(final UUID datasetID) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
+
+        final Topology.DatasetNode dataset = environmentManager.getDataset(datasetID);
+        for (final Topology.ExecutionNode en : dataset.getExecutionNodes()) {
+            final IWM2TMProtocol tmProtocol =
+                    rpcManager.getRPCProtocolProxy(IWM2TMProtocol.class, en.getNodeDescriptor().getMachineDescriptor());
+            tmProtocol.eraseDataset(en.getNodeDescriptor().taskID);
+        }
+    }
+
+    @Override
     public void assignDataset(final UUID dstDatasetID, final UUID srcDatasetID) {
         // sanity check.
         if (dstDatasetID == null)
@@ -300,7 +307,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     public InputSplit requestNextInputSplit(final UUID topologyID, final UUID taskID, int sequenceNumber) {
         final AuraTopology topology = this.registeredTopologies.get(topologyID).getTopology();
         final Topology.ExecutionNode exNode = topology.executionNodeMap.get(taskID);
-        return infrastructureManager.getInputSplitFromHDFSSource(exNode);
+        return infrastructureManager.getNextInputSplitForHDFSSource(exNode);
     }
 
     @Override

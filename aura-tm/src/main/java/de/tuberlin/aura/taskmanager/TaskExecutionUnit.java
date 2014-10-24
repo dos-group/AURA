@@ -80,7 +80,11 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         this.isExecutionUnitRunning = new AtomicBoolean(false);
     }
 
-    // ---------------------------------------------------
+    public Thread getExecutorThread() {
+        return executorThread;
+    }
+
+// ---------------------------------------------------
     // Public Methods.
     // ---------------------------------------------------
 
@@ -133,6 +137,10 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         return executionUnitID;
     }
 
+    public void eraseDataset() {
+        isExecutingDataset = false;
+    }
+
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
@@ -150,9 +158,11 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
                         try {
                             runtime = taskQueue.take();
-                            LOG.info("Execution Unit {} prepares execution of taskmanager {}",
+
+                            LOG.info("EXECUTION UNIT {} PREPARES EXECUTION OF TASK {}",
                                     TaskExecutionUnit.this.executionUnitID,
                                     runtime.getNodeDescriptor().taskID);
+
                         } catch (InterruptedException e) {
                             throw new IllegalStateException(e);
                         }
@@ -226,11 +236,11 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
                         // ----------------------------------------------
 
-                        if (((DatasetDriver2)runtime.getInvokeable()).type == AbstractDataset.DatasetType.DATASET_ITERATION_HEAD_STATE)
-                            ((DatasetDriver2)runtime.getInvokeable()).state = DatasetDriver2.DatasetState.DATASET_ITERATION_STATE;
+                        if (((DatasetDriver2)runtime.getInvokeable()).datasetType == AbstractDataset.DatasetType.DATASET_ITERATION_HEAD_STATE)
+                            ((DatasetDriver2)runtime.getInvokeable()).internalState = DatasetDriver2.DatasetInternalState.DATASET_INTERNAL_STATE_ITERATION;
 
-                        else if (((DatasetDriver2)runtime.getInvokeable()).type == AbstractDataset.DatasetType.DATASET_ITERATION_TAIL_STATE)
-                            ((DatasetDriver2)runtime.getInvokeable()).state = DatasetDriver2.DatasetState.DATASET_EMPTY;
+                        else if (((DatasetDriver2)runtime.getInvokeable()).datasetType == AbstractDataset.DatasetType.DATASET_ITERATION_TAIL_STATE)
+                            ((DatasetDriver2)runtime.getInvokeable()).internalState = DatasetDriver2.DatasetInternalState.DATASET_INTERNAL_STATE_EMPTY;
 
                         // ----------------------------------------------
 

@@ -59,6 +59,8 @@ public final class PhysicalOperatorFactory {
                 return new SortPhysicalOperator<>(context, inputOp1);
             case FOLD_OPERATOR:
                 return new FoldPhysicalOperator(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object>>) udfType));
+            case HASH_FOLD_OPERATOR:
+                return new HashBasedFoldPhysicalOperator<>(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object>>) udfType));
             case REDUCE_OPERATOR:
                 break;
             // ---------------------------------------------------
@@ -159,6 +161,11 @@ public final class PhysicalOperatorFactory {
                 }
                 case FOLD_OPERATOR: {
                     inputOp1 = new FoldPhysicalOperator(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object, Object>>) udfType));
+                    inputOp1.setOperatorNum(operatorNum);
+                    break;
+                }
+                case HASH_FOLD_OPERATOR: {
+                    inputOp1 = new HashBasedFoldPhysicalOperator(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object, Object>>) udfType));
                     inputOp1.setOperatorNum(operatorNum);
                     break;
                 }

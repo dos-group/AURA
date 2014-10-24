@@ -386,7 +386,7 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
             @Override
             public void stateAction(TaskState previousState, TaskTransition transition, TaskState state) {
-                throw new IllegalStateException("Task " + nodeDescriptor.name + " [" + nodeDescriptor.taskID + "] from state " + previousState
+                throw new IllegalStateException("Task " + nodeDescriptor.name + " [" + nodeDescriptor.taskID + "] from internalState " + previousState
                         + " to " + state + " is not defined  [" + transition.toString() + "]");
             }
         });

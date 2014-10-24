@@ -21,6 +21,8 @@ public interface IClientWMProtocol {
 
     public abstract <E> void broadcastDataset(final UUID datasetID, final Collection<E> dataset);
 
+    public abstract void eraseDataset(final UUID datasetID);
+
     public abstract void assignDataset(final UUID dstDatasetID, final UUID srcDatasetID);
 
     //public abstract void shutdownWorkloadManager();

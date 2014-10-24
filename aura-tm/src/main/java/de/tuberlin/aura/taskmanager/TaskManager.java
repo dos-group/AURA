@@ -190,6 +190,25 @@ public final class TaskManager implements ITaskManager {
     }
 
     @Override
+    public void eraseDataset(final UUID taskID) {
+        // sanity check.
+        if (taskID == null)
+            throw new IllegalArgumentException("taskID == null");
+
+        final ITaskRuntime runtime = deployedTasks.get(taskID);
+        if (runtime == null)
+            throw new IllegalStateException("RuntimeEnv is not found");
+
+        if (runtime.getInvokeable() instanceof DatasetDriver2) {
+
+            getTaskExecutionManager().getExecutionUnitByTaskID(taskID).eraseDataset();
+            getTaskExecutionManager().getExecutionUnitByTaskID(taskID).getExecutorThread().interrupt();
+
+        } else
+            throw new IllegalStateException("task id " + taskID + " is not a dataset");
+    }
+
+    @Override
     public void uninstallTask(final UUID taskID) {
         // sanity check.
         if (taskID == null)

@@ -1,16 +1,24 @@
 package de.tuberlin.aura.core.filesystem;
 
-import de.tuberlin.aura.core.topology.Topology;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import de.tuberlin.aura.core.topology.Topology;
 
 public final class LocatableInputSplitAssigner implements InputSplitAssigner {
 
+    // ---------------------------------------------------
+    // Constants.
+    // ---------------------------------------------------
+
     private static final Logger LOG = LoggerFactory.getLogger(LocatableInputSplitAssigner.class);
+
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
 
     private final Set<FileInputSplit> unassigned = new HashSet<>();
 
@@ -20,7 +28,9 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
 
     private int remoteAssignments;		// lock protected by the unassigned set lock
 
-    // --------------------------------------------------------------------------------------------
+    // ---------------------------------------------------
+    // Constructors.
+    // ---------------------------------------------------
 
     public LocatableInputSplitAssigner(Collection<FileInputSplit> splits) {
         this.unassigned.addAll(splits);
@@ -30,7 +40,14 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
         Collections.addAll(this.unassigned, splits);
     }
 
-    // --------------------------------------------------------------------------------------------
+    // ---------------------------------------------------
+    // Methods.
+    // ---------------------------------------------------
+
+    @Override
+    public InputSplit getNextInputSplit(Topology.ExecutionNode exNode) {
+        return getNextInputSplit(exNode.getNodeDescriptor().getMachineDescriptor().hostName);
+    }
 
     public InputSplit getNextInputSplit(String host) {
         // for a null host, we return an arbitrary split
@@ -156,18 +173,4 @@ public final class LocatableInputSplitAssigner implements InputSplitAssigner {
         return false;
     }
 
-    public int getNumberOfLocalAssignments() {
-        return localAssignments;
-    }
-
-    public int getNumberOfRemoteAssignments() {
-        return remoteAssignments;
-    }
-
-    // -------------------------------------------------------------------------------------------
-
-    @Override
-    public InputSplit getNextInputSplit(Topology.ExecutionNode exNode) {
-        return getNextInputSplit(exNode.getNodeDescriptor().getMachineDescriptor().address.getHostAddress());
-    }
 }

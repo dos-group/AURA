@@ -25,4 +25,8 @@ public interface ITaskExecutionUnit {
     public abstract IAllocator getInputAllocator();
 
     public abstract IAllocator getOutputAllocator();
+
+    public abstract Thread getExecutorThread();
+
+    public abstract void eraseDataset();
 }

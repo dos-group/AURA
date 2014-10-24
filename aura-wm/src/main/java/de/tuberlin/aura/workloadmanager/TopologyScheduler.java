@@ -11,6 +11,7 @@ import de.tuberlin.aura.core.topology.Topology.TopologyBreadthFirstTraverser;
 import de.tuberlin.aura.core.topology.TopologyStates.TopologyTransition;
 import de.tuberlin.aura.workloadmanager.spi.IDistributedEnvironment;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,14 +89,14 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
 
                 } else {
 
-                    if (element.propertiesList.get(0).type == DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE) {
+                    if (element.isHDFSSource()) {
                         infrastructureManager.registerHDFSSource(element);
                     }
 
                     for (final ExecutionNode en : element.getExecutionNodes()) {
 
                         if (!en.logicalNode.isAlreadyDeployed) {
-                            en.getNodeDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
+                            en.getNodeDescriptor().setMachineDescriptor(infrastructureManager.getNextMachineForTask(element));
                         }
 
                         LOG.debug(en.getNodeDescriptor().getMachineDescriptor().address.toString()

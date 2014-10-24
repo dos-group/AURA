@@ -92,7 +92,7 @@ public class TopologyParallelizer extends AssemblyPhase<AuraTopology, AuraTopolo
                 if (element.isAlreadyDeployed) {
 
                     for(final ExecutionNode en : element.getExecutionNodes()) {
-                        // Reset the task manager state.
+                        // Reset the task manager internalState.
                         en.setState(TaskStates.TaskState.TASK_STATE_CREATED);
                         executionNodeMap.put(en.getNodeDescriptor().taskID, en);
                     }

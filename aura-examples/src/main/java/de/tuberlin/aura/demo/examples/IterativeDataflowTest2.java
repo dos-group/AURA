@@ -26,7 +26,7 @@ public final class IterativeDataflowTest2 {
     // UDFs.
     // ---------------------------------------------------
 
-    public static final int COUNT = 1000000;
+    public static final int COUNT = 10000;
 
     public static final class Source1 extends SourceFunction<Tuple2<Integer, String>> {
 

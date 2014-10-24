@@ -147,9 +147,9 @@
                                 <dataSet>
                                     <data>
                                         <src>${basedir}/src/deb/bin/workmanager</src>
-                                        <type>file</type>
+                                        <datasetType>file</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/etc/init.d</prefix>
                                             <user>root</user>
                                             <group>root</group>
@@ -158,9 +158,9 @@
                                     </data>
                                     <data>
                                         <src>${basedir}/src/deb/bin/taskmanager</src>
-                                        <type>file</type>
+                                        <datasetType>file</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/etc/init.d</prefix>
                                             <user>root</user>
                                             <group>root</group>
@@ -169,9 +169,9 @@
                                     </data>
                                     <data>
                                         <src>${basedir}/src/deb/bin/webclient</src>
-                                        <type>file</type>
+                                        <datasetType>file</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/etc/init.d</prefix>
                                             <user>root</user>
                                             <group>root</group>
@@ -180,9 +180,9 @@
                                     </data>
                                     <data>
                                         <src>${project.build.directory}/${project.artifactId}-${project.version}-bin/aura-${project.version}/bin</src>
-                                        <type>directory</type>
+                                        <datasetType>directory</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/usr/share/${project.artifactId}/bin</prefix>
                                             <user>root</user>
                                             <group>root</group>
@@ -191,9 +191,9 @@
                                     </data>
                                     <data>
                                         <src>${project.build.directory}/${project.artifactId}-${project.version}-bin/aura-${project.version}/examples</src>
-                                        <type>directory</type>
+                                        <datasetType>directory</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/usr/share/${project.artifactId}/examples</prefix>
                                             <user>root</user>
                                             <group>root</group>
@@ -201,9 +201,9 @@
                                     </data>
                                     <data>
                                         <src>${project.build.directory}/${project.artifactId}-${project.version}-bin/aura-${project.version}/lib</src>
-                                        <type>directory</type>
+                                        <datasetType>directory</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/usr/share/${project.artifactId}/lib</prefix>
                                             <user>root</user>
                                             <group>root</group>
@@ -211,9 +211,9 @@
                                     </data>
                                     <data>
                                         <src>${project.build.directory}/${project.artifactId}-${project.version}-bin/aura-${project.version}/lib_clients</src>
-                                        <type>directory</type>
+                                        <datasetType>directory</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/usr/share/${project.artifactId}/lib_clients</prefix>
                                             <user>root</user>
                                             <group>root</group>
@@ -221,9 +221,9 @@
                                     </data>
                                     <data>
                                         <src>${project.build.directory}/${project.artifactId}-${project.version}-bin/aura-${project.version}/resources</src>
-                                        <type>directory</type>
+                                        <datasetType>directory</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/usr/share/${project.artifactId}/resources</prefix>
                                             <user>root</user>
                                             <group>root</group>
@@ -231,28 +231,28 @@
                                     </data>
                                     <data>
                                         <src>${project.build.directory}/${project.artifactId}-${project.version}-bin/aura-${project.version}/conf</src>
-                                        <type>directory</type>
+                                        <datasetType>directory</datasetType>
                                         <mapper>
-                                            <type>perm</type>
+                                            <datasetType>perm</datasetType>
                                             <prefix>/etc/${project.artifactId}/conf</prefix>
                                             <user>root</user>
                                             <group>root</group>
                                         </mapper>
                                     </data>
                                     <data>
-                                        <type>template</type>
+                                        <datasetType>template</datasetType>
                                         <paths>
                                             <path>/var/log/${project.artifactId}</path>
                                         </paths>
                                     </data>
                                     <data>
-                                        <type>link</type>
+                                        <datasetType>link</datasetType>
                                         <linkName>/usr/share/${project.artifactId}/conf</linkName>
                                         <linkTarget>/etc/${project.artifactId}/conf</linkTarget>
                                         <symlink>true</symlink>
                                     </data>
                                     <data>
-                                        <type>link</type>
+                                        <datasetType>link</datasetType>
                                         <linkName>/usr/share/${project.artifactId}/log</linkName>
                                         <linkTarget>/var/log/${project.artifactId}</linkTarget>
                                         <symlink>true</symlink>

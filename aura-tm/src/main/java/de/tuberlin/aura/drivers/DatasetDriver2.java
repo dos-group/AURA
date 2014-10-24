@@ -6,6 +6,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
+import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.dataflow.datasets.DatasetFactory;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
@@ -14,8 +15,6 @@ import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.RecordReader;
 import de.tuberlin.aura.core.record.RecordWriter;
-import de.tuberlin.aura.core.record.tuples.Tuple4;
-import de.tuberlin.aura.core.record.tuples.Tuple5;
 import de.tuberlin.aura.core.taskmanager.common.TaskStates;
 import de.tuberlin.aura.core.taskmanager.spi.AbstractInvokeable;
 import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
@@ -27,13 +26,45 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
     // ---------------------------------------------------
 
-    public enum DatasetState {
+    private static final class OutputGateBindingProperties {
 
-        DATASET_EMPTY,
+        public OutputGateBindingProperties(final UUID topologyID,
+                                           final Partitioner.PartitioningStrategy partitioningStrategy,
+                                           final int[][] partitioningKeys,
+                                           final boolean isReExecutable,
+                                           final AbstractDataset.DatasetType datasetType) {
 
-        DATASET_FILLED,
+            this.topologyID = topologyID;
 
-        DATASET_ITERATION_STATE
+            this.partitioningStrategy = partitioningStrategy;
+
+            this.partitioningKeys = partitioningKeys;
+
+            this.isReExecutable = isReExecutable;
+
+            this.datasetType = datasetType;
+        }
+
+        public final UUID topologyID;
+
+        public final Partitioner.PartitioningStrategy partitioningStrategy;
+
+        public final int[][] partitioningKeys;
+
+        public final boolean isReExecutable;
+
+        public final AbstractDataset.DatasetType datasetType;
+    }
+
+    // ---------------------------------------------------
+
+    public enum DatasetInternalState {
+
+        DATASET_INTERNAL_STATE_EMPTY,
+
+        DATASET_INTERNAL_STATE_FILLED,
+
+        DATASET_INTERNAL_STATE_ITERATION
     }
 
     // ---------------------------------------------------
@@ -46,21 +77,19 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
     private final AbstractDataset<Object> dataset;
 
-    private final BlockingQueue<List<Descriptors.AbstractNodeDescriptor>> bindingRequest;
-
-    private final Queue<Tuple5<UUID, Partitioner.PartitioningStrategy, int[][], Boolean, AbstractDataset.DatasetType>> requestProperties;
+    private final BlockingQueue<Pair<List<Descriptors.AbstractNodeDescriptor>,OutputGateBindingProperties>> bindingRequest;
 
     // ---------------------------------------------------
 
-    public DatasetState state = DatasetState.DATASET_EMPTY;
+    public DatasetInternalState internalState = DatasetInternalState.DATASET_INTERNAL_STATE_EMPTY;
 
-    public AbstractDataset.DatasetType type = AbstractDataset.DatasetType.UNKNOWN;
+    public AbstractDataset.DatasetType datasetType = AbstractDataset.DatasetType.UNKNOWN;
 
     private boolean hasInitialBinding;
 
     private IRecordWriter writer;
 
-    private List<Descriptors.AbstractNodeDescriptor> currentBinding = null;
+    private Pair<List<Descriptors.AbstractNodeDescriptor>,OutputGateBindingProperties> currentRequest = null;
 
     // ---------------------------------------------------
     // Constructors.
@@ -78,29 +107,27 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
         this.bindingRequest = new LinkedBlockingQueue<>();
 
-        this.requestProperties = new LinkedList<>();
-
-        this.type = nodeDescriptor.datasetType;
+        this.datasetType = nodeDescriptor.datasetType;
 
         if (!bindingDescriptor.outputGateBindings.isEmpty()) {
 
-            bindingRequest.addAll(bindingDescriptor.outputGateBindings);
+            synchronized (this) {
 
-            if (nodeDescriptor.name.equals("Dataset2")) {
-                System.out.println();
+                final OutputGateBindingProperties requestProperties = new OutputGateBindingProperties(
+                        nodeDescriptor.topologyID,
+                        nodeDescriptor.propertiesList.get(0).strategy,
+                        nodeDescriptor.propertiesList.get(0).partitionKeyIndices,
+                        nodeDescriptor.isReExecutable,
+                        nodeDescriptor.datasetType
+                );
+
+                final Pair<List<Descriptors.AbstractNodeDescriptor>, OutputGateBindingProperties> request =
+                        new Pair<>(bindingDescriptor.outputGateBindings.get(0), requestProperties);
+
+                bindingRequest.add(request);
+
+                hasInitialBinding = true;
             }
-
-            requestProperties.add(
-                    new Tuple5<>(
-                            nodeDescriptor.topologyID,
-                            nodeDescriptor.propertiesList.get(0).strategy,
-                            nodeDescriptor.propertiesList.get(0).partitionKeyIndices,
-                            nodeDescriptor.isReExecutable,
-                            nodeDescriptor.datasetType
-                    )
-            );
-
-            hasInitialBinding = true;
         }
     }
 
@@ -121,23 +148,23 @@ public class DatasetDriver2 extends AbstractInvokeable {
     @Override
     public void run() throws Throwable {
 
-        if (state == DatasetState.DATASET_EMPTY) {
+        if (internalState == DatasetInternalState.DATASET_INTERNAL_STATE_EMPTY) {
 
             dataset.clear();
 
             produceDataset(0);
 
-            state = DatasetState.DATASET_FILLED;
+            internalState = DatasetInternalState.DATASET_INTERNAL_STATE_FILLED;
 
-        } else if (state == DatasetState.DATASET_FILLED) {
+        } else if (internalState == DatasetInternalState.DATASET_INTERNAL_STATE_FILLED) {
 
-            waitForOutputBinding(0);
+            if (waitForOutputBinding(0) != null) {
+                consumeDataset();
+            }
 
-            consumeDataset();
+        } else if (internalState == DatasetInternalState.DATASET_INTERNAL_STATE_ITERATION) {
 
-        } else if (state == DatasetState.DATASET_ITERATION_STATE) {
-
-            final CountDownLatch executeLatch = new CountDownLatch(1);
+            final CountDownLatch consumeDataLatch = new CountDownLatch(1);
 
             runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
                     new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
@@ -147,12 +174,12 @@ public class DatasetDriver2 extends AbstractInvokeable {
                                                 TaskStates.TaskTransition transition,
                                                 TaskStates.TaskState state) {
 
-                            executeLatch.countDown();
+                            consumeDataLatch.countDown();
                         }
                     });
 
             try {
-                executeLatch.await();
+                consumeDataLatch.await();
             } catch (InterruptedException e) {
                 LOG.error(e.getLocalizedMessage(), e);
             }
@@ -190,10 +217,24 @@ public class DatasetDriver2 extends AbstractInvokeable {
             throw new IllegalArgumentException("partitioningStrategy == null");
         if(partitioningKeys == null)
             throw new IllegalArgumentException("partitionKeyIndices == null");
+        if(datasetType == null)
+            throw new IllegalArgumentException("datasetType == null");
 
-        requestProperties.add(new Tuple5<>(topologyID, partitioningStrategy, partitioningKeys, isReExecutable, datasetType));
+        synchronized (this) {
 
-        bindingRequest.addAll(outputBinding);
+            final OutputGateBindingProperties requestProperties = new OutputGateBindingProperties(
+                    topologyID,
+                    partitioningStrategy,
+                    partitioningKeys,
+                    isReExecutable,
+                    datasetType
+            );
+
+            final Pair<List<Descriptors.AbstractNodeDescriptor>,OutputGateBindingProperties> request =
+                    new Pair<>(outputBinding.get(0), requestProperties);
+
+            bindingRequest.add(request);
+        }
     }
 
     public Collection<Object> getData() {
@@ -235,7 +276,7 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
                                 runtime.getBindingDescriptor().outputGateBindings.clear();
 
-                                runtime.getTaskStateMachine().reset();
+                                //runtime.getTaskStateMachine().reset();
                             }
                         }
                     }
@@ -243,29 +284,31 @@ public class DatasetDriver2 extends AbstractInvokeable {
         }
     }
 
-    private void waitForOutputBinding(final int gateIndex) {
+    private List<Descriptors.AbstractNodeDescriptor> waitForOutputBinding(final int gateIndex) {
 
         try {
 
-            currentBinding = bindingRequest.take();
+            currentRequest = bindingRequest.take();
 
         } catch(InterruptedException e) {
             LOG.info(e.getMessage());
         }
 
-        if (currentBinding != null) {
+        if (currentRequest != null) {
 
-            final Tuple5<UUID, Partitioner.PartitioningStrategy, int[][], Boolean, AbstractDataset.DatasetType> gateRequestProperties = requestProperties.poll();
+            runtime.getTaskStateMachine().reset();
 
-            runtime.getNodeDescriptor().topologyID = gateRequestProperties._1;
+            final OutputGateBindingProperties requestProperties = currentRequest.getSecond();
 
-            final Partitioner.PartitioningStrategy partitioningStrategy = gateRequestProperties._2;
+            runtime.getNodeDescriptor().topologyID = requestProperties.topologyID;
 
-            final int[][] partitioningKey = gateRequestProperties._3;
+            final Partitioner.PartitioningStrategy partitioningStrategy = requestProperties.partitioningStrategy;
 
-            runtime.getNodeDescriptor().isReExecutable = gateRequestProperties._4;
+            final int[][] partitioningKey = requestProperties.partitioningKeys;
 
-            type = gateRequestProperties._5;
+            runtime.getNodeDescriptor().isReExecutable = requestProperties.isReExecutable;
+
+            datasetType = requestProperties.datasetType;
 
             final Partitioner.IPartitioner partitioner =
                     Partitioner.PartitionerFactory.createPartitioner(
@@ -281,7 +324,7 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
                 final List<List<Descriptors.AbstractNodeDescriptor>> ob = new ArrayList<>();
 
-                ob.add(currentBinding);
+                ob.add(currentRequest.getFirst());
 
                 runtime.getBindingDescriptor().addOutputGateBinding(ob);
 
@@ -313,10 +356,9 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
             writer = new RecordWriter(runtime, nodeDescriptor.propertiesList.get(0).outputType, gateIndex, partitioner);
 
-        } else {
-
-            throw new IllegalStateException("no output binding");
-        }
+            return currentRequest.getFirst();
+        } else
+            return null;
     }
 
     private void consumeDataset() {
@@ -331,11 +373,9 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
     private void releaseOutputBinding(final int gateIndex) {
 
-        if (currentBinding != null) {
+        if (currentRequest != null) {
             producer.done(gateIndex);
         }
-
-        //final CountDownLatch awaitFinishTransition = new CountDownLatch(2);
 
         runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
                 new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
@@ -346,28 +386,16 @@ public class DatasetDriver2 extends AbstractInvokeable {
                                             TaskStates.TaskState state) {
 
                         runtime.getBindingDescriptor().inputGateBindings.clear();
+
                         runtime.getBindingDescriptor().outputGateBindings.clear();
-                        runtime.getTaskStateMachine().reset();
+
+                        //runtime.getTaskStateMachine().reset();
 
                         hasInitialBinding = false;
                     }
                 });
 
-        state = DatasetState.DATASET_FILLED;
-
-        /*runtime.addEventListener(IOEvents.DataEventType.DATA_EVENT_OUTPUT_GATE_CLOSE, new IEventHandler() {
-
-            @Override
-            public void handleEvent(Event event) {
-                awaitFinishTransition.countDown();
-            }
-        });
-
-        try {
-            awaitFinishTransition.await();
-        } catch (InterruptedException e) {
-            LOG.info(e.getMessage());
-        }*/
+        internalState = DatasetInternalState.DATASET_INTERNAL_STATE_FILLED;
     }
 
     public AbstractDataset<Object> getDataset() {

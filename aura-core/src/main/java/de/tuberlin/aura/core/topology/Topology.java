@@ -558,6 +558,11 @@ public class Topology {
             return Collections.unmodifiableList(new ArrayList<>(executionNodes.values()));
         }
 
+        public boolean isHDFSSource() {
+            return this.propertiesList != null && this.propertiesList.get(0) != null &&
+                    this.propertiesList.get(0).type == DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE;
+        }
+
         @Override
         public String toString() {
             return (new StringBuilder()).append("Node = {").append(" name = " + name + ", ").append(" }").toString();
