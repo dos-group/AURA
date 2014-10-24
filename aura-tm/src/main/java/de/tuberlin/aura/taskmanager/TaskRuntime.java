@@ -188,10 +188,6 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
 
         try {
 
-            //if (nodeDescriptor.name.equals("Dataset1")) {
-            //    System.out.println();
-            //}
-
             if (invokeableInitialization) {
                 invokeable.create();
                 invokeableInitialization = false;

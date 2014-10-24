@@ -82,8 +82,8 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
                         throw new IllegalStateException("primary dataset not found");
 
                     for (int i = 0; i <  coLocatedDataset.getExecutionNodes().size(); ++i) {
-                        final ExecutionNode primaryEN = coLocatedDataset.getExecutionNodes().get(i);
-                        element.getExecutionNodes().get(i).getNodeDescriptor().setMachineDescriptor(primaryEN.getNodeDescriptor().getMachineDescriptor());
+                        final ExecutionNode coLocatedEN = coLocatedDataset.getExecutionNodes().get(i);
+                        element.getExecutionNodes().get(i).getNodeDescriptor().setMachineDescriptor(coLocatedEN.getNodeDescriptor().getMachineDescriptor());
                     }
 
                 } else {
@@ -93,9 +93,11 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
                     }
 
                     for (final ExecutionNode en : element.getExecutionNodes()) {
+
                         if (!en.logicalNode.isAlreadyDeployed) {
                             en.getNodeDescriptor().setMachineDescriptor(infrastructureManager.getNextMachine());
                         }
+
                         LOG.debug(en.getNodeDescriptor().getMachineDescriptor().address.toString()
                                 + " -> " + en.getNodeDescriptor().name + "_"
                                 + en.getNodeDescriptor().taskIndex);

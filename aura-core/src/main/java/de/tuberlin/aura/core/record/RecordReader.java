@@ -125,6 +125,11 @@ public class RecordReader implements IRecordReader {
             }
 
             inputStream.nextBuf();
+            // stream is exhausted
+            if (isFinished) {
+                return null;
+            }
+
             kryoInput.setLimit(0);
             kryoInput.rewind();
             return readObject();

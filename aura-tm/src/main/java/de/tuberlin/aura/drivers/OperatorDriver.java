@@ -164,12 +164,12 @@ public final class OperatorDriver extends AbstractInvokeable {
 
             int lastOperatorNum = nodeDescriptor.propertiesList.size() - 1;
 
-            final Partitioner.IPartitioner partitioner =
+            final Partitioner.IPartitioner partitioner = (nodeDescriptor.propertiesList.get(lastOperatorNum).strategy != null) ?
                     Partitioner.PartitionerFactory.createPartitioner(
                             nodeDescriptor.propertiesList.get(lastOperatorNum).strategy,
                             nodeDescriptor.propertiesList.get(lastOperatorNum).outputType,
                             nodeDescriptor.propertiesList.get(lastOperatorNum).partitionKeyIndices
-                    );
+                    ) : null;
 
             for (int i = 0; i <  runtime.getBindingDescriptor().outputGateBindings.size(); ++i) {
                 final RecordWriter writer = new RecordWriter(runtime, nodeDescriptor.propertiesList.get(lastOperatorNum).outputType, i, partitioner);
@@ -187,8 +187,6 @@ public final class OperatorDriver extends AbstractInvokeable {
 
         for (final IRecordWriter writer : writers)
             writer.begin();
-
-
 
         for (final DataflowNodeProperties properties : nodeDescriptor.propertiesList) {
             if (properties.broadcastVars != null) {

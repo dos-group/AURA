@@ -26,7 +26,7 @@ public final class IterativeDataflowTest2 {
     // UDFs.
     // ---------------------------------------------------
 
-    public static final int COUNT = 5;
+    public static final int COUNT = 1000000;
 
     public static final class Source1 extends SourceFunction<Tuple2<Integer, String>> {
 
@@ -96,7 +96,7 @@ public final class IterativeDataflowTest2 {
                 dataset1UID,
                 DataflowNodeProperties.DataflowNodeType.DATASET_REFERENCE,
                 "Dataset1",
-                1,
+                4,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -119,7 +119,7 @@ public final class IterativeDataflowTest2 {
                 UUID.randomUUID(),
                 DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
                 "Map1",
-                1,
+                4,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -144,7 +144,7 @@ public final class IterativeDataflowTest2 {
                 dataset2UID,
                 DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
                 "Dataset2",
-                1,
+                4,
                 1,
                 new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -214,7 +214,7 @@ public final class IterativeDataflowTest2 {
         final Topology.AuraTopology topology2 = atb2.build("JOB2", true);
         ac.submitTopology(topology2, null);
 
-        final int ITERATION_COUNT = 5;
+        final int ITERATION_COUNT = 1500;
 
         for (int i = 0; i < ITERATION_COUNT; ++i) {
 

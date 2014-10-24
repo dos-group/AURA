@@ -347,15 +347,27 @@ public final class BufferStream {
             flush();
         }
 
+        //int counter = 0;
+
         public int nextBuf() {
 
             if (buf != null && bufferOutput != null)
                 bufferOutput.put(buf);
 
+            //if (Thread.currentThread().getName().equals("Execution-Unit-1->Join1") && counter == 94)
+            //    System.out.println("STOP");
+
             buf = bufferInput.get();
 
-            if (buf == null)
+            //if (Thread.currentThread().getName().equals("Execution-Unit-1->Join1")) {
+            //    counter++;
+            //}
+
+            if (buf == null) {
+                //if (Thread.currentThread().getName().equals("Execution-Unit-1->Join1"))
+                //    System.out.println(counter);
                 return -1;
+            }
 
             pos = buf.baseOffset;
 

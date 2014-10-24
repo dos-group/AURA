@@ -4,13 +4,11 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
@@ -150,9 +148,9 @@ public final class RPCManager implements IRPCManager{
 
         private final IIOManager ioManager;
 
-        private final static Map<UUID, CountDownLatch> callerTable = new HashMap<>();
+        private final static Map<UUID, CountDownLatch> callerTable = Collections.synchronizedMap(new HashMap<UUID, CountDownLatch>());
 
-        private final static Map<UUID, Object> callerResultTable = new HashMap<>();
+        private final static Map<UUID, Object> callerResultTable = Collections.synchronizedMap(new HashMap<UUID, Object>());
 
         public ProtocolCallerProxy(long responseTimeout, final UUID dstMachineID, final IIOManager ioManager) {
             // sanity check.
@@ -239,7 +237,6 @@ public final class RPCManager implements IRPCManager{
                 throw new IllegalArgumentException("callUID == null");
 
             callerResultTable.put(callUID, result);
-            // final CountDownLatch cdl = RPCManager.ProtocolCallerProxy.callerTable.get(callUID);
             final CountDownLatch cdl = callerTable.get(callUID);
             cdl.countDown();
         }
@@ -266,19 +263,15 @@ public final class RPCManager implements IRPCManager{
                 return new RPCCalleeResponseEvent(callUID, new IllegalStateException("found no protocol implementation"));
             }
 
-            //synchronized (protocolImplementation) { // TODO: Synchronization on local variable 'protocolImplementation'
-
-                // Maybe we could do some caching of method signatures
-                // on the callee site for frequent repeated calls...
-
-                try {
-                    final Method method = protocolImplementation.getClass().getMethod(methodInfo.methodName, methodInfo.argumentTypes);
-                    final Object result = method.invoke(protocolImplementation, methodInfo.arguments);
-                    return new RPCCalleeResponseEvent(callUID, result);
-                } catch (Exception e) {
-                    return new RPCCalleeResponseEvent(callUID, e);
-                }
-            //}
+            // Maybe we could do some caching of method signatures
+            // on the callee site for frequent repeated calls...
+            try {
+                final Method method = protocolImplementation.getClass().getMethod(methodInfo.methodName, methodInfo.argumentTypes);
+                final Object result = method.invoke(protocolImplementation, methodInfo.arguments);
+                return new RPCCalleeResponseEvent(callUID, result);
+            } catch (Exception e) {
+                return new RPCCalleeResponseEvent(callUID, e);
+            }
         }
     }
 

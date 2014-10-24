@@ -432,7 +432,8 @@ public final class TopologyController extends EventDispatcher implements ITopolo
                             transitionUpdate.setPayload(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_CANCEL));
                             transitionUpdate.setTaskID(en.getNodeDescriptor().taskID);
                             transitionUpdate.setTopologyID(en.getNodeDescriptor().topologyID);
-                            if (en.getState().equals(TaskStates.TaskState.TASK_STATE_RUNNING)) {
+                            //if (en.getState().equals(TaskStates.TaskState.TASK_STATE_RUNNING)) {
+                            if (TaskStates.TaskState.TASK_STATE_RUNNING.equals(en.getState())) {
                                 workloadManager.getIOManager().sendEvent(en.getNodeDescriptor().getMachineDescriptor(), transitionUpdate);
                             }
                         }

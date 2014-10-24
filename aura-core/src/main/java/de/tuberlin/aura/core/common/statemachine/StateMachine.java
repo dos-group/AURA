@@ -12,6 +12,8 @@ public final class StateMachine {
     // Disallow instantiation.
     private StateMachine() {}
 
+    // --------------------------------------------------------------------------------------------
+
     public static final class FiniteStateMachineBuilder<S extends Enum<S>, T extends Enum<T>> {
 
         // ---------------------------------------------------
@@ -210,6 +212,8 @@ public final class StateMachine {
         }
     }
 
+    // --------------------------------------------------------------------------------------------
+
     public static final class FSMStateEvent<S, T> extends Event {
 
         // ---------------------------------------------------
@@ -255,10 +259,14 @@ public final class StateMachine {
         }
     }
 
+    // --------------------------------------------------------------------------------------------
+
     public static interface IFSMStateAction<S, T> {
 
         public abstract void stateAction(final S previousState, final T transition, final S state);
     }
+
+    // --------------------------------------------------------------------------------------------
 
     public static class FSMTransitionEvent<T extends Enum<T>> extends IOEvents.ControlIOEvent {
 
@@ -270,10 +278,14 @@ public final class StateMachine {
         }
     }
 
+    // --------------------------------------------------------------------------------------------
+
     public static interface IFSMTransitionConstraint<S extends Enum<S>, T extends Enum<T>> {
 
         public abstract void defineTransitionConstraint(final T transition, final FiniteStateMachine<S, T> stateMachine);
     }
+
+    // --------------------------------------------------------------------------------------------
 
     public static abstract class FSMTransitionConstraint2<S extends Enum<S>, T extends Enum<T>> implements IFSMTransitionConstraint<S, T> {
 
@@ -295,9 +307,6 @@ public final class StateMachine {
                 @Override
                 public void handleEvent(Event event) {
                     if (eval((FSMTransitionEvent<? extends Enum<?>>) event)) {
-
-                        // TODO:  HERE IS THE BUG !
-
                         stateMachine.dispatchEvent(new FSMTransitionEvent<>(hostTransition));
                     }
                 }
@@ -305,13 +314,15 @@ public final class StateMachine {
         }
     }
 
+    // --------------------------------------------------------------------------------------------
+
     public static final class FiniteStateMachine<S extends Enum<S>, T extends Enum<T>> extends EventDispatcher {
 
         // ---------------------------------------------------
         // Fields.
         // ---------------------------------------------------
 
-        private S currentState;
+        private volatile S currentState;
 
         private final Map<S, Map<T, S>> stateTransitionMtx;
 
@@ -477,15 +488,15 @@ public final class StateMachine {
             currentState = nextState;
         }
 
-        public boolean isInFinalState() {
+        public synchronized boolean isInFinalState() {
             return finalStates.contains(currentState);
         }
 
-        public void reset() {
+        public synchronized void reset() {
             currentState = initialState;
         }
 
-        public S getCurrentState() {
+        public synchronized S getCurrentState() {
             return currentState;
         }
     }

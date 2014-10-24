@@ -29,7 +29,6 @@ public class TestHelper {
         auraClient.ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, finishedHandler);
 
         handler.handleTopologyFinished(null);
-
         auraClient.awaitSubmissionResult(topologies.size());
 
         auraClient.ioManager.removeEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, handler);
