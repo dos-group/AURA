@@ -30,11 +30,9 @@ public final class DataflowNodeProperties implements Serializable {
 
         MAP_TUPLE_OPERATOR(InputArity.UNARY),
 
-        MAP_GROUP_OPERATOR(InputArity.UNARY),
-
         FLAT_MAP_TUPLE_OPERATOR(InputArity.UNARY),
 
-        FLAT_MAP_GROUP_OPERATOR(InputArity.UNARY),
+        MAP_GROUP_OPERATOR(InputArity.UNARY),
 
         FILTER_OPERATOR(InputArity.UNARY),
 
@@ -56,8 +54,6 @@ public final class DataflowNodeProperties implements Serializable {
 
         HASH_FOLD_OPERATOR(InputArity.UNARY),
 
-        REDUCE_OPERATOR(InputArity.UNARY),
-
         UDF_SOURCE(InputArity.NULLARY),
 
         HDFS_SOURCE(InputArity.NULLARY),
@@ -75,6 +71,10 @@ public final class DataflowNodeProperties implements Serializable {
         IMMUTABLE_DATASET(InputArity.DYNAMIC),
 
         MUTABLE_DATASET(InputArity.DYNAMIC),
+
+        // ---------------------------------------------------
+
+        DATASET_UPDATE_OPERATOR(InputArity.UNARY),
 
         // ---------------------------------------------------
 

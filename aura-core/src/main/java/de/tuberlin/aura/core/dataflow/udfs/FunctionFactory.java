@@ -91,4 +91,16 @@ public final class FunctionFactory {
             throw new IllegalStateException(e);
         }
     }
+
+    public static <I,O> UpdateFunction<I,O> createUpdateFunction(Class<UpdateFunction<I,O>> functionType) {
+        // sanity check.
+        if (functionType == null)
+            throw new IllegalArgumentException("functionType == null");
+
+        try {
+            return functionType.getConstructor().newInstance();
+        } catch(Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }

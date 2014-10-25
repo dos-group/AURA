@@ -56,6 +56,8 @@ public class MutableDataset<E> extends AbstractDataset<E> {
         data.put(keyFields, element);
     }
 
+    // TODO: add a contains(final E element) {}
+
     @Override
     public Collection<E> getData() {
         return data.values();

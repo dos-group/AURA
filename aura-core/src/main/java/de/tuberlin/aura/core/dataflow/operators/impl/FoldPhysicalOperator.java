@@ -48,7 +48,7 @@ public class FoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<
             return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
         }
 
-        FoldFunction<I,O> function = ((FoldFunction<I,O>) this.function);
+        FoldFunction<I,O> function = (FoldFunction<I,O>) this.function;
 
         O value = function.empty();
 
