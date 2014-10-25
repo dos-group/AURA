@@ -32,9 +32,6 @@ public class FileInputSplit implements InputSplit {
         this.length = length;
     }
 
-    public FileInputSplit() {
-    }
-
     // --------------------------------------------------------------------------------------------
 
     @Override

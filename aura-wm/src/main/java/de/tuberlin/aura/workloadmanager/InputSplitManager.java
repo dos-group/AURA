@@ -28,8 +28,6 @@ public class InputSplitManager implements Serializable {
 
     private final IWorkloadManager workloadManager;
 
-    private Map<UUID, List<FileInputSplit>> inputSplitMap;
-
     private Map<UUID, InputSplitAssigner> inputSplitAssignerMap;
 
     // ---------------------------------------------------
@@ -43,8 +41,6 @@ public class InputSplitManager implements Serializable {
 
         this.workloadManager = workloadManager;
 
-        this.inputSplitMap = new ConcurrentHashMap<>();
-
         this.inputSplitAssignerMap = new ConcurrentHashMap<>();
     }
 
@@ -52,7 +48,7 @@ public class InputSplitManager implements Serializable {
     // Public Methods.
     // ---------------------------------------------------
 
-    public void registerHDFSSource(final Topology.LogicalNode node) {
+    public List<InputSplit> registerHDFSSource(final Topology.LogicalNode node) {
         if (node == null)
             throw new IllegalArgumentException("node == null");
         if (node.propertiesList.get(0) == null)
@@ -68,21 +64,17 @@ public class InputSplitManager implements Serializable {
         conf.set("fs.defaultFS", workloadManager.getConfig().getString("wm.io.hdfs.hdfs_url"));
         inputFormat.configure(conf);
 
-        final List<FileInputSplit> inputSplits;
+        final InputSplit[] inputSplits;
         try {
-            inputSplits = Arrays.asList((FileInputSplit[]) inputFormat.createInputSplits(node.propertiesList.get(0).globalDOP));
+            inputSplits =  inputFormat.createInputSplits(node.propertiesList.get(0).globalDOP);
         } catch (IOException e) {
             throw new IllegalStateException(e);
         }
 
-        inputSplitMap.put(node.uid, inputSplits);
-
-        final InputSplitAssigner inputSplitAssigner = new LocatableInputSplitAssigner(inputSplits);
+        final InputSplitAssigner inputSplitAssigner = new LocatableInputSplitAssigner((FileInputSplit[]) inputSplits);
         inputSplitAssignerMap.put(node.uid, inputSplitAssigner);
-    }
 
-    public synchronized List<FileInputSplit> getAllInputSplitsForLogicalHDFSSource(final Topology.LogicalNode node) {
-        return inputSplitMap.get(node.uid);
+        return Arrays.asList(inputSplits);
     }
 
     public synchronized InputSplit getNextInputSplitForExecutionUnit(final Topology.ExecutionNode exNode) {

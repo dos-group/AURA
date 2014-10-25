@@ -79,7 +79,7 @@ public final class TopologyController extends EventDispatcher implements ITopolo
 
         assemblyPipeline.addPhase(new TopologyParallelizer(workloadManager.getEnvironmentManager(), config));
 
-        assemblyPipeline.addPhase(new TopologyScheduler(workloadManager.getInfrastructureManager()));
+        assemblyPipeline.addPhase(new TopologyScheduler(workloadManager.getInfrastructureManager(), config));
 
         assemblyPipeline.addPhase(new TopologyDeployer(workloadManager.getRPCManager()));
 

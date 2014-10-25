@@ -126,7 +126,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         rpcManager.registerRPCProtocol(this, ITM2WMProtocol.class);
 
         // Initialize InfrastructureManager.
-        this.infrastructureManager = new InfrastructureManager(this, zkServer, machineDescriptor);
+        this.infrastructureManager = new InfrastructureManager(this, zkServer, machineDescriptor, config);
         // Initialize InfrastructureManager.
         this.environmentManager = new DistributedEnvironment();
     }
@@ -196,8 +196,16 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         // Sanity check.
         if (topologyID == null)
             throw new IllegalArgumentException("topologyID == null");
-        if (registeredTopologies.remove(topologyID) == null)
+
+        TopologyController finishedTopologyController = registeredTopologies.remove(topologyID);
+
+        if (finishedTopologyController == null)
             throw new IllegalStateException("topologyID not found");
+
+
+        AuraTopology finishedTopology = finishedTopologyController.getTopology();
+
+        this.infrastructureManager.reclaimExecutionUnits(finishedTopology);
 
         for (final Set<UUID> assignedTopologies : registeredSessions.values()) {
             if (assignedTopologies.contains(topologyID))

@@ -6,6 +6,7 @@ import java.util.*;
 import de.tuberlin.aura.core.common.utils.IVisitable;
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.common.utils.Pair;
+import de.tuberlin.aura.core.dataflow.operators.base.AbstractPhysicalOperator;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.descriptors.Descriptors.AbstractNodeDescriptor;
 import de.tuberlin.aura.core.descriptors.Descriptors.NodeBindingDescriptor;
@@ -139,6 +140,26 @@ public class Topology {
                 throw new IllegalStateException("execution nodes already set");
 
             this.executionNodeMap = Collections.unmodifiableMap(executionNodeMap);
+        }
+
+        // ---------------------------------------------------
+        // Private Methods.
+        // ---------------------------------------------------
+
+        public List<LogicalNode> nodesFromSourceToSink() {
+
+            final List<LogicalNode> nodes = new ArrayList<>();
+
+            TopologyBreadthFirstTraverser.traverse(this, new IVisitor<LogicalNode>() {
+
+                @Override
+                public void visit(final LogicalNode element) {
+                    nodes.add(element);
+                }
+            });
+
+            return nodes;
+
         }
     }
 
@@ -596,6 +617,10 @@ public class Topology {
         public boolean isHDFSSource() {
             return this.propertiesList != null && this.propertiesList.get(0) != null &&
                     this.propertiesList.get(0).type == DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE;
+        }
+
+        public boolean hasCoLocationRequirements() {
+            return this.propertiesList.get(0).config != null && this.propertiesList.get(0).config.containsKey(AbstractPhysicalOperator.CO_LOCATION_TASKID);
         }
 
         @Override
