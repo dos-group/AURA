@@ -3,6 +3,7 @@ package de.tuberlin.aura.taskmanager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.dataflow.datasets.MutableDataset;
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
@@ -158,17 +159,31 @@ public final class TaskManager implements ITaskManager {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <E> Collection<E> getDataset(final UUID uid) {
+    public <E> Collection<E> getDataset(final UUID datasetID) {
         // sanity check.
-        if (uid == null)
-            throw new IllegalArgumentException("uid == null");
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
 
-        final ITaskRuntime runtime = deployedTasks.get(uid);
+        final ITaskRuntime runtime = deployedTasks.get(datasetID);
         if (runtime == null)
             throw new IllegalStateException("runtime == null");
 
         final DatasetDriver datasetDriver = (DatasetDriver)runtime.getInvokeable();
         return (Collection<E>)datasetDriver.getData();
+    }
+
+    @Override
+    public MutableDataset getMutableDataset(UUID datasetID) {
+        // sanity check.
+        if (datasetID == null)
+            throw new IllegalArgumentException("datasetID == null");
+
+        final ITaskRuntime runtime = deployedTasks.get(datasetID);
+        if (runtime == null)
+            throw new IllegalStateException("runtime == null");
+
+        final DatasetDriver datasetDriver = (DatasetDriver)runtime.getInvokeable();
+        return (MutableDataset) datasetDriver.getDataset();
     }
 
     @Override
@@ -187,6 +202,8 @@ public final class TaskManager implements ITaskManager {
             throw new IllegalArgumentException("taskID == null");
         getTaskExecutionManager().getExecutionUnitByTaskID(taskID).getExecutorThread().interrupt();
     }
+
+
 
     @Override
     public void uninstallTask(final UUID taskID) {

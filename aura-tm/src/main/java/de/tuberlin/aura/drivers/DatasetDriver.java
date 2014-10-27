@@ -10,6 +10,7 @@ import de.tuberlin.aura.core.common.eventsystem.IEventHandler;
 import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.dataflow.datasets.DatasetFactory;
+import de.tuberlin.aura.core.dataflow.datasets.MutableDataset;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.impl.ExecutionContext;
 import de.tuberlin.aura.core.descriptors.Descriptors;
@@ -302,5 +303,9 @@ public class DatasetDriver extends AbstractInvokeable {
 
     public Collection<Object> getData() {
         return dataset.getData();
+    }
+
+    public AbstractDataset getDataset() {
+        return dataset;
     }
 }

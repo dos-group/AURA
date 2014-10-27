@@ -54,8 +54,7 @@ public class DatasetUpdatePhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
 
         final UUID datasetID = (UUID)getContext().getProperties().config.get(CO_LOCATION_TASKID);
 
-        // TODO: implement/generify getDataset for mutable datasets
-        dataset = (MutableDataset) this.getContext().getRuntime().getTaskManager().getDataset(datasetID);
+        dataset = this.getContext().getRuntime().getTaskManager().getMutableDataset(datasetID);
 
         this.inputOp.open();
     }
@@ -69,24 +68,22 @@ public class DatasetUpdatePhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
             return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
         }
 
-        List<Object> keyset = new ArrayList<>(datasetKeyIndices.length);
+        Object[] keys = new Object[datasetKeyIndices.length];
 
         for (int i = 0; i < datasetKeyIndices.length; i++) {
-            keyset.add(i, inputTypeInfo.selectField(datasetKeyIndices[i], input.element));
+            keys[i] = inputTypeInfo.selectField(datasetKeyIndices[i], input.element);
         }
 
-        // TODO: change the interface of mutable datasets: contains, get, update.. all operating via keys
-        // TODO: finish this!!
-//        if (dataset.containsElement(keyset)) {
-//
-//            O currentState = dataset.get(keyset);
-//
-//            O newState = ((UpdateFunction<I,O>) function).update(currentState, input.element);
-//
-//            if (newState != null) {
-//                dataset.update(keyset, newState);
-//            }
-//        }
+        if (dataset.containsElement(keys)) {
+
+            O currentState = dataset.get(keys);
+
+            O newState = ((UpdateFunction<I,O>) function).update(currentState, input.element);
+
+            if (newState != null) {
+                dataset.update(keys, newState);
+            }
+        }
 
         return input;
     }

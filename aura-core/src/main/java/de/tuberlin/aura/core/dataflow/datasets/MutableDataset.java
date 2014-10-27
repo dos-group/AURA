@@ -39,27 +39,44 @@ public class MutableDataset<E> extends AbstractDataset<E> {
 
     @Override
     public void add(final E element) {
-        final Object[] keyFields = new Object[datasetKeyIndices.length];
-        int fieldIndex = 0;
-        for(final int[] selectorChain : datasetKeyIndices) {
-            keyFields[fieldIndex++] = typeInfo.selectField(selectorChain, element);
-        }
-        data.put(keyFields, element);
+        data.put(getKeyFields(element), element);
+    }
+
+    public E get(Object[] keys) {
+        return data.get(keys);
     }
 
     public void update(final E element) {
-        final Object[] keyFields = new Object[datasetKeyIndices.length];
-        int fieldIndex = 0;
-        for(final int[] selectorChain : datasetKeyIndices) {
-            keyFields[fieldIndex++] = typeInfo.selectField(selectorChain, element);
-        }
-        data.put(keyFields, element);
+        update(getKeyFields(element), element);
     }
 
-    // TODO: add a contains(final E element) {}
+    public void update(Object[] keys, final E element) {
+        data.put(keys, element);
+    }
+
+    public boolean containsElement(Object[] keys) {
+        return data.containsKey(keys);
+    }
+
+    public boolean containsElement(final E element) {
+        return data.containsKey(getKeyFields(element));
+    }
 
     @Override
     public Collection<E> getData() {
         return data.values();
+    }
+
+    // ---------------------------------------------------
+    // Private Methods.
+    // ---------------------------------------------------
+
+    public Object[] getKeyFields(E element) {
+        final Object[] keyFields = new Object[datasetKeyIndices.length];
+        int fieldIndex = 0;
+        for(final int[] selectorChain : datasetKeyIndices) {
+            keyFields[fieldIndex++] = typeInfo.selectField(selectorChain, element);
+        }
+        return keyFields;
     }
 }
