@@ -75,7 +75,7 @@ public final class ParallelDataflowTest {
                 source1TypeInfo,
                 Source1.class.getName(),
                 null, null, null, null, null,
-                null, null, null, null
+                null, null, null
         );
 
         final DataflowNodeProperties map1 = new DataflowNodeProperties(
@@ -91,7 +91,7 @@ public final class ParallelDataflowTest {
                 map1TypeInfo,
                 Map1.class.getName(),
                 null, null, null, null, null,
-                null, null, null, null
+                null, null, null
         );
 
         final DataflowNodeProperties sink1 = new DataflowNodeProperties(
@@ -107,7 +107,7 @@ public final class ParallelDataflowTest {
                 null,
                 Sink1.class.getName(),
                 null, null, null, null, null,
-                null, null, null, null
+                null, null, null
         );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();

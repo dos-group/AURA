@@ -24,11 +24,7 @@ public final class DescriptorFactory {
         String hostName;
 
         try {
-            hostName = address.getLocalHost().getHostName();
-
-//            String hostName3 = address.getHostName();
-//            String hostName2 = address.getCanonicalHostName();
-
+            hostName = InetAddress.getLocalHost().getCanonicalHostName();
         } catch (UnknownHostException e) {
             e.printStackTrace();
             throw new IllegalStateException("Could not resolve hostName", e);

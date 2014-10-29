@@ -81,7 +81,7 @@ public final class TopologyController extends EventDispatcher implements ITopolo
 
         assemblyPipeline.addPhase(new TopologyParallelizer(workloadManager.getEnvironmentManager(), config));
 
-        assemblyPipeline.addPhase(new TopologyScheduler(workloadManager.getInfrastructureManager(), workloadManager.getEnvironmentManager()));
+        assemblyPipeline.addPhase(new TopologyScheduler(workloadManager.getInfrastructureManager()));
 
         assemblyPipeline.addPhase(new TopologyDeployer(workloadManager.getRPCManager()));
 
@@ -112,12 +112,10 @@ public final class TopologyController extends EventDispatcher implements ITopolo
                     ++finalStateCnt;
 
                 if (finalStateCnt == topology.executionNodeMap.size()) { // TODO
-                    //((WorkloadManager)workloadManager).unregisterTopology(topology.topologyID);
-                    //TopologyController.this.removeAllEventListener();
-                    // Shutdown the event dispatcher threads used by this executingTopology controller
-                    //shutdownEventDispatcher();
                     topologyFSM.joinDispatcherThread();
                     finalStateCnt = 0;
+
+                    workloadManager.unregisterTopology(topology.topologyID);
                 }
             }
         });

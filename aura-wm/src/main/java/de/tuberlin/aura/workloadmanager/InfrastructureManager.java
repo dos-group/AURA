@@ -3,6 +3,8 @@ package de.tuberlin.aura.workloadmanager;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import de.tuberlin.aura.core.descriptors.Descriptors;
+import de.tuberlin.aura.core.filesystem.FileInputSplit;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
@@ -12,11 +14,14 @@ import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors.MachineDescriptor;
 import de.tuberlin.aura.core.zookeeper.ZookeeperClient;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
-import de.tuberlin.aura.core.filesystem.FileInputSplit;
 import de.tuberlin.aura.core.filesystem.InputSplit;
 import de.tuberlin.aura.core.topology.Topology;
 import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
+import de.tuberlin.aura.core.config.IConfig;
 
+import javax.crypto.Mac;
+
+import static de.tuberlin.aura.workloadmanager.LocationPreference.PreferenceLevel;
 
 public final class InfrastructureManager extends EventDispatcher implements IInfrastructureManager {
 
@@ -28,13 +33,14 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
     private final ZookeeperClient zookeeperClient;
 
+    private final IConfig config;
+
+    // this monitor is used to protect the book keeping of available execution units (nodeMap and availableExecutionUnitsMap)
+    private final Object nodeInfoMonitor;
+
     private final Map<UUID, MachineDescriptor> nodeMap;
 
-    private List<MachineDescriptor> usedNodes;
-
-    private Map<UUID, Queue<FileInputSplit>> inputSplitMap;
-
-    private final Object monitor;
+    private final Map<UUID, Integer> availableExecutionUnitsMap;
 
     private final InputSplitManager inputSplitManager;
 
@@ -42,7 +48,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
     // Constructors.
     // ---------------------------------------------------
 
-    public InfrastructureManager(final IWorkloadManager workloadManager, final String zookeeper, final MachineDescriptor wmMachine) {
+    public InfrastructureManager(final IWorkloadManager workloadManager, final String zookeeper, final MachineDescriptor wmMachine, IConfig config) {
         super();
         // sanity check.
         ZookeeperClient.checkConnectionString(zookeeper);
@@ -52,13 +58,13 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
         if (wmMachine == null)
             throw new IllegalArgumentException("wmMachine == null");
 
-        this.monitor = new Object();
+        this.config = config;
+
+        this.nodeInfoMonitor = new Object();
 
         this.nodeMap = new ConcurrentHashMap<>();
 
-        this.usedNodes = new ArrayList<>();
-
-        this.inputSplitMap = new ConcurrentHashMap<>();
+        this.availableExecutionUnitsMap = new ConcurrentHashMap<>();
 
         try {
             zookeeperClient = new ZookeeperClient(zookeeper);
@@ -68,7 +74,8 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
             // Get all available nodes.
             final ZookeeperTaskManagerWatcher watcher = new ZookeeperTaskManagerWatcher();
 
-            synchronized (monitor) {
+            // FIXME: this synchronization in the constructor isn't necessary, is it?
+            synchronized (nodeInfoMonitor) {
                 final List<String> nodes = zookeeperClient.getChildrenForPathAndWatch(ZookeeperClient.ZOOKEEPER_TASKMANAGERS, watcher);
                 for (final String node : nodes) {
                     final MachineDescriptor descriptor;
@@ -78,8 +85,10 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                         throw new IllegalStateException(e);
                     }
                     this.nodeMap.put(descriptor.uid, descriptor);
+                    this.availableExecutionUnitsMap.put(descriptor.uid, config.getInt("tm.execution.units.number"));
                 }
             }
+
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -92,74 +101,62 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
     // ---------------------------------------------------
 
     @Override
-    public synchronized MachineDescriptor getNextMachineForTask(final Topology.LogicalNode task) {
+    public synchronized MachineDescriptor getMachine(LocationPreference locationPreference) {
 
-        synchronized (monitor) {
-
-            // schedule tasks evenly on available machines
-            // (TODO: manage actually available execution units per worker instead of this round-robin approach,
-            // including errors when no slot is available)
-            if (usedNodes.size() == nodeMap.size()) {
-                usedNodes = new ArrayList<>();
-            }
+        synchronized (nodeInfoMonitor) {
 
             final List<MachineDescriptor> workerMachines = new ArrayList<>(nodeMap.values());
 
-            // try to schedule HDFS sources local to HDFS input splits
-            // (TODO: translate inputSplit locations into locality preferences that the TopologyScheduler can manage
-            // and provide to the InfrastructureManager so that getNextMachine(preferences) receives just preferences
-            // and doesn't need to know about the specifics of e.g. HDFS sources and input splits. instead instances of
-            // HDFS sources could each prefer the locations of one previously assigned split. this preferences mechanism
-            // could then also be extended towards task co-location)
-            if (task != null && task.isHDFSSource() && inputSplitMap.containsKey(task.uid)) {
+            if (locationPreference != null) {
 
-                Queue<FileInputSplit> inputSplitsForTask = inputSplitMap.get(task.uid);
-
-                if (!inputSplitsForTask.isEmpty()) {
-
-                    int numberOfSplits = inputSplitsForTask.size();
-
-                    // try to find an available machine which hosts an not yet assigned input split. when there is no
-                    // such machine available queue the split again for a machine might become "available" before the
-                    // next call (available (for evenly using machines) == max one more assignments than the others)
-                    for (int i = 0; i < numberOfSplits; i++) {
-
-                        FileInputSplit split = inputSplitsForTask.poll();
-                        List<String> hostNames = Arrays.asList(split.getHostnames());
-
-                        for (MachineDescriptor machine : workerMachines) {
-                            if (!usedNodes.contains(machine) && hostNames.contains(machine.hostName)) {
-                                usedNodes.add(machine);
-                                return machine;
-                            }
-                        }
-
-                        inputSplitsForTask.add(split);
+                for (MachineDescriptor machine : locationPreference.preferredLocationAlternatives) {
+                    if (availableExecutionUnitsMap.get(machine.uid) > 0) {
+                        availableExecutionUnitsMap.put(machine.uid, availableExecutionUnitsMap.get(machine.uid) - 1);
+                        return machine;
                     }
+                }
 
+                if (locationPreference.preferenceLevel == PreferenceLevel.REQUIRED) {
+                    throw new IllegalStateException("Could not schedule required co-location.");
                 }
             }
 
-            // round-robin scheduling (default / fall back)
             for (MachineDescriptor machine : workerMachines) {
-                if (!usedNodes.contains(machine)) {
-                    usedNodes.add(machine);
+
+                if (availableExecutionUnitsMap.get(machine.uid) > 0) {
+                    availableExecutionUnitsMap.put(machine.uid, availableExecutionUnitsMap.get(machine.uid) - 1);
                     return machine;
                 }
+
             }
+
+            // TODO: handle this case (and the above exception) in the TopologyScheduler/WorkloadManager by waiting for
+            // resources to become available (but maybe then reason about the scheduling some more: deploy from sources
+            // so partially deployed queries can progress as much as possible)
+            throw new IllegalStateException("No execution unit available");
+
         }
 
-        return null;
     }
 
     @Override
-    public void registerHDFSSource(final Topology.LogicalNode node) {
+    public void reclaimExecutionUnits(Topology.AuraTopology finishedTopology) {
 
-        inputSplitManager.registerHDFSSource(node);
+        synchronized (nodeInfoMonitor) {
 
-        Queue<FileInputSplit> inputSplits = new LinkedList<>(inputSplitManager.getAllInputSplitsForLogicalHDFSSource(node));
+            for (Topology.LogicalNode logicalNode : finishedTopology.nodeMap.values()) {
+                for (Topology.ExecutionNode executionNode : logicalNode.getExecutionNodes()) {
+                    UUID machineID = executionNode.getNodeDescriptor().getMachineDescriptor().uid;
+                    availableExecutionUnitsMap.put(machineID, availableExecutionUnitsMap.get(machineID) + 1);
+                }
+            }
 
-        inputSplitMap.put(node.uid, inputSplits);
+        }
+    }
+
+    @Override
+    public List<InputSplit> registerHDFSSource(final Topology.LogicalNode node) {
+        return inputSplitManager.registerHDFSSource(node);
     }
 
     @Override
@@ -179,6 +176,24 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
         return nodeMap.values().size();
     }
 
+    public List<MachineDescriptor> getMachinesWithInputSplit(InputSplit inputSplit) {
+
+        List<MachineDescriptor> machinesWithInputSplit = new ArrayList<>();
+
+        List<String> hostNames = Arrays.asList(inputSplit.getHostnames());
+
+        synchronized (nodeInfoMonitor) {
+
+            for (MachineDescriptor machine : nodeMap.values()) {
+                if (hostNames.contains(machine.hostName)) {
+                    machinesWithInputSplit.add(machine);
+                }
+            }
+        }
+
+        return machinesWithInputSplit;
+    }
+
     // ---------------------------------------------------
     // Inner Classes.
     // ---------------------------------------------------
@@ -190,7 +205,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
             LOG.debug("Received event - internalState: {} - datasetType: {}", event.getState().toString(), event.getType().toString());
 
             try {
-                synchronized (monitor) {
+                synchronized (nodeInfoMonitor) {
                     final List<String> nodeList = zookeeperClient.getChildrenForPath(ZookeeperClient.ZOOKEEPER_TASKMANAGERS);
 
                     // Find out whether a node was created or deleted.
@@ -203,6 +218,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                             if (!nodeMap.containsKey(machineID)) {
                                 newMachine = (MachineDescriptor) zookeeperClient.read(event.getPath() + "/" + node);
                                 nodeMap.put(machineID, newMachine);
+                                availableExecutionUnitsMap.put(machineID, config.getInt("tm.execution.units.number"));
                             }
                         }
 
@@ -219,6 +235,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                         }
 
                         final MachineDescriptor removedMachine = nodeMap.remove(machineID);
+                        availableExecutionUnitsMap.remove(machineID);
                         if (removedMachine == null)
                             LOG.error("machine with uid = " + machineID + " can not be removed");
                         else

@@ -18,4 +18,6 @@ public interface IWorkloadManager {
     public abstract IInfrastructureManager getInfrastructureManager();
 
     public abstract IDistributedEnvironment getEnvironmentManager();
+
+    public abstract void unregisterTopology(final UUID topologyID);
 }

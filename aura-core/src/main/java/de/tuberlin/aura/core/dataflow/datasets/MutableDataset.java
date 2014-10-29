@@ -39,12 +39,7 @@ public class MutableDataset<E> extends AbstractDataset<E> {
 
     @Override
     public void add(final E element) {
-        final Object[] keyFields = new Object[datasetKeyIndices.length];
-        int fieldIndex = 0;
-        for(final int[] selectorChain : datasetKeyIndices) {
-            keyFields[fieldIndex++] = typeInfo.selectField(selectorChain, element);
-        }
-        data.put(keyFields, element);
+        data.put(getKeyFields(element), element);
     }
 
     @Override
@@ -53,7 +48,7 @@ public class MutableDataset<E> extends AbstractDataset<E> {
     }
 
     @Override
-    public void setData(Collection<E> data) {
+    public void setData(final Collection<E> data) {
         throw new UnsupportedOperationException();
     }
 
@@ -62,12 +57,36 @@ public class MutableDataset<E> extends AbstractDataset<E> {
         return data.values();
     }
 
+    public E get(final Object[] keys) {
+        return data.get(keys);
+    }
+
     public void update(final E element) {
+        update(getKeyFields(element), element);
+    }
+
+    public void update(final Object[] keys, final E element) {
+        data.put(keys, element);
+    }
+
+    public boolean containsElement(final Object[] keys) {
+        return data.containsKey(keys);
+    }
+
+    public boolean containsElement(final E element) {
+        return data.containsKey(getKeyFields(element));
+    }
+
+    // ---------------------------------------------------
+    // Private Methods.
+    // ---------------------------------------------------
+
+    private Object[] getKeyFields(E element) {
         final Object[] keyFields = new Object[datasetKeyIndices.length];
         int fieldIndex = 0;
         for(final int[] selectorChain : datasetKeyIndices) {
             keyFields[fieldIndex++] = typeInfo.selectField(selectorChain, element);
         }
-        data.put(keyFields, element);
+        return keyFields;
     }
 }

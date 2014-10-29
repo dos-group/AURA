@@ -2,6 +2,7 @@ package de.tuberlin.aura.core.taskmanager.spi;
 
 
 import de.tuberlin.aura.core.config.IConfig;
+import de.tuberlin.aura.core.dataflow.datasets.MutableDataset;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
@@ -28,6 +29,8 @@ public interface ITaskManager extends IWM2TMProtocol {
     public abstract Descriptors.MachineDescriptor getWorkloadManagerMachineDescriptor();
 
     public abstract Descriptors.MachineDescriptor getTaskManagerMachineDescriptor();
+
+    public abstract MutableDataset getMutableDataset(UUID datasetID);
 
     public abstract void uninstallTask(final UUID taskID);
 

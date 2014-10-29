@@ -151,7 +151,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         rpcManager.registerRPCProtocol(this, ITM2WMProtocol.class);
 
         // Initialize InfrastructureManager.
-        this.infrastructureManager = new InfrastructureManager(this, zkServer, machineDescriptor);
+        this.infrastructureManager = new InfrastructureManager(this, zkServer, machineDescriptor, config);
         // Initialize InfrastructureManager.
         this.environmentManager = new DistributedEnvironment();
     }
@@ -181,15 +181,16 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         if (topology == null)
             throw new IllegalArgumentException("topology == null");
 
-        final Set<UUID> runningTopologies = registeredSessions.get(sessionID);
+        final Set<UUID> topologiesAssignedToSession = registeredSessions.get(sessionID);
 
-        if (runningTopologies != null) {
+        if (topologiesAssignedToSession != null) {
 
-            if (runningTopologies.contains(topology.topologyID) || registeredTopologies.containsKey(topology.topologyID))
+            if (topologiesAssignedToSession.contains(topology.topologyID) || registeredTopologies.containsKey(topology.topologyID))
                 throw new IllegalStateException("topology " + topology.topologyID + "  already running");
 
+            topologiesAssignedToSession.add(topology.topologyID);
+
             final TopologyController topologyController = new TopologyController(this, topology.topologyID, topology, this.config);
-            runningTopologies.add(topology.topologyID);
             registeredTopologies.put(topology.topologyID, topologyController);
 
             executor.submit(new Runnable() {
@@ -216,22 +217,42 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         if (assignedTopologies == null)
             throw new IllegalStateException("session with id " + sessionID.toString() + " does not exist");
 
-        for (final UUID topologyID : assignedTopologies) {
-            final TopologyController topologyController = registeredTopologies.remove(topologyID);
-
-            if (!topologyController.getTopologyFSM().isInFinalState()) {
-                throw new IllegalArgumentException("topology " + topologyID + " is not in final internalState");
-                //topologyController.cancelTopology(); // TODO: Not implemented yet!
-            }
-
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    topologyController.shutdownTopologyController();
-                }
-            });
-        }
         LOG.info("CLOSED SESSION [" + sessionID + "]");
+    }
+
+    public void unregisterTopology(final UUID topologyID) {
+        // Sanity check.
+        if (topologyID == null)
+            throw new IllegalArgumentException("topologyID == null");
+
+
+        final TopologyController finishedTopologyController = registeredTopologies.remove(topologyID);
+
+        if (finishedTopologyController == null)
+            throw new IllegalStateException("topologyID not found");
+
+        if (!finishedTopologyController.getTopologyFSM().isInFinalState()) {
+            throw new IllegalArgumentException("topology " + topologyID + " is not in final internalState");
+            //finishedTopologyController.cancelTopology(); // TODO: Not implemented yet!
+        }
+
+        executor.submit(new Runnable() {
+            @Override
+            public void run() {
+                finishedTopologyController.shutdownTopologyController();
+            }
+        });
+
+        // TODO: maybe critical?
+
+        AuraTopology finishedTopology = finishedTopologyController.getTopology();
+
+        this.infrastructureManager.reclaimExecutionUnits(finishedTopology);
+
+        for (final Set<UUID> topologiesAssignedToSession : registeredSessions.values()) {
+            if (topologiesAssignedToSession.contains(topologyID))
+                topologiesAssignedToSession.remove(topologyID);
+        }
     }
 
     @Override

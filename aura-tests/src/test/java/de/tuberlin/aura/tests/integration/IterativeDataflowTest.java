@@ -6,6 +6,7 @@ import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
 import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
+import de.tuberlin.aura.core.dataflow.operators.base.AbstractPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SourceFunction;
@@ -17,6 +18,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class IterativeDataflowTest {
@@ -70,7 +73,6 @@ public class IterativeDataflowTest {
                 null,
                 null,
                 null,
-                null,
                 null
         );
 
@@ -87,7 +89,6 @@ public class IterativeDataflowTest {
                 source1TypeInfo,
                 null,
                 source1TypeInfo,
-                null,
                 null,
                 null,
                 null,
@@ -118,11 +119,13 @@ public class IterativeDataflowTest {
                 null,
                 null,
                 null,
-                null,
                 null
         );
 
         final UUID dataset2UID = UUID.randomUUID();
+
+        final Map<String,Object> tailDatasetConfig = new HashMap<>();
+        tailDatasetConfig.put(AbstractPhysicalOperator.CO_LOCATION_TASK_NAME, "DatasetHead");
 
         final DataflowNodeProperties dataset2 = new DataflowNodeProperties(
                 dataset2UID,
@@ -143,8 +146,7 @@ public class IterativeDataflowTest {
                 null,
                 null,
                 null,
-                null,
-                dataset1UID
+                tailDatasetConfig
         );
 
         DataflowNodeProperties sink1 = new DataflowNodeProperties(
@@ -159,7 +161,6 @@ public class IterativeDataflowTest {
                 null,
                 null,
                 Sink1.class.getName(),
-                null,
                 null,
                 null,
                 null,

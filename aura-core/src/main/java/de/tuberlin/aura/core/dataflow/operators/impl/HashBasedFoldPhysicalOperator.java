@@ -58,7 +58,7 @@ public class HashBasedFoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
 
         while (input.marker != StreamMarker.END_OF_STREAM_MARKER) {
 
-            ArrayList<Object> keys = new ArrayList<>();
+            List<Object> keys = new ArrayList<>();
 
             if (groupKeyIndices != null) {
 

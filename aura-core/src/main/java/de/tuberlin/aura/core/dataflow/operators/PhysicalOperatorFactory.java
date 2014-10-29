@@ -39,8 +39,6 @@ public final class PhysicalOperatorFactory {
                 return new MapGroupPhysicalOperator(context, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object,Object>>) udfType));
             case FLAT_MAP_TUPLE_OPERATOR:
                 return new FlatMapPhysicalOperator(context, inputOp1, FunctionFactory.createFlatMapFunction((Class<FlatMapFunction<Object,Object>>) udfType));
-            case FLAT_MAP_GROUP_OPERATOR:
-                break;
             case FILTER_OPERATOR:
                 return new FilterPhysicalOperator(context, inputOp1, FunctionFactory.createFilterFunction((Class<FilterFunction<Object>>) udfType));
             case UNION_OPERATOR:
@@ -61,8 +59,8 @@ public final class PhysicalOperatorFactory {
                 return new FoldPhysicalOperator(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object>>) udfType));
             case HASH_FOLD_OPERATOR:
                 return new HashBasedFoldPhysicalOperator<>(context, inputOp1, FunctionFactory.createFoldFunction((Class<FoldFunction<Object,Object>>) udfType));
-            case REDUCE_OPERATOR:
-                break;
+            case DATASET_UPDATE_OPERATOR:
+               return new DatasetUpdatePhysicalOperator<>(context, inputOp1, FunctionFactory.createUpdateFunction((Class<UpdateFunction<Object,Object>>) udfType));
             // ---------------------------------------------------
             case UDF_SOURCE:
                 return new UDFSourcePhysicalOperator(context, FunctionFactory.createSourceFunction((Class<SourceFunction<Object>>) udfType));
@@ -110,18 +108,16 @@ public final class PhysicalOperatorFactory {
                     inputOp1.setOperatorNum(operatorNum);
                     break;
                 }
-                case MAP_GROUP_OPERATOR: {
-                    inputOp1 = new MapGroupPhysicalOperator(context, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object, Object>>) udfType));
-                    inputOp1.setOperatorNum(operatorNum);
-                    break;
-                }
                 case FLAT_MAP_TUPLE_OPERATOR: {
                     inputOp1 = new FlatMapPhysicalOperator(context, inputOp1, FunctionFactory.createFlatMapFunction((Class<FlatMapFunction<Object, Object>>) udfType));
                     inputOp1.setOperatorNum(operatorNum);
                     break;
                 }
-                case FLAT_MAP_GROUP_OPERATOR:
+                case MAP_GROUP_OPERATOR: {
+                    inputOp1 = new MapGroupPhysicalOperator(context, inputOp1, FunctionFactory.createGroupMapFunction((Class<GroupMapFunction<Object, Object>>) udfType));
+                    inputOp1.setOperatorNum(operatorNum);
                     break;
+                }
                 case FILTER_OPERATOR: {
                     inputOp1 = new FilterPhysicalOperator(context, inputOp1, FunctionFactory.createFilterFunction((Class<FilterFunction<Object>>) udfType));
                     inputOp1.setOperatorNum(operatorNum);
@@ -169,8 +165,6 @@ public final class PhysicalOperatorFactory {
                     inputOp1.setOperatorNum(operatorNum);
                     break;
                 }
-                case REDUCE_OPERATOR:
-                    break;
 
                 // ---------------------------------------------------
 

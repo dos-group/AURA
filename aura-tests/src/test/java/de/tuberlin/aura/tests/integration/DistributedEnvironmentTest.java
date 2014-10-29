@@ -2,7 +2,6 @@ package de.tuberlin.aura.tests.integration;
 
 import java.util.*;
 
-import de.tuberlin.aura.tests.util.TestHelper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -17,6 +16,10 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple2;
 import de.tuberlin.aura.core.topology.Topology;
+import de.tuberlin.aura.core.dataflow.operators.impl.DatasetUpdatePhysicalOperator;
+import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
+import de.tuberlin.aura.core.dataflow.udfs.functions.UpdateFunction;
+import de.tuberlin.aura.tests.util.TestHelper;
 
 public final class DistributedEnvironmentTest {
 
@@ -46,7 +49,7 @@ public final class DistributedEnvironmentTest {
     }
 
     @Test
-    public void testDataSetSink() {
+    public void testJob1DataSetSink() {
 
         int dop = executionUnits / 3;
 
@@ -74,7 +77,7 @@ public final class DistributedEnvironmentTest {
     }
 
     @Test
-    public void testDataSetGenerationAndClientTransfer() {
+    public void testJob2DataSetGenerationAndClientTransfer() {
 
         int dop = executionUnits / 3;
 
@@ -103,12 +106,12 @@ public final class DistributedEnvironmentTest {
         auraClient.eraseDataset(dataset1UID);
 
         for (Tuple2<Tuple2<String,Integer>, Tuple2<String,Integer>> tuple : collection1) {
-//            System.out.println(tuple);
+            //  System.out.println(tuple);
         }
     }
 
     @Test
-    public void testGeneratedDataSetAsSourceForFollowingDataflow() {
+    public void testJob3GeneratedDataSetAsSourceForFollowingDataflow() {
 
         int dop = executionUnits / 3;
 
@@ -162,6 +165,164 @@ public final class DistributedEnvironmentTest {
         auraClient.eraseDataset(dataset2UID);
     }
 
+    @Test
+    public void testJob4UpdateOperator() {
+
+        int dop =  1; // executionUnits / ?;
+
+        Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
+
+        TypeInformation source1TypeInfo = source1TypeInfo();
+
+        // JOB 1: fill a mutable dataset with state
+
+        final DataflowNodeProperties mutableDatasetSource = new DataflowNodeProperties(
+                UUID.randomUUID(),
+                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
+                "MutableDatasetSource",
+                dop,
+                1,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                null,
+                null,
+                source1TypeInfo,
+                Job4Source.class.getName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        final UUID mutableDatasetUID = UUID.randomUUID();
+
+        final DataflowNodeProperties mutableDatasetNode = new DataflowNodeProperties(
+                mutableDatasetUID,
+                DataflowNodeProperties.DataflowNodeType.MUTABLE_DATASET,
+                "MutableDataset",
+                dop,
+                1,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                source1TypeInfo,
+                null,
+                source1TypeInfo,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                null,
+                null
+        );
+
+        atb.addNode(new Topology.OperatorNode(mutableDatasetSource)).
+                connectTo("MutableDataset", Topology.Edge.TransferType.ALL_TO_ALL).
+                addNode(new Topology.OperatorNode(mutableDatasetNode));
+
+        final Topology.AuraTopology topology1 = atb.build("JOB1");
+
+        TestHelper.runTopology(auraClient, topology1);
+
+        // ----- JOB 2: update the mutable dataset using an update operator
+
+        final DataflowNodeProperties elementSource = new DataflowNodeProperties(
+                UUID.randomUUID(),
+                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
+                "MutableDatasetSource",
+                dop,
+                1,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                null,
+                null,
+                source1TypeInfo,
+                Job4Source.class.getName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        Map<String,Object> updateConfig = new HashMap<>();
+        updateConfig.put(DatasetUpdatePhysicalOperator.CO_LOCATION_TASK_NAME, mutableDatasetUID);
+
+        final DataflowNodeProperties updateNode = new DataflowNodeProperties(
+                UUID.randomUUID(),
+                DataflowNodeProperties.DataflowNodeType.DATASET_UPDATE_OPERATOR,
+                "Update",
+                dop,
+                1,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                null,
+                null,
+                source1TypeInfo,
+                Job4Update.class.getName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                null,
+                updateConfig
+        );
+
+        final DataflowNodeProperties sinkNode = new DataflowNodeProperties(
+                UUID.randomUUID(),
+                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                "Sink",
+                dop,
+                1,
+                null,
+                null,
+                null,
+                null,
+                source1TypeInfo,
+                Job4Sink.class.getName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+
+        Topology.AuraTopologyBuilder atb2 = auraClient.createTopologyBuilder();
+
+        atb2.addNode(new Topology.DatasetNode(elementSource)).
+                connectTo("Update", Topology.Edge.TransferType.ALL_TO_ALL).
+                addNode(new Topology.OperatorNode(updateNode)).
+                connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
+                addNode(new Topology.DatasetNode(sinkNode));
+
+        final Topology.AuraTopology topology2 = atb2.build("JOB2");
+
+        TestHelper.runTopology(auraClient, topology2);
+
+        final Collection<Tuple2<String,Integer>> mutableDataset = auraClient.getDataset(mutableDatasetUID);
+
+        for (Tuple2<String,Integer> datasetElement : mutableDataset) {
+            System.out.println(datasetElement);
+        }
+
+        auraClient.eraseDataset(mutableDatasetUID);
+    }
+
+
     @AfterClass
     public static void tearDown() {
 
@@ -209,39 +370,9 @@ public final class DistributedEnvironmentTest {
                 null,
                 null,
                 null,
-                null,
                 null
         );
     }
-
-    private DataflowNodeProperties source1NodePropertiesXY(int dop) {
-
-        TypeInformation source1TypeInfo = source1TypeInfo();
-
-        return new DataflowNodeProperties(
-                UUID.randomUUID(),
-                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
-                "Source1XY",
-                dop,
-                1,
-                null,
-                null,
-                null,
-                null,
-                source1TypeInfo,
-                Source1.class.getName(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
-    }
-
 
     private DataflowNodeProperties map1NodeProperties(int dop) {
 
@@ -259,7 +390,6 @@ public final class DistributedEnvironmentTest {
                 null,
                 source1TypeInfo,
                 Map1.class.getName(),
-                null,
                 null,
                 null,
                 null,
@@ -286,7 +416,6 @@ public final class DistributedEnvironmentTest {
                 source1TypeInfo,
                 null,
                 source1TypeInfo,
-                null,
                 null,
                 null,
                 null,
@@ -322,7 +451,6 @@ public final class DistributedEnvironmentTest {
                 null,
                 null,
                 Arrays.asList(broadcastDatasetID),
-                null,
                 null
         );
     }
@@ -350,7 +478,6 @@ public final class DistributedEnvironmentTest {
                 null,
                 null,
                 null,
-                null,
                 null
         );
     }
@@ -361,7 +488,7 @@ public final class DistributedEnvironmentTest {
 
     public static final class Source1 extends SourceFunction<Tuple2<String,Integer>> {
 
-        int count = 1000;
+        int count = 100;
 
         @Override
         public  Tuple2<String,Integer> produce() {
@@ -394,6 +521,38 @@ public final class DistributedEnvironmentTest {
                 sb.append(t._1);
             return new Tuple2<>("HELLO" + sb.toString(), in._2);
         }
+    }
+
+    // ----- TEST JOB 4 UDFs -----
+
+    public static final class Job4Source extends SourceFunction<Tuple2<String,Integer>> {
+
+        int count = 1000;
+
+        @Override
+        public  Tuple2<String,Integer> produce() {
+            return (--count >= 0 ) ? new Tuple2<>("id=" + count, count) : null;
+        }
+    }
+
+    public static final class Job4Sink extends SinkFunction<Tuple2<String,Integer>> {
+
+        @Override
+        public void consume(final Tuple2<String,Integer> in) {
+//            System.out.println(in);
+        }
+    }
+
+    public static final class Job4Update extends UpdateFunction<Tuple2<String,Integer>,Tuple2<String,Integer>> {
+
+        @Override
+        public Tuple2<String,Integer> update(Tuple2<String,Integer> state, Tuple2<String,Integer> element) {
+
+            Integer sum = state._2 + element._2;
+
+            return (sum % 2 == 0) ? new Tuple2<>(state._1, sum) : null;
+        }
+
     }
 
 

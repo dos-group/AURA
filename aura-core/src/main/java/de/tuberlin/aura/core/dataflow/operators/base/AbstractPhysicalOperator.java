@@ -9,6 +9,12 @@ import java.util.List;
 public abstract class AbstractPhysicalOperator<O> implements IPhysicalOperator<O> {
 
     // ---------------------------------------------------
+    // Constants.
+    // ---------------------------------------------------
+
+    public static final String CO_LOCATION_TASK_NAME = "CO_LOCATION_TASK_NAME";
+
+    // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 

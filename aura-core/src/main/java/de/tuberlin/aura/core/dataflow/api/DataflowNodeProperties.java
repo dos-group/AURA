@@ -30,11 +30,9 @@ public final class DataflowNodeProperties implements Serializable {
 
         MAP_TUPLE_OPERATOR(InputArity.UNARY),
 
-        MAP_GROUP_OPERATOR(InputArity.UNARY),
-
         FLAT_MAP_TUPLE_OPERATOR(InputArity.UNARY),
 
-        FLAT_MAP_GROUP_OPERATOR(InputArity.UNARY),
+        MAP_GROUP_OPERATOR(InputArity.UNARY),
 
         FILTER_OPERATOR(InputArity.UNARY),
 
@@ -56,8 +54,6 @@ public final class DataflowNodeProperties implements Serializable {
 
         HASH_FOLD_OPERATOR(InputArity.UNARY),
 
-        REDUCE_OPERATOR(InputArity.UNARY),
-
         UDF_SOURCE(InputArity.NULLARY),
 
         HDFS_SOURCE(InputArity.NULLARY),
@@ -77,6 +73,10 @@ public final class DataflowNodeProperties implements Serializable {
         MUTABLE_DATASET(InputArity.DYNAMIC),
 
         DATASET_REFERENCE(InputArity.DYNAMIC),
+
+        // ---------------------------------------------------
+
+        DATASET_UPDATE_OPERATOR(InputArity.UNARY),
 
         // ---------------------------------------------------
 
@@ -148,14 +148,12 @@ public final class DataflowNodeProperties implements Serializable {
 
     public final Map<String, Object> config;
 
-    public final UUID coLocatedDatasetID;
-
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
     public DataflowNodeProperties(final UUID operatorUID, final String instanceName) {
-        this(operatorUID, null, instanceName, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        this(operatorUID, null, instanceName, 0, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     public DataflowNodeProperties(final UUID operatorUID,
@@ -176,8 +174,7 @@ public final class DataflowNodeProperties implements Serializable {
                                   final int[][] groupByKeyIndices,
                                   final int[][] datasetKeyIndices,
                                   final List<UUID> broadcastVars,
-                                  final Map<String, Object> config,
-                                  final UUID coLocatedDatasetID) {
+                                  final Map<String, Object> config) {
         // sanity check.
         if (operatorUID == null)
             throw new IllegalArgumentException("operatorUID == null");
@@ -219,7 +216,5 @@ public final class DataflowNodeProperties implements Serializable {
         this.broadcastVars = broadcastVars;
 
         this.config = config;
-
-        this.coLocatedDatasetID = coLocatedDatasetID;
     }
 }
