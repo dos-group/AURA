@@ -52,9 +52,6 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
     private CountDownLatch executeLatch = new CountDownLatch(1);
 
-
-    private ITaskRuntime oldRuntime = null;
-
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -217,7 +214,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                     runtime.initialize(inputAllocator, outputAllocator);
 
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -290,8 +287,6 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             isDatasetInitialized.set(false);
 
                             executorThread.setName("empty");
-
-                            oldRuntime = runtime;
 
                             runtime = null;
                         }

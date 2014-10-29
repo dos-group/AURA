@@ -165,6 +165,17 @@ public class DataReader {
      * @param event the event that is written to the channel
      */
     public void write(final UUID taskID, final int gateIndex, final int channelIndex, final IOEvents.DataIOEvent event) {
+
+        while (gateKeyToChannel.get(Triple.of(taskID, gateIndex, channelIndex)) == null) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("SLEEP");
+        }
+
+
         gateKeyToChannel.get(Triple.of(taskID, gateIndex, channelIndex)).writeAndFlush(event);
     }
 

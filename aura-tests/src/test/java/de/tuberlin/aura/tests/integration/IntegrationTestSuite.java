@@ -14,9 +14,9 @@ import org.slf4j.LoggerFactory;
 @RunWith(Suite.class)
 
 @Suite.SuiteClasses({
-        PlainTopologiesTest.class,
+        /*PlainTopologiesTest.class,
         DataflowTest.class,
-        ParallelDataflowTest.class,
+        ParallelDataflowTest.class,*/
         DistributedEnvironmentTest.class,
         IterativeDataflowTest.class})
 
