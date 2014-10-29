@@ -93,6 +93,7 @@ public class RecordReader implements IRecordReader {
         this.inputStream = inputStream;
 
         this.kryoInput = new UnsafeInput(inputStream, bufferSize);
+        ((UnsafeInput)kryoInput).setVarIntsEnabled(false);
     }
 
     public void begin() {

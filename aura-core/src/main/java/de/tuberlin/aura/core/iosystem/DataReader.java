@@ -27,7 +27,7 @@ public class DataReader {
     // Fields.
     // ---------------------------------------------------
 
-    public final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
+    private final static Logger LOG = LoggerFactory.getLogger(DataReader.class);
 
     private final IConfig config;
 
@@ -37,7 +37,7 @@ public class DataReader {
 
     private final Map<Triple<UUID, Integer, Integer>, Channel> gateKeyToChannel = new HashMap<>();
 
-    public final ITaskExecutionManager executionManager;
+    private final ITaskExecutionManager executionManager;
 
     // ---------------------------------------------------
     // Constructors.
@@ -54,11 +54,11 @@ public class DataReader {
         // sanity check.
         if (dispatcher == null)
             throw new IllegalArgumentException("dispatcher == null");
-        // if (executionManager == null)
-        // throw new IllegalArgumentException("executionManager == null");
 
         this.config = config;
+
         this.dispatcher = dispatcher;
+
         this.executionManager = executionManager;
     }
 
@@ -171,8 +171,6 @@ public class DataReader {
     // ---------------------------------------------------
     // NETTY CHANNEL HANDLER
     // ---------------------------------------------------
-
-
 
     /**
      * Handles {@link de.tuberlin.aura.core.iosystem.IOEvents.TransferBufferEvent}.

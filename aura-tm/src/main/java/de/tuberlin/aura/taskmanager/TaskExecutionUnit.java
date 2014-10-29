@@ -1,5 +1,6 @@
 package de.tuberlin.aura.taskmanager;
 
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -43,9 +44,16 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
     private ITaskRuntime runtime;
 
-    private boolean isExecutingDataset = false;
+    // ---------------------------------------------------
 
-    private boolean isDatasetInitialized = false;
+    private AtomicBoolean isExecutingDataset = new AtomicBoolean(false);
+
+    private AtomicBoolean isDatasetInitialized = new AtomicBoolean(false);
+
+    private CountDownLatch executeLatch = new CountDownLatch(1);
+
+
+    private ITaskRuntime oldRuntime = null;
 
     // ---------------------------------------------------
     // Constructors.
@@ -113,6 +121,22 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         isExecutionUnitRunning.set(false);
     }
 
+    public ITaskRuntime getRuntimeForTaskID(final UUID taskID) {
+        // sanity check.
+        if (taskID == null)
+            throw new IllegalArgumentException("taskID == null");
+
+        if (runtime != null && taskID.equals(runtime.getNodeDescriptor().taskID))
+            return runtime;
+
+        for (final ITaskRuntime runtime : taskQueue) {
+            if (taskID.equals(runtime.getNodeDescriptor().taskID))
+                return runtime;
+        }
+
+        return null;
+    }
+
     // ---------------------------------------------------
     // Public Getter Methods.
     // ---------------------------------------------------
@@ -138,7 +162,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
     }
 
     public void eraseDataset() {
-        isExecutingDataset = false;
+        isExecutingDataset.set(false);
     }
 
     // ---------------------------------------------------
@@ -154,55 +178,62 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
 
                 if (runtime == null || (runtime != null && !runtime.doNextIteration())) {
 
-                    if (!isExecutingDataset) {
+                    if (!isExecutingDataset.get()) {
 
                         try {
+
                             runtime = taskQueue.take();
 
                             LOG.info("EXECUTION UNIT {} PREPARES EXECUTION OF TASK {}",
                                     TaskExecutionUnit.this.executionUnitID,
                                     runtime.getNodeDescriptor().taskID);
 
+                            runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
+                                    new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+
+                                        @Override
+                                        public void stateAction(TaskStates.TaskState previousState,
+                                                                TaskStates.TaskTransition transition,
+                                                                TaskStates.TaskState state) {
+                                            executeLatch.countDown();
+                                        }
+                                    });
+
                         } catch (InterruptedException e) {
                             throw new IllegalStateException(e);
                         }
 
-                        executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID + "->" + runtime.getNodeDescriptor().name);
+                        executorThread.setName("Execution-Unit-" + TaskExecutionUnit.this.executionUnitID
+                                + "[" + runtime.getNodeDescriptor().taskID + "]" + "::" + runtime.getNodeDescriptor().name
+                                + "@" + executionManager.getTaskManager().getIOManager().getMachineDescriptor().uid);
 
                         if (runtime.getNodeDescriptor() instanceof Descriptors.DatasetNodeDescriptor) {
-                            isExecutingDataset = true;
+                            isExecutingDataset.set(true);
                         }
                     }
                 }
 
-                final CountDownLatch executeLatch = new CountDownLatch(1);
-
-                runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
-                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState,
-                                                    TaskStates.TaskTransition transition,
-                                                    TaskStates.TaskState state) {
-                                executeLatch.countDown();
-                            }
-                        });
-
-                if (!runtime.doNextIteration() && !isDatasetInitialized) {
+                if (!runtime.doNextIteration() && !isDatasetInitialized.get()) {
                     runtime.initialize(inputAllocator, outputAllocator);
+
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
 
-                if (!isDatasetInitialized) {
-
+                if (!isDatasetInitialized.get()) {
                     try {
                         executeLatch.await();
                     } catch (InterruptedException e) {
                         LOG.error(e.getLocalizedMessage(), e);
                     }
+                    executeLatch = new CountDownLatch(1);
                 }
 
-                if (isExecutingDataset) {
-                    isDatasetInitialized = true;
+                if (isExecutingDataset.get()) {
+                    isDatasetInitialized.set(true);
                 }
 
                 boolean success = runtime.execute();
@@ -252,6 +283,18 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                             runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FINISH));
                         else
                             runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FAIL));
+
+
+                        if (!isExecutingDataset.get()) {
+
+                            isDatasetInitialized.set(false);
+
+                            executorThread.setName("empty");
+
+                            oldRuntime = runtime;
+
+                            runtime = null;
+                        }
                     }
                 }
             }

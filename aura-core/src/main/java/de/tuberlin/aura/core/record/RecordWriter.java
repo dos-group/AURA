@@ -84,6 +84,8 @@ public class RecordWriter implements IRecordWriter {
             final BufferStream.ContinuousByteOutputStream os = new BufferStream.ContinuousByteOutputStream();
             outputStreams.add(os);
             final Output kryoOutput = new UnsafeOutput(os, bufferSize);
+            ((UnsafeOutput)kryoOutput).supportVarInts(false);
+
             kryoOutputs.add(kryoOutput);
 
             os.setBufferInput(new BufferStream.IBufferInput() {

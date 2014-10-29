@@ -3,6 +3,8 @@ package de.tuberlin.aura.core.taskmanager.spi;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 
+import java.util.UUID;
+
 
 public interface ITaskExecutionUnit {
 
@@ -29,4 +31,7 @@ public interface ITaskExecutionUnit {
     public abstract Thread getExecutorThread();
 
     public abstract void eraseDataset();
+
+
+    public abstract ITaskRuntime getRuntimeForTaskID(final UUID taskID);
 }

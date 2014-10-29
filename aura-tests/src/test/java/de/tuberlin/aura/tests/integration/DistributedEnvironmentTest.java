@@ -43,7 +43,6 @@ public final class DistributedEnvironmentTest {
         auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         executionUnits = simConfig.getInt("simulator.tm.number") * simConfig.getInt("tm.execution.units.number");
-
     }
 
     @Test
@@ -129,7 +128,7 @@ public final class DistributedEnvironmentTest {
                 connectTo("Dataset1", Topology.Edge.TransferType.ALL_TO_ALL).
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
-        final Topology.AuraTopology topology1 = atb.build("JOB1");
+        final Topology.AuraTopology topology1 = atb.build("JOB1-testGeneratedDataSetAsSourceForFollowingDataflow");
 
         TestHelper.runTopology(auraClient, topology1);
 
@@ -155,7 +154,7 @@ public final class DistributedEnvironmentTest {
                 connectTo("Dataset2", Topology.Edge.TransferType.POINT_TO_POINT).
                 addNode(new Topology.DatasetNode(dataset2Properties));
 
-        final Topology.AuraTopology topology2 = atb2.build("JOB2");
+        final Topology.AuraTopology topology2 = atb2.build("JOB2-testGeneratedDataSetAsSourceForFollowingDataflow");
 
         TestHelper.runTopology(auraClient, topology2);
 
@@ -214,6 +213,35 @@ public final class DistributedEnvironmentTest {
                 null
         );
     }
+
+    private DataflowNodeProperties source1NodePropertiesXY(int dop) {
+
+        TypeInformation source1TypeInfo = source1TypeInfo();
+
+        return new DataflowNodeProperties(
+                UUID.randomUUID(),
+                DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
+                "Source1XY",
+                dop,
+                1,
+                null,
+                null,
+                null,
+                null,
+                source1TypeInfo,
+                Source1.class.getName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
 
     private DataflowNodeProperties map1NodeProperties(int dop) {
 

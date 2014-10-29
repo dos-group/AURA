@@ -42,9 +42,6 @@ public final class IOManager extends EventDispatcher implements IIOManager {
     // Fields.
     // ---------------------------------------------------
 
-    /**
-     * Logger.
-     */
     private static final Logger LOG = LoggerFactory.getLogger(IOManager.class);
 
     public final MachineDescriptor machine;

@@ -238,37 +238,44 @@ public final class SerializationHandler {
             return deseralizationBuffer;
         }
 
-        private void bindAllocator(UUID src, UUID dst) {
+        private void bindAllocator(final UUID src, final UUID dst) {
+
             final ITaskExecutionManager tem = executionManager;
 
-            ITaskExecutionUnit executionUnit = tem.getExecutionUnitByTaskID(dst);
-            final ITaskRuntime taskDriver = executionUnit.getRuntime();
-            final IDataConsumer dataConsumer = taskDriver.getConsumer();
-            final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
+            final ITaskExecutionUnit executionUnit = tem.getExecutionUnitByTaskID(dst);
 
-            IAllocator allocatorGroup = executionUnit.getInputAllocator();
+            if (executionUnit != null) {
 
-            // -------------------- STUPID HOT FIX --------------------
+                final ITaskRuntime runtime = executionUnit.getRuntime();
 
-            if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 1) {
-                allocator = allocatorGroup;
-            } else {
-                if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 2) {
-                    if (gateIndex == 0) {
-                        allocator =
-                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0)));
-                    } else {
-                        allocator =
-                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
-                    }
+                final IDataConsumer dataConsumer = runtime.getConsumer();
+
+                final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
+
+                final IAllocator allocatorGroup = executionUnit.getInputAllocator();
+
+                // -------------------- STUPID HOT FIX --------------------
+
+                if (runtime.getBindingDescriptor().inputGateBindings.size() == 1) {
+                    allocator = allocatorGroup;
                 } else {
-                    throw new IllegalStateException("Not supported more than two input gates.");
+                    if (runtime.getBindingDescriptor().inputGateBindings.size() == 2) {
+                        if (gateIndex == 0) {
+                            allocator =
+                                    new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                                             Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0)));
+                        } else {
+                            allocator =
+                                    new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                                             Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
+                        }
+                    } else {
+                        throw new IllegalStateException("Not supported more than two input gates.");
+                    }
                 }
-            }
 
-            // -------------------- STUPID HOT FIX --------------------
+                // -------------------- STUPID HOT FIX --------------------
+            }
         }
     }
 
@@ -423,34 +430,43 @@ public final class SerializationHandler {
         }
 
         private void bindAllocator(UUID src, UUID dst) {
+
             final ITaskExecutionManager tem = executionManager;
+
             final ITaskExecutionUnit executionUnit = tem.getExecutionUnitByTaskID(dst);
-            final ITaskRuntime taskDriver = executionUnit.getRuntime();
-            final IDataConsumer dataConsumer = taskDriver.getConsumer();
-            final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
-            IAllocator allocatorGroup = executionUnit.getInputAllocator();
 
-            // -------------------- STUPID HOT FIX --------------------
+            if (executionUnit != null) {
 
-            if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 1) {
-                allocator = allocatorGroup;
-            } else {
-                if (taskDriver.getBindingDescriptor().inputGateBindings.size() == 2) {
-                    if (gateIndex == 0) {
-                        allocator =
-                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0)));
-                    } else {
-                        allocator =
-                                new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
-                                                         Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
-                    }
+                final ITaskRuntime runtime = executionUnit.getRuntime();
+
+                final IDataConsumer dataConsumer = runtime.getConsumer();
+
+                final int gateIndex = dataConsumer.getInputGateIndexFromTaskID(src);
+
+                IAllocator allocatorGroup = executionUnit.getInputAllocator();
+
+                // -------------------- STUPID HOT FIX --------------------
+
+                if (runtime.getBindingDescriptor().inputGateBindings.size() == 1) {
+                    allocator = allocatorGroup;
                 } else {
-                    throw new IllegalStateException("Not supported more than two input gates.");
+                    if (runtime.getBindingDescriptor().inputGateBindings.size() == 2) {
+                        if (gateIndex == 0) {
+                            allocator =
+                                    new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                            Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(0)));
+                        } else {
+                            allocator =
+                                    new BufferAllocatorGroup(allocatorGroup.getBufferSize(),
+                                            Arrays.asList(((BufferAllocatorGroup) allocatorGroup).getAllocator(1)));
+                        }
+                    } else {
+                        throw new IllegalStateException("Not supported more than two input gates.");
+                    }
                 }
-            }
 
-            // -------------------- STUPID HOT FIX --------------------
+                // -------------------- STUPID HOT FIX --------------------
+            }
         }
 
     }

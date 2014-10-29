@@ -73,8 +73,6 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
     private final Descriptors.DatasetNodeDescriptor nodeDescriptor;
 
-    private final IExecutionContext context;
-
     private final AbstractDataset<Object> dataset;
 
     private final BlockingQueue<Pair<List<Descriptors.AbstractNodeDescriptor>,OutputGateBindingProperties>> bindingRequest;
@@ -92,16 +90,21 @@ public class DatasetDriver2 extends AbstractInvokeable {
     private Pair<List<Descriptors.AbstractNodeDescriptor>,OutputGateBindingProperties> currentRequest = null;
 
     // ---------------------------------------------------
+
+    private CountDownLatch awaitRunningTransition = new CountDownLatch(1);
+
+    // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
+    @SuppressWarnings("unchecked")
     public DatasetDriver2(final ITaskRuntime runtime,
                           final Descriptors.DatasetNodeDescriptor nodeDescriptor,
                           final Descriptors.NodeBindingDescriptor bindingDescriptor) {
 
         this.nodeDescriptor = nodeDescriptor;
 
-        this.context = new ExecutionContext(runtime, nodeDescriptor, bindingDescriptor);
+        final IExecutionContext context = new ExecutionContext(runtime, nodeDescriptor, bindingDescriptor);
 
         this.dataset = (AbstractDataset<Object>)DatasetFactory.createDataset(context);
 
@@ -136,7 +139,37 @@ public class DatasetDriver2 extends AbstractInvokeable {
     // ---------------------------------------------------
 
     @Override
+    @SuppressWarnings("unchecked")
     public void create() throws Throwable {
+
+        runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
+                new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+
+                    @Override
+                    public void stateAction(TaskStates.TaskState previousState,
+                                            TaskStates.TaskTransition transition,
+                                            TaskStates.TaskState state) {
+
+                        awaitRunningTransition.countDown();
+                    }
+                });
+
+        runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
+                new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
+
+                    @Override
+                    public void stateAction(TaskStates.TaskState previousState,
+                                            TaskStates.TaskTransition transition,
+                                            TaskStates.TaskState state) {
+
+                        runtime.getBindingDescriptor().inputGateBindings.clear();
+
+                        runtime.getBindingDescriptor().outputGateBindings.clear();
+
+                        hasInitialBinding = false;
+                    }
+                }
+        );
 
         consumer.openGate(0);
     }
@@ -164,25 +197,13 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
         } else if (internalState == DatasetInternalState.DATASET_INTERNAL_STATE_ITERATION) {
 
-            final CountDownLatch consumeDataLatch = new CountDownLatch(1);
-
-            runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
-                    new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                        @Override
-                        public void stateAction(TaskStates.TaskState previousState,
-                                                TaskStates.TaskTransition transition,
-                                                TaskStates.TaskState state) {
-
-                            consumeDataLatch.countDown();
-                        }
-                    });
-
             try {
-                consumeDataLatch.await();
+                awaitRunningTransition.await();
             } catch (InterruptedException e) {
                 LOG.error(e.getLocalizedMessage(), e);
             }
+
+            awaitRunningTransition = new CountDownLatch(1);
 
             consumeDataset();
         }
@@ -195,7 +216,11 @@ public class DatasetDriver2 extends AbstractInvokeable {
     @Override
     public void release() throws Throwable {
 
-        releaseOutputBinding(0);
+        if (currentRequest != null) {
+            producer.done(0);
+        }
+
+        internalState = DatasetInternalState.DATASET_INTERNAL_STATE_FILLED;
 
         //consumer.closeGate(gateIndex);
     }
@@ -259,32 +284,11 @@ public class DatasetDriver2 extends AbstractInvokeable {
         }
 
         reader.end();
-
-        if (runtime.getBindingDescriptor().outputGateBindings.isEmpty()) {
-
-            runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
-                    new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                        @Override
-                        public void stateAction(TaskStates.TaskState previousState,
-                                                TaskStates.TaskTransition transition,
-                                                TaskStates.TaskState state) {
-
-                            if (!runtime.getNodeDescriptor().isReExecutable) {
-
-                                runtime.getBindingDescriptor().inputGateBindings.clear();
-
-                                runtime.getBindingDescriptor().outputGateBindings.clear();
-
-                                //runtime.getTaskStateMachine().reset();
-                            }
-                        }
-                    }
-            );
-        }
     }
 
     private List<Descriptors.AbstractNodeDescriptor> waitForOutputBinding(final int gateIndex) {
+
+        currentRequest = null;
 
         try {
 
@@ -332,26 +336,13 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
                 producer.bind(runtime.getBindingDescriptor().outputGateBindings, producer.getAllocator());
 
-                final CountDownLatch awaitRunningTransition = new CountDownLatch(1);
-
-                runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_RUNNING,
-                        new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                            @Override
-                            public void stateAction(TaskStates.TaskState previousState,
-                                                    TaskStates.TaskTransition transition,
-                                                    TaskStates.TaskState state) {
-
-                                awaitRunningTransition.countDown();
-                            }
-                        }
-                );
-
                 try {
                     awaitRunningTransition.await();
                 } catch (InterruptedException e) {
                     LOG.info(e.getMessage());
                 }
+
+                awaitRunningTransition = new CountDownLatch(1);
             }
 
             writer = new RecordWriter(runtime, nodeDescriptor.propertiesList.get(0).outputType, gateIndex, partitioner);
@@ -362,40 +353,12 @@ public class DatasetDriver2 extends AbstractInvokeable {
     }
 
     private void consumeDataset() {
-
         writer.begin();
 
         for (final Object object : dataset.getData())
             writer.writeObject(object);
 
         writer.end();
-    }
-
-    private void releaseOutputBinding(final int gateIndex) {
-
-        if (currentRequest != null) {
-            producer.done(gateIndex);
-        }
-
-        runtime.getTaskStateMachine().addStateListener(TaskStates.TaskState.TASK_STATE_FINISHED,
-                new StateMachine.IFSMStateAction<TaskStates.TaskState, TaskStates.TaskTransition>() {
-
-                    @Override
-                    public void stateAction(TaskStates.TaskState previousState,
-                                            TaskStates.TaskTransition transition,
-                                            TaskStates.TaskState state) {
-
-                        runtime.getBindingDescriptor().inputGateBindings.clear();
-
-                        runtime.getBindingDescriptor().outputGateBindings.clear();
-
-                        //runtime.getTaskStateMachine().reset();
-
-                        hasInitialBinding = false;
-                    }
-                });
-
-        internalState = DatasetInternalState.DATASET_INTERNAL_STATE_FILLED;
     }
 
     public AbstractDataset<Object> getDataset() {

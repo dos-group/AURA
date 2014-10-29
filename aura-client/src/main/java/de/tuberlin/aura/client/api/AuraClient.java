@@ -164,27 +164,35 @@ public final class AuraClient {
 
         final CountDownLatch awaitExecution = new CountDownLatch(numTopologies);
 
-        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, new IEventHandler() {
+        final IEventHandler finishedHandler = new IEventHandler() {
 
             @Override
             public void handleEvent(Event event) {
                 awaitExecution.countDown();
             }
-        });
+        };
 
-        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE, new IEventHandler() {
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, finishedHandler);
+
+        final IEventHandler failureHandler = new IEventHandler() {
 
             @Override
             public void handleEvent(Event event) {
                 awaitExecution.countDown();
             }
-        });
+        };
+
+        ioManager.addEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE, failureHandler);
 
         try {
             awaitExecution.await();
         } catch (InterruptedException e) {
             LOG.error("latch was interrupted", e);
         }
+
+        ioManager.removeEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED, finishedHandler);
+
+        ioManager.removeEventListener(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE, failureHandler);
     }
 
     public <E> Collection<E> getDataset(final UUID datasetID) {

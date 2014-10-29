@@ -209,9 +209,9 @@ public final class TaskRuntime extends EventDispatcher implements ITaskRuntime {
                     LOG.info(e.getMessage());
                 }
 
-                if (!doNextIteration) {
+                if (!doNextIteration)
                     invokeable.release();
-                } else
+                else
                     nextIterationSignal = new CountDownLatch(1);
 
             } else {

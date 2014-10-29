@@ -3,7 +3,9 @@ package de.tuberlin.aura.taskmanager;
 
 import java.util.UUID;
 
-import de.tuberlin.aura.core.taskmanager.spi.ITaskManager;
+import de.tuberlin.aura.core.taskmanager.spi.*;
+import de.tuberlin.aura.drivers.DatasetDriver2;
+import de.tuberlin.aura.drivers.OperatorDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,9 +13,6 @@ import de.tuberlin.aura.core.common.eventsystem.EventDispatcher;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.memory.BufferAllocatorGroup;
 import de.tuberlin.aura.core.memory.spi.IBufferMemoryManager;
-import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
-import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionManager;
-import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 
 
 public final class TaskExecutionManager extends EventDispatcher implements ITaskExecutionManager {
@@ -89,12 +88,30 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
 
         executionUnit[selectedEU].enqueueTask(runtime);
 
-        LOG.info("EXECUTE TASK {}-{} [{}] ON EXECUTION UNIT ({}) ON MACHINE [{}]",
+        StringBuilder sb = new StringBuilder();
+        if (executionUnit[selectedEU].getRuntime() != null && executionUnit[selectedEU].getRuntime().getInvokeable() != null) {
+            if (executionUnit[selectedEU].getRuntime().getInvokeable() instanceof DatasetDriver2)
+                sb.append("Dataset NAME:" + executionUnit[selectedEU].getRuntime().getNodeDescriptor().name + " TASK ID: " + executionUnit[selectedEU].getRuntime().getNodeDescriptor().taskID);
+            else
+                if (executionUnit[selectedEU].getRuntime().getInvokeable() instanceof OperatorDriver)
+                    sb.append("Operator NAME:" + executionUnit[selectedEU].getRuntime().getNodeDescriptor().name + " TASK ID: " + executionUnit[selectedEU].getRuntime().getNodeDescriptor().taskID);
+                else
+                    if (executionUnit[selectedEU].getRuntime().getInvokeable() instanceof AbstractInvokeable)
+                        sb.append("Invokeable");
+                    else
+                        sb.append("NAME:" + executionUnit[selectedEU].getRuntime().getNodeDescriptor().name + " TASK ID: " + executionUnit[selectedEU].getRuntime().getNodeDescriptor().taskID);
+        } else {
+            sb.append("Empty");
+        }
+
+        LOG.info("EXECUTE TASK {}-{} [{}] ON EXECUTION UNIT ({}) ON MACHINE [{}] -- QUEUE LENGTH: {} -- CURRENTLY RUNNING {}",
                  runtime.getNodeDescriptor().name,
                  runtime.getNodeDescriptor().taskIndex,
                  runtime.getNodeDescriptor().taskID,
                  executionUnit[selectedEU].getExecutionUnitID(),
-                 machineDescriptor.uid);
+                 machineDescriptor.uid,
+                 executionUnit[selectedEU].getNumberOfEnqueuedTasks(),
+                 sb.toString());
     }
 
     public ITaskExecutionUnit getExecutionUnitByTaskID(final UUID taskID) {
@@ -116,18 +133,24 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
                 Thread.sleep(50);
                 executionUnitForTask = this.findExecutionUnitByTaskID(taskID);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                LOG.info(e.getMessage());
             }
         }
 
         if (executionUnitForTask == null) {
-            throw new IllegalStateException("Could not find execution unit for input edge");
+            /*for (final ITaskExecutionUnit eu : executionUnit) {
+                final String euTaskName = eu.getRuntime() != null ? eu.getRuntime().getNodeDescriptor().name : "";
+                final UUID euTaskID = eu.getRuntime() != null ? eu.getRuntime().getNodeDescriptor().taskID : null;
+                LOG.info( "execUnitId(" + eu.getExecutionUnitID() + ") - numOfEnqueuedTasks(" + eu.getNumberOfEnqueuedTasks() + ") - currentTask(" + euTaskName +  ", " + euTaskID + ")");
+            }*/
+            //throw new IllegalStateException("Could not find execution unit for input edge");
+            return null;
         }
 
         return executionUnitForTask;
     }
 
-    private ITaskExecutionUnit findExecutionUnitByTaskID(UUID taskID) {
+    private ITaskExecutionUnit findExecutionUnitByTaskID(final UUID taskID) {
         for (int i = 0; i < numberOfExecutionUnits; ++i) {
             final ITaskExecutionUnit eu = executionUnit[i];
             final ITaskRuntime runtime = eu.getRuntime();
@@ -137,6 +160,17 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
         }
         return null;
     }
+
+    /*private boolean ___isTaskEnqueuedInExecutionUnit(final UUID taskID) {
+        for (int i = 0; i < numberOfExecutionUnits; ++i) {
+            final ITaskExecutionUnit eu = executionUnit[i];
+            final ITaskRuntime runtime = eu.getRuntimeForTaskID(taskID);
+            if (runtime != null) {
+                return true;
+            }
+        }
+        return false;
+    }*/
 
     @Override
     public ITaskManager getTaskManager() {

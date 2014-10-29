@@ -73,6 +73,8 @@ public final class IOEvents {
 
         // -----------------------------
 
+        public static final String CONTROL_EVENT_ASK_EXECUTE_NEXT_ITERATION = "CONTROL_EVENT_ASK_EXECUTE_NEXT_ITERATION";
+
         public static final String CONTROL_EVENT_EXECUTE_NEXT_ITERATION = "CONTROL_EVENT_EXECUTE_NEXT_ITERATION";
 
         public static final String CONTROL_EVENT_ITERATION_CYCLE_END = "CONTROL_EVENT_ITERATION_CYCLE_END";

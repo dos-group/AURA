@@ -26,40 +26,11 @@ public final class IterativeDataflowTest2 {
     // UDFs.
     // ---------------------------------------------------
 
-    public static final int COUNT = 10000;
-
-    public static final class Source1 extends SourceFunction<Tuple2<Integer, String>> {
-
-        int count = COUNT;
-
-        @Override
-        public Tuple2<Integer, String> produce() {
-            Tuple2<Integer, String> res = (--count >= 0 ) ?  new Tuple2<>(count, "String" + count) : null;
-            if (count < 0) count = COUNT;
-            return res;
-        }
-    }
-
-    public static final class Map1 extends MapFunction<Tuple2<Integer, String>, Tuple2<Integer,String>> {
-
-        @Override
-        public Tuple2<Integer,String> map(final Tuple2<Integer, String> in) {
-            return new Tuple2<>(in._1 + 1, in._2);
-        }
-    }
-
-    public static final class Sink1 extends SinkFunction<Tuple2<String,Integer>> {
-
-        @Override
-        public void consume(final Tuple2<String,Integer> in) {
-            System.out.println(in);
-        }
-    }
 
     // ---------------------------------------------------
     // Entry Point.
     // ---------------------------------------------------
-
+/*
     public static void main(final String[] args) {
 
         final TypeInformation source1TypeInfo =
@@ -214,7 +185,7 @@ public final class IterativeDataflowTest2 {
         final Topology.AuraTopology topology2 = atb2.build("JOB2", true);
         ac.submitTopology(topology2, null);
 
-        final int ITERATION_COUNT = 1500;
+        final int ITERATION_COUNT = 100;
 
         for (int i = 0; i < ITERATION_COUNT; ++i) {
 
@@ -249,7 +220,7 @@ public final class IterativeDataflowTest2 {
         //ac.assignDataset(dataset1UID, dataset2UID);
 
 
-        /*Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
+        Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
         atb.addNode(new Topology.OperatorNode(source1))
                 .connectTo("Map1", Topology.Edge.TransferType.ALL_TO_ALL)
                 .addNode(new Topology.OperatorNode(map1))
@@ -262,8 +233,8 @@ public final class IterativeDataflowTest2 {
             ac.waitForIterationEnd(topology.topologyID);
             ac.reExecute(topology.topologyID, i < 5 - 1);
         }
-        ac.awaitSubmissionResult(1);*/
+        ac.awaitSubmissionResult(1);
 
-    }
+    }*/
 }
 

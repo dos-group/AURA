@@ -9,6 +9,7 @@ import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
 import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 import de.tuberlin.aura.drivers.DatasetDriver2;
 import net.sourceforge.argparse4j.ArgumentParsers;
@@ -201,8 +202,11 @@ public final class TaskManager implements ITaskManager {
 
         if (runtime.getInvokeable() instanceof DatasetDriver2) {
 
-            getTaskExecutionManager().getExecutionUnitByTaskID(taskID).eraseDataset();
-            getTaskExecutionManager().getExecutionUnitByTaskID(taskID).getExecutorThread().interrupt();
+            final ITaskExecutionUnit execUnit = getTaskExecutionManager().getExecutionUnitByTaskID(taskID);
+            execUnit.eraseDataset();
+            execUnit.getExecutorThread().interrupt();
+
+            LOG.info("ERASE DATASET [" + taskID + "]");
 
         } else
             throw new IllegalStateException("task id " + taskID + " is not a dataset");

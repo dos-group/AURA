@@ -182,11 +182,8 @@ public final class DataConsumer implements IDataConsumer {
     }
 
     public int getInputGateIndexFromTaskID(final UUID taskID) {
-
         // see DataConsumer.getExecutionUnitByTaskID(..) for the reasoning behind this polling..
-
         Integer gateIndex = taskIDToGateIndex.get(taskID);
-
         for (int i=0; i < 20 && gateIndex == null; i++) {
             try {
                 Thread.sleep(50);
@@ -195,11 +192,9 @@ public final class DataConsumer implements IDataConsumer {
                 e.printStackTrace();
             }
         }
-
         if (gateIndex == null) {
             throw new IllegalStateException("Could not find gate for task");
         }
-
         return gateIndex;
     }
 
@@ -305,12 +300,12 @@ public final class DataConsumer implements IDataConsumer {
         private void handleTaskInputDataChannelConnect(final IOEvents.DataIOEvent event) {
 
             try {
-                int gateIndex = taskIDToGateIndex.get(event.srcTaskID);
-                int channelIndex = senderTaskIDToChannelIndex.get(event.srcTaskID);
-                final DataReader channelReader = (DataReader) event.getPayload();
+                final int gateIndex = taskIDToGateIndex.get(event.srcTaskID);
+                final int channelIndex = senderTaskIDToChannelIndex.get(event.srcTaskID);
+                final DataReader dataReader = (DataReader) event.getPayload();
                 final BufferQueue<IOEvents.DataIOEvent> queue = runtime.getQueueManager().getInboundQueue(gateIndex, channelIndex);
-                channelReader.bindQueue(runtime.getNodeDescriptor().taskID, event.getChannel(), gateIndex, channelIndex, queue);
-                inputGates.get(gateIndex).setDataReader(channelReader);
+                dataReader.bindQueue(runtime.getNodeDescriptor().taskID, event.getChannel(), gateIndex, channelIndex, queue);
+                inputGates.get(gateIndex).setDataReader(dataReader);
                 final Descriptors.AbstractNodeDescriptor src = runtime.getBindingDescriptor().inputGateBindings.get(gateIndex).get(channelIndex);
 
                 LOG.debug("INPUT CONNECTION FROM " + src.name + " [" + src.taskID + "] TO TASK "
@@ -332,7 +327,7 @@ public final class DataConsumer implements IDataConsumer {
                 }
 
             } catch (Exception ex) {
-                throw new IllegalStateException("unexpected channel tried to connect");
+                throw new IllegalStateException("unexpected channel tried to connect - srcTask: " + event.srcTaskID, ex);
             }
         }
     }

@@ -86,7 +86,7 @@ public class EventDispatcher implements IEventDispatcher {
                         }
                     }
 
-                    LOG.trace("Event dispatcher thread stopped.");
+                    removeAllEventListener();
                 }
             };
 
@@ -222,11 +222,6 @@ public class EventDispatcher implements IEventDispatcher {
         return listenerMap.get(type) != null;
     }
 
-    @Deprecated
-    public void shutdownEventQueue() {
-        isRunning.set(false);
-    }
-
     public void setName(String name) {
         if (useDispatchThread) {
             this.dispatcherThread.setName(name);
@@ -240,6 +235,8 @@ public class EventDispatcher implements IEventDispatcher {
             isRunning.set(false);
             // Feed the poison pill to the event dispatcher thread to terminate it.
             eventQueue.add(new Event(IOEvents.InternalEventType.POISON_PILL_TERMINATION));
+        } else {
+            removeAllEventListener();
         }
     }
 

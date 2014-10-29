@@ -47,7 +47,7 @@ public final class BufferAllocator implements IAllocator {
 
     public final BlockingQueue<MemoryView> freeList;
 
-    public final Map<MemoryView,StackTraceElement[]> usedMap;
+    //public final Map<MemoryView,StackTraceElement[]> usedMap;
 
     private final LinkedList<IBufferCallback> callbackList;
 
@@ -75,7 +75,7 @@ public final class BufferAllocator implements IAllocator {
 
         this.freeList = new LinkedBlockingQueue<>();
 
-        this.usedMap = new HashMap<>();
+        //this.usedMap = new HashMap<>();
 
         this.callbackList = new LinkedList<>();
 
@@ -93,7 +93,7 @@ public final class BufferAllocator implements IAllocator {
         final MemoryView buffer = freeList.poll();
         if (buffer != null) {
             buffer.retain();
-            usedMap.put(buffer, Thread.currentThread().getStackTrace());
+            //usedMap.put(buffer, Thread.currentThread().getStackTrace());
         }
         return buffer;
     }
@@ -110,7 +110,7 @@ public final class BufferAllocator implements IAllocator {
                 callbackList.add(callback);
             } else {
                 buffer.retain();
-                usedMap.put(buffer, Thread.currentThread().getStackTrace());
+                //usedMap.put(buffer, Thread.currentThread().getStackTrace());
             }
             return buffer;
         }
@@ -123,11 +123,11 @@ public final class BufferAllocator implements IAllocator {
             logStatus();
             buffer = freeList.take();
             buffer.retain();
-            usedMap.put(buffer, Thread.currentThread().getStackTrace());
+            //usedMap.put(buffer, Thread.currentThread().getStackTrace());
         }
         if (buffer != null) {
             buffer.retain();
-            usedMap.put(buffer, Thread.currentThread().getStackTrace());
+            //usedMap.put(buffer, Thread.currentThread().getStackTrace());
         }
 
         return buffer;
@@ -143,11 +143,11 @@ public final class BufferAllocator implements IAllocator {
             if (!callbackList.isEmpty()) {
                 final IBufferCallback bufferCallback = callbackList.poll();
                 buffer.retain();
-                usedMap.put(buffer, Thread.currentThread().getStackTrace());
+                //usedMap.put(buffer, Thread.currentThread().getStackTrace());
                 bufferCallback.bufferReader(buffer);
             } else {
                 freeList.add(buffer);
-                usedMap.remove(buffer);
+                //usedMap.remove(buffer);
             }
         }
     }
@@ -170,7 +170,7 @@ public final class BufferAllocator implements IAllocator {
     @Override
     public void checkForMemoryLeaks() {
         if (freeList.size() != bufferCount) {
-            throw new IllegalStateException( (bufferCount - freeList.size()) + " buffers are not freed. callbackList.size = " + callbackList.size() + " usedMap: " + usedMap);
+            throw new IllegalStateException( (bufferCount - freeList.size()) + " buffers are not freed. callbackList.size = " + callbackList.size() /*+ " usedMap: " + usedMap*/);
         }
 
         for (final MemoryView buffer : freeList) {

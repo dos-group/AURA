@@ -242,8 +242,6 @@ public final class OperatorDriver extends AbstractInvokeable {
         for (int i = 0; i <  runtime.getBindingDescriptor().outputGateBindings.size(); ++i)
             producer.done(i);
 
-        //Thread.sleep(1000);
-
         //operator.close();
     }
 

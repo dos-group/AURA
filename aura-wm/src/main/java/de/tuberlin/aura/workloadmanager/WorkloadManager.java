@@ -112,7 +112,17 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
             @Override
             public void handleEvent(Event e) {
                 final IOEvents.TaskControlIOEvent event = (IOEvents.TaskControlIOEvent) e;
-                registeredTopologies.get(event.getTopologyID()).dispatchEvent(event);
+                try {
+                    registeredTopologies.get(event.getTopologyID()).dispatchEvent(event);
+                } catch(Exception ex) {
+                    if (event == null)
+                        System.out.println("(1)");
+                    else
+                        if (registeredTopologies.get(event.getTopologyID()) == null)
+                            System.out.println("(2)");
+
+                    throw new IllegalStateException(ex);
+                }
             }
         });
         // Register EventHandler (acts as an Dispatcher) for TaskManager transitions.
