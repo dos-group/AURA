@@ -25,8 +25,6 @@ public final class TypeInformation implements Serializable {
 
     public final List<TypeInformation> fieldTypes;
 
-    private final boolean isGrouped;
-
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
@@ -36,19 +34,13 @@ public final class TypeInformation implements Serializable {
     }
 
     public TypeInformation(final Class<?> type, TypeInformation... fieldTypes) {
-        this(type, false, fieldTypes.length > 0 ? Arrays.asList(fieldTypes) : null);
+        this(type, fieldTypes.length > 0 ? Arrays.asList(fieldTypes) : null);
     }
 
-    public TypeInformation(final Class<?> type, boolean isGrouped, TypeInformation... fieldTypes) {
-        this(type, isGrouped, fieldTypes.length > 0 ? Arrays.asList(fieldTypes) : null);
-    }
-
-    public TypeInformation(final Class<?> type, boolean isGrouped, List<TypeInformation> fieldTypes) {
+    public TypeInformation(final Class<?> type, List<TypeInformation> fieldTypes) {
         // sanity check.
         if (type == null)
             throw new IllegalArgumentException("type == null");
-
-        this.isGrouped = isGrouped;
 
         this.type = type;
 
@@ -95,10 +87,6 @@ public final class TypeInformation implements Serializable {
         }
 
         return ArrayUtils.toIntArray(selectorChain);
-    }
-
-    public boolean isGrouped() {
-        return isGrouped;
     }
 
     public List<Class<?>> extractTypes() {
@@ -158,7 +146,7 @@ public final class TypeInformation implements Serializable {
             throw new IllegalStateException(e);
         }
 
-        return new TypeInformation(obj.getClass(), false, fields);
+        return new TypeInformation(obj.getClass(), fields);
     }
 
     // ---------------------------------------------------

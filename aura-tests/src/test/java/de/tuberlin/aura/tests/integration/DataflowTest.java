@@ -592,7 +592,6 @@ public final class DataflowTest {
         int dop = executionUnits / 4;
 
         final TypeInformation source1TypeInfo = source1TypeInfo();
-        final TypeInformation groupBy1TypeInfo = groupBy1TypeInfo();
 
         Topology.OperatorNode sourceNode =
                 new Topology.OperatorNode(
@@ -636,7 +635,7 @@ public final class DataflowTest {
                         null,
                         source1TypeInfo,
                         null,
-                        groupBy1TypeInfo,
+                        source1TypeInfo,
                         null,
                         null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                         null, null, null
@@ -649,7 +648,7 @@ public final class DataflowTest {
                         "Fold1", dop, 1,
                         new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                        groupBy1TypeInfo,
+                        source1TypeInfo,
                         null,
                         source1TypeInfo,
                         Job6Fold.class.getName(),
@@ -686,7 +685,7 @@ public final class DataflowTest {
                         null,
                         source1TypeInfo,
                         null,
-                        groupBy1TypeInfo,
+                        source1TypeInfo,
                         null,
                         null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
                         null, null, null
@@ -699,7 +698,7 @@ public final class DataflowTest {
                         "Fold2", dop, 1,
                         null,
                         null,
-                        groupBy1TypeInfo,
+                        source1TypeInfo,
                         null,
                         source1TypeInfo,
                         Job6Fold.class.getName(),
@@ -855,12 +854,6 @@ public final class DataflowTest {
         return new TypeInformation(Tuple2.class,
                 joinedType1,
                 joinedType2);
-    }
-
-    private static TypeInformation groupBy1TypeInfo() {
-        return new TypeInformation(Tuple2.class, true,
-                new TypeInformation(String.class),
-                new TypeInformation(Integer.class));
     }
 
     // ---------------------------------------------------
