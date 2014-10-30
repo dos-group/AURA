@@ -66,7 +66,6 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
         List<LogicalNode> nodesRequiredToCoLocateTo = new ArrayList<>();
         List<LogicalNode> nodesWithCoLocationRequirements = new ArrayList<>();
         List<LogicalNode> nodesWithPreferredLocations = new ArrayList<>();
-        List<LogicalNode> unconstrainedNodes = new ArrayList<>();
 
         for (LogicalNode node : topology.nodesFromSourceToSink()) {
             if (node.hasCoLocationRequirements()) {
@@ -76,15 +75,26 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
                 nodesRequiredToCoLocateTo.add(topology.nodeMap.get(taskToCoLocateTo));
             } else if (node.isHDFSSource()) {
                 nodesWithPreferredLocations.add(node);
-            } else {
-                unconstrainedNodes.add(node);
             }
         }
 
+        // schedule nodes required by others first (e.g. datasets), then the nodes with requirements (e.g. dataset update ops)
+
         scheduleCollectionOfElements(nodesRequiredToCoLocateTo, topology);
         scheduleCollectionOfElements(nodesWithCoLocationRequirements, topology);
+
+        // schedule nodes that prefer locations (e.g. HDFSSources)
+
         scheduleCollectionOfElements(nodesWithPreferredLocations, topology);
-        scheduleCollectionOfElements(unconstrainedNodes, topology);
+
+        // schedule all remaining nodes
+
+        List<LogicalNode> remainingNodes = new ArrayList<>(topology.nodesFromSourceToSink());
+        remainingNodes.removeAll(nodesRequiredToCoLocateTo);
+        remainingNodes.removeAll(nodesWithCoLocationRequirements);
+        remainingNodes.removeAll(nodesWithPreferredLocations);
+
+        scheduleCollectionOfElements(remainingNodes, topology);
     }
 
     private void scheduleCollectionOfElements(final Collection<LogicalNode> nodes, AuraTopology topology) {
@@ -138,6 +148,10 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
         } else if (element.isHDFSSource()) {
 
             List<InputSplit> inputSplits = infrastructureManager.registerHDFSSource(element);
+
+            // shuffle in case HDFS returns the inputSplits ordered / with similar orders
+            // to in the end assign inputSplits roughly evenly to hosts
+            Collections.shuffle(inputSplits);
 
             locationPreferences = new LinkedList<>();
 

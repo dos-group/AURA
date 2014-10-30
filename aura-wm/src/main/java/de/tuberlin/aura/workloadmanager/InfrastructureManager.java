@@ -42,6 +42,8 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
     private final Map<UUID, Integer> availableExecutionUnitsMap;
 
+    private int machineIdx;
+
     private final InputSplitManager inputSplitManager;
 
     // ---------------------------------------------------
@@ -66,6 +68,8 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
         this.availableExecutionUnitsMap = new ConcurrentHashMap<>();
 
+        this.machineIdx = 0;
+
         try {
             zookeeperClient = new ZookeeperClient(zookeeper);
             zookeeperClient.initDirectories();
@@ -84,6 +88,9 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                     } catch (Exception e) {
                         throw new IllegalStateException(e);
                     }
+
+                    LOG.info("ADDED MACHINE uid = " + descriptor.uid);
+
                     this.nodeMap.put(descriptor.uid, descriptor);
                     this.availableExecutionUnitsMap.put(descriptor.uid, config.getInt("tm.execution.units.number"));
                 }
@@ -107,11 +114,21 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
             final List<MachineDescriptor> workerMachines = new ArrayList<>(nodeMap.values());
 
+            LOG.debug("--------- Available execution units before getMachine() call");
+
+            for (int i = 0; i < workerMachines.size(); i++) {
+                MachineDescriptor machine = workerMachines.get(i);
+                LOG.debug(".. " + i + ". " + availableExecutionUnitsMap.get(machine.uid) + " available execution units on machine " + machine.uid + " [" + machine.hostName + "]");
+            }
+
             if (locationPreference != null) {
 
                 for (MachineDescriptor machine : locationPreference.preferredLocationAlternatives) {
                     if (availableExecutionUnitsMap.get(machine.uid) > 0) {
                         availableExecutionUnitsMap.put(machine.uid, availableExecutionUnitsMap.get(machine.uid) - 1);
+
+                        LOG.debug("--------- Took machine " + machine.uid);
+
                         return machine;
                     }
                 }
@@ -121,20 +138,24 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                 }
             }
 
-            for (MachineDescriptor machine : workerMachines) {
+            for (int i = 0; i < workerMachines.size(); i++) {
 
+                machineIdx = (++machineIdx % workerMachines.size());
+
+                MachineDescriptor machine = workerMachines.get(machineIdx);
                 if (availableExecutionUnitsMap.get(machine.uid) > 0) {
                     availableExecutionUnitsMap.put(machine.uid, availableExecutionUnitsMap.get(machine.uid) - 1);
+
+                    LOG.debug("--------- Took machine " + machine.uid + " with Index " + machineIdx);
+
                     return machine;
                 }
-
             }
 
             // TODO: handle this case (and the above exception) in the TopologyScheduler/WorkloadManager by waiting for
             // resources to become available (but maybe then reason about the scheduling some more: deploy from sources
             // so partially deployed queries can progress as much as possible)
             throw new IllegalStateException("No execution unit available");
-
         }
 
     }
@@ -176,7 +197,6 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
         List<String> hostNames = Arrays.asList(inputSplit.getHostnames());
 
         synchronized (nodeInfoMonitor) {
-
             for (MachineDescriptor machine : nodeMap.values()) {
                 if (hostNames.contains(machine.hostName)) {
                     machinesWithInputSplit.add(machine);
@@ -195,7 +215,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
         @Override
         public synchronized void process(WatchedEvent event) {
-            LOG.debug("Received event - state: {} - type: {}", event.getState().toString(), event.getType().toString());
+            LOG.info("Received event - state: {} - type: {}", event.getState().toString(), event.getType().toString());
 
             try {
                 synchronized (nodeInfoMonitor) {
@@ -208,6 +228,9 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                         MachineDescriptor newMachine = null;
                         for (final String node : nodeList) {
                             final UUID machineID = UUID.fromString(node);
+
+                            LOG.info("ADDED MACHINE uid = " + machineID);
+
                             if (!nodeMap.containsKey(machineID)) {
                                 newMachine = (MachineDescriptor) zookeeperClient.read(event.getPath() + "/" + node);
                                 nodeMap.put(machineID, newMachine);
