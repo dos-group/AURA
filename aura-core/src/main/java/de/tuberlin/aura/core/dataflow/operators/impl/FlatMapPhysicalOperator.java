@@ -1,5 +1,8 @@
 package de.tuberlin.aura.core.dataflow.operators.impl;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.operators.base.AbstractUnaryUDFPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
@@ -7,9 +10,6 @@ import de.tuberlin.aura.core.dataflow.operators.base.IPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.contracts.IFlatMapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FlatMapFunction;
 import de.tuberlin.aura.core.record.OperatorResult;
-
-import java.util.Queue;
-import java.util.LinkedList;
 
 import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
@@ -20,7 +20,7 @@ public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
     // Fields.
     // ---------------------------------------------------
 
-    private Queue<O> elementQueue;
+    private List<O> results;
 
     // ---------------------------------------------------
     // Constructor.
@@ -43,25 +43,24 @@ public final class FlatMapPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
         super.open();
         inputOp.open();
 
-        elementQueue = new LinkedList<>();
+        results = new ArrayList<>();
     }
 
     @Override
     public OperatorResult<O> next() throws Throwable {
 
-        while (elementQueue.isEmpty()) {
+        while (results.isEmpty()) {
             OperatorResult<I> input = inputOp.next();
 
             if (input.marker != StreamMarker.END_OF_STREAM_MARKER) {
-                ((IFlatMapFunction<I,O>)function).flatMap(input.element, elementQueue);
+                ((IFlatMapFunction<I,O>)function).flatMap(input.element, results);
             } else {
                 return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
             }
 
         }
 
-        return new OperatorResult<>(elementQueue.poll());
-
+        return new OperatorResult<>(results.remove(0));
     }
 
     @Override
