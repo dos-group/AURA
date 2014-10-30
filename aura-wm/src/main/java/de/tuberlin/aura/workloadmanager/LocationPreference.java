@@ -29,7 +29,6 @@ public class LocationPreference {
     public LocationPreference(MachineDescriptor preferredLocation, PreferenceLevel preferenceLevel) {
 
         this(Collections.singletonList(preferredLocation), preferenceLevel);
-
     }
 
     public LocationPreference(List<MachineDescriptor> preferredLocationAlternatives, PreferenceLevel preferenceLevel) {
@@ -37,7 +36,6 @@ public class LocationPreference {
         this.preferredLocationAlternatives = preferredLocationAlternatives;
 
         this.preferenceLevel = preferenceLevel;
-
     }
 
 

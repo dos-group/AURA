@@ -73,7 +73,5 @@ public class IntegrationTestSuite {
             clusterSimulator.shutdown();
             clusterSimulator = null;
         }
-
     }
-
 }

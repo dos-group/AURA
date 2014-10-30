@@ -283,7 +283,7 @@ public final class PlainTopologiesTest {
 
     public static class LargeSource extends AbstractInvokeable {
 
-        private static final int BUFFER_COUNT = 1500000;
+        private static final int BUFFER_COUNT = 100;
 
         public LargeSource() {
         }

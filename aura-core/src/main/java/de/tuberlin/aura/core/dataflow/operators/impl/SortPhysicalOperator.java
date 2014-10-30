@@ -1,7 +1,6 @@
 package de.tuberlin.aura.core.dataflow.operators.impl;
 
-import java.util.Comparator;
-import java.util.PriorityQueue;
+import java.util.*;
 
 import de.tuberlin.aura.core.common.utils.IVisitor;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
@@ -20,17 +19,18 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
     // Inner Classes.
     // ---------------------------------------------------
 
-    public class SortComparator<T> implements Comparator<OperatorResult<T>> {
+    public class SortComparator<T> implements Comparator<T> {
 
         private DataflowNodeProperties properties = getContext().getProperties();
 
         @Override
-        public int compare(final OperatorResult<T> o1, final OperatorResult<T> o2) {
+        @SuppressWarnings("unchecked")
+        public int compare(final T o1, final T o2) {
 
             for(final int[] selectorChain : getContext().getProperties().sortKeyIndices) {
 
-                final Comparable f1 = (Comparable)inputType.selectField(selectorChain, o1.element);
-                final Comparable f2 = (Comparable)inputType.selectField(selectorChain, o2.element);
+                final Comparable f1 = (Comparable)inputType.selectField(selectorChain, o1);
+                final Comparable f2 = (Comparable)inputType.selectField(selectorChain, o2);
                 final int res = properties.sortOrder == DataflowNodeProperties.SortOrder.ASCENDING ? f1.compareTo(f2) : f2.compareTo(f1);
 
                 if (res != 0)
@@ -47,7 +47,7 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
     private final TypeInformation inputType;
 
-    private PriorityQueue<OperatorResult<I>> priorityQueue;
+    private List<I> elements;
 
     // ---------------------------------------------------
     // Constructor.
@@ -60,7 +60,7 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
         this.inputType = getContext().getProperties(getOperatorNum()).input1Type;
 
-        this.priorityQueue = new PriorityQueue<>(10, new SortComparator<I>());
+        this.elements = new ArrayList<>();
     }
 
     // ---------------------------------------------------
@@ -76,17 +76,21 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
         OperatorResult<I> in = inputOp.next();
 
         while (in.marker != StreamMarker.END_OF_STREAM_MARKER) {
-            priorityQueue.add(in);
+            elements.add(in.element);
             in = inputOp.next();
         }
 
         inputOp.close();
+
+        Collections.sort(elements, new SortComparator<>());
     }
 
     @Override
     public OperatorResult<I> next() throws Throwable {
-        OperatorResult<I> result = priorityQueue.poll();
-        return (result != null) ? result : new OperatorResult<I>(StreamMarker.END_OF_STREAM_MARKER);
+        if (elements.size() > 0)
+            return new OperatorResult<>(elements.remove(0));
+        else
+            return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
     }
 
     @Override

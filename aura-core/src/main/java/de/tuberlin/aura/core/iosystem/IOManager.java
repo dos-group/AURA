@@ -315,13 +315,13 @@ public final class IOManager extends EventDispatcher implements IIOManager {
         @Handle(event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_INPUT_CHANNEL_CONNECTED)
         private void handleControlChannelInputConnected(final ControlIOEvent event) {
             controlIOConnections.put(new Pair<>(machine.uid, event.getSrcMachineID()), event.getChannel());
-            LOG.debug("CONTROL I/O CONNECTION BETWEEN MACHINE " + event.getSrcMachineID() + " AND " + event.getDstMachineID() + " ESTABLISHED");
+            LOG.info("CONTROL I/O CONNECTION BETWEEN MACHINE " + event.getSrcMachineID() + " AND " + event.getDstMachineID() + " ESTABLISHED");
         }
 
         @Handle(event = ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_OUTPUT_CHANNEL_CONNECTED)
         private void handleControlChannelOutputConnected(final ControlIOEvent event) {
             controlIOConnections.put(new Pair<>(machine.uid, event.getDstMachineID()), event.getChannel());
-            LOG.debug("CONTROL I/O CONNECTION BETWEEN MACHINE " + event.getSrcMachineID() + " AND " + event.getDstMachineID() + " ESTABLISHED");
+            LOG.info("CONTROL I/O CONNECTION BETWEEN MACHINE " + event.getSrcMachineID() + " AND " + event.getDstMachineID() + " ESTABLISHED");
         }
     }
 
