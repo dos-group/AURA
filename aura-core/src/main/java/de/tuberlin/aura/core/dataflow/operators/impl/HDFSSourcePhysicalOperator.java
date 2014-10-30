@@ -43,7 +43,6 @@ public class HDFSSourcePhysicalOperator<O> extends AbstractUnaryPhysicalOperator
     public HDFSSourcePhysicalOperator(final IExecutionContext context) {
 
         super(context, null);
-
     }
 
     // ---------------------------------------------------
@@ -65,8 +64,6 @@ public class HDFSSourcePhysicalOperator<O> extends AbstractUnaryPhysicalOperator
         split = (FileInputSplit)getContext().getRuntime().getNextInputSplit();
 
         record = AbstractTuple.createTuple(((CSVInputFormat<AbstractTuple>)inputFormat).getFieldTypes().length);
-
-        //System.out.println("HDFSSourcePhysicalOperator (" + getContext().getNodeDescriptor().taskIndex + ") -------------------------> " + split.getStart());
 
         inputFormat.open(split);
     }

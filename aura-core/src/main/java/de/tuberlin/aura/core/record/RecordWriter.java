@@ -57,16 +57,16 @@ public class RecordWriter implements IRecordWriter {
     // Constructors.
     // ---------------------------------------------------
 
-    public RecordWriter(final ITaskRuntime driver, final TypeInformation typeInformation, final int gateIndex, final Partitioner.IPartitioner partitioner) {
+    public RecordWriter(final ITaskRuntime runtime, final TypeInformation typeInformation, final int gateIndex, final Partitioner.IPartitioner partitioner) {
         // sanity check.
-        if (driver == null)
+        if (runtime == null)
             throw new IllegalArgumentException("runtime == null");
         if (typeInformation == null)
             throw new IllegalArgumentException("typeInformation == null");
 
         this.partitioner = partitioner;
 
-        final int bufferSize = driver.getProducer().getAllocator().getBufferSize();
+        final int bufferSize = runtime.getProducer().getAllocator().getBufferSize();
 
         this.kryo = new Kryo(null);
 
@@ -74,7 +74,7 @@ public class RecordWriter implements IRecordWriter {
 
         this.outputStreams = new ArrayList<>();
 
-        this.outputBinding = driver.getBindingDescriptor().outputGateBindings.get(gateIndex); // 1
+        this.outputBinding = runtime.getBindingDescriptor().outputGateBindings.get(gateIndex); // 1
 
         this.channelCount = (partitioner != null) ? outputBinding.size() : 1;
 
@@ -93,7 +93,7 @@ public class RecordWriter implements IRecordWriter {
                 @Override
                 public MemoryView get() {
                     try {
-                        return driver.getProducer().getAllocator().allocBlocking();
+                        return runtime.getProducer().getAllocator().allocBlocking();
                     } catch (InterruptedException e) {
                         throw new IllegalStateException(e);
                     }
@@ -105,9 +105,9 @@ public class RecordWriter implements IRecordWriter {
                 @Override
                 public void put(MemoryView buffer) {
                     if (partitioner != null) {
-                        driver.getProducer().emit(gateIndex, index, buffer);
+                        runtime.getProducer().emit(gateIndex, index, buffer);
                     } else {
-                        driver.getProducer().broadcast(gateIndex, buffer);
+                        runtime.getProducer().broadcast(gateIndex, buffer);
                     }
                 }
             });

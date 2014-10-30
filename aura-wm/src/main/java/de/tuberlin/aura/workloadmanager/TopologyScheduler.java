@@ -48,12 +48,7 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
     @Override
     public AuraTopology apply(AuraTopology topology) {
 
-        LOG.info("ENTER SCHEDULE");
-
         scheduleTopology(topology);
-
-        LOG.info("LEAVE SCHEDULE");
-
 
         dispatcher.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE));
 

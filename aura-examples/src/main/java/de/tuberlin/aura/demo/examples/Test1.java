@@ -12,8 +12,10 @@ import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
 import de.tuberlin.aura.core.record.tuples.Tuple3;
 import de.tuberlin.aura.core.topology.Topology;
+import org.apache.commons.lang3.RandomStringUtils;
 
 import java.util.Arrays;
+import java.util.Random;
 import java.util.UUID;
 
 
@@ -25,19 +27,15 @@ public class Test1 {
 
     public static final class UDFSource1 extends SourceFunction<Tuple3<Integer,String,Integer>> {
 
-        int count = 25000000;
+        int count = 5500000;
+
+        Random randInt = new Random();
+
+        RandomStringUtils randStrUtils = new RandomStringUtils();
 
         @Override
         public Tuple3<Integer, String, Integer> produce() {
-
-            if (count == 0)
-                return null;
-
-            if ((count-- % 2) == 0) {
-                return new Tuple3<>(1,"eins",count);
-            } else {
-                return new Tuple3<>(2,"zwei",count);
-            }
+            return new Tuple3<>(randInt.nextInt(10000000), randStrUtils.random(10), randInt.nextInt(10000000));
         }
     }
 
