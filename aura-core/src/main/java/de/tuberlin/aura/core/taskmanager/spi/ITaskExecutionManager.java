@@ -1,5 +1,6 @@
 package de.tuberlin.aura.core.taskmanager.spi;
 
+import java.util.List;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.common.eventsystem.IEventDispatcher;
@@ -16,4 +17,6 @@ public interface ITaskExecutionManager extends IEventDispatcher {
     public abstract ITaskExecutionUnit getExecutionUnitByTaskID(final UUID taskID);
 
     public abstract ITaskManager getTaskManager();
+
+    public abstract List<ITaskExecutionUnit> getExecutionUnits();
 }

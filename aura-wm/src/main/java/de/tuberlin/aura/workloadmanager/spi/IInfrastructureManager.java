@@ -1,6 +1,8 @@
 package de.tuberlin.aura.workloadmanager.spi;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.filesystem.FileInputSplit;
@@ -14,8 +16,6 @@ public interface IInfrastructureManager {
 
     public abstract Descriptors.MachineDescriptor getMachine(LocationPreference locationPreference);
 
-    void reclaimExecutionUnits(final Topology.AuraTopology finishedTopology);
-
     public abstract List<InputSplit> registerHDFSSource(final Topology.LogicalNode node);
 
     public abstract List<Descriptors.MachineDescriptor> getMachinesWithInputSplit(InputSplit inputSplit);
@@ -23,4 +23,10 @@ public interface IInfrastructureManager {
     public abstract InputSplit getNextInputSplitForHDFSSource(final Topology.ExecutionNode executionNode);
 
     public abstract void shutdownInfrastructureManager();
+
+    public abstract Map<UUID, Descriptors.MachineDescriptor> getTaskManagerMachines();
+
+    public abstract void reclaimExecutionUnits(final Topology.AuraTopology finishedTopology);
+
+    public abstract void reclaimExecutionUnits(final Topology.DatasetNode dataset);
 }

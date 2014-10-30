@@ -4,7 +4,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import de.tuberlin.aura.core.descriptors.Descriptors;
-import de.tuberlin.aura.core.filesystem.FileInputSplit;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.slf4j.Logger;
@@ -18,8 +17,6 @@ import de.tuberlin.aura.core.filesystem.InputSplit;
 import de.tuberlin.aura.core.topology.Topology;
 import de.tuberlin.aura.workloadmanager.spi.IWorkloadManager;
 import de.tuberlin.aura.core.config.IConfig;
-
-import javax.crypto.Mac;
 
 import static de.tuberlin.aura.workloadmanager.LocationPreference.PreferenceLevel;
 
@@ -35,10 +32,10 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
     private final IConfig config;
 
-    // this monitor is used to protect the book keeping of available execution units (nodeMap and availableExecutionUnitsMap)
+    // this monitor is used to protect the book keeping of available execution units (tmMachineMap and availableExecutionUnitsMap)
     private final Object nodeInfoMonitor;
 
-    private final Map<UUID, MachineDescriptor> nodeMap;
+    private final Map<UUID, MachineDescriptor> tmMachineMap;
 
     private final Map<UUID, Integer> availableExecutionUnitsMap;
 
@@ -62,7 +59,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
         this.nodeInfoMonitor = new Object();
 
-        this.nodeMap = new ConcurrentHashMap<>();
+        this.tmMachineMap = new ConcurrentHashMap<>();
 
         this.availableExecutionUnitsMap = new ConcurrentHashMap<>();
 
@@ -84,7 +81,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                     } catch (Exception e) {
                         throw new IllegalStateException(e);
                     }
-                    this.nodeMap.put(descriptor.uid, descriptor);
+                    this.tmMachineMap.put(descriptor.uid, descriptor);
                     this.availableExecutionUnitsMap.put(descriptor.uid, config.getInt("tm.execution.units.number"));
                 }
             }
@@ -105,7 +102,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
         synchronized (nodeInfoMonitor) {
 
-            final List<MachineDescriptor> workerMachines = new ArrayList<>(nodeMap.values());
+            final List<MachineDescriptor> workerMachines = new ArrayList<>(tmMachineMap.values());
 
             if (locationPreference != null) {
 
@@ -122,35 +119,47 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
             }
 
             for (MachineDescriptor machine : workerMachines) {
-
                 if (availableExecutionUnitsMap.get(machine.uid) > 0) {
                     availableExecutionUnitsMap.put(machine.uid, availableExecutionUnitsMap.get(machine.uid) - 1);
                     return machine;
                 }
-
             }
 
             // TODO: handle this case (and the above exception) in the TopologyScheduler/WorkloadManager by waiting for
             // resources to become available (but maybe then reason about the scheduling some more: deploy from sources
             // so partially deployed queries can progress as much as possible)
             throw new IllegalStateException("No execution unit available");
-
         }
-
     }
 
     @Override
-    public void reclaimExecutionUnits(Topology.AuraTopology finishedTopology) {
-
+    public void reclaimExecutionUnits(final Topology.AuraTopology finishedTopology) {
         synchronized (nodeInfoMonitor) {
-
             for (Topology.LogicalNode logicalNode : finishedTopology.nodeMap.values()) {
                 for (Topology.ExecutionNode executionNode : logicalNode.getExecutionNodes()) {
-                    UUID machineID = executionNode.getNodeDescriptor().getMachineDescriptor().uid;
-                    availableExecutionUnitsMap.put(machineID, availableExecutionUnitsMap.get(machineID) + 1);
+                    if (!(executionNode.getNodeDescriptor() instanceof Descriptors.DatasetNodeDescriptor)) {
+                        UUID machineID = executionNode.getNodeDescriptor().getMachineDescriptor().uid;
+                        availableExecutionUnitsMap.put(machineID, availableExecutionUnitsMap.get(machineID) + 1);
+                    }
                 }
             }
 
+            /*LOG.info("--------");
+            for (final Map.Entry<UUID,Integer> machineAndFreeSlots : availableExecutionUnitsMap.entrySet()) {
+                LOG.info("....");
+                LOG.info("Machine: " + machineAndFreeSlots.getKey() + "  Free Slots: " + machineAndFreeSlots.getValue());
+            }*/
+        }
+    }
+
+    @Override
+    public void reclaimExecutionUnits(final Topology.DatasetNode dataset) {
+        // sanity check.
+        if (dataset == null)
+            throw new IllegalArgumentException("dataset == null");
+        for (Topology.ExecutionNode executionNode : dataset.getExecutionNodes()) {
+            UUID machineID = executionNode.getNodeDescriptor().getMachineDescriptor().uid;
+            availableExecutionUnitsMap.put(machineID, availableExecutionUnitsMap.get(machineID) + 1);
         }
     }
 
@@ -173,25 +182,26 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
 
     @Override
     public synchronized int getNumberOfMachines() {
-        return nodeMap.values().size();
+        return tmMachineMap.values().size();
     }
 
     public List<MachineDescriptor> getMachinesWithInputSplit(InputSplit inputSplit) {
 
-        List<MachineDescriptor> machinesWithInputSplit = new ArrayList<>();
-
-        List<String> hostNames = Arrays.asList(inputSplit.getHostnames());
+        final List<MachineDescriptor> machinesWithInputSplit = new ArrayList<>();
+        final List<String> hostNames = Arrays.asList(inputSplit.getHostnames());
 
         synchronized (nodeInfoMonitor) {
-
-            for (MachineDescriptor machine : nodeMap.values()) {
+            for (MachineDescriptor machine : tmMachineMap.values()) {
                 if (hostNames.contains(machine.hostName)) {
                     machinesWithInputSplit.add(machine);
                 }
             }
         }
-
         return machinesWithInputSplit;
+    }
+
+    public Map<UUID, Descriptors.MachineDescriptor> getTaskManagerMachines() {
+        return Collections.unmodifiableMap(tmMachineMap);
     }
 
     // ---------------------------------------------------
@@ -209,15 +219,15 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                     final List<String> nodeList = zookeeperClient.getChildrenForPath(ZookeeperClient.ZOOKEEPER_TASKMANAGERS);
 
                     // Find out whether a node was created or deleted.
-                    if (nodeMap.values().size() < nodeList.size()) {
+                    if (tmMachineMap.values().size() < nodeList.size()) {
 
                         // A node has been added.
                         MachineDescriptor newMachine = null;
                         for (final String node : nodeList) {
                             final UUID machineID = UUID.fromString(node);
-                            if (!nodeMap.containsKey(machineID)) {
+                            if (!tmMachineMap.containsKey(machineID)) {
                                 newMachine = (MachineDescriptor) zookeeperClient.read(event.getPath() + "/" + node);
-                                nodeMap.put(machineID, newMachine);
+                                tmMachineMap.put(machineID, newMachine);
                                 availableExecutionUnitsMap.put(machineID, config.getInt("tm.execution.units.number"));
                             }
                         }
@@ -227,14 +237,14 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                     } else {
                         // A node has been removed.
                         UUID machineID = null;
-                        for (final UUID uid : nodeMap.keySet()) {
+                        for (final UUID uid : tmMachineMap.keySet()) {
                             if (!nodeList.contains(uid.toString())) {
                                 machineID = uid;
                                 break;
                             }
                         }
 
-                        final MachineDescriptor removedMachine = nodeMap.remove(machineID);
+                        final MachineDescriptor removedMachine = tmMachineMap.remove(machineID);
                         availableExecutionUnitsMap.remove(machineID);
                         if (removedMachine == null)
                             LOG.error("machine with uid = " + machineID + " can not be removed");

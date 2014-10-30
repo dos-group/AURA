@@ -7,6 +7,7 @@ import java.util.UUID;
 import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.taskmanager.TaskManagerStatus;
 import org.apache.hadoop.mapred.InputSplit;
 
 public interface IWM2TMProtocol {
@@ -25,6 +26,7 @@ public interface IWM2TMProtocol {
                                           final boolean isReExecutable,
                                           final AbstractDataset.DatasetType datasetType);
 
+
     public abstract <E> Collection<E> getDataset(final UUID uid);
 
     public abstract <E> Collection<E> getBroadcastDataset(final UUID datasetID);
@@ -32,4 +34,7 @@ public interface IWM2TMProtocol {
     public abstract void assignDataset(final UUID dstDatasetTaskID, final UUID srcDatasetTaskID);
 
     public abstract void eraseDataset(UUID taskID);
+
+
+    public abstract TaskManagerStatus getTaskManagerStatus();
 }

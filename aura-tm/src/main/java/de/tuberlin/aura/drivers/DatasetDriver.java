@@ -308,7 +308,7 @@ public class DatasetDriver {}
         return dataset.getData();
     }
 
-    public AbstractDataset<Object> getDataset() {
+    public AbstractDataset<Object> gatherDataset() {
         return dataset;
     }
 }

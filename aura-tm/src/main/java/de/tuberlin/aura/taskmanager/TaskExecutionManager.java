@@ -1,6 +1,8 @@
 package de.tuberlin.aura.taskmanager;
 
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import de.tuberlin.aura.core.taskmanager.spi.*;
@@ -161,20 +163,14 @@ public final class TaskExecutionManager extends EventDispatcher implements ITask
         return null;
     }
 
-    /*private boolean ___isTaskEnqueuedInExecutionUnit(final UUID taskID) {
-        for (int i = 0; i < numberOfExecutionUnits; ++i) {
-            final ITaskExecutionUnit eu = executionUnit[i];
-            final ITaskRuntime runtime = eu.getRuntimeForTaskID(taskID);
-            if (runtime != null) {
-                return true;
-            }
-        }
-        return false;
-    }*/
-
     @Override
     public ITaskManager getTaskManager() {
         return taskManager;
+    }
+
+    @Override
+    public List<ITaskExecutionUnit> getExecutionUnits() {
+        return Arrays.asList(executionUnit);
     }
 
     // ---------------------------------------------------

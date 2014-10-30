@@ -122,7 +122,6 @@ public final class BufferAllocator implements IAllocator {
         if (buffer == null) {
             logStatus();
             buffer = freeList.take();
-            buffer.retain();
             //usedMap.put(buffer, Thread.currentThread().getStackTrace());
         }
         if (buffer != null) {

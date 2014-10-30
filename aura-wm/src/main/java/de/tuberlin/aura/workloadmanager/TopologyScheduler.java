@@ -48,7 +48,12 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
     @Override
     public AuraTopology apply(AuraTopology topology) {
 
+        LOG.info("ENTER SCHEDULE");
+
         scheduleTopology(topology);
+
+        LOG.info("LEAVE SCHEDULE");
+
 
         dispatcher.dispatchEvent(new StateMachine.FSMTransitionEvent<>(TopologyTransition.TOPOLOGY_TRANSITION_SCHEDULE));
 
@@ -65,20 +70,22 @@ public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology>
         List<LogicalNode> nodesRequiredToCoLocateTo = new ArrayList<>();
         List<LogicalNode> nodesWithCoLocationRequirements = new ArrayList<>();
         List<LogicalNode> nodesWithPreferredLocations = new ArrayList<>();
-        List<LogicalNode> unconstrainedNodes = new ArrayList<>();
+        List<LogicalNode> unconstrainedNodes = new ArrayList<>(topology.nodesFromSourceToSink());
 
         for (LogicalNode node : topology.nodesFromSourceToSink()) {
             if (node.hasCoLocationRequirements()) {
                 nodesWithCoLocationRequirements.add(node);
 
-                UUID taskToCoLocateTo = (UUID)node.propertiesList.get(0).config.get(AbstractPhysicalOperator.CO_LOCATION_TASK_NAME);
-                nodesRequiredToCoLocateTo.add(topology.nodeMap.get(taskToCoLocateTo));
+                String taskToCoLocateToName = (String)node.propertiesList.get(0).config.get(AbstractPhysicalOperator.CO_LOCATION_TASK_NAME);
+                nodesRequiredToCoLocateTo.add(topology.nodeMap.get(taskToCoLocateToName));
             } else if (node.isHDFSSource()) {
                 nodesWithPreferredLocations.add(node);
-            } else {
-                unconstrainedNodes.add(node);
             }
         }
+
+        unconstrainedNodes.removeAll(nodesRequiredToCoLocateTo);
+        unconstrainedNodes.removeAll(nodesWithCoLocationRequirements);
+        unconstrainedNodes.removeAll(nodesWithPreferredLocations);
 
         scheduleCollectionOfElements(nodesRequiredToCoLocateTo, topology);
         scheduleCollectionOfElements(nodesWithCoLocationRequirements, topology);

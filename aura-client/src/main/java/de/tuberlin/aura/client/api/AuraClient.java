@@ -1,13 +1,11 @@
 package de.tuberlin.aura.client.api;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
+import de.tuberlin.aura.core.taskmanager.TaskManagerStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -200,7 +198,7 @@ public final class AuraClient {
         if (datasetID == null)
             throw new IllegalArgumentException("datasetID == null");
 
-        return clientProtocol.getDataset(datasetID);
+        return clientProtocol.gatherDataset(datasetID);
     }
 
     public <E> void broadcastDataset(final UUID datasetID, final Collection<E> dataset) {
@@ -210,7 +208,7 @@ public final class AuraClient {
         if (dataset == null)
             throw new IllegalArgumentException("dataset == null");
 
-        clientProtocol.broadcastDataset(datasetID, dataset);
+        clientProtocol.scatterDataset(datasetID, dataset);
     }
 
     public void assignDataset(final UUID dstDatasetID, final UUID srcDatasetID) {
@@ -228,6 +226,10 @@ public final class AuraClient {
         if (datasetID == null)
             throw new IllegalArgumentException("datasetID == null");
         clientProtocol.eraseDataset(datasetID);
+    }
+
+    public List<TaskManagerStatus> getClusterUtilization() {
+        return clientProtocol.getClusterUtilization();
     }
 
     // ---------------------------------------------------

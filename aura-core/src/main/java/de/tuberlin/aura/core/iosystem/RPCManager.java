@@ -178,12 +178,14 @@ public final class RPCManager implements IRPCManager{
         public Object invoke(Object proxy, Method method, Object[] methodArguments) throws Throwable {
 
             // check if all arguments implement serializable
-            int argumentIndex = 0;
-            for (final Object argument : methodArguments) {
-                if (!(argument instanceof Serializable))
-                    throw new IllegalStateException("argument [" + argumentIndex + "] is not instance of" + "<"
-                            + Serializable.class.getCanonicalName() + ">");
-                ++argumentIndex;
+            if (methodArguments != null) {
+                int argumentIndex = 0;
+                for (final Object argument : methodArguments) {
+                    if (!(argument instanceof Serializable))
+                        throw new IllegalStateException("argument [" + argumentIndex + "] is not instance of" + "<"
+                                + Serializable.class.getCanonicalName() + ">");
+                    ++argumentIndex;
+                }
             }
 
             final MethodSignature methodInfo =

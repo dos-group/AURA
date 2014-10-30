@@ -10,6 +10,7 @@ import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
 import de.tuberlin.aura.core.protocols.IWM2TMProtocol;
+import de.tuberlin.aura.core.taskmanager.TaskManagerStatus;
 import de.tuberlin.aura.core.topology.Topology;
 import de.tuberlin.aura.workloadmanager.spi.IDistributedEnvironment;
 import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
@@ -225,7 +226,6 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         if (topologyID == null)
             throw new IllegalArgumentException("topologyID == null");
 
-
         final TopologyController finishedTopologyController = registeredTopologies.remove(topologyID);
 
         if (finishedTopologyController == null)
@@ -246,9 +246,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         // TODO: maybe critical?
 
         AuraTopology finishedTopology = finishedTopologyController.getTopology();
-
         this.infrastructureManager.reclaimExecutionUnits(finishedTopology);
-
         for (final Set<UUID> topologiesAssignedToSession : registeredSessions.values()) {
             if (topologiesAssignedToSession.contains(topologyID))
                 topologiesAssignedToSession.remove(topologyID);
@@ -256,7 +254,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     }
 
     @Override
-    public <E> Collection<E> getDataset(final UUID uid) {
+    public <E> Collection<E> gatherDataset(final UUID uid) {
         // sanity check.
         if (uid == null)
             throw new IllegalArgumentException("uid == null");
@@ -274,7 +272,7 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
     }
 
     @Override
-    public <E> void broadcastDataset(final UUID datasetID, final Collection<E> dataset) {
+    public <E> void scatterDataset(final UUID datasetID, final Collection<E> dataset) {
         // sanity check.
         if (datasetID == null)
             throw new IllegalArgumentException("datasetID == null");
@@ -296,6 +294,8 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
                     rpcManager.getRPCProtocolProxy(IWM2TMProtocol.class, en.getNodeDescriptor().getMachineDescriptor());
             tmProtocol.eraseDataset(en.getNodeDescriptor().taskID);
         }
+
+        infrastructureManager.reclaimExecutionUnits(dataset);
     }
 
     @Override
@@ -327,12 +327,12 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         }
     }
 
-    // ---------------------------------------------------
-
     @Override
     public <E> Collection<E> getBroadcastDataset(final UUID datasetID) {
         return environmentManager.getBroadcastDataset(datasetID);
     }
+
+    // ---------------------------------------------------
 
     @Override
     public InputSplit requestNextInputSplit(final UUID topologyID, final UUID taskID, int sequenceNumber) {
@@ -341,10 +341,24 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
         return infrastructureManager.getNextInputSplitForHDFSSource(exNode);
     }
 
+    // ---------------------------------------------------
+
     @Override
     public void doNextIteration(final UUID topologyID, final UUID taskID) {
         final TopologyController tc = this.registeredTopologies.get(topologyID);
         tc.evaluateIteration(taskID);
+    }
+
+    // ---------------------------------------------------
+
+    @Override
+    public List<TaskManagerStatus> getClusterUtilization() {
+        final List<TaskManagerStatus> taskManagerStatuses = new ArrayList<>();
+        for (final MachineDescriptor md : infrastructureManager.getTaskManagerMachines().values()) {
+            final IWM2TMProtocol tmProtocol = rpcManager.getRPCProtocolProxy(IWM2TMProtocol.class, md);
+            taskManagerStatuses.add(tmProtocol.getTaskManagerStatus());
+        }
+        return Collections.unmodifiableList(taskManagerStatuses);
     }
 
     // ---------------------------------------------------

@@ -10,6 +10,7 @@ import de.tuberlin.aura.core.iosystem.spi.IIOManager;
 import de.tuberlin.aura.core.iosystem.spi.IRPCManager;
 import de.tuberlin.aura.core.protocols.ITM2WMProtocol;
 import de.tuberlin.aura.core.record.Partitioner;
+import de.tuberlin.aura.core.taskmanager.TaskManagerStatus;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskExecutionUnit;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 import de.tuberlin.aura.drivers.DatasetDriver2;
@@ -223,8 +224,7 @@ public final class TaskManager implements ITaskManager {
         } else
             throw new IllegalStateException("task id " + taskID + " is not a dataset");
     }
-    
-    
+
     @Override
     public void uninstallTask(final UUID taskID) {
         // sanity check.
@@ -270,6 +270,17 @@ public final class TaskManager implements ITaskManager {
     @Override
     public ITM2WMProtocol getWorkloadManagerProtocol() {
         return workloadManagerProtocol;
+    }
+
+    @Override
+    public TaskManagerStatus getTaskManagerStatus() {
+        final List<TaskManagerStatus.ExecutionUnitStatus> euStatuses = new ArrayList<>();
+        for(final ITaskExecutionUnit eu : getTaskExecutionManager().getExecutionUnits()) {
+            final UUID taskID = eu.getRuntime() != null ? eu.getRuntime().getNodeDescriptor().taskID : null;
+            final String taskName = eu.getRuntime() != null ? eu.getRuntime().getNodeDescriptor().name : null;
+            euStatuses.add(new TaskManagerStatus.ExecutionUnitStatus(taskID, taskName));
+        }
+        return new TaskManagerStatus(euStatuses);
     }
 
     // ---------------------------------------------------

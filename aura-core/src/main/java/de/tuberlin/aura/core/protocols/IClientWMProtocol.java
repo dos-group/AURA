@@ -1,8 +1,10 @@
 package de.tuberlin.aura.core.protocols;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
+import de.tuberlin.aura.core.taskmanager.TaskManagerStatus;
 import de.tuberlin.aura.core.topology.Topology.AuraTopology;
 
 public interface IClientWMProtocol {
@@ -17,13 +19,15 @@ public interface IClientWMProtocol {
 
     public abstract void closeSession(final UUID sessionID);
 
-    public abstract <E> Collection<E> getDataset(final UUID uid);
 
-    public abstract <E> void broadcastDataset(final UUID datasetID, final Collection<E> dataset);
+    public abstract <E> Collection<E> gatherDataset(final UUID uid);
+
+    public abstract <E> void scatterDataset(final UUID datasetID, final Collection<E> dataset);
 
     public abstract void eraseDataset(final UUID datasetID);
 
     public abstract void assignDataset(final UUID dstDatasetID, final UUID srcDatasetID);
 
-    //public abstract void shutdownWorkloadManager();
+
+    public abstract List<TaskManagerStatus> getClusterUtilization();
 }

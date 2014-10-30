@@ -2,6 +2,7 @@ package de.tuberlin.aura.tests.integration;
 
 import java.util.*;
 
+import de.tuberlin.aura.core.taskmanager.TaskManagerStatus;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -97,7 +98,7 @@ public final class DistributedEnvironmentTest {
                 connectTo("Dataset1", Topology.Edge.TransferType.ALL_TO_ALL).
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
-        final Topology.AuraTopology topology1 = atb.build("JOB1");
+        final Topology.AuraTopology topology1 = atb.build("testJob2DataSetGenerationAndClientTransfer");
 
         TestHelper.runTopology(auraClient, topology1);
 
@@ -131,7 +132,7 @@ public final class DistributedEnvironmentTest {
                 connectTo("Dataset1", Topology.Edge.TransferType.ALL_TO_ALL).
                 addNode(new Topology.DatasetNode(dataset1Properties));
 
-        final Topology.AuraTopology topology1 = atb.build("JOB1-testGeneratedDataSetAsSourceForFollowingDataflow");
+        final Topology.AuraTopology topology1 = atb.build("testJob3GeneratedDataSetAsSourceForFollowingDataflow-1");
 
         TestHelper.runTopology(auraClient, topology1);
 
@@ -157,7 +158,7 @@ public final class DistributedEnvironmentTest {
                 connectTo("Dataset2", Topology.Edge.TransferType.POINT_TO_POINT).
                 addNode(new Topology.DatasetNode(dataset2Properties));
 
-        final Topology.AuraTopology topology2 = atb2.build("JOB2-testGeneratedDataSetAsSourceForFollowingDataflow");
+        final Topology.AuraTopology topology2 = atb2.build("testJob3GeneratedDataSetAsSourceForFollowingDataflow-2");
 
         TestHelper.runTopology(auraClient, topology2);
 
@@ -165,7 +166,7 @@ public final class DistributedEnvironmentTest {
         auraClient.eraseDataset(dataset2UID);
     }
 
-    @Test
+    /*@Test
     public void testJob4UpdateOperator() {
 
         int dop =  1; // executionUnits / ?;
@@ -320,8 +321,7 @@ public final class DistributedEnvironmentTest {
         }
 
         auraClient.eraseDataset(mutableDatasetUID);
-    }
-
+    }*/
 
     @AfterClass
     public static void tearDown() {
@@ -552,8 +552,5 @@ public final class DistributedEnvironmentTest {
 
             return (sum % 2 == 0) ? new Tuple2<>(state._1, sum) : null;
         }
-
     }
-
-
 }
