@@ -179,6 +179,11 @@ public final class BufferAllocator implements IAllocator {
         }
     }
 
+    @Override
+    public int getBufferCount() {
+        return this.bufferCount;
+    }
+
     // ---------------------------------------------------
     // Private Methods.
     // ---------------------------------------------------

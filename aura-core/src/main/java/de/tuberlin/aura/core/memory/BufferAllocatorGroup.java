@@ -1,7 +1,6 @@
 package de.tuberlin.aura.core.memory;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.spi.IBufferCallback;
@@ -17,7 +16,11 @@ public final class BufferAllocatorGroup implements IAllocator {
 
     private final List<IAllocator> assignedAllocators;
 
-    private final AtomicInteger allocCounter;
+    private int idxAlloc = 0;
+
+    private int idxBlockingAlloc = 0;
+
+    private int idxAllocWithCallBack = 0;
 
     // ---------------------------------------------------
     // Constants.
@@ -39,8 +42,6 @@ public final class BufferAllocatorGroup implements IAllocator {
         this.bufferSize = bufferSize;
 
         this.assignedAllocators = initialAssignedAllocators;
-
-        this.allocCounter = new AtomicInteger(0);
     }
 
     // ---------------------------------------------------
@@ -78,28 +79,20 @@ public final class BufferAllocatorGroup implements IAllocator {
         return assignedAllocators.get(index);
     }
 
-    // ---------------------------------------------------
-    // Public Methods: IAllocator Interface.
-    // ---------------------------------------------------
-
     @Override
     public MemoryView alloc() {
-        // for (final IAllocator allocator : assignedAllocators) {
-        // if (allocator.hasFree()) {
-        // return allocator.alloc();
-        // }
-        // }
+
+        idxAlloc = ++idxAlloc % assignedAllocators.size();
+
         return assignedAllocators.get(0).alloc();
     }
 
     @Override
     public MemoryView allocBlocking() throws InterruptedException {
-        // for (final IAllocator allocator : assignedAllocators) {
-        // if (allocator.hasFree()) {
-        // return allocator.allocBlocking();
-        // }
-        // }
-        return assignedAllocators.get(0).allocBlocking();
+
+        idxBlockingAlloc = ++idxBlockingAlloc % assignedAllocators.size();
+
+        return assignedAllocators.get(idxBlockingAlloc).allocBlocking();
     }
 
     @Override
@@ -108,25 +101,9 @@ public final class BufferAllocatorGroup implements IAllocator {
         if (bufferCallback == null)
             throw new IllegalArgumentException("bufferCallback == null");
 
-        // if (allocCounter.get() == Integer.MAX_VALUE)
-        // allocCounter.set(0);
-        //
-        // final int count = allocCounter.getAndIncrement();
-        //
-        // int allocatorIndex = count % (assignedAllocators.size());
-        // int tmpAllocatorIndex = allocatorIndex;
-        // int index = 0;
-        //
-        // while (index++ < assignedAllocators.size()) {
-        // final IAllocator allocator = assignedAllocators.get((tmpAllocatorIndex++) %
-        // (assignedAllocators.size()));
-        // if (allocator.hasFree()) {
-        // return allocator.alloc();
-        // }
-        // }
-        //
-        // return assignedAllocators.get(allocatorIndex).alloc(bufferCallback);
-        return assignedAllocators.get(0).alloc(bufferCallback);
+        idxAllocWithCallBack = ++idxAllocWithCallBack % assignedAllocators.size();
+
+        return assignedAllocators.get(idxAllocWithCallBack).alloc(bufferCallback);
     }
 
     @Override
@@ -154,5 +131,13 @@ public final class BufferAllocatorGroup implements IAllocator {
         for (final IAllocator allocator : assignedAllocators) {
             allocator.checkForMemoryLeaks();
         }
+    }
+
+    @Override
+    public int getBufferCount() {
+        int bufferCount = 0;
+        for (final IAllocator allocator : assignedAllocators)
+            bufferCount += allocator.getBufferCount();
+        return bufferCount;
     }
 }

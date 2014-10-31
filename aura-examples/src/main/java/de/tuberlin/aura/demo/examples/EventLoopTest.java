@@ -16,7 +16,17 @@ import java.util.concurrent.Callable;
 public class EventLoopTest {
 
     public static void main(String... args) {
-        MultithreadEventExecutorGroup eventloop = new DefaultEventExecutorGroup(5);
+
+        int idx = 0;
+        for (int i = 0; i < 20; ++i) {
+            idx = ++idx % 2;
+            System.out.println(idx);
+        }
+
+
+
+
+        /*MultithreadEventExecutorGroup eventloop = new DefaultEventExecutorGroup(5);
         Future<Void> f = eventloop.submit(new Callable<Void>() {
 
             @Override
@@ -37,7 +47,7 @@ public class EventLoopTest {
                 }
             }
         });
-        System.out.println(System.currentTimeMillis() + " main");
+        System.out.println(System.currentTimeMillis() + " main");*/
 
     }
 }

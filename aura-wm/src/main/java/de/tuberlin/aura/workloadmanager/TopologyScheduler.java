@@ -16,7 +16,6 @@ import de.tuberlin.aura.workloadmanager.spi.IInfrastructureManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
 
 public class TopologyScheduler extends AssemblyPhase<AuraTopology, AuraTopology> {
 

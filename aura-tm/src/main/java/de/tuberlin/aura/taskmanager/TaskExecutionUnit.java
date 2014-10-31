@@ -100,6 +100,9 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
         }
         isExecutionUnitRunning.set(true);
         executorThread.start();
+
+        LOG.info("EXECUTION UNIT (" + getExecutionUnitID() + ") HAS " + inputAllocator.getBufferCount() + " INPUT BUFFERS");
+        LOG.info("EXECUTION UNIT (" + getExecutionUnitID() + ") HAS " + inputAllocator.getBufferCount() + " OUTPUT BUFFERS");
     }
 
     public void enqueueTask(final ITaskRuntime taskDriver) {
@@ -214,7 +217,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                     runtime.initialize(inputAllocator, outputAllocator);
 
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(100);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
