@@ -86,7 +86,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                         throw new IllegalStateException(e);
                     }
 
-                    LOG.info("ADDED MACHINE uid = " + descriptor.uid);
+                    LOG.info("ADDED MACHINE uid = " + descriptor.uid + " (" + descriptor.hostName + ")");
 
                     this.tmMachineMap.put(descriptor.uid, descriptor);
                     this.availableExecutionUnitsMap.put(descriptor.uid, config.getInt("tm.execution.units.number"));
@@ -249,6 +249,8 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                                 newMachine = (MachineDescriptor) zookeeperClient.read(event.getPath() + "/" + node);
                                 tmMachineMap.put(machineID, newMachine);
                                 availableExecutionUnitsMap.put(machineID, config.getInt("tm.execution.units.number"));
+
+                                LOG.info("ADDED MACHINE uid = " + machineID + " (" + newMachine.hostName + ")");
                             }
                         }
 
@@ -269,7 +271,7 @@ public final class InfrastructureManager extends EventDispatcher implements IInf
                         if (removedMachine == null)
                             LOG.error("machine with uid = " + machineID + " can not be removed");
                         else
-                            LOG.info("REMOVED MACHINE uid = " + machineID);
+                            LOG.info("REMOVED MACHINE uid = " + machineID + " (" + removedMachine.hostName + ")");
 
                         dispatchEvent(new de.tuberlin.aura.core.common.eventsystem.Event(ZookeeperClient.EVENT_TYPE_NODE_REMOVED, removedMachine));
                     }
