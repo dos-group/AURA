@@ -1,6 +1,7 @@
 package de.tuberlin.aura.core.memory;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import de.tuberlin.aura.core.memory.spi.IAllocator;
 import de.tuberlin.aura.core.memory.spi.IBufferCallback;
@@ -16,11 +17,11 @@ public final class BufferAllocatorGroup implements IAllocator {
 
     private final List<IAllocator> assignedAllocators;
 
-    private int idxAlloc = 0;
+    private AtomicInteger idxAlloc = new AtomicInteger(0);
 
-    private int idxBlockingAlloc = 0;
+    private AtomicInteger idxBlockingAlloc = new AtomicInteger(0);
 
-    private int idxAllocWithCallBack = 0;
+    private AtomicInteger idxAllocWithCallBack = new AtomicInteger(0);
 
     // ---------------------------------------------------
     // Constants.
@@ -82,7 +83,9 @@ public final class BufferAllocatorGroup implements IAllocator {
     @Override
     public MemoryView alloc() {
 
-        idxAlloc = ++idxAlloc % assignedAllocators.size();
+        //idxAlloc = ++idxAlloc % assignedAllocators.size();
+
+        idxAlloc.set(idxAlloc.incrementAndGet() % assignedAllocators.size());
 
         return assignedAllocators.get(0).alloc();
     }
@@ -90,9 +93,11 @@ public final class BufferAllocatorGroup implements IAllocator {
     @Override
     public MemoryView allocBlocking() throws InterruptedException {
 
-        idxBlockingAlloc = ++idxBlockingAlloc % assignedAllocators.size();
+        //idxBlockingAlloc = ++idxBlockingAlloc % assignedAllocators.size();
 
-        return assignedAllocators.get(idxBlockingAlloc).allocBlocking();
+        idxBlockingAlloc.set(idxBlockingAlloc.incrementAndGet() % assignedAllocators.size());
+
+        return assignedAllocators.get(0).allocBlocking();
     }
 
     @Override
@@ -101,13 +106,15 @@ public final class BufferAllocatorGroup implements IAllocator {
         if (bufferCallback == null)
             throw new IllegalArgumentException("bufferCallback == null");
 
-        idxAllocWithCallBack = ++idxAllocWithCallBack % assignedAllocators.size();
+        //idxAllocWithCallBack = ++idxAllocWithCallBack % assignedAllocators.size();
 
-        return assignedAllocators.get(idxAllocWithCallBack).alloc(bufferCallback);
+        idxAllocWithCallBack.set(idxAllocWithCallBack.incrementAndGet() % assignedAllocators.size());
+
+        return assignedAllocators.get(0).alloc(bufferCallback);
     }
 
     @Override
-   public void free(MemoryView memory) {
+    public void free(MemoryView memory) {
         memory.free();
     }
 
