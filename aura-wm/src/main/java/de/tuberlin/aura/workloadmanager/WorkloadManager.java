@@ -295,6 +295,8 @@ public class WorkloadManager implements IWorkloadManager, IClientWMProtocol, ITM
             tmProtocol.eraseDataset(en.getNodeDescriptor().taskID);
         }
 
+        environmentManager.removeDataset(datasetID);
+
         infrastructureManager.reclaimExecutionUnits(dataset);
     }
 
