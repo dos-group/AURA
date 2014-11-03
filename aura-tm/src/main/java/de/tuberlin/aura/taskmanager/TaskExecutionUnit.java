@@ -217,7 +217,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                     runtime.initialize(inputAllocator, outputAllocator);
 
                     try {
-                        Thread.sleep(100);
+                        Thread.sleep(500);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }

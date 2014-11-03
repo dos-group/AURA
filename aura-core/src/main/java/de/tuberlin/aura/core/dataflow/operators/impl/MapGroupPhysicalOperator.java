@@ -19,7 +19,7 @@ public class MapGroupPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
     // Fields.
     // ---------------------------------------------------
 
-    private List<O> results;
+    private Queue<O> elements;
 
     // ---------------------------------------------------
     // Constructor.
@@ -31,7 +31,7 @@ public class MapGroupPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
 
         super(context, inputOp, function);
 
-        results = new ArrayList<>();
+        elements = new LinkedList<>();
     }
 
     // ---------------------------------------------------
@@ -48,7 +48,7 @@ public class MapGroupPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
     @SuppressWarnings("unchecked")
     public OperatorResult<O> next() throws Throwable {
 
-        while (results.isEmpty()) {
+        while (elements.isEmpty()) {
 
             OperatorInputIterator<I> it = new OperatorInputIterator<>(inputOp);
 
@@ -56,17 +56,20 @@ public class MapGroupPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOpera
                 return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
             }
 
-            ((IGroupMapFunction<I, O>) function).map(it, results);
+            ((IGroupMapFunction<I, O>) function).map(it, elements);
 
             if (it.endOfGroup()) {
-                results.add(null);
+                elements.add(null);
             }
         }
 
-        if (results.size() > 0)
-            return new OperatorResult<>(results.remove(0));
-        else
-            return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
+        OperatorResult<O> result = new OperatorResult<>(elements.poll());
+
+        if (result.element == null) {
+            return new OperatorResult<>(StreamMarker.END_OF_GROUP_MARKER);
+        }
+
+        return result;
     }
 
     @Override

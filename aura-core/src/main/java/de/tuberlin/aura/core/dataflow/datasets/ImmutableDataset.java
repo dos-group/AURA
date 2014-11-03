@@ -2,8 +2,8 @@ package de.tuberlin.aura.core.dataflow.datasets;
 
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 
 public class ImmutableDataset<E> extends AbstractDataset<E> {
@@ -21,7 +21,7 @@ public class ImmutableDataset<E> extends AbstractDataset<E> {
     public ImmutableDataset(final IExecutionContext context) {
         super(context);
 
-        this.data = new ArrayList<>();
+        this.data = new LinkedList<>();
     }
 
     // ---------------------------------------------------
@@ -52,6 +52,6 @@ public class ImmutableDataset<E> extends AbstractDataset<E> {
         if (data == null)
             throw new IllegalArgumentException("data == null");
 
-        this.data = new ArrayList<>(data);
+        this.data = new LinkedList<>(data);
     }
 }

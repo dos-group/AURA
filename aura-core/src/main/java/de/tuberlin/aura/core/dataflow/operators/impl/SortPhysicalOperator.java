@@ -60,7 +60,7 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
         this.inputType = getContext().getProperties(getOperatorNum()).input1Type;
 
-        this.elements = new ArrayList<>();
+        this.elements = new LinkedList<>();
     }
 
     // ---------------------------------------------------

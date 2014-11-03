@@ -20,7 +20,7 @@ public class HashBasedFoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
 
     private Map<List<Object>,O> keysToValue;
 
-    private List<O> foldResults;
+    private Queue<O> foldResults;
 
     // ---------------------------------------------------
     // Constructor.
@@ -33,6 +33,8 @@ public class HashBasedFoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
         super(context, inputOp, function);
 
         keysToValue = new HashMap<>();
+
+        foldResults = new LinkedList<>();
     }
 
 
@@ -76,17 +78,18 @@ public class HashBasedFoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
             input = inputOp.next();
         }
 
-        foldResults = new ArrayList<>(keysToValue.values());
+        foldResults = new LinkedList<>(keysToValue.values());
     }
 
     @Override
     public OperatorResult<O> next() throws Throwable {
 
         if (!foldResults.isEmpty()) {
-            return new OperatorResult<>(foldResults.remove(0));
+            return new OperatorResult<>(foldResults.poll());
         } else {
             return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
         }
+
     }
 
     @Override
