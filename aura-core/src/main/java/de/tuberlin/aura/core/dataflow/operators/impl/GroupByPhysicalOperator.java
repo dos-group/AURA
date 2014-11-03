@@ -9,6 +9,7 @@ import de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 import de.tuberlin.aura.core.record.TypeInformation;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,I> {
 
@@ -22,7 +23,7 @@ public class GroupByPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,
 
     private OperatorResult<I> firstElementOfNewGroup;
 
-    private ArrayList<Object> currentGroupKeys;
+    private List<Object> currentGroupKeys;
 
 
     // ---------------------------------------------------
