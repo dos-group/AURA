@@ -14,9 +14,7 @@ import de.tuberlin.aura.core.record.tuples.Tuple3;
 import de.tuberlin.aura.core.topology.Topology;
 import org.apache.commons.lang3.RandomStringUtils;
 
-import java.util.Arrays;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 
 public class Test1 {
@@ -27,15 +25,17 @@ public class Test1 {
 
     public static final class UDFSource1 extends SourceFunction<Tuple3<Integer,String,Integer>> {
 
-        int count = 5500000;
+        int count = 1000000;
 
         Random randInt = new Random();
 
-        RandomStringUtils randStrUtils = new RandomStringUtils();
-
         @Override
         public Tuple3<Integer, String, Integer> produce() {
-            return new Tuple3<>(randInt.nextInt(10000000), randStrUtils.random(10), randInt.nextInt(10000000));
+
+            if (--count > 0)
+                return new Tuple3<>(randInt.nextInt(10000000), RandomStringUtils.random(10), randInt.nextInt(10000000));
+            else
+                return null;
         }
     }
 
@@ -78,12 +78,10 @@ public class Test1 {
                         new TypeInformation(String.class), // value
                         new TypeInformation(Integer.class)); // payload
 
-//        int dop = 40 / 4;
-        int dop = 16 / 4;
+        //int dop = 88 / 4;
+        int dop = 16 / 2;
 
-        final Topology.OperatorNode sourceNode =
-                new Topology.OperatorNode(
-                        new DataflowNodeProperties(
+        DataflowNodeProperties sourceNodeProperties = new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.UDF_SOURCE,
                                 "Source",
@@ -103,230 +101,242 @@ public class Test1 {
                                 null,
                                 null,
                                 null
-                        ));
+                        );
 
         /*Map<String,Object> srcConfig = new HashMap<>();
         srcConfig.put(HDFSSourcePhysicalOperator.HDFS_SOURCE_FILE_PATH, "/tmp/input/groups");
         srcConfig.put(HDFSSourcePhysicalOperator.HDFS_SOURCE_INPUT_FIELD_TYPES, new Class<?>[] {Integer.class, String.class, Integer.class});
 
-        final Topology.OperatorNode sourceNode =
-                new Topology.OperatorNode(
-                        new DataflowNodeProperties(
-                                UUID.randomUUID(),
-                                DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE,
-                                "Source",
-                                dop,
-                                1,
-                                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-                                null,
-                                null,
-                                source1TypeInfo,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                srcConfig
-                        ));*/
-
-//        Topology.OperatorNode fold1Node = new Topology.OperatorNode(
-//                new DataflowNodeProperties(
-//                        UUID.randomUUID(),
-//                        DataflowNodeProperties.DataflowNodeType.HASH_FOLD_OPERATOR,
-//                        "Fold1", dop, 1,
-//                        new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
-//                        Partitioner.PartitioningStrategy.HASH_PARTITIONER,
-//                        source1TypeInfo,
-//                        null,
-//                        source1TypeInfo,
-//                        MinValueFold.class.getName(),
-//                        null, null, null, null,
-//                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-//                        null, null, null
-//                ));
-//
-//        Topology.OperatorNode fold2Node = new Topology.OperatorNode(
-//                new DataflowNodeProperties(
-//                        UUID.randomUUID(),
-//                        DataflowNodeProperties.DataflowNodeType.HASH_FOLD_OPERATOR,
-//                        "Fold2", dop, 1,
-//                        null,
-//                        null,
-//                        source1TypeInfo,
-//                        null,
-//                        source1TypeInfo,
-//                        MinValueFold.class.getName(),
-//                        null, null, null, null,
-//                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-//                        null, null, null
-//                ));
+        DataflowNodeProperties sourceNodeProperties = new DataflowNodeProperties(
+                UUID.randomUUID(),
+                DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE,
+                "Source",
+                22,
+                1,
+                new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                null,
+                null,
+                source1TypeInfo,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                srcConfig
+        );*/
 
         DataflowNodeProperties sort1NodeProperties =
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
-                        "Sort1", dop, 1,
+                        "Sort1",
+                        dop,
+                        1,
                         null,
                         null,
                         source1TypeInfo,
                         null,
                         source1TypeInfo,
                         null,
-                        null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                        DataflowNodeProperties.SortOrder.ASCENDING, null,
-                        null, null, null
+                        null,
+                        null,
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                        DataflowNodeProperties.SortOrder.ASCENDING,
+                        null,
+                        null,
+                        null,
+                        null
                 );
 
         DataflowNodeProperties groupBy1NodeProperties =
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
-                        "GroupBy1", dop, 1,
+                        "GroupBy1",
+                        dop,
+                        1,
                         null,
                         null,
                         source1TypeInfo,
                         null,
                         source1TypeInfo,
                         null,
-                        null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                        null, null, null
+                        null,
+                        null,
+                        null,
+                        null,
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                        null,
+                        null,
+                        null
                 );
 
         DataflowNodeProperties fold1NodeProperties =
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
-                        "Fold1", dop, 1,
+                        "Fold1",
+                        dop,
+                        1,
                         new int[][] {source1TypeInfo.buildFieldSelectorChain("_1")},
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
                         source1TypeInfo,
                         null,
                         source1TypeInfo,
                         MinValueFold.class.getName(),
-                        null, null, null, null, null,
-                        null, null, null
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 );
 
-        Topology.OperatorNode chainedSortGroupFold1Node = new Topology.OperatorNode(Arrays.asList(sort1NodeProperties,
-                groupBy1NodeProperties,
-                fold1NodeProperties));
+        Topology.OperatorNode chainedSortGroupFold1Node =
+                new Topology.OperatorNode(
+                    Arrays.asList(
+                            sourceNodeProperties,
+                            sort1NodeProperties,
+                            groupBy1NodeProperties,
+                            fold1NodeProperties
+                    )
+                );
 
         DataflowNodeProperties sort2NodeProperties =
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
-                        "Sort2", dop, 1,
+                        "Sort2",
+                        dop,
+                        1,
                         null,
                         null,
                         source1TypeInfo,
                         null,
                         source1TypeInfo,
                         null,
-                        null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                        DataflowNodeProperties.SortOrder.ASCENDING, null,
-                        null, null, null
+                        null,
+                        null,
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                        DataflowNodeProperties.SortOrder.ASCENDING,
+                        null,
+                        null,
+                        null,
+                        null
                 );
 
         DataflowNodeProperties groupBy2NodeProperties =
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
-                        "GroupBy2", dop, 1,
+                        "GroupBy2",
+                        dop,
+                        1,
                         null,
                         null,
                         source1TypeInfo,
                         null,
                         source1TypeInfo,
                         null,
-                        null, null, null, null, new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
-                        null, null, null
+                        null,
+                        null,
+                        null,
+                        null,
+                        new int[][] { source1TypeInfo.buildFieldSelectorChain("_1") },
+                        null,
+                        null,
+                        null
                 );
 
         DataflowNodeProperties fold2NodeProperties =
                 new DataflowNodeProperties(
                         UUID.randomUUID(),
                         DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
-                        "Fold2", dop, 1,
+                        "Fold2",
+                        dop,
+                        1,
                         null,
                         null,
                         source1TypeInfo,
                         null,
                         source1TypeInfo,
                         MinValueFold.class.getName(),
-                        null, null, null, null, null,
-                        null, null, null
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 );
-
-        Topology.OperatorNode chainedSortGroupFold2Node = new Topology.OperatorNode(Arrays.asList(sort2NodeProperties,
-                groupBy2NodeProperties,
-                fold2NodeProperties));
-
-        Topology.OperatorNode sinkNode =
-                new Topology.OperatorNode(
-                        new DataflowNodeProperties(
-                                UUID.randomUUID(),
-                                DataflowNodeProperties.DataflowNodeType.UDF_SINK,
-                                "Sink",
-                                dop,
-                                1,
-                                null,
-                                null,
-                                source1TypeInfo,
-                                null,
-                                null,
-                                Sink1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null
-                        ));
 
         /*Map<String,Object> snkConfig = new HashMap<>();
         snkConfig.put(HDFSSinkPhysicalOperator.HDFS_SINK_FILE_PATH, "/tmp/output/groups");
 
-        Topology.OperatorNode sinkNode =
-                new Topology.OperatorNode(
-                        new DataflowNodeProperties(
-                                UUID.randomUUID(),
-                                DataflowNodeProperties.DataflowNodeType.HDFS_SINK,
-                                "Sink",
-                                dop,
-                                1,
-                                null,
-                                null,
-                                source1TypeInfo,
-                                null,
-                                null,
-                                Sink1.class.getName(),
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                null,
-                                snkConfig
-                        ));*/
+        DataflowNodeProperties sinkNodeProperties = new DataflowNodeProperties(
+                UUID.randomUUID(),
+                DataflowNodeProperties.DataflowNodeType.HDFS_SINK,
+                "Sink",
+                11,
+                1,
+                null,
+                null,
+                source1TypeInfo,
+                null,
+                null,
+                Sink1.class.getName(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                snkConfig
+        );*/
+
+        DataflowNodeProperties sinkNodeProperties = new DataflowNodeProperties(
+                        UUID.randomUUID(),
+                        DataflowNodeProperties.DataflowNodeType.UDF_SINK,
+                        "Sink",
+                        dop,
+                        1,
+                        null,
+                        null,
+                        source1TypeInfo,
+                        null,
+                        null,
+                        Sink1.class.getName(),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+
+
+        Topology.OperatorNode chainedSortGroupFold2Node = new Topology.OperatorNode(Arrays.asList(sort2NodeProperties,
+                groupBy2NodeProperties,
+                fold2NodeProperties,
+                sinkNodeProperties));
 
         final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
         final AuraClient ac = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         Topology.AuraTopologyBuilder atb = ac.createTopologyBuilder();
-        atb.addNode(sourceNode).
-                connectTo("Sort1", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(chainedSortGroupFold1Node).
-                connectTo("Sort2", Topology.Edge.TransferType.ALL_TO_ALL).
-                addNode(chainedSortGroupFold2Node).
-                connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
-                addNode(sinkNode);
+        atb.addNode(chainedSortGroupFold1Node).
+            connectTo("Sort2", Topology.Edge.TransferType.ALL_TO_ALL).
+            addNode(chainedSortGroupFold2Node);
 
         ac.submitTopology(atb.build("JOB1"), null);
 

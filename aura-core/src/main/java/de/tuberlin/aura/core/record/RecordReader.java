@@ -101,6 +101,7 @@ public class RecordReader implements IRecordReader {
     }
 
     public Object readObject() {
+
         Object object = kryo.readClassAndObject(kryoInput);
 
         if (object != null && object.getClass() == RowRecordModel.RECORD_CLASS_BLOCK_END.class) {

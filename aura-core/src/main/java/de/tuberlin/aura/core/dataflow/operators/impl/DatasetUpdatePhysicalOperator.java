@@ -26,7 +26,6 @@ public class DatasetUpdatePhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
 
     private MutableDataset<O> dataset;
 
-
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------

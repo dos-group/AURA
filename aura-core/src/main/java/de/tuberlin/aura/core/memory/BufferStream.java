@@ -147,6 +147,10 @@ public final class BufferStream {
             }
         }
 
+        public MemoryView getCurrentBuffer() {
+            return buf;
+        }
+
         // ---------------------------------------------------
         // Private Methods.
         // ---------------------------------------------------
@@ -347,25 +351,18 @@ public final class BufferStream {
             flush();
         }
 
-        //int counter = 0;
+        public MemoryView getCurrentBuffer() {
+            return buf;
+        }
 
         public int nextBuf() {
 
             if (buf != null && bufferOutput != null)
                 bufferOutput.put(buf);
 
-            //if (Thread.currentThread().getName().equals("Execution-Unit-1->Join1") && counter == 94)
-            //    System.out.println("STOP");
-
             buf = bufferInput.get();
 
-            //if (Thread.currentThread().getName().equals("Execution-Unit-1->Join1")) {
-            //    counter++;
-            //}
-
             if (buf == null) {
-                //if (Thread.currentThread().getName().equals("Execution-Unit-1->Join1"))
-                //    System.out.println(counter);
                 return -1;
             }
 

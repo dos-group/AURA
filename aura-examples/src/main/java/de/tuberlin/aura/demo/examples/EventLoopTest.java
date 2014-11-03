@@ -5,9 +5,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.MultithreadEventExecutorGroup;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 /**
@@ -17,14 +15,25 @@ public class EventLoopTest {
 
     public static void main(String... args) {
 
-        int idx = 0;
-        for (int i = 0; i < 20; ++i) {
-            idx = ++idx % 2;
-            System.out.println(idx);
+        long t0 = System.currentTimeMillis();
+
+        System.out.println("START " + t0);
+
+        Random rand = new Random();
+
+        List<Integer> intList = new ArrayList<>();
+
+        for (int i = 0; i < 268435456; ++i) {
+            intList.add(rand.nextInt(268435456));
         }
 
+        Collections.sort(intList);
 
+        long t1 = System.currentTimeMillis();
 
+        System.out.println("STOP " + t1);
+
+        System.out.println("ELAPSED TIME " + (((t1 - t0) / 1000) / 60));
 
         /*MultithreadEventExecutorGroup eventloop = new DefaultEventExecutorGroup(5);
         Future<Void> f = eventloop.submit(new Callable<Void>() {

@@ -11,6 +11,19 @@ import de.tuberlin.aura.core.memory.spi.IAllocator;
 public final class MemoryView {
 
     // ---------------------------------------------------
+    // Constants.
+    // ---------------------------------------------------
+
+    public enum BufferMarker {
+
+        BUFFER_MARKER_STREAM_END,
+
+        BUFFER_MARKER_BLOCK_END,
+
+        BUFFER_MARKER_ITERATION_END
+    }
+
+    // ---------------------------------------------------
     // Fields.
     // ---------------------------------------------------
 
@@ -25,6 +38,10 @@ public final class MemoryView {
     public final int size;
 
     private final AtomicInteger refCount;
+
+    public int recordCount = 0;
+
+    public BufferMarker bufferMarker;
 
     // ---------------------------------------------------
     // Constructors.

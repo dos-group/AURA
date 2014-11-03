@@ -32,6 +32,9 @@ public class RecordWriter implements IRecordWriter {
 
     private final int channelCount;
 
+    private int[] bufferRecordCount;
+
+
     // block end marker
     public static byte[] BLOCK_END;
 
@@ -78,6 +81,9 @@ public class RecordWriter implements IRecordWriter {
 
         this.channelCount = (partitioner != null) ? outputBinding.size() : 1;
 
+
+        this.bufferRecordCount = new int[channelCount];
+
         for (int i = 0; i < channelCount; ++i) {
 
             final int index = i;
@@ -93,6 +99,7 @@ public class RecordWriter implements IRecordWriter {
                 @Override
                 public MemoryView get() {
                     try {
+                        bufferRecordCount[index] = 0;
                         return runtime.getProducer().getAllocator().allocBlocking();
                     } catch (InterruptedException e) {
                         throw new IllegalStateException(e);
@@ -104,6 +111,7 @@ public class RecordWriter implements IRecordWriter {
 
                 @Override
                 public void put(MemoryView buffer) {
+                    buffer.recordCount = bufferRecordCount[index];
                     if (partitioner != null) {
                         runtime.getProducer().emit(gateIndex, index, buffer);
                     } else {
@@ -141,6 +149,9 @@ public class RecordWriter implements IRecordWriter {
         Integer channelIndex = (partitioner != null) ? partitioner.partition(object, outputBinding.size()) : 0;
 
         kryo.writeClassAndObject(kryoOutputs.get(channelIndex), object);
+
+        bufferRecordCount[channelIndex]++;
+
         // flush Kryo's internal buffer to the actual channel buffer to ensure object is written to one buffer only
         kryoOutputs.get(channelIndex).flush();
     }

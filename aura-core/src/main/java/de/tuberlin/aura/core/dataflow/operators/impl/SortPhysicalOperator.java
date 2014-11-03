@@ -21,16 +21,16 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
     public class SortComparator<T> implements Comparator<T> {
 
-        private DataflowNodeProperties properties = getContext().getProperties();
+        private DataflowNodeProperties properties = getContext().getProperties(getOperatorNum());
 
         @Override
         @SuppressWarnings("unchecked")
         public int compare(final T o1, final T o2) {
 
-            for(final int[] selectorChain : getContext().getProperties().sortKeyIndices) {
+            for(final int[] selectorChain : properties.sortKeyIndices) {
 
-                final Comparable f1 = (Comparable)inputType.selectField(selectorChain, o1);
-                final Comparable f2 = (Comparable)inputType.selectField(selectorChain, o2);
+                final Comparable f1 = (Comparable)properties.input1Type.selectField(selectorChain, o1);
+                final Comparable f2 = (Comparable)properties.input1Type.selectField(selectorChain, o2);
                 final int res = properties.sortOrder == DataflowNodeProperties.SortOrder.ASCENDING ? f1.compareTo(f2) : f2.compareTo(f1);
 
                 if (res != 0)
@@ -48,6 +48,10 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
     private final TypeInformation inputType;
 
     private List<I> elements;
+
+    private boolean init = false;
+
+    private int index = 0;
 
     // ---------------------------------------------------
     // Constructor.
@@ -73,24 +77,39 @@ public final class SortPhysicalOperator<I> extends AbstractUnaryPhysicalOperator
 
         inputOp.open();
 
-        OperatorResult<I> in = inputOp.next();
+        if (!init) {
 
-        while (in.marker != StreamMarker.END_OF_STREAM_MARKER) {
-            elements.add(in.element);
-            in = inputOp.next();
+            OperatorResult<I> in = inputOp.next();
+
+            while (in.marker != StreamMarker.END_OF_STREAM_MARKER) {
+                elements.add(in.element);
+                in = inputOp.next();
+            }
+
+            inputOp.close();
+
+            Collections.sort(elements, new SortComparator<>());
+
+            getContext().getRuntime().getLogger().info("num of elements => " + elements.size());
+
+            init = true;
         }
-
-        inputOp.close();
-
-        Collections.sort(elements, new SortComparator<>());
     }
 
     @Override
     public OperatorResult<I> next() throws Throwable {
-        if (elements.size() > 0)
-            return new OperatorResult<>(elements.remove(0));
-        else
+
+        if (index < elements.size()) {
+
+            /*if (index % 300000 == 0) {
+                elements.subList(0, index).clear();
+                index = 0;
+            }*/
+
+            return new OperatorResult<>(elements.get(index++));
+        } else {
             return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
+        }
     }
 
     @Override

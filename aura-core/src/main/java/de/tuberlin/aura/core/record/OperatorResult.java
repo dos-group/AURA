@@ -57,5 +57,4 @@ public class OperatorResult<T> {
 
         this.marker = marker;
     }
-
 }

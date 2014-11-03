@@ -348,7 +348,7 @@ public final class SerializationHandler {
                     } else {
                         callbackID--;
                         IOEvents.TransferBufferEvent event = (IOEvents.TransferBufferEvent) msg;
-                        System.arraycopy(event.buffer.memory, event.buffer.baseOffset, view.memory, view.baseOffset, event.buffer.size());
+                        System.arraycopy(event.buffer.memory, event.buffer.baseOffset, view.memory, view.baseOffset, event.buffer.size()); // TODO: DO WE NEED A COPY ???
                         event.buffer.free();
                         IOEvents.TransferBufferEvent copy = new IOEvents.TransferBufferEvent(event.srcTaskID, event.dstTaskID, view);
                         ctx.fireChannelRead(copy);
@@ -527,6 +527,8 @@ public final class SerializationHandler {
         @Override
         public void write(Kryo kryo, Output output, IOEvents.TransferBufferEvent transferBufferEvent) {
 
+            //output.writeInt(transferBufferEvent.buffer.recordCount);
+
             output.writeBytes(transferBufferEvent.buffer.memory, transferBufferEvent.buffer.baseOffset, transferBufferEvent.buffer.size());
 
             output.writeLong(transferBufferEvent.srcTaskID.getMostSignificantBits());
@@ -543,6 +545,9 @@ public final class SerializationHandler {
         public IOEvents.TransferBufferEvent read(Kryo kryo, Input input, Class<IOEvents.TransferBufferEvent> type) {
 
             final MemoryView buffer = handler.getBuffer();
+
+            //buffer.recordCount = input.readInt();
+
             input.readBytes(buffer.memory, buffer.baseOffset, buffer.size());
 
             final UUID src = new UUID(input.readLong(false), input.readLong(false));

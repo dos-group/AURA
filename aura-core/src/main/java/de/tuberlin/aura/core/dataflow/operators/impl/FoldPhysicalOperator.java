@@ -30,7 +30,6 @@ public class FoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysicalOperator<
         this.isDrained = false;
     }
 
-
     // ---------------------------------------------------
     // Public Methods.
     // ---------------------------------------------------

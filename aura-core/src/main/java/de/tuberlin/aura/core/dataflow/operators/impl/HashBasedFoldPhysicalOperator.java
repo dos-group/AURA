@@ -22,6 +22,8 @@ public class HashBasedFoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
 
     private List<O> foldResults;
 
+    private int index;
+
     // ---------------------------------------------------
     // Constructor.
     // ---------------------------------------------------
@@ -81,9 +83,8 @@ public class HashBasedFoldPhysicalOperator<I,O> extends AbstractUnaryUDFPhysical
 
     @Override
     public OperatorResult<O> next() throws Throwable {
-
-        if (!foldResults.isEmpty()) {
-            return new OperatorResult<>(foldResults.remove(0));
+        if (index < foldResults.size()) {
+            return new OperatorResult<>(foldResults.get(index++));
         } else {
             return new OperatorResult<>(StreamMarker.END_OF_STREAM_MARKER);
         }

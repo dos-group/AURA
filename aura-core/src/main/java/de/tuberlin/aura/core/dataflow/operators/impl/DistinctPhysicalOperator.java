@@ -14,6 +14,10 @@ import static de.tuberlin.aura.core.record.OperatorResult.StreamMarker;
 
 public class DistinctPhysicalOperator<I> extends AbstractUnaryPhysicalOperator<I,I> {
 
+    // ---------------------------------------------------
+    // Fields.
+    // ---------------------------------------------------
+
     Map<I,Boolean> hashes;
 
     // ---------------------------------------------------

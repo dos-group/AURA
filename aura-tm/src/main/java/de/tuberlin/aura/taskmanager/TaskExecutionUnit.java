@@ -284,7 +284,6 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                         else
                             runtime.getTaskStateMachine().dispatchEvent(new StateMachine.FSMTransitionEvent<>(TaskStates.TaskTransition.TASK_TRANSITION_FAIL));
 
-
                         if (!isExecutingDataset.get()) {
 
                             isDatasetInitialized.set(false);
