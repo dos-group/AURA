@@ -37,7 +37,7 @@ public class KMeansExperiment {
 
         final int operatorDop = executionUnits / 5;
 
-        int iterationCount = 0;
+        int iterationCount = 1;
 
 
         // initialize client values
@@ -69,8 +69,7 @@ public class KMeansExperiment {
         srcConfig.put(HDFSSourcePhysicalOperator.HDFS_SOURCE_FILE_PATH, "/tmp/input/points");
         srcConfig.put(HDFSSourcePhysicalOperator.HDFS_SOURCE_INPUT_FIELD_TYPES, new Class<?>[] {Long.class, Long.class, Double.class, Double.class, Double.class});
 
-        final Topology.OperatorNode sourceNode =
-                new Topology.OperatorNode(
+        final DataflowNodeProperties sourceProperties =
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.HDFS_SOURCE,
@@ -91,7 +90,7 @@ public class KMeansExperiment {
                                 null,
                                 null,
                                 srcConfig
-                        ));
+                        );
 
         final TypeInformation pointsTuple4TypeInfo = new TypeInformation(Tuple4.class,
                 new TypeInformation(Long.class), // pointID
@@ -99,8 +98,7 @@ public class KMeansExperiment {
                 new TypeInformation(Double.class), // y
                 new TypeInformation(Double.class)); // z
 
-        final Topology.OperatorNode tupleCutterMapNode =
-                new Topology.OperatorNode(
+        final DataflowNodeProperties tupleCutterMapProperties =
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
@@ -121,7 +119,7 @@ public class KMeansExperiment {
                                 null,
                                 null,
                                 null
-                        ));
+                        );
 
         final TypeInformation pointsTuple5TypeInfo = new TypeInformation(Tuple5.class,
                 new TypeInformation(Long.class), // pointID
@@ -130,8 +128,7 @@ public class KMeansExperiment {
                 new TypeInformation(Double.class), // z
                 new TypeInformation(Long.class)); // clusterID
 
-        final Topology.OperatorNode closestCentroidMapNode =
-                new Topology.OperatorNode(
+        final DataflowNodeProperties closestCentroidMapProperties =
                         new DataflowNodeProperties(
                                 UUID.randomUUID(),
                                 DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
@@ -152,7 +149,7 @@ public class KMeansExperiment {
                                 null,
                                 Arrays.asList(centroidsBroadcastDatasetID),
                                 null
-                        ));
+                        );
 
         UUID solutionDatasetUID = UUID.randomUUID();
         String solutionDatasetName = "SolutionDataset" + iterationCount;
@@ -181,11 +178,7 @@ public class KMeansExperiment {
                         );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
-        atb.addNode(sourceNode).
-            connectTo("TupleCutterMap", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(tupleCutterMapNode).
-            connectTo("ClosestCentroidMap", Topology.Edge.TransferType.POINT_TO_POINT).
-            addNode(closestCentroidMapNode).
+        atb.addNode(new Topology.OperatorNode(Arrays.asList(sourceProperties, tupleCutterMapProperties, closestCentroidMapProperties))).
             connectTo(solutionDatasetName, Topology.Edge.TransferType.POINT_TO_POINT).
             addNode(new Topology.DatasetNode((solutionDatasetProperties)));
 
@@ -201,41 +194,11 @@ public class KMeansExperiment {
             System.out.println("===== ITERATION COUNT : " + iterationCount);
             System.out.println();
 
-            DataflowNodeProperties sort1NodeProperties =
-                    new DataflowNodeProperties(
-                            UUID.randomUUID(),
-                            DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
-                            "Sort1", operatorDop, 1,
-                            null,
-                            null,
-                            pointsTuple5TypeInfo,
-                            null,
-                            pointsTuple5TypeInfo,
-                            null,
-                            null, null, new int[][] { pointsTuple5TypeInfo.buildFieldSelectorChain("_5") },
-                            DataflowNodeProperties.SortOrder.ASCENDING, null,
-                            null, null, null
-                    );
 
-            DataflowNodeProperties groupBy1NodeProperties =
+            Topology.OperatorNode fold1Node = new Topology.OperatorNode(
                     new DataflowNodeProperties(
                             UUID.randomUUID(),
-                            DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
-                            "GroupBy1", operatorDop, 1,
-                            null,
-                            null,
-                            pointsTuple5TypeInfo,
-                            null,
-                            pointsTuple5TypeInfo,
-                            null,
-                            null, null, null, null, new int[][] { pointsTuple5TypeInfo.buildFieldSelectorChain("_5") },
-                            null, null, null
-                    );
-
-            DataflowNodeProperties fold1NodeProperties =
-                    new DataflowNodeProperties(
-                            UUID.randomUUID(),
-                            DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
+                            DataflowNodeProperties.DataflowNodeType.HASH_FOLD_OPERATOR,
                             "Fold1", operatorDop, 1,
                             new int[][] {pointsTuple5TypeInfo.buildFieldSelectorChain("_5")},
                             Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -243,66 +206,28 @@ public class KMeansExperiment {
                             null,
                             pointsTuple5TypeInfo,
                             LocalFold.class.getName(),
-                            null, null, null, null, null,
+                            null, null, null, null,
+                            new int[][] { pointsTuple5TypeInfo.buildFieldSelectorChain("_5") },
                             null, null, null
-                    );
+                    ));
 
-            Topology.OperatorNode chainedSortGroupFold1Node = new Topology.OperatorNode(Arrays.asList(sort1NodeProperties,
-                    groupBy1NodeProperties,
-                    fold1NodeProperties));
-
-            DataflowNodeProperties sort2NodeProperties =
+            DataflowNodeProperties fold2Properties =
                     new DataflowNodeProperties(
                             UUID.randomUUID(),
-                            DataflowNodeProperties.DataflowNodeType.SORT_OPERATOR,
-                            "Sort2", operatorDop, 1,
-                            null,
-                            null,
-                            pointsTuple5TypeInfo,
-                            null,
-                            pointsTuple5TypeInfo,
-                            null,
-                            null, null, new int[][] { pointsTuple5TypeInfo.buildFieldSelectorChain("_5") },
-                            DataflowNodeProperties.SortOrder.ASCENDING, null,
-                            null, null, null
-                    );
-
-            DataflowNodeProperties groupBy2NodeProperties =
-                    new DataflowNodeProperties(
-                            UUID.randomUUID(),
-                            DataflowNodeProperties.DataflowNodeType.GROUP_BY_OPERATOR,
-                            "GroupBy2", operatorDop, 1,
-                            null,
-                            null,
-                            pointsTuple5TypeInfo,
-                            null,
-                            pointsTuple5TypeInfo,
-                            null,
-                            null, null, null, null, new int[][] { pointsTuple5TypeInfo.buildFieldSelectorChain("_5") },
-                            null, null, null
-                    );
-
-            DataflowNodeProperties fold2NodeProperties =
-                    new DataflowNodeProperties(
-                            UUID.randomUUID(),
-                            DataflowNodeProperties.DataflowNodeType.FOLD_OPERATOR,
+                            DataflowNodeProperties.DataflowNodeType.HASH_FOLD_OPERATOR,
                             "Fold2", operatorDop, 1,
-                            new int[][] {pointsTuple5TypeInfo.buildFieldSelectorChain("_5")},
-                            Partitioner.PartitioningStrategy.HASH_PARTITIONER,
+                            null,
+                            null,
                             pointsTuple5TypeInfo,
                             null,
                             pointsTuple5TypeInfo,
                             GlobalFold.class.getName(),
-                            null, null, null, null, null,
+                            null, null, null, null,
+                            new int[][] { pointsTuple5TypeInfo.buildFieldSelectorChain("_5") },
                             null, null, null
                     );
 
-            Topology.OperatorNode chainedSortGroupFold2Node = new Topology.OperatorNode(Arrays.asList(sort2NodeProperties,
-                    groupBy2NodeProperties,
-                    fold2NodeProperties));
-
-            final Topology.OperatorNode newCentroidsMap =
-                    new Topology.OperatorNode(
+            final DataflowNodeProperties newCentroidsMapProperties =
                             new DataflowNodeProperties(
                                     UUID.randomUUID(),
                                     DataflowNodeProperties.DataflowNodeType.MAP_TUPLE_OPERATOR,
@@ -323,7 +248,7 @@ public class KMeansExperiment {
                                     null,
                                     null,
                                     null
-                            ));
+                            );
 
             final UUID iterationDatasetUID = UUID.randomUUID();
             final String iterationDatasetName = "IterationDataset" + iterationCount;
@@ -354,13 +279,10 @@ public class KMeansExperiment {
             Topology.AuraTopologyBuilder iterationAtb1 = auraClient.createTopologyBuilder();
 
             iterationAtb1.addNode(new Topology.DatasetNode(solutionDatasetProperties)).
-                    connectTo("Sort1", Topology.Edge.TransferType.POINT_TO_POINT).
-                    addNode(chainedSortGroupFold1Node).
-                    connectTo("Sort2", Topology.Edge.TransferType.ALL_TO_ALL).
-                    addNode(chainedSortGroupFold2Node).
-                    // TODO: why is there only one result from the second fold and thus only one new centroid??
-                    connectTo("NewCentroidsMap", Topology.Edge.TransferType.POINT_TO_POINT).
-                    addNode(newCentroidsMap).
+                    connectTo("Fold1", Topology.Edge.TransferType.POINT_TO_POINT).
+                    addNode(fold1Node).
+                    connectTo("Fold2", Topology.Edge.TransferType.ALL_TO_ALL).
+                    addNode(new Topology.OperatorNode(Arrays.asList(fold2Properties,newCentroidsMapProperties))).
                     connectTo(iterationDatasetName, Topology.Edge.TransferType.POINT_TO_POINT).
                     addNode(new Topology.DatasetNode((iterationDatasetProperties)));
 
@@ -529,6 +451,8 @@ public class KMeansExperiment {
         auraClient.submitTopology(writeResults, null);
         auraClient.awaitSubmissionResult(1);
 
+        auraClient.eraseDataset(solutionDatasetUID);
+
         auraClient.closeSession();
 
 //        lcs.shutdown();
@@ -558,7 +482,7 @@ public class KMeansExperiment {
 
         @Override
         public void create() {
-            final UUID dataset1 = getEnvironment().getProperties().broadcastVars.get(0);
+            final UUID dataset1 = getEnvironment().getProperties(2).broadcastVars.get(0);
             centroids = getEnvironment().getDataset(dataset1);
         }
 
