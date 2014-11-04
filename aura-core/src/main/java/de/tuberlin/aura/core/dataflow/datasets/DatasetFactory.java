@@ -28,6 +28,8 @@ public final class DatasetFactory {
                 return new ImmutableDataset<>(context);
             case DATASET_REFERENCE:
                 return new DatasetRef<>(context);
+            case SERIALIZED_IMMUTABLE_DATASET:
+                return new SerializedImmutableDataset<>(context);
         }
 
         throw new IllegalStateException("'" + context.getProperties().type + "' is not defined.");

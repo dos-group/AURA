@@ -7,6 +7,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
+import de.tuberlin.aura.core.dataflow.datasets.SerializedImmutableDataset;
 import de.tuberlin.aura.core.descriptors.Descriptors;
 import de.tuberlin.aura.drivers.DatasetDriver2;
 import org.slf4j.Logger;
@@ -172,6 +173,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
     private final class ExecutionUnitRunner implements Runnable {
 
         @Override
+        @SuppressWarnings("unchecked")
         public void run() {
 
             while (isExecutionUnitRunning.get()) {
@@ -217,7 +219,7 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                     runtime.initialize(inputAllocator, outputAllocator);
 
                     try {
-                        Thread.sleep(500);
+                        Thread.sleep(300);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -288,6 +290,10 @@ public final class TaskExecutionUnit implements ITaskExecutionUnit {
                         if (!isExecutingDataset.get()) {
 
                             isDatasetInitialized.set(false);
+
+                            if (((DatasetDriver2)runtime.getInvokeable()).getDataset() instanceof SerializedImmutableDataset) {
+                                ((SerializedImmutableDataset) ((DatasetDriver2)runtime.getInvokeable()).getDataset()).releaseDataset();
+                            }
 
                             executorThread.setName("empty");
 

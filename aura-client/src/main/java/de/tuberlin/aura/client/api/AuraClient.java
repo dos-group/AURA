@@ -49,12 +49,16 @@ public final class AuraClient {
 
     public final MachineDescriptor wmMachine;
 
+    public final Map<UUID,Long> jobStartPoint;
+
     // ---------------------------------------------------
     // Constructors.
     // ---------------------------------------------------
 
     public AuraClient(IConfig config) {
         final String zkServer = ZookeeperClient.buildServersString(config.getObjectList("zookeeper.servers"));
+
+        this.jobStartPoint = new HashMap<>();
 
         // sanity check.
         ZookeeperClient.checkConnectionString(zkServer);
@@ -109,6 +113,12 @@ public final class AuraClient {
 
         if (handler != null)
             registeredTopologyMonitors.put(topology.topologyID, handler);
+
+        long start = System.currentTimeMillis();
+
+        jobStartPoint.put(topology.topologyID, start);
+
+        LOG.info("SUBMIT TOPOLOGY " + topology.name + " [" + topology.topologyID + "]");
 
         clientProtocol.submitTopology(clientSessionID, topology);
     }
@@ -238,14 +248,18 @@ public final class AuraClient {
 
     private final class IORedispatcher extends EventHandler {
 
-        @Handle(event = IOEvents.ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
-        private void handleTopologyFinished(final IOEvents.ControlIOEvent event) {
-            LOG.info("Topology finished.");
+        @Handle(event = IOEvents.ClientControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
+        private void handleTopologyFinished(final IOEvents.ClientControlIOEvent event) {
+            long end = System.currentTimeMillis();
+            long start = jobStartPoint.get(event.getTopologyID());
+            LOG.info("TOPOLOGY " + event.getPayload() + " [" + event.getTopologyID() + "] FINISHED => DURATION: " + (end - start) + " ms");
         }
 
-        @Handle(event = IOEvents.ControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE)
-        private void handleTopologyFailure(final IOEvents.ControlIOEvent event) {
-            LOG.info("Topology failed.");
+        @Handle(event = IOEvents.ClientControlIOEvent.class, type = ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE)
+        private void handleTopologyFailure(final IOEvents.ClientControlIOEvent event) {
+            long end = System.currentTimeMillis();
+            long start = jobStartPoint.get(event.getTopologyID());
+            LOG.info("TOPOLOGY " + event.getPayload() + " [" + event.getTopologyID() + "] FAILED => DURATION: " + (end - start) + " ms");
         }
     }
 }

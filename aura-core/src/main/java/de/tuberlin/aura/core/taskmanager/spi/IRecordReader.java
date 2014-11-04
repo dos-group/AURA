@@ -1,8 +1,7 @@
 package de.tuberlin.aura.core.taskmanager.spi;
 
-import de.tuberlin.aura.core.memory.MemoryView;
-import de.tuberlin.aura.core.record.RowRecordModel;
 
+import de.tuberlin.aura.core.memory.BufferStream;
 
 public interface IRecordReader {
 
@@ -18,14 +17,13 @@ public interface IRecordReader {
 
     public abstract boolean finished();
 
-    public abstract void addInputBufferAccessor(final InputBufferAccessor bufferAccessor);
-
-    // ---------------------------------------------------
-    // Inner classes.
     // ---------------------------------------------------
 
-    public interface InputBufferAccessor {
+    public void setBufferInputHandler(final BufferStream.IBufferInputHandler inputHandler);
 
-        public abstract void accessInputBuffer(final MemoryView buffer);
-    }
+    public void setBufferOutputHandler(final BufferStream.IBufferOutputHandler outputHandler);
+
+    public int getGateIndex();
+
+    public int getChannelCount();
 }

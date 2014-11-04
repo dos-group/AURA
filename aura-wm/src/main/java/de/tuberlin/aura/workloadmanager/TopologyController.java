@@ -418,7 +418,11 @@ public final class TopologyController extends EventDispatcher implements ITopolo
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
 
-                workloadManager.getIOManager().sendEvent(topology.machineID, new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE));
+                IOEvents.ClientControlIOEvent event = new IOEvents.ClientControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FAILURE);
+                event.setTopologyID(TopologyController.this.topology.topologyID);
+                event.setPayload(TopologyController.this.topology.name);
+
+                workloadManager.getIOManager().sendEvent(topology.machineID, event);
 
                 Topology.TopologyBreadthFirstTraverser.traverse(topology, new IVisitor<Topology.LogicalNode>() {
 
@@ -445,7 +449,8 @@ public final class TopologyController extends EventDispatcher implements ITopolo
             @Override
             public void stateAction(TopologyState previousState, TopologyTransition transition, TopologyState state) {
                 // Send to the examples the finish notification...
-                IOEvents.ControlIOEvent event = new IOEvents.ControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED);
+                IOEvents.ClientControlIOEvent event = new IOEvents.ClientControlIOEvent(IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED);
+                event.setTopologyID(TopologyController.this.topology.topologyID);
                 event.setPayload(TopologyController.this.topology.name);
                 workloadManager.getIOManager().sendEvent(topology.machineID, event);
                 // Shutdown the event dispatcher threads used by this executingTopology controller

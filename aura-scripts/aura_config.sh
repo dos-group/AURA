@@ -1,15 +1,15 @@
 #!/bin/sh
-USER="andreas.kunft"
+USER="tobias.herb"
 URL="cit.tu-berlin.de"
 
-LOCAL_AURA_PATH="/home/akunft/dev/AURA"
-LOCAL_AURA_LOGS_DESTINATION="/home/akunft/aura_measurements"
+LOCAL_AURA_PATH="/home/therb/Development/Projects/AURA"
+LOCAL_AURA_LOGS_DESTINATION="/home/therb/aura_measurements"
 HOME_PATH="/home/$USER"
 AURA_PATH="$HOME_PATH/aura"
 DATA_PATH="/data/$USER"
 AURA_DATA_PATH="$DATA_PATH/aura"
 
-LOCAL_AURA_INPUT="/home/teots/Desktop/text"
+LOCAL_AURA_INPUT="/home/therb/Desktop/text"
 AURA_INPUT_PATH="$AURA_DATA_PATH/input"
 
 BENCHMARK_PATH="$DATA_PATH/benchmarks"
@@ -156,8 +156,8 @@ SSHEND
 			if [ $i -eq $2 ]; then
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 cd aura/aura-wm/
-export MAVEN_OPTS="-Xms4G -Xmx8G -Daura.profile=wally -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011"
-nohup mvn exec:java -Dexec.mainClass="de.tuberlin.aura.workloadmanager.WorkloadManager" > $AURA_DATA_PATH/logs/log 2>&1 &
+export MAVEN_OPTS="-Xms12G -Xmx12G -Daura.profile=wally -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011"
+nohup mvn exec:java -server -Dexec.mainClass="de.tuberlin.aura.workloadmanager.WorkloadManager" > $AURA_DATA_PATH/logs/log 2>&1 &
 echo \$! > $AURA_DATA_PATH/data/wm_pid
 exit
 SSHEND
@@ -166,8 +166,8 @@ SSHEND
 			else
 				ssh -t -t "$USER@$ADDRESS" << SSHEND
 cd aura/aura-tm/
-export MAVEN_OPTS="-Xms4G -Xmx8G -Daura.profile=wally -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011"
-nohup mvn exec:java -Dexec.mainClass="de.tuberlin.aura.taskmanager.TaskManager" > $AURA_DATA_PATH/logs/log 2>&1 &
+export MAVEN_OPTS="-Xms12G -Xmx12G -Daura.profile=wally -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=9011"
+nohup mvn exec:java -server -Dexec.mainClass="de.tuberlin.aura.taskmanager.TaskManager" > $AURA_DATA_PATH/logs/log 2>&1 &
 echo \$! > $AURA_DATA_PATH/data/tm_pid
 exit
 SSHEND

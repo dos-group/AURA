@@ -60,7 +60,7 @@ public class ZookeeperClient {
         if (zookeeperServer == null)
             throw new IllegalArgumentException("zookeeperServer == null");
 
-        curator = CuratorFrameworkFactory.newClient(zookeeperServer, 60000, 60000, new ExponentialBackoffRetry(1000, 3));
+        curator = CuratorFrameworkFactory.newClient(zookeeperServer, 60000 * 10, 60000 * 10, new ExponentialBackoffRetry(1000, 3));
         curator.start();
     }
 

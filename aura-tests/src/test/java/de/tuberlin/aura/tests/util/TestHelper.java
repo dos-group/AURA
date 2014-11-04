@@ -84,8 +84,8 @@ public class TestHelper {
             this.runs = runs;
         }
 
-        @Handle(event = IOEvents.ControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
-        private void handleTopologyFinished(final IOEvents.ControlIOEvent event) {
+        @Handle(event = IOEvents.ClientControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
+        private void handleTopologyFinished(final IOEvents.ClientControlIOEvent event) {
             if (jobCounter < runs * topologies.size()) {
                 final int jobIndex = jobCounter++ / runs;
 
@@ -104,8 +104,8 @@ public class TestHelper {
 
     private static class TopologyFinishedHandler extends EventHandler {
 
-        @Handle(event = IOEvents.ControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
-        private void handleTopologyFinished(final IOEvents.ControlIOEvent event) {
+        @Handle(event = IOEvents.ClientControlIOEvent.class, type = IOEvents.ControlEventType.CONTROL_EVENT_TOPOLOGY_FINISHED)
+        private void handleTopologyFinished(final IOEvents.ClientControlIOEvent event) {
             if (event != null) {
                 String jobName = (String) event.getPayload();
                 LOG.info("Topology ({}) finished.", jobName);

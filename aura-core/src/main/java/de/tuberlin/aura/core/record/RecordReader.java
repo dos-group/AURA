@@ -10,8 +10,6 @@ import de.tuberlin.aura.core.taskmanager.spi.IRecordReader;
 import de.tuberlin.aura.core.taskmanager.spi.ITaskRuntime;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class RecordReader implements IRecordReader {
@@ -27,8 +25,6 @@ public class RecordReader implements IRecordReader {
     private Input kryoInput;
 
     private BufferStream.ContinuousByteInputStream inputStream;
-
-    private List<InputBufferAccessor> inputBufferAccessors;
 
     private final ITaskRuntime runtime;
 
@@ -53,11 +49,9 @@ public class RecordReader implements IRecordReader {
 
         this.kryo = new Kryo(null);
 
-        this.inputBufferAccessors = new ArrayList<>();
-
         final BufferStream.ContinuousByteInputStream inputStream = new BufferStream.ContinuousByteInputStream();
 
-        inputStream.setBufferInput(new BufferStream.IBufferInput() {
+        inputStream.setBufferInputHandler(new BufferStream.IBufferInputHandler() {
 
             @Override
             public MemoryView get() {
@@ -67,20 +61,14 @@ public class RecordReader implements IRecordReader {
                         isFinished = true;
                         return null;
                     }
-                    final MemoryView buffer = event.buffer;
-                    for (final InputBufferAccessor bufferAccessor : inputBufferAccessors) {
-                        if (buffer != null) {
-                            bufferAccessor.accessInputBuffer(buffer);
-                        }
-                    }
-                    return buffer;
+                    return event.buffer;
                 } catch (InterruptedException e) {
                     throw new IllegalStateException(e);
                 }
             }
         });
 
-        inputStream.setBufferOutput(new BufferStream.IBufferOutput() {
+        inputStream.setBufferOutputHandler(new BufferStream.IBufferOutputHandler() {
 
             @Override
             public void put(final MemoryView buffer) {
@@ -93,11 +81,16 @@ public class RecordReader implements IRecordReader {
         this.inputStream = inputStream;
 
         this.kryoInput = new UnsafeInput(inputStream, bufferSize);
+
         ((UnsafeInput)kryoInput).setVarIntsEnabled(false);
     }
 
     public void begin() {
-        channelCount = runtime.getBindingDescriptor().inputGateBindings.get(gateIndex).size();
+
+        if (runtime.getBindingDescriptor().inputGateBindings.size() >= gateIndex + 1)
+            channelCount = runtime.getBindingDescriptor().inputGateBindings.get(gateIndex).size();
+        else
+            channelCount = 1;
     }
 
     public Object readObject() {
@@ -153,12 +146,21 @@ public class RecordReader implements IRecordReader {
         return isFinished;
     }
 
-    @Override
-    public void addInputBufferAccessor(final InputBufferAccessor bufferAccessor) {
-        // sanity check.
-        if (bufferAccessor == null)
-            throw new IllegalArgumentException("bufferAccessor == null");
+    // ---------------------------------------------------
 
-        inputBufferAccessors.add(bufferAccessor);
+    public void setBufferInputHandler(final BufferStream.IBufferInputHandler inputHandler) {
+        inputStream.setBufferInputHandler(inputHandler);
+    }
+
+    public void setBufferOutputHandler(final BufferStream.IBufferOutputHandler outputHandler) {
+        inputStream.setBufferOutputHandler(outputHandler);
+    }
+
+    public int getGateIndex() {
+        return gateIndex;
+    }
+
+    public int getChannelCount() {
+        return channelCount;
     }
 }

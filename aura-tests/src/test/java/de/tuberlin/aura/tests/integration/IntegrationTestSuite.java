@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
         DataflowTest.class,
         ParallelDataflowTest.class,
         DistributedEnvironmentTest.class,
+        DatasetTest.class,
         IterativeDataflowTest.class})
 
 public class IntegrationTestSuite {

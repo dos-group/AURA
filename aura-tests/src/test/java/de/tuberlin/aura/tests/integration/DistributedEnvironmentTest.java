@@ -141,6 +141,7 @@ public final class DistributedEnvironmentTest {
         broadcastDataset.add(new Tuple2<>("B", 1));
         broadcastDataset.add(new Tuple2<>("C", 2));
         broadcastDataset.add(new Tuple2<>("D", 3));
+
         final UUID broadcastDatasetID = UUID.randomUUID();
         auraClient.broadcastDataset(broadcastDatasetID, broadcastDataset);
 

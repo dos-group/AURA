@@ -14,15 +14,19 @@ public final class BufferStream {
     // Disallow instantiation.
     private BufferStream() {}
 
-    public static interface IBufferInput {
+    // ---------------------------------------------------
+
+    public static interface IBufferInputHandler {
 
         public abstract MemoryView get();
     }
 
-    public static interface IBufferOutput {
+    public static interface IBufferOutputHandler {
 
         public abstract void put(final MemoryView buffer);
     }
+
+    // ---------------------------------------------------
 
     public static class ContinuousByteOutputStream extends OutputStream {
 
@@ -34,9 +38,9 @@ public final class BufferStream {
 
         protected int count;
 
-        protected IBufferInput bufferInput;
+        protected IBufferInputHandler bufferInput;
 
-        protected IBufferOutput bufferOutput;
+        protected IBufferOutputHandler bufferOutput;
 
         // ---------------------------------------------------
         // Constructors.
@@ -48,7 +52,7 @@ public final class BufferStream {
         // Public Methods.
         // ---------------------------------------------------
 
-        public void setBufferInput(final IBufferInput bufferInput) {
+        public void setBufferInput(final IBufferInputHandler bufferInput) {
             // sanity check.
             if (bufferInput == null)
                 throw new IllegalArgumentException("bufferInput == null");
@@ -56,7 +60,7 @@ public final class BufferStream {
             this.bufferInput = bufferInput;
         }
 
-        public void setBufferOutput(final IBufferOutput bufferOutput) {
+        public void setBufferOutput(final IBufferOutputHandler bufferOutput) {
             // sanity check.
             if (bufferOutput == null)
                 throw new IllegalArgumentException("bufferOutput == null");
@@ -171,9 +175,9 @@ public final class BufferStream {
 
         protected MemoryView buf;
 
-        protected IBufferInput bufferInput;
+        protected IBufferInputHandler bufferInput;
 
-        protected IBufferOutput bufferOutput;
+        protected IBufferOutputHandler bufferOutput;
 
         protected int pos;
 
@@ -195,7 +199,7 @@ public final class BufferStream {
         // Public Methods.
         // ---------------------------------------------------
 
-        public void setBufferInput(final IBufferInput bufferInput) {
+        public void setBufferInputHandler(final IBufferInputHandler bufferInput) {
             // sanity check.
             if (bufferInput == null)
                 throw new IllegalArgumentException("bufferInput == null");
@@ -203,7 +207,7 @@ public final class BufferStream {
             this.bufferInput = bufferInput;
         }
 
-        public void setBufferOutput(final IBufferOutput bufferOutput) {
+        public void setBufferOutputHandler(final IBufferOutputHandler bufferOutput) {
             // sanity check.
             if (bufferOutput == null)
                 throw new IllegalArgumentException("bufferOutput == null");

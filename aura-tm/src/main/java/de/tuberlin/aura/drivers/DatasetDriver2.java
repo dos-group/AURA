@@ -9,6 +9,7 @@ import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.dataflow.datasets.DatasetFactory;
+import de.tuberlin.aura.core.dataflow.datasets.SerializedImmutableDataset;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.impl.ExecutionContext;
 import de.tuberlin.aura.core.descriptors.Descriptors;
@@ -270,20 +271,27 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
     private void produceDataset(final int gateIndex) {
 
-        final IRecordReader reader = new RecordReader(runtime, gateIndex);
+        if (dataset instanceof SerializedImmutableDataset) {
 
-        reader.begin();
+            ((SerializedImmutableDataset)dataset).produceDataset(gateIndex);
 
-        Object object = reader.readObject();
+        } else {
 
-        while (object != null) {
+            final IRecordReader reader = new RecordReader(runtime, gateIndex);
 
-            dataset.add(object);
+            reader.begin();
 
-            object = reader.readObject();
+            Object object = reader.readObject();
+
+            while (object != null) {
+
+                dataset.add(object);
+
+                object = reader.readObject();
+            }
+
+            reader.end();
         }
-
-        reader.end();
     }
 
     private List<Descriptors.AbstractNodeDescriptor> waitForOutputBinding(final int gateIndex) {
@@ -353,12 +361,20 @@ public class DatasetDriver2 extends AbstractInvokeable {
     }
 
     private void consumeDataset() {
-        writer.begin();
 
-        for (final Object object : dataset.getData())
-            writer.writeObject(object);
+        if (dataset instanceof SerializedImmutableDataset) {
 
-        writer.end();
+            ((SerializedImmutableDataset)dataset).consumeDataset(writer);
+
+        } else {
+
+            writer.begin();
+
+            for (final Object object : dataset.getData())
+                writer.writeObject(object);
+
+            writer.end();
+        }
     }
 
     public AbstractDataset<Object> getDataset() {

@@ -1,9 +1,8 @@
-package de.tuberlin.aura.demo.examples;
+package de.tuberlin.aura.demo.experiments;
 
 import java.util.*;
 
 import de.tuberlin.aura.client.api.AuraClient;
-import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;

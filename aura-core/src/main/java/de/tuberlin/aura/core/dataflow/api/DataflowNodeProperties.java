@@ -74,6 +74,8 @@ public final class DataflowNodeProperties implements Serializable {
 
         DATASET_REFERENCE(InputArity.DYNAMIC),
 
+        SERIALIZED_IMMUTABLE_DATASET(InputArity.DYNAMIC),
+
         // ---------------------------------------------------
 
         DATASET_UPDATE_OPERATOR(InputArity.UNARY),
