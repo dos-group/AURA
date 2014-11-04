@@ -7,6 +7,7 @@ import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.datasets.ImmutableDataset;
 import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSinkPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSourcePhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FoldFunction;
@@ -167,6 +168,9 @@ public class KMeansExperiment {
         UUID solutionDatasetUID = UUID.randomUUID();
         String solutionDatasetName = "SolutionDataset" + iterationCount;
 
+        Map<String,Object> solutionSetConfig = new HashMap<>();
+        solutionSetConfig.put(ImmutableDataset.NUMBER_OF_CONSUMPTIONS, 2);
+
         DataflowNodeProperties solutionDatasetProperties =
                         new DataflowNodeProperties(
                                 solutionDatasetUID,
@@ -187,7 +191,7 @@ public class KMeansExperiment {
                                 null,
                                 null,
                                 null,
-                                null
+                                solutionSetConfig
                         );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
@@ -204,7 +208,7 @@ public class KMeansExperiment {
         do {
 
             System.out.println();
-            System.out.println("===== ITERATION COUNT : " + iterationCount);
+            System.out.println("===== STARTING ITERATION " + iterationCount);
             System.out.println();
 
 
@@ -326,6 +330,10 @@ public class KMeansExperiment {
                 }
             }
 
+            System.out.println();
+            System.out.println("===== CURRENT CENTROIDS : " + centroids);
+            System.out.println();
+
             if (change > epsilon) {
 
                 final UUID newCentroidsBroadcastDatasetID = UUID.randomUUID();
@@ -377,7 +385,7 @@ public class KMeansExperiment {
                         null,
                         null,
                         null,
-                        null
+                        solutionSetConfig
                 );
 
                 Topology.AuraTopologyBuilder iterationAtb2 = auraClient.createTopologyBuilder();
@@ -415,7 +423,7 @@ public class KMeansExperiment {
                         null,
                         null,
                         null,
-                        null
+                        solutionSetConfig
                 );
 
                 iterationCount++;
@@ -473,8 +481,8 @@ public class KMeansExperiment {
         }
 
         System.out.println();
-        System.out.println("===== CENTROIDS : " + centroids);
-        System.out.println("===== ITERATION COUNT : " + iterationCount);
+        System.out.println("===== FINAL CENTROIDS : " + centroids);
+        System.out.println("===== FINAL ITERATION COUNT : " + iterationCount);
         System.out.println();
     }
 
