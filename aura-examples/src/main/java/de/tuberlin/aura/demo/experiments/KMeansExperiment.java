@@ -1,8 +1,13 @@
 package de.tuberlin.aura.demo.experiments;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.FileSystem;
 import java.util.*;
 
 import de.tuberlin.aura.client.api.AuraClient;
+import de.tuberlin.aura.client.executors.LocalClusterSimulator;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
@@ -12,11 +17,17 @@ import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSourcePhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FoldFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.MapFunction;
 import de.tuberlin.aura.core.dataflow.udfs.functions.SinkFunction;
+import de.tuberlin.aura.core.filesystem.FileInputSplit;
+import de.tuberlin.aura.core.filesystem.in.CSVInputFormat;
+import de.tuberlin.aura.core.filesystem.in.InputFormat;
 import de.tuberlin.aura.core.record.Partitioner;
 import de.tuberlin.aura.core.record.TypeInformation;
+import de.tuberlin.aura.core.record.tuples.AbstractTuple;
 import de.tuberlin.aura.core.record.tuples.Tuple4;
 import de.tuberlin.aura.core.record.tuples.Tuple5;
 import de.tuberlin.aura.core.topology.Topology;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 public class KMeansExperiment {
 
@@ -45,10 +56,13 @@ public class KMeansExperiment {
         final AuraClient auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         IConfig config = IConfigFactory.load(IConfig.Type.SIMULATOR);
-        int executionUnits = config.getInt("simulator.tm.number") * config.getInt("tm.execution.units.number");
 
-        final int solutionSetDop = Math.min(config.getInt("simulator.tm.number"), executionUnits / 4); // for evenly distribution of the big datasets
+        final int solutionSetDop = config.getInt("simulator.tm.number") * (config.getInt("tm.execution.units.number") / 4); // for evenly distribution of the solution datasets
         final int operatorDop = solutionSetDop; // for having point-to-point connections (without partitioning)
+
+        System.out.println();
+        System.out.println("---> DOP per task: " + operatorDop);
+        System.out.println();
 
         int iterationCount = 1;
 
@@ -58,15 +72,42 @@ public class KMeansExperiment {
         Double change;
 
         // initialize centroids
+
         Collection<Tuple4<Long,Double,Double,Double>> centroids = new ArrayList<>();
-        centroids.add(new Tuple4<>(0L, random.nextDouble(), random.nextDouble(), random.nextDouble()));
-        centroids.add(new Tuple4<>(1L, random.nextDouble(), random.nextDouble(), random.nextDouble()));
-        centroids.add(new Tuple4<>(2L, random.nextDouble(), random.nextDouble(), random.nextDouble()));
+
+        try {
+            final Path path = new Path("/tmp/input/clusters");
+            final Class<?>[] fieldTypes = new Class<?>[] {Long.class, Long.class, Double.class, Double.class, Double.class};
+
+            InputFormat<AbstractTuple, FileInputSplit> centroidsInputFormat = new CSVInputFormat(path, fieldTypes);
+            final Configuration conf = new Configuration();
+            conf.set("fs.defaultFS", IConfigFactory.load(IConfig.Type.TM).getString("tm.io.hdfs.hdfs_url"));
+            centroidsInputFormat.configure(conf);
+
+            FileInputSplit[] splits = centroidsInputFormat.createInputSplits(1);
+
+            centroidsInputFormat.open(splits[0]);
+
+            while (!centroidsInputFormat.reachedEnd()) {
+                Tuple5<Long,Long,Double,Double,Double> record = (Tuple5<Long,Long,Double,Double,Double>)AbstractTuple.createTuple(((CSVInputFormat<AbstractTuple>)centroidsInputFormat).getFieldTypes().length);
+
+                centroidsInputFormat.nextRecord(record);
+
+                if (record._1 == null) {
+                    continue; // empty line
+                }
+
+                centroids.add(new Tuple4<>(record._1, record._3, record._4, record._5));
+            }
+
+            centroidsInputFormat.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         final UUID centroidsBroadcastDatasetID = UUID.randomUUID();
         auraClient.broadcastDataset(centroidsBroadcastDatasetID, centroids);
-
-
 
 
         // JOB 1: assign all points to closest centroids
@@ -198,7 +239,7 @@ public class KMeansExperiment {
             connectTo(solutionDatasetName, Topology.Edge.TransferType.POINT_TO_POINT).
             addNode(new Topology.DatasetNode((solutionDatasetProperties)));
 
-        Topology.AuraTopology initializeCentroids = atb.build("SETUP JOB (JOB 1) - assignToCentroids");
+        Topology.AuraTopology initializeCentroids = atb.build("JOB 1: SETUP JOB - assignToCentroids");
 
         auraClient.submitTopology(initializeCentroids, null);
 
@@ -302,7 +343,7 @@ public class KMeansExperiment {
                     connectTo(iterationDatasetName, Topology.Edge.TransferType.POINT_TO_POINT).
                     addNode(new Topology.DatasetNode((iterationDatasetProperties)));
 
-            Topology.AuraTopology iterationJob1NewCentroids = iterationAtb1.build("First of the Iteration Jobs - newCentroids - ITERATION " + iterationCount);
+            Topology.AuraTopology iterationJob1NewCentroids = iterationAtb1.build("JOB 2: First of the Iteration Jobs - newCentroids - ITERATION " + iterationCount);
             auraClient.submitTopology(iterationJob1NewCentroids, null);
             auraClient.awaitSubmissionResult(1);
 
@@ -330,7 +371,7 @@ public class KMeansExperiment {
             }
 
             System.out.println();
-            System.out.println("===== CURRENT CENTROIDS : " + centroids);
+            System.out.println("CURRENT CENTROIDS : " + centroids);
             System.out.println();
 
             if (change > epsilon) {
@@ -395,7 +436,7 @@ public class KMeansExperiment {
                         connectTo(newSolutionDatasetName, Topology.Edge.TransferType.POINT_TO_POINT).
                         addNode(new Topology.DatasetNode(newSolutionDatasetProperties));
 
-                Topology.AuraTopology iterationJob2ClosestCentroids = iterationAtb2.build("Second of the Iteration Jobs - newCentroids - ITERATION " + iterationCount);
+                Topology.AuraTopology iterationJob2ClosestCentroids = iterationAtb2.build("JOB 3: Second of the Iteration Jobs - newCentroids - ITERATION " + iterationCount);
                 auraClient.submitTopology(iterationJob2ClosestCentroids, null);
                 auraClient.awaitSubmissionResult(1);
 
@@ -429,11 +470,10 @@ public class KMeansExperiment {
 
             }
 
-        } while(change > epsilon);
+        } while(change > epsilon && iterationCount < 5); // stop after five iterations for comparison with other systems
 
 
-
-        // JOB 2: write all points to HDFS
+        // JOB 4: write all points to HDFS
 
         Map<String,Object> snkConfig = new HashMap<>();
         snkConfig.put(HDFSSinkPhysicalOperator.HDFS_SINK_FILE_PATH, "/tmp/output/points");
@@ -467,7 +507,7 @@ public class KMeansExperiment {
             connectTo("Sink", Topology.Edge.TransferType.POINT_TO_POINT).
             addNode(sinkNode);
 
-        Topology.AuraTopology writeResults = atb2.build("WRITE OUT JOB - writeResults");
+        Topology.AuraTopology writeResults = atb2.build("JOB 4: WRITE OUT - writeResults");
         auraClient.submitTopology(writeResults, null);
         auraClient.awaitSubmissionResult(1);
 
