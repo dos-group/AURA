@@ -6,6 +6,7 @@ import de.tuberlin.aura.client.api.AuraClient;
 import de.tuberlin.aura.core.config.IConfig;
 import de.tuberlin.aura.core.config.IConfigFactory;
 import de.tuberlin.aura.core.dataflow.api.DataflowNodeProperties;
+import de.tuberlin.aura.core.dataflow.datasets.ImmutableDataset;
 import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSinkPhysicalOperator;
 import de.tuberlin.aura.core.dataflow.operators.impl.HDFSSourcePhysicalOperator;
 import de.tuberlin.aura.core.dataflow.udfs.functions.FoldFunction;
@@ -27,14 +28,27 @@ public class KMeansExperiment {
 
         final Random random = new Random(123456789);
 
-//        final LocalClusterSimulator lcs = new LocalClusterSimulator(IConfigFactory.load(IConfig.Type.SIMULATOR));
+        IConfig simConfig = IConfigFactory.load(IConfig.Type.SIMULATOR);
+
+        LocalClusterSimulator lcs = null;
+
+        switch (simConfig.getString("simulator.mode")) {
+            case "LOCAL":
+                lcs = new LocalClusterSimulator(simConfig);
+                break;
+            case "cluster":
+                break;
+            default:
+                lcs = new LocalClusterSimulator(simConfig);
+        }
 
         final AuraClient auraClient = new AuraClient(IConfigFactory.load(IConfig.Type.CLIENT));
 
         IConfig config = IConfigFactory.load(IConfig.Type.SIMULATOR);
         int executionUnits = config.getInt("simulator.tm.number") * config.getInt("tm.execution.units.number");
 
-        final int operatorDop = executionUnits / 5;
+        final int solutionSetDop = Math.min(config.getInt("simulator.tm.number"), executionUnits / 4); // for evenly distribution of the big datasets
+        final int operatorDop = solutionSetDop; // for having point-to-point connections (without partitioning)
 
         int iterationCount = 1;
 
@@ -153,12 +167,15 @@ public class KMeansExperiment {
         UUID solutionDatasetUID = UUID.randomUUID();
         String solutionDatasetName = "SolutionDataset" + iterationCount;
 
+        Map<String,Object> solutionSetConfig = new HashMap<>();
+        solutionSetConfig.put(ImmutableDataset.NUMBER_OF_CONSUMPTIONS, 2);
+
         DataflowNodeProperties solutionDatasetProperties =
                         new DataflowNodeProperties(
                                 solutionDatasetUID,
                                 DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
                                 solutionDatasetName,
-                                operatorDop,
+                                solutionSetDop,
                                 1,
                                 new int[][] { pointsTuple5TypeInfo.buildFieldSelectorChain("_1") },
                                 Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -173,7 +190,7 @@ public class KMeansExperiment {
                                 null,
                                 null,
                                 null,
-                                null
+                                solutionSetConfig
                         );
 
         Topology.AuraTopologyBuilder atb = auraClient.createTopologyBuilder();
@@ -190,7 +207,7 @@ public class KMeansExperiment {
         do {
 
             System.out.println();
-            System.out.println("===== ITERATION COUNT : " + iterationCount);
+            System.out.println("===== STARTING ITERATION " + iterationCount);
             System.out.println();
 
 
@@ -285,7 +302,7 @@ public class KMeansExperiment {
                     connectTo(iterationDatasetName, Topology.Edge.TransferType.POINT_TO_POINT).
                     addNode(new Topology.DatasetNode((iterationDatasetProperties)));
 
-            Topology.AuraTopology iterationJob1NewCentroids = iterationAtb1.build("First Iteration JOB - newCentroids - ROUND " + iterationCount);
+            Topology.AuraTopology iterationJob1NewCentroids = iterationAtb1.build("First of the Iteration Jobs - newCentroids - ITERATION " + iterationCount);
             auraClient.submitTopology(iterationJob1NewCentroids, null);
             auraClient.awaitSubmissionResult(1);
 
@@ -311,6 +328,10 @@ public class KMeansExperiment {
                     }
                 }
             }
+
+            System.out.println();
+            System.out.println("===== CURRENT CENTROIDS : " + centroids);
+            System.out.println();
 
             if (change > epsilon) {
 
@@ -348,7 +369,7 @@ public class KMeansExperiment {
                         newSolutionDatasetUID,
                         DataflowNodeProperties.DataflowNodeType.IMMUTABLE_DATASET,
                         newSolutionDatasetName,
-                        operatorDop,
+                        solutionSetDop,
                         1,
                         new int[][]{pointsTuple5TypeInfo.buildFieldSelectorChain("_1")},
                         Partitioner.PartitioningStrategy.HASH_PARTITIONER,
@@ -363,18 +384,18 @@ public class KMeansExperiment {
                         null,
                         null,
                         null,
-                        null
+                        solutionSetConfig
                 );
 
                 Topology.AuraTopologyBuilder iterationAtb2 = auraClient.createTopologyBuilder();
 
                 iterationAtb2.addNode(new Topology.DatasetNode(solutionDatasetProperties)).
-                        connectTo("IterationClosestCentroidMap", Topology.Edge.TransferType.POINT_TO_POINT);
-                iterationAtb2.addNode(iterationClosestCentroidMapNode).
-                        connectTo(newSolutionDatasetName, Topology.Edge.TransferType.POINT_TO_POINT);
-                iterationAtb2.addNode(new Topology.DatasetNode(newSolutionDatasetProperties));
+                        connectTo("IterationClosestCentroidMap", Topology.Edge.TransferType.POINT_TO_POINT).
+                        addNode(iterationClosestCentroidMapNode).
+                        connectTo(newSolutionDatasetName, Topology.Edge.TransferType.POINT_TO_POINT).
+                        addNode(new Topology.DatasetNode(newSolutionDatasetProperties));
 
-                Topology.AuraTopology iterationJob2ClosestCentroids = iterationAtb2.build("Second Iteration JOB - closestCentroids - ROUND " + iterationCount);
+                Topology.AuraTopology iterationJob2ClosestCentroids = iterationAtb2.build("Second of the Iteration Jobs - newCentroids - ITERATION " + iterationCount);
                 auraClient.submitTopology(iterationJob2ClosestCentroids, null);
                 auraClient.awaitSubmissionResult(1);
 
@@ -401,7 +422,7 @@ public class KMeansExperiment {
                         null,
                         null,
                         null,
-                        null
+                        solutionSetConfig
                 );
 
                 iterationCount++;
@@ -454,11 +475,13 @@ public class KMeansExperiment {
 
         auraClient.closeSession();
 
-//        lcs.shutdown();
+        if (lcs != null) {
+            lcs.shutdown();
+        }
 
         System.out.println();
-        System.out.println("===== CENTROIDS : " + centroids);
-        System.out.println("===== ITERATION COUNT : " + iterationCount);
+        System.out.println("===== FINAL CENTROIDS : " + centroids);
+        System.out.println("===== FINAL ITERATION COUNT : " + iterationCount);
         System.out.println();
     }
 

@@ -52,7 +52,7 @@ public class HDFSSinkPhysicalOperator <I> extends AbstractUnaryPhysicalOperator<
 
         this.outputFormat.configure(conf);
 
-        this.outputFormat.open(getContext().getNodeDescriptor().taskIndex, getContext().getProperties().globalDOP);
+        this.outputFormat.open(getContext().getNodeDescriptor().taskIndex, getContext().getProperties(getOperatorNum()).globalDOP);
 
         this.inputOp.open();
     }

@@ -9,6 +9,7 @@ import de.tuberlin.aura.core.common.statemachine.StateMachine;
 import de.tuberlin.aura.core.common.utils.Pair;
 import de.tuberlin.aura.core.dataflow.datasets.AbstractDataset;
 import de.tuberlin.aura.core.dataflow.datasets.DatasetFactory;
+import de.tuberlin.aura.core.dataflow.datasets.ImmutableDataset;
 import de.tuberlin.aura.core.dataflow.datasets.SerializedImmutableDataset;
 import de.tuberlin.aura.core.dataflow.operators.base.IExecutionContext;
 import de.tuberlin.aura.core.dataflow.operators.impl.ExecutionContext;
@@ -370,8 +371,20 @@ public class DatasetDriver2 extends AbstractInvokeable {
 
             writer.begin();
 
-            for (final Object object : dataset.getData())
-                writer.writeObject(object);
+            if (dataset instanceof ImmutableDataset &&
+                    ((ImmutableDataset) dataset).hasFixedNumberOfReads() &&
+                    ((ImmutableDataset) dataset).isLastRead()) {
+
+                Queue dataQueue = (Queue) dataset.getData();
+
+                while (dataQueue.size() > 0) {
+                    writer.writeObject(dataQueue.remove());
+                }
+
+            } else {
+                for (final Object object : dataset.getData())
+                    writer.writeObject(object);
+            }
 
             writer.end();
         }
