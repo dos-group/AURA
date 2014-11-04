@@ -107,7 +107,7 @@ public class ZookeeperClient {
             final ObjectOutputStream objectStream = new ObjectOutputStream(byteArrayStream);
             objectStream.writeObject(object);
             objectStream.flush();
-            curator.create().withMode(CreateMode.EPHEMERAL).forPath(path, byteArrayStream.toByteArray());
+            curator.create().withMode(CreateMode.PERSISTENT).forPath(path, byteArrayStream.toByteArray());
             objectStream.close();
             byteArrayStream.close();
         } catch (InterruptedException e) {
