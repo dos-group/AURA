@@ -42,7 +42,7 @@ public class HDFSSinkPhysicalOperator <I> extends AbstractUnaryPhysicalOperator<
     public void open() throws Throwable {
         super.open();
 
-        final Path path = new Path((String)getContext().getProperties().config.get(HDFS_SINK_FILE_PATH));
+        final Path path = new Path((String)getContext().getProperties(getOperatorNum()).config.get(HDFS_SINK_FILE_PATH));
 
         this.outputFormat = new CSVOutputFormat<AbstractTuple>(path);
 
@@ -52,7 +52,7 @@ public class HDFSSinkPhysicalOperator <I> extends AbstractUnaryPhysicalOperator<
 
         this.outputFormat.configure(conf);
 
-        this.outputFormat.open(getContext().getNodeDescriptor().taskIndex, getContext().getProperties().globalDOP);
+        this.outputFormat.open(getContext().getNodeDescriptor().taskIndex, getContext().getProperties(getOperatorNum()).globalDOP);
 
         this.inputOp.open();
     }
